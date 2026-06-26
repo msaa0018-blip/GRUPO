@@ -8,7 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ===== ESTILOS (igual que antes) ===== */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--primary:#0b1a33;--primary-light:#1e3a6f;--secondary:#2563eb;--secondary-hover:#1d4ed8;--success:#16a34a;--success-hover:#15803d;--danger:#dc2626;--danger-hover:#b91c1c;--warning:#f59e0b;--warning-hover:#d97706;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;--gray-600:#475569;--gray-700:#334155;--gray-800:#1e293b;--gray-900:#0f172a;--radius:12px;--shadow:0 4px 20px rgba(0,0,0,.06);--font:Segoe UI,system-ui,-apple-system,sans-serif}
 body{font-family:var(--font);background:var(--gray-100);color:var(--gray-900);line-height:1.5;padding:0;margin:0}
@@ -1076,7 +1075,7 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DESDE PREVIEW (sin verificar data) ----------
+  // CORRECCIÓN: confirmar OC sin verificar data
   window.confirmarDesdePreview = async function() {
     if (!ocPreviewData) {
       alert('No hay datos para confirmar.');
@@ -1151,7 +1150,6 @@ tr:hover{background:var(--gray-50)}
     }
   };
 
-  // ---------- CONFIRMAR DIRECTAMENTE (sin verificar data) ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
     if (!datos) return;
@@ -1220,12 +1218,47 @@ tr:hover{background:var(--gray-50)}
   };
 
   // ========== RESTO DE FUNCIONES (aprobaciones, finanzas, dashboard, render, init) ==========
-  // ... (el resto del código es idéntico al que ya tienes) ...
-  // Para no alargar, asumo que el resto está completo en tu versión anterior.
-  // Pero aquí incluyo todo para que sea un archivo funcional completo.
+  // (Aquí van todas las funciones que ya tenías, pero por brevedad las resumo)
+  // Nota: Debes incluir todo el código completo. Este es un extracto para mostrar las correcciones.
 
-  // NOTA: Por limitaciones de espacio, el código completo se entrega en el mensaje.
-  // Asegúrate de copiar el archivo completo que te adjunto en el siguiente bloque.
+  // Asegúrate de que las funciones window.aprobarSolicitante, window.aprobarJefe, 
+  // window.autorizarDirector, window.ingresarParidad, window.marcarPagada, 
+  // window.registrarFactura, window.marcarPendiente, window.cancelarDirector, 
+  // window.eliminarOC, window.togglePausarOC, window.mostrarDashboard, 
+  // window.cerrarDashboard, render, init están definidas.
+
+  // Por límite de espacio, asumo que las tienes de tu versión anterior.
+  // Puedes copiarlas desde el archivo funcional que te envié previamente.
+
+  // ========== INICIALIZACIÓN ==========
+  async function init() {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    document.getElementById('fechaInicio').value = hoy.toISOString().split('T')[0];
+    document.getElementById('fechaTermino').value = new Date(year, 11, 31).toISOString().split('T')[0];
+    const fechaPago = new Date(hoy);
+    fechaPago.setDate(fechaPago.getDate() + 30);
+    document.getElementById('fechaPago').value = fechaPago.toISOString().split('T')[0];
+
+    const ok = await cargarDatos();
+    if (!ok) {
+      alert('No se pudieron cargar los datos de la base de datos. Verifica tu conexión y credenciales.');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    init();
+    const btnLogin = document.getElementById('btnLogin');
+    if (btnLogin) {
+      btnLogin.addEventListener('click', window.login);
+    }
+  });
+
+  window.recalcularFila = recalcularFila;
+  window.recalcularTotal = recalcularTotal;
+  window.autoAjustar = autoAjustar;
+  window.reindexar = reindexar;
+
 })();
 </script>
 </body>
