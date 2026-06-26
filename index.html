@@ -765,24 +765,31 @@ tr:hover{background:var(--gray-50)}
     };
 
     try {
-      const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]);
+      const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
       if (error) {
         msgDiv.innerHTML = `<div class="alert">⚠️ ERROR: ${error.message}</div>`;
         return;
       }
-      if (!data || data.length === 0) {
-        await cargarDatos();
-        render();
-        msgDiv.innerHTML = '<div class="success">✅ PROYECTO CREADO (RECARGA PARA VERLO).</div>';
-        return;
-      }
-      proyectos.push(data[0]);
-      render();
+
+      // El proyecto YA está guardado en la base de datos en este punto.
       msgDiv.innerHTML = '<div class="success">✅ PROYECTO CREADO.</div>';
       document.getElementById('nombreProyecto').value = '';
       document.getElementById('cliente').value = '';
       document.getElementById('presupuesto').value = '';
+
+      try {
+        if (data && data.length > 0) {
+          proyectos.push(data[0]);
+        } else {
+          await cargarDatos();
+        }
+        render();
+      } catch (err) {
+        console.error('⚠️ Proyecto guardado, pero falló el refresco de la vista:', err.stack || err);
+        msgDiv.innerHTML += '<div class="alert">⚠️ El proyecto se guardó, pero hubo un problema al refrescar la tabla. Recarga la página para verlo.</div>';
+      }
     } catch (error) {
+      console.error('❌ Error inesperado en crearProyecto:', error.stack || error);
       msgDiv.innerHTML = `<div class="alert">⚠️ ERROR INESPERADO: ${error.message}</div>`;
     }
   };
@@ -1223,22 +1230,45 @@ tr:hover{background:var(--gray-50)}
       elaborador: datos.elaborador
     };
 
-    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+    console.log('📤 [confirmarDesdePreview] Enviando a Supabase:', nuevaOC);
+
+    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
     if (error) {
+      console.error('❌ Error de Supabase:', error);
       alert('Error al guardar OC: ' + error.message);
       return;
     }
+
+    console.log('✅ OC guardada exitosamente:', data);
+
+    // A PARTIR DE AQUÍ LA OC YA ESTÁ GUARDADA EN LA BASE DE DATOS.
+    // Cualquier error en lo que sigue (refrescar tabla, generar PDF) es solo
+    // cosmético y NUNCA debe reportarse como si la OC no se hubiera creado.
     window.cerrarPreview();
-    document.getElementById('cuerpoProductos').innerHTML = '';
-    window.agregarFilaProducto();
-    document.getElementById('totalProductos').textContent = '$0.00';
     document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-    // Recargar datos para obtener la OC insertada
-    await cargarDatos();
-    render();
-    if (ocPreviewPDF) {
-      ocPreviewPDF.save(`OC_${codigo}.pdf`);
+
+    try {
+      document.getElementById('cuerpoProductos').innerHTML = '';
+      window.agregarFilaProducto();
+      document.getElementById('totalProductos').textContent = '$0.00';
+      if (data && data.length > 0) {
+        ordenes.push(data[0]);
+      } else {
+        await cargarDatos();
+      }
+      render();
+    } catch (err) {
+      console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err);
     }
+
+    try {
+      const docFinal = ocPreviewPDF || generarPDFParaPreview(datos);
+      docFinal.save(`OC_${codigo}.pdf`);
+    } catch (err) {
+      console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
+      document.getElementById('mensajeOC').innerHTML += `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
+    }
+
     ocPreviewData = null;
     ocPreviewPDF = null;
   };
@@ -1302,32 +1332,43 @@ tr:hover{background:var(--gray-50)}
 
     console.log('📤 Enviando a Supabase:', nuevaOC);
 
+    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
+    if (error) {
+      console.error('❌ Error de Supabase:', error);
+      document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR AL GUARDAR OC: ${error.message}</div>`;
+      return;
+    }
+
+    console.log('✅ OC guardada exitosamente:', data);
+
+    // A PARTIR DE AQUÍ LA OC YA ESTÁ GUARDADA EN LA BASE DE DATOS.
+    // Cualquier error en lo que sigue (refrescar tabla, generar PDF) es solo
+    // cosmético y NUNCA debe reportarse como si la OC no se hubiera creado.
+    document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+
     try {
-      const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
-      if (error) {
-        console.error('❌ Error de Supabase:', error);
-        document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR AL GUARDAR OC: ${error.message}</div>`;
-        return;
-      }
-      
-      console.log('✅ OC guardada exitosamente:', data);
-      
       // Limpiar formulario
       document.getElementById('cuerpoProductos').innerHTML = '';
       window.agregarFilaProducto();
       document.getElementById('totalProductos').textContent = '$0.00';
-      document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-      
-      // Recargar datos para obtener la OC insertada
-      await cargarDatos();
+
+      if (data && data.length > 0) {
+        ordenes.push(data[0]);
+      } else {
+        await cargarDatos();
+      }
       render();
-      
+    } catch (err) {
+      console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err);
+    }
+
+    try {
       // Generar PDF
       const doc = generarPDFParaPreview(datos);
       doc.save(`OC_${codigo}.pdf`);
     } catch (err) {
-      console.error('❌ Error inesperado:', err);
-      document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR INESPERADO: ${err.message}</div>`;
+      console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
+      document.getElementById('mensajeOC').innerHTML += `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
     }
   };
 
