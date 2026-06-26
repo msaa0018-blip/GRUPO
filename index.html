@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* (el mismo CSS de siempre, no lo repito por brevedad) */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --primary:#0b1a33;
@@ -762,7 +763,7 @@ tr:hover{background:var(--gray-50)}
     };
 
     try {
-      const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
+      const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]);
       if (error) {
         msgDiv.innerHTML = `<div class="alert">⚠️ ERROR: ${error.message}</div>`;
         return;
@@ -1026,16 +1027,6 @@ tr:hover{background:var(--gray-50)}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
 
-    const codigoReal = generarCodigoOC(
-      datos.proyecto, // pero necesitamos el objeto proyecto completo para empresa y depto, lo pasamos aparte
-      datos.proyecto, // temporal, pero lo ajustamos
-      datos.proveedor,
-      datos.proyecto,
-      datos.cliente,
-      datos.elaborador,
-      consecutivoOC
-    );
-    // Mejor obtenemos el proyecto completo desde la lista
     const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
     const codigoFinal = generarCodigoOC(
       proyectoObj ? proyectoObj.empresa : 'GIE',
@@ -1180,7 +1171,7 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DESDE PREVIEW ----------
+  // ---------- CONFIRMAR DESDE PREVIEW (CORREGIDO) ----------
   window.confirmarDesdePreview = async function() {
     if (!ocPreviewData) {
       alert('No hay datos para confirmar.');
@@ -1230,26 +1221,34 @@ tr:hover{background:var(--gray-50)}
       elaborador: datos.elaborador
     };
 
-    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
-    if (error) {
-      alert('Error al guardar OC: ' + error.message);
-      return;
+    try {
+      const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+      if (error) {
+        alert('Error al guardar OC: ' + error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        alert('No se recibieron datos de la inserción. La OC podría no haberse guardado.');
+        return;
+      }
+      ordenes.push(data[0]);
+      window.cerrarPreview();
+      document.getElementById('cuerpoProductos').innerHTML = '';
+      window.agregarFilaProducto();
+      document.getElementById('totalProductos').textContent = '$0.00';
+      document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+      render();
+      if (ocPreviewPDF) {
+        ocPreviewPDF.save(`OC_${codigo}.pdf`);
+      }
+      ocPreviewData = null;
+      ocPreviewPDF = null;
+    } catch (err) {
+      alert('Error inesperado: ' + err.message);
     }
-    ordenes.push(data[0]);
-    window.cerrarPreview();
-    document.getElementById('cuerpoProductos').innerHTML = '';
-    window.agregarFilaProducto();
-    document.getElementById('totalProductos').textContent = '$0.00';
-    document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-    render();
-    if (ocPreviewPDF) {
-      ocPreviewPDF.save(`OC_${codigo}.pdf`);
-    }
-    ocPreviewData = null;
-    ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DIRECTAMENTE ----------
+  // ---------- CONFIRMAR DIRECTAMENTE (CORREGIDO) ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
     if (!datos) return;
@@ -1296,19 +1295,27 @@ tr:hover{background:var(--gray-50)}
       elaborador: datos.elaborador
     };
 
-    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
-    if (error) {
-      alert('Error al guardar OC: ' + error.message);
-      return;
+    try {
+      const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+      if (error) {
+        alert('Error al guardar OC: ' + error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        alert('No se recibieron datos de la inserción. La OC podría no haberse guardado.');
+        return;
+      }
+      ordenes.push(data[0]);
+      document.getElementById('cuerpoProductos').innerHTML = '';
+      window.agregarFilaProducto();
+      document.getElementById('totalProductos').textContent = '$0.00';
+      document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+      render();
+      const doc = generarPDFParaPreview(datos);
+      doc.save(`OC_${codigo}.pdf`);
+    } catch (err) {
+      alert('Error inesperado: ' + err.message);
     }
-    ordenes.push(data[0]);
-    document.getElementById('cuerpoProductos').innerHTML = '';
-    window.agregarFilaProducto();
-    document.getElementById('totalProductos').textContent = '$0.00';
-    document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-    render();
-    const doc = generarPDFParaPreview(datos);
-    doc.save(`OC_${codigo}.pdf`);
   };
 
   // ---------- GENERAR PDF FIRMADO ----------
