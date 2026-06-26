@@ -433,7 +433,7 @@ tr:hover{background:var(--gray-50)}
     const emp = empresa.trim().toUpperCase();
     if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return '#FF0000';
     if (emp.includes('VEXPAR OPERACIONES')) return '#0000FF';
-    return '#6b7280'; // gris por defecto
+    return '#6b7280';
   }
 
   // ---------- CONVERSIÓN AUTOMÁTICA A MAYÚSCULAS EN INPUTS ----------
@@ -1145,11 +1145,11 @@ tr:hover{background:var(--gray-50)}
     doc.text(`Dirección: ${datos.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const lines = doc.splitTextToSize(`Dirección: ${datos.direccion}`, pageWidth - 2*margin);
     y += lines.length * 16 + 2;
-    doc.text(`Uso CFDI: ${datos.usoCFDI}`, margin, y);
-    y += 16;
     doc.text(`Dirección de entrega: ${datos.direccionEntrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const linesEntrega = doc.splitTextToSize(`Dirección de entrega: ${datos.direccionEntrega}`, pageWidth - 2*margin);
     y += linesEntrega.length * 16 + 2;
+    doc.text(`Uso CFDI: ${datos.usoCFDI}`, margin, y);
+    y += 16;
     doc.text(`Moneda: ${datos.moneda}`, margin, y);
     y += 16;
     doc.text(`Total: ${formatoMoneda(datos.montoTotal, datos.moneda)}`, margin, y);
@@ -1420,11 +1420,11 @@ tr:hover{background:var(--gray-50)}
     doc.text(`Dirección: ${oc.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const linesDir = doc.splitTextToSize(`Dirección: ${oc.direccion}`, pageWidth - 2*margin);
     y += linesDir.length * 16 + 2;
+    doc.text(`Dirección de entrega: ${oc.direccionEntrega || 'No especificada'}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direccionEntrega || 'No especificada'}`, pageWidth - 2*margin);
+    y += linesEnt.length * 16 + 2;
     doc.text(`Uso CFDI: ${oc.usoCFDI}`, margin, y);
     y += 16;
-    doc.text(`Dirección de entrega: ${oc.direccionEntrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
-    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direccionEntrega}`, pageWidth - 2*margin);
-    y += linesEnt.length * 16 + 2;
     doc.text(`Moneda: ${oc.moneda}`, margin, y);
     y += 16;
     doc.text(`Total en ${oc.moneda}: ${formatoMoneda(oc.montoTotal, oc.moneda)}`, margin, y);
@@ -2213,6 +2213,12 @@ tr:hover{background:var(--gray-50)}
       btnLogin.addEventListener('click', window.login);
     }
   });
+
+  // ========== EXPONER FUNCIONES AL ÁMBITO GLOBAL ==========
+  // Esto permite que los eventos inline (onchange, oninput) puedan llamarlas
+  window.recalcularFila = recalcularFila;
+  window.recalcularTotal = recalcularTotal;
+  window.autoAjustar = autoAjustar;
 
 })(); // Fin del IIFE
 </script>
