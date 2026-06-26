@@ -8,7 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* (el mismo CSS de siempre, no lo repito por brevedad) */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --primary:#0b1a33;
@@ -1222,16 +1221,33 @@ tr:hover{background:var(--gray-50)}
     };
 
     try {
-      const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+      // Insertar la OC
+      const { error } = await supabase.from('ordenes').insert([nuevaOC]);
       if (error) {
         alert('Error al guardar OC: ' + error.message);
         return;
       }
-      if (!data || data.length === 0) {
-        alert('No se recibieron datos de la inserción. La OC podría no haberse guardado.');
+
+      // Recuperar la OC insertada por su código
+      const { data: insertedData, error: selectError } = await supabase
+        .from('ordenes')
+        .select('*')
+        .eq('codigo', codigo)
+        .maybeSingle();
+
+      if (selectError || !insertedData) {
+        alert('La OC se guardó, pero no se pudo recuperar. Por favor, recarga la página para verla.');
+        // Aún así, la OC está en la base de datos, solo no se muestra en la bandeja hasta recargar
+        window.cerrarPreview();
+        document.getElementById('cuerpoProductos').innerHTML = '';
+        window.agregarFilaProducto();
+        document.getElementById('totalProductos').textContent = '$0.00';
+        document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA (recarga para verla). CÓDIGO: ${codigo}</div>`;
+        render();
         return;
       }
-      ordenes.push(data[0]);
+
+      ordenes.push(insertedData);
       window.cerrarPreview();
       document.getElementById('cuerpoProductos').innerHTML = '';
       window.agregarFilaProducto();
@@ -1296,16 +1312,34 @@ tr:hover{background:var(--gray-50)}
     };
 
     try {
-      const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+      // Insertar la OC
+      const { error } = await supabase.from('ordenes').insert([nuevaOC]);
       if (error) {
         alert('Error al guardar OC: ' + error.message);
         return;
       }
-      if (!data || data.length === 0) {
-        alert('No se recibieron datos de la inserción. La OC podría no haberse guardado.');
+
+      // Recuperar la OC insertada por su código
+      const { data: insertedData, error: selectError } = await supabase
+        .from('ordenes')
+        .select('*')
+        .eq('codigo', codigo)
+        .maybeSingle();
+
+      if (selectError || !insertedData) {
+        alert('La OC se guardó, pero no se pudo recuperar. Por favor, recarga la página para verla.');
+        document.getElementById('cuerpoProductos').innerHTML = '';
+        window.agregarFilaProducto();
+        document.getElementById('totalProductos').textContent = '$0.00';
+        document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA (recarga para verla). CÓDIGO: ${codigo}</div>`;
+        render();
+        // Aún así, generamos el PDF
+        const doc = generarPDFParaPreview(datos);
+        doc.save(`OC_${codigo}.pdf`);
         return;
       }
-      ordenes.push(data[0]);
+
+      ordenes.push(insertedData);
       document.getElementById('cuerpoProductos').innerHTML = '';
       window.agregarFilaProducto();
       document.getElementById('totalProductos').textContent = '$0.00';
