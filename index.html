@@ -413,7 +413,6 @@ tr:hover{background:var(--gray-50)}
   });
 
   function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
-      // Si empresa o departamento son undefined/null, usar valores por defecto
       if (!empresa) empresa = 'GIE';
       if (!departamento) departamento = 'GENERAL';
       
@@ -970,13 +969,9 @@ tr:hover{background:var(--gray-50)}
       motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
     }
 
-    // Extraer empresa y departamento del proyecto
-    const empresa = proyecto.empresa;
-    const departamento = proyecto.departamento;
-
     return {
-      empresa: empresa,
-      departamento: departamento,
+      empresa: proyecto.empresa,
+      departamento: proyecto.departamento,
       proyectonombre: proyecto.nombre,
       proveedor: proveedor,
       rfc: rfc || 'NA',
@@ -1233,12 +1228,13 @@ tr:hover{background:var(--gray-50)}
       alert('Error al guardar OC: ' + error.message);
       return;
     }
-    ordenes.push(data[0]);
     window.cerrarPreview();
     document.getElementById('cuerpoProductos').innerHTML = '';
     window.agregarFilaProducto();
     document.getElementById('totalProductos').textContent = '$0.00';
     document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+    // Recargar datos para obtener la OC insertada
+    await cargarDatos();
     render();
     if (ocPreviewPDF) {
       ocPreviewPDF.save(`OC_${codigo}.pdf`);
@@ -1247,7 +1243,7 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DIRECTAMENTE ----------
+  // ---------- CONFIRMAR DIRECTAMENTE (CORREGIDO) ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
     if (!datos) {
@@ -1313,13 +1309,20 @@ tr:hover{background:var(--gray-50)}
         document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR AL GUARDAR OC: ${error.message}</div>`;
         return;
       }
+      
       console.log('✅ OC guardada exitosamente:', data);
-      ordenes.push(data[0]);
+      
+      // Limpiar formulario
       document.getElementById('cuerpoProductos').innerHTML = '';
       window.agregarFilaProducto();
       document.getElementById('totalProductos').textContent = '$0.00';
       document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+      
+      // Recargar datos para obtener la OC insertada
+      await cargarDatos();
       render();
+      
+      // Generar PDF
       const doc = generarPDFParaPreview(datos);
       doc.save(`OC_${codigo}.pdf`);
     } catch (err) {
@@ -1327,6 +1330,163 @@ tr:hover{background:var(--gray-50)}
       document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR INESPERADO: ${err.message}</div>`;
     }
   };
+
+  // ---------- GENERAR PDF FIRMADO ----------
+  function generarPDFFirmado(oc) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40;
+    let y = agregarMembrete(doc, pageWidth, margin);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Código: ${oc.codigo}`, margin, y);
+    y += 16;
+    doc.text(`Proveedor: ${oc.proveedor}`, margin, y);
+    y += 16;
+    if (oc.rfc && oc.rfc.toUpperCase() !== 'NA') {
+      doc.text(`RFC: ${oc.rfc}`, margin, y);
+      y += 16;
+    }
+    doc.text(`Dirección: ${oc.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesDir = doc.splitTextToSize(`Dirección: ${oc.direccion}`, pageWidth - 2*margin);
+    y += linesDir.length * 16 + 2;
+    doc.text(`Dirección de entrega: ${oc.direccionentrega || 'No especificada'}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direccionentrega || 'No especificada'}`, pageWidth - 2*margin);
+    y += linesEnt.length * 16 + 2;
+    doc.text(`Uso CFDI: ${oc.usocfdi}`, margin, y);
+    y += 16;
+    doc.text(`Moneda: ${oc.moneda}`, margin, y);
+    y += 16;
+    doc.text(`Total en ${oc.moneda}: ${formatoMoneda(oc.montototal, oc.moneda)}`, margin, y);
+    y += 16;
+    if (oc.moneda === 'USD' && oc.tipocambio) {
+      doc.text(`Tipo de Cambio (MXN/USD) - Final: ${oc.tipocambio.toFixed(4)}`, margin, y);
+      y += 16;
+      doc.text(`Equivalente en MXN: ${formatoMoneda(oc.montomxn, 'MXN')}`, margin, y);
+      y += 16;
+    }
+    doc.text(`Fecha de Pago: ${new Date(oc.fechapago).toLocaleDateString()}`, margin, y);
+    y += 20;
+
+    const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
+    const rows = oc.productos.map((p, i) => [
+      i+1,
+      p.parte || '',
+      p.descripcion,
+      p.cantidad,
+      p.udm || 'PZA',
+      formatoMoneda(p.precioUnitario, oc.moneda),
+      p.descuento.toFixed(2) + '%',
+      p.impuesto.toFixed(2) + '%',
+      formatoMoneda(p.importe, oc.moneda)
+    ]);
+
+    doc.autoTable({
+      head: [headers],
+      body: rows,
+      startY: y,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 9, cellPadding: 3, font: 'helvetica' },
+      headStyles: { fillColor: [30, 40, 60], fontSize: 9, font: 'helvetica' },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 50 },
+        6: { cellWidth: 35 },
+        7: { cellWidth: 35 },
+        8: { cellWidth: 50 }
+      }
+    });
+
+    let subtotal = 0, ivaTotal = 0;
+    oc.productos.forEach(p => {
+      const base = p.cantidad * p.precioUnitario;
+      const desc = base * (p.descuento / 100);
+      const baseConDesc = base - desc;
+      subtotal += baseConDesc;
+      ivaTotal += baseConDesc * (p.impuesto / 100);
+    });
+    const total = subtotal + ivaTotal;
+
+    const finalY = doc.lastAutoTable.finalY + 16;
+    const colX = margin + (pageWidth - 2*margin) * 0.64;
+    doc.setFontSize(10);
+    doc.text(`Subtotal: ${formatoMoneda(subtotal, oc.moneda)}`, colX, finalY);
+    doc.text(`IVA (incluido): ${formatoMoneda(ivaTotal, oc.moneda)}`, colX, finalY + 14);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`TOTAL: ${formatoMoneda(total, oc.moneda)}`, colX, finalY + 30);
+    doc.setFont('helvetica', 'normal');
+
+    const leyendaY = finalY + 50;
+    doc.setFontSize(10);
+    doc.setTextColor(11, 26, 51);
+    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', pageWidth - margin - 10, leyendaY, { align: 'right' });
+
+    const authY = leyendaY + 25;
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('AUTORIZACIONES', margin, authY);
+    let ay = authY + 16;
+
+    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+    const solicitanteNombre = oc.responsable || 'No definido';
+    const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
+    const directorNombre = getDirector();
+
+    function mostrarFirma(doc, x, y, nombre, fecha) {
+      doc.setFont('helvetica', 'bolditalic');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(nombre, x, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Fecha: ${fecha}`, x, y + 12);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    if (oc.nombresolicitante) {
+      doc.text(`Solicitante:`, margin, ay);
+      mostrarFirma(doc, margin + 80, ay, oc.nombresolicitante, oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente');
+    } else {
+      doc.text(`Solicitante: ${solicitanteNombre} (Pendiente)`, margin, ay);
+      ay += 12;
+      doc.text(`Fecha: Pendiente`, margin, ay);
+    }
+    ay += 30;
+
+    if (oc.nombrejefe) {
+      doc.text(`Jefe de Departamento:`, margin, ay);
+      mostrarFirma(doc, margin + 80, ay, oc.nombrejefe, oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente');
+    } else {
+      doc.text(`Jefe de Departamento: ${jefeNombre} (Pendiente)`, margin, ay);
+      ay += 12;
+      doc.text(`Fecha: Pendiente`, margin, ay);
+    }
+    ay += 30;
+
+    if (oc.nombredirector) {
+      doc.text(`Director General:`, margin, ay);
+      mostrarFirma(doc, margin + 80, ay, oc.nombredirector, oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente');
+    } else {
+      doc.text(`Director General: ${directorNombre} (Pendiente)`, margin, ay);
+      ay += 12;
+      doc.text(`Fecha: Pendiente`, margin, ay);
+    }
+
+    doc.save(`OC_${oc.codigo}.pdf`);
+  }
 
   // ---------- APROBACIONES ----------
   window.aprobarSolicitante = async function(index) {
@@ -1935,163 +2095,6 @@ tr:hover{background:var(--gray-50)}
         filtroDeptoSelect.appendChild(opt);
       });
     }
-  }
-
-  // ---------- GENERAR PDF FIRMADO ----------
-  function generarPDFFirmado(oc) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 40;
-    let y = agregarMembrete(doc, pageWidth, margin);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Código: ${oc.codigo}`, margin, y);
-    y += 16;
-    doc.text(`Proveedor: ${oc.proveedor}`, margin, y);
-    y += 16;
-    if (oc.rfc && oc.rfc.toUpperCase() !== 'NA') {
-      doc.text(`RFC: ${oc.rfc}`, margin, y);
-      y += 16;
-    }
-    doc.text(`Dirección: ${oc.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
-    const linesDir = doc.splitTextToSize(`Dirección: ${oc.direccion}`, pageWidth - 2*margin);
-    y += linesDir.length * 16 + 2;
-    doc.text(`Dirección de entrega: ${oc.direccionentrega || 'No especificada'}`, margin, y, { maxWidth: pageWidth - 2*margin });
-    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direccionentrega || 'No especificada'}`, pageWidth - 2*margin);
-    y += linesEnt.length * 16 + 2;
-    doc.text(`Uso CFDI: ${oc.usocfdi}`, margin, y);
-    y += 16;
-    doc.text(`Moneda: ${oc.moneda}`, margin, y);
-    y += 16;
-    doc.text(`Total en ${oc.moneda}: ${formatoMoneda(oc.montototal, oc.moneda)}`, margin, y);
-    y += 16;
-    if (oc.moneda === 'USD' && oc.tipocambio) {
-      doc.text(`Tipo de Cambio (MXN/USD) - Final: ${oc.tipocambio.toFixed(4)}`, margin, y);
-      y += 16;
-      doc.text(`Equivalente en MXN: ${formatoMoneda(oc.montomxn, 'MXN')}`, margin, y);
-      y += 16;
-    }
-    doc.text(`Fecha de Pago: ${new Date(oc.fechapago).toLocaleDateString()}`, margin, y);
-    y += 20;
-
-    const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
-    const rows = oc.productos.map((p, i) => [
-      i+1,
-      p.parte || '',
-      p.descripcion,
-      p.cantidad,
-      p.udm || 'PZA',
-      formatoMoneda(p.precioUnitario, oc.moneda),
-      p.descuento.toFixed(2) + '%',
-      p.impuesto.toFixed(2) + '%',
-      formatoMoneda(p.importe, oc.moneda)
-    ]);
-
-    doc.autoTable({
-      head: [headers],
-      body: rows,
-      startY: y,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 3, font: 'helvetica' },
-      headStyles: { fillColor: [30, 40, 60], fontSize: 9, font: 'helvetica' },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 50 },
-        2: { cellWidth: 'auto' },
-        3: { cellWidth: 30 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 50 },
-        6: { cellWidth: 35 },
-        7: { cellWidth: 35 },
-        8: { cellWidth: 50 }
-      }
-    });
-
-    let subtotal = 0, ivaTotal = 0;
-    oc.productos.forEach(p => {
-      const base = p.cantidad * p.precioUnitario;
-      const desc = base * (p.descuento / 100);
-      const baseConDesc = base - desc;
-      subtotal += baseConDesc;
-      ivaTotal += baseConDesc * (p.impuesto / 100);
-    });
-    const total = subtotal + ivaTotal;
-
-    const finalY = doc.lastAutoTable.finalY + 16;
-    const colX = margin + (pageWidth - 2*margin) * 0.64;
-    doc.setFontSize(10);
-    doc.text(`Subtotal: ${formatoMoneda(subtotal, oc.moneda)}`, colX, finalY);
-    doc.text(`IVA (incluido): ${formatoMoneda(ivaTotal, oc.moneda)}`, colX, finalY + 14);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`TOTAL: ${formatoMoneda(total, oc.moneda)}`, colX, finalY + 30);
-    doc.setFont('helvetica', 'normal');
-
-    const leyendaY = finalY + 50;
-    doc.setFontSize(10);
-    doc.setTextColor(11, 26, 51);
-    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', pageWidth - margin - 10, leyendaY, { align: 'right' });
-
-    const authY = leyendaY + 25;
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text('AUTORIZACIONES', margin, authY);
-    let ay = authY + 16;
-
-    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
-    const solicitanteNombre = oc.responsable || 'No definido';
-    const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
-    const directorNombre = getDirector();
-
-    function mostrarFirma(doc, x, y, nombre, fecha) {
-      doc.setFont('helvetica', 'bolditalic');
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text(nombre, x, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      doc.text(`Fecha: ${fecha}`, x, y + 12);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-    }
-
-    if (oc.nombresolicitante) {
-      doc.text(`Solicitante:`, margin, ay);
-      mostrarFirma(doc, margin + 80, ay, oc.nombresolicitante, oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente');
-    } else {
-      doc.text(`Solicitante: ${solicitanteNombre} (Pendiente)`, margin, ay);
-      ay += 12;
-      doc.text(`Fecha: Pendiente`, margin, ay);
-    }
-    ay += 30;
-
-    if (oc.nombrejefe) {
-      doc.text(`Jefe de Departamento:`, margin, ay);
-      mostrarFirma(doc, margin + 80, ay, oc.nombrejefe, oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente');
-    } else {
-      doc.text(`Jefe de Departamento: ${jefeNombre} (Pendiente)`, margin, ay);
-      ay += 12;
-      doc.text(`Fecha: Pendiente`, margin, ay);
-    }
-    ay += 30;
-
-    if (oc.nombredirector) {
-      doc.text(`Director General:`, margin, ay);
-      mostrarFirma(doc, margin + 80, ay, oc.nombredirector, oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente');
-    } else {
-      doc.text(`Director General: ${directorNombre} (Pendiente)`, margin, ay);
-      ay += 12;
-      doc.text(`Fecha: Pendiente`, margin, ay);
-    }
-
-    doc.save(`OC_${oc.codigo}.pdf`);
   }
 
   // ---------- INICIALIZACIÓN ----------
