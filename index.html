@@ -1123,51 +1123,71 @@ tr:hover{background:var(--gray-50)}
     const margin = 40;
     let y = margin;
 
-    // ----- ENCABEZADO MEMBRETADO ESTILO ODOO -----
-    // Logo y nombre de la empresa en la parte superior
-    try {
-        doc.addImage('https://extingue.com.mx/img/logo.png', 'PNG', margin, y - 10, 80, 30);
-    } catch(e) {
-        doc.setFontSize(14);
-        doc.setTextColor(11, 26, 51);
-        doc.setFont('helvetica', 'bold');
-        doc.text('GRUPO INDUSTRIAL EXTINGUE', margin, y + 10);
-    }
-    
+    // ----- ENCABEZADO ESTILO IMAGEN -----
     // Dirección de la empresa
-    y += 30;
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.setFont('helvetica', 'normal');
-    doc.text('Privada del Copalillo #298 Colonia El Copalillo, 36800 Irapuato, Gto.', margin, y);
+    doc.text('Privada del Copalillo #298 lote interior B Colonia El Copalillo, 36800 Irapuato, Gto.', margin, y);
+    y += 14;
+    doc.text('RFC: GIE0402262X3', margin, y);
+    y += 20;
+
+    // ----- DIRECCIÓN DE ENVÍO (EMPRESA) -----
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Dirección de envío', margin, y);
+    y += 14;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('GRUPO INDUSTRIAL EXTINGUE', margin, y);
+    y += 12;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text('Privada Copalillo No. 298, Int. B Copalillo', margin, y);
+    y += 12;
+    doc.text('36800 Irapuato, GUANAJUATO', margin, y);
     y += 12;
     doc.text('México', margin, y);
     y += 12;
-    
-    // RFC y Régimen fiscal
-    doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.text('RFC: GIEXXXXXXX', margin, y);
-    y += 12;
-    doc.text('Régimen fiscal: General de Ley de Personas Morales', margin, y);
+    doc.text('📞 +52 462 600 4936', margin, y);
     y += 20;
 
-    // ----- DATOS DEL PROVEEDOR (CLIENTE) -----
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
+    // ----- DATOS DEL CLIENTE (PROVEEDOR) -----
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'bold');
-    doc.text('Cliente:', margin, y);
+    doc.text(datos.proveedor, margin, y);
     y += 14;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`${datos.proveedor}`, margin, y);
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    const dirLines = doc.splitTextToSize(datos.direccion, 200);
+    doc.text(dirLines, margin, y);
+    y += dirLines.length * 12 + 4;
+    // Intentar extraer ciudad, estado y código postal de la dirección
+    const dirParts = datos.direccion.split(',');
+    if (dirParts.length > 1) {
+      const lastPart = dirParts[dirParts.length - 1].trim();
+      if (lastPart.length > 5) {
+        doc.text(lastPart, margin, y);
+        y += 12;
+      }
+    }
+    doc.text('México', margin, y);
     y += 12;
-    doc.text(`${datos.direccion}`, margin, y);
-    y += 12;
-    doc.text(`RFC: ${datos.rfc}`, margin, y);
+    if (datos.rfc && datos.rfc !== 'NA') {
+      doc.text(`RFC: ${datos.rfc}`, margin, y);
+      y += 12;
+    }
+    // Teléfono ficticio
+    doc.text('📞 +52 464 647 3274', margin, y);
     y += 20;
 
-    // ----- NÚMERO DE OC Y REFERENCIAS (TABLA ESTILO ODOO) -----
+    // ----- NÚMERO DE ORDEN DE COMPRA (EN ROJO) -----
     const codigoFinal = generarCodigoOC(
         datos.empresa,
         datos.departamento,
@@ -1178,149 +1198,134 @@ tr:hover{background:var(--gray-50)}
         consecutivoOC
     );
 
-    // Tabla de información de la OC (estilo Odoo)
-    const infoHeaders = ['Su referencia', 'Proyecto', 'Fecha de OC', 'Vencimiento', 'Responsable'];
-    const infoData = [
-        [datos.referencia || 'N/A', datos.proyectonombre, new Date().toLocaleDateString(), new Date(datos.fechapago).toLocaleDateString(), datos.responsable]
-    ];
+    doc.setFontSize(16);
+    doc.setTextColor(200, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Orden de compra #${codigoFinal}`, margin, y);
+    y += 20;
 
-    doc.autoTable({
-        head: [infoHeaders],
-        body: infoData,
-        startY: y,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 4, font: 'helvetica' },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-        columnStyles: {
-            0: { cellWidth: 80 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 60 },
-            3: { cellWidth: 60 },
-            4: { cellWidth: 70 }
-        }
+    // ----- COMPRADOR Y FECHAS -----
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Comprador', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(datos.responsable, margin + 80, y);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fecha de la orden:', margin + 200, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date().toLocaleDateString(), margin + 330, y);
+    y += 16;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Llegada esperada:', margin + 200, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(datos.fechaentrega).toLocaleDateString(), margin + 330, y);
+    y += 20;
+
+    // ----- TABLA DE PRODUCTOS -----
+    const headers = ['Descripción', 'Cant.', 'Precio unitario', 'Desc.', 'Impuestos', 'Importe'];
+    const rows = datos.productos.map((p, i) => {
+        const desc = p.descripcion || '';
+        const parte = p.parte ? `\nNúm. Parte: ${p.parte}` : '';
+        return [
+            desc + parte,
+            (p.cantidad || 0) + ' ' + (p.udm || 'PZA'),
+            formatoMoneda(p.precioUnitario, datos.moneda),
+            (p.descuento || 0) + '%',
+            'IVA(' + (p.impuesto || 0) + '%)',
+            formatoMoneda(p.importe, datos.moneda)
+        ];
     });
-
-    y = doc.lastAutoTable.finalY + 16;
-
-    // ----- TABLA DE PRODUCTOS (ESTILO ODOO) -----
-    const headers = ['Descripción', 'Cantidad', 'Precio unitario', 'Impuestos', 'Importe'];
-    const rows = datos.productos.map((p, i) => [
-        p.descripcion || '',
-        p.cantidad || 0,
-        formatoMoneda(p.precioUnitario, datos.moneda),
-        (p.impuesto || 0) + '%',
-        formatoMoneda(p.importe, datos.moneda)
-    ]);
 
     doc.autoTable({
         head: [headers],
         body: rows,
         startY: y,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 9, cellPadding: 5, font: 'helvetica' },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, font: 'helvetica', fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 4, font: 'helvetica' },
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
         columnStyles: {
             0: { cellWidth: 'auto' },
             1: { cellWidth: 40 },
-            2: { cellWidth: 60 },
-            3: { cellWidth: 50 },
-            4: { cellWidth: 60 }
+            2: { cellWidth: 55 },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 45 },
+            5: { cellWidth: 50 }
         }
     });
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ----- NOTAS / TÉRMINOS Y CONDICIONES (estilo Odoo) -----
+    // ----- DATOS BANCARIOS -----
     doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.setFont('helvetica', 'italic');
-    const notas = `Mantenimiento del código personalizado: Si en algún momento añade código personalizado a su base de datos, el mantenimiento de este código tendrá un costo adicional recurrente por cada 100 líneas. El servicio de mantenimiento incluye correcciones de bugs, soporte técnico y actualizaciones.`;
-    const notasLines = doc.splitTextToSize(notas, pageWidth - 2 * margin);
-    doc.text(notasLines, margin, y);
-    y += notasLines.length * 10 + 10;
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Precios expresados en moneda nacional (${datos.moneda})`, margin, y);
+    y += 12;
+    doc.text(`GIE-VC-OC-${datos.proveedor.substring(0, 15)}-${datos.proyectonombre.substring(0, 10)}`, margin, y);
+    y += 12;
+    doc.text('TRANSFERENCIA ELECTRONICA', margin, y);
+    y += 12;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Cuenta de retiro: ${datos.cuenta || 'N/A'}`, margin, y);
+    doc.text(`Cuenta de depósito: ${datos.clabe || 'N/A'}`, margin + 250, y);
+    y += 16;
 
-    // ----- TOTALES (estilo Odoo) -----
+    // ----- TOTALES (tabla de resumen) -----
     const subtotal = datos.montototal / (1 + (datos.productos[0]?.impuesto || 0) / 100);
     const iva = datos.montototal - subtotal;
 
-    const totalX = pageWidth - margin - 120;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    const totalHeaders = ['', 'Subtotal', 'IVA ' + (datos.productos[0]?.impuesto || 0) + '%', 'Total'];
+    const totalData = [
+        ['', formatoMoneda(subtotal, datos.moneda), formatoMoneda(iva, datos.moneda), formatoMoneda(datos.montototal, datos.moneda)]
+    ];
+
+    doc.autoTable({
+        head: [totalHeaders],
+        body: totalData,
+        startY: y,
+        margin: { left: margin + 200, right: margin },
+        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 50 }
+        }
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+
+    // ----- TÉRMINOS DE PAGO -----
+    doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    doc.text('Subtotal:', totalX, y);
-    doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 14;
-    doc.text('IVA:', totalX, y);
-    doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 16;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('TOTAL:', totalX, y);
-    doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
+    doc.text('Términos de pago: 30 días', margin, y);
     y += 20;
 
-    // ----- AUTORIZACIONES (estilo Odoo - en paralelo) -----
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('AUTORIZACIONES', margin, y + 10);
-    y += 30;
-
-    const solicitante = datos.responsable || 'No definido';
-    const jefe = getJefeDepto(datos.empresa, datos.departamento);
-    const director = getDirector();
-    const colWidth = (pageWidth - 2 * margin) / 3;
-
-    function dibujarFirmaOdoo(doc, x, y, nombre, titulo) {
-        const lineWidth = colWidth - 20;
-        doc.setDrawColor(100, 100, 100);
-        doc.setLineWidth(0.5);
-        doc.line(x, y, x + lineWidth, y);
-
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.setFont('helvetica', 'normal');
-        doc.text(titulo, x + (lineWidth / 2), y - 6, { align: 'center' });
-
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text(nombre, x + (lineWidth / 2), y + 12, { align: 'center' });
-
-        doc.setFontSize(7);
-        doc.setTextColor(150, 150, 150);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Pendiente', x + (lineWidth / 2), y + 22, { align: 'center' });
-    }
-
-    const x1 = margin;
-    const x2 = margin + colWidth;
-    const x3 = margin + colWidth * 2;
-
-    dibujarFirmaOdoo(doc, x1, y, solicitante, 'Solicitante');
-    dibujarFirmaOdoo(doc, x2, y, jefe, 'Jefe de Departamento');
-    dibujarFirmaOdoo(doc, x3, y, director, 'Director General');
-
-    y += 50;
-
-    // ----- PIE DE PÁGINA (estilo Odoo) -----
+    // ----- PIE DE PÁGINA -----
     const pieY = doc.internal.pageSize.height - 40;
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
     doc.line(margin, pieY, pageWidth - margin, pieY);
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
     doc.setFont('helvetica', 'normal');
-    doc.text(`OC: ${codigoFinal}`, margin, pieY + 10);
+    doc.text(`GIE-OC-VC`, margin, pieY + 10);
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(8);
+    doc.setTextColor(11, 26, 51);
+    doc.setFont('helvetica', 'bold');
     doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', pageWidth / 2, pieY + 10, { align: 'center' });
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Página 1', pageWidth - margin, pieY + 10, { align: 'right' });
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Página 1 / 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
     return doc;
   }
@@ -1547,176 +1552,175 @@ tr:hover{background:var(--gray-50)}
     const margin = 40;
     let y = margin;
 
-    // ----- ENCABEZADO MEMBRETADO ESTILO ODOO -----
-    try {
-        doc.addImage('https://extingue.com.mx/img/logo.png', 'PNG', margin, y - 10, 80, 30);
-    } catch(e) {
-        doc.setFontSize(14);
-        doc.setTextColor(11, 26, 51);
-        doc.setFont('helvetica', 'bold');
-        doc.text('GRUPO INDUSTRIAL EXTINGUE', margin, y + 10);
-    }
-    
-    y += 30;
-    doc.setFontSize(8);
+    // ----- ENCABEZADO ESTILO IMAGEN -----
+    doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.setFont('helvetica', 'normal');
-    doc.text('Privada del Copalillo #298 Colonia El Copalillo, 36800 Irapuato, Gto.', margin, y);
+    doc.text('Privada del Copalillo #298 lote interior B Colonia El Copalillo, 36800 Irapuato, Gto.', margin, y);
+    y += 14;
+    doc.text('RFC: GIE0402262X3', margin, y);
+    y += 20;
+
+    // ----- DIRECCIÓN DE ENVÍO -----
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Dirección de envío', margin, y);
+    y += 14;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('GRUPO INDUSTRIAL EXTINGUE', margin, y);
+    y += 12;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text('Privada Copalillo No. 298, Int. B Copalillo', margin, y);
+    y += 12;
+    doc.text('36800 Irapuato, GUANAJUATO', margin, y);
     y += 12;
     doc.text('México', margin, y);
     y += 12;
-    
-    doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.text(`RFC: ${oc.rfc || 'GIEXXXXXXX'}`, margin, y);
-    y += 12;
-    doc.text('Régimen fiscal: General de Ley de Personas Morales', margin, y);
+    doc.text('📞 +52 462 600 4936', margin, y);
     y += 20;
 
-    // ----- DATOS DEL PROVEEDOR -----
+    // ----- DATOS DEL CLIENTE -----
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'bold');
+    doc.text(oc.proveedor, margin, y);
+    y += 14;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    const dirLines = doc.splitTextToSize(oc.direccion, 200);
+    doc.text(dirLines, margin, y);
+    y += dirLines.length * 12 + 4;
+    const dirParts = oc.direccion.split(',');
+    if (dirParts.length > 1) {
+      const lastPart = dirParts[dirParts.length - 1].trim();
+      if (lastPart.length > 5) {
+        doc.text(lastPart, margin, y);
+        y += 12;
+      }
+    }
+    doc.text('México', margin, y);
+    y += 12;
+    if (oc.rfc && oc.rfc !== 'NA') {
+      doc.text(`RFC: ${oc.rfc}`, margin, y);
+      y += 12;
+    }
+    doc.text('📞 +52 464 647 3274', margin, y);
+    y += 20;
+
+    // ----- NÚMERO DE ORDEN DE COMPRA (EN ROJO) -----
+    doc.setFontSize(16);
+    doc.setTextColor(200, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Orden de compra #${oc.codigo}`, margin, y);
+    y += 20;
+
+    // ----- COMPRADOR Y FECHAS -----
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.text('Cliente:', margin, y);
-    y += 14;
+    doc.text('Comprador', margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(oc.proveedor, margin, y);
-    y += 12;
-    doc.text(oc.direccion, margin, y);
-    y += 12;
-    doc.text(`RFC: ${oc.rfc}`, margin, y);
+    doc.text(oc.responsable, margin + 80, y);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fecha de la orden:', margin + 200, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(oc.fechacreacion).toLocaleDateString(), margin + 330, y);
+    y += 16;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Llegada esperada:', margin + 200, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(oc.fechaentrega).toLocaleDateString(), margin + 330, y);
     y += 20;
 
-    // ----- TABLA DE INFORMACIÓN -----
-    const infoHeaders = ['Su referencia', 'Proyecto', 'Fecha de OC', 'Vencimiento', 'Responsable'];
-    const infoData = [
-        [oc.referencia || 'N/A', oc.proyecto, new Date(oc.fechacreacion).toLocaleDateString(), new Date(oc.fechapago).toLocaleDateString(), oc.responsable]
-    ];
-
-    doc.autoTable({
-        head: [infoHeaders],
-        body: infoData,
-        startY: y,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 4, font: 'helvetica' },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-        columnStyles: {
-            0: { cellWidth: 80 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 60 },
-            3: { cellWidth: 60 },
-            4: { cellWidth: 70 }
-        }
-    });
-
-    y = doc.lastAutoTable.finalY + 16;
-
     // ----- TABLA DE PRODUCTOS -----
-    const headers = ['Descripción', 'Cantidad', 'Precio unitario', 'Impuestos', 'Importe'];
-    const rows = oc.productos.map((p, i) => [
-        p.descripcion || '',
-        p.cantidad || 0,
-        formatoMoneda(p.precioUnitario, oc.moneda),
-        (p.impuesto || 0) + '%',
-        formatoMoneda(p.importe, oc.moneda)
-    ]);
+    const headers = ['Descripción', 'Cant.', 'Precio unitario', 'Desc.', 'Impuestos', 'Importe'];
+    const rows = oc.productos.map((p, i) => {
+        const desc = p.descripcion || '';
+        const parte = p.parte ? `\nNúm. Parte: ${p.parte}` : '';
+        return [
+            desc + parte,
+            (p.cantidad || 0) + ' ' + (p.udm || 'PZA'),
+            formatoMoneda(p.precioUnitario, oc.moneda),
+            (p.descuento || 0) + '%',
+            'IVA(' + (p.impuesto || 0) + '%)',
+            formatoMoneda(p.importe, oc.moneda)
+        ];
+    });
 
     doc.autoTable({
         head: [headers],
         body: rows,
         startY: y,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 9, cellPadding: 5, font: 'helvetica' },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, font: 'helvetica', fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 4, font: 'helvetica' },
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
         columnStyles: {
             0: { cellWidth: 'auto' },
             1: { cellWidth: 40 },
-            2: { cellWidth: 60 },
-            3: { cellWidth: 50 },
-            4: { cellWidth: 60 }
+            2: { cellWidth: 55 },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 45 },
+            5: { cellWidth: 50 }
         }
     });
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ----- NOTAS -----
+    // ----- DATOS BANCARIOS -----
     doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.setFont('helvetica', 'italic');
-    const notas = `Mantenimiento del código personalizado: Si en algún momento añade código personalizado a su base de datos, el mantenimiento de este código tendrá un costo adicional recurrente por cada 100 líneas. El servicio de mantenimiento incluye correcciones de bugs, soporte técnico y actualizaciones.`;
-    const notasLines = doc.splitTextToSize(notas, pageWidth - 2 * margin);
-    doc.text(notasLines, margin, y);
-    y += notasLines.length * 10 + 10;
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Precios expresados en moneda nacional (${oc.moneda})`, margin, y);
+    y += 12;
+    doc.text(`GIE-VC-OC-${oc.proveedor.substring(0, 15)}-${oc.proyecto.substring(0, 10)}`, margin, y);
+    y += 12;
+    doc.text('TRANSFERENCIA ELECTRONICA', margin, y);
+    y += 12;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Cuenta de retiro: ${oc.cuenta || 'N/A'}`, margin, y);
+    doc.text(`Cuenta de depósito: ${oc.clabe || 'N/A'}`, margin + 250, y);
+    y += 16;
 
     // ----- TOTALES -----
     const subtotal = oc.montototal / (1 + (oc.productos[0]?.impuesto || 0) / 100);
     const iva = oc.montototal - subtotal;
 
-    const totalX = pageWidth - margin - 120;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    const totalHeaders = ['', 'Subtotal', 'IVA ' + (oc.productos[0]?.impuesto || 0) + '%', 'Total'];
+    const totalData = [
+        ['', formatoMoneda(subtotal, oc.moneda), formatoMoneda(iva, oc.moneda), formatoMoneda(oc.montototal, oc.moneda)]
+    ];
+
+    doc.autoTable({
+        head: [totalHeaders],
+        body: totalData,
+        startY: y,
+        margin: { left: margin + 200, right: margin },
+        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 50 }
+        }
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+
+    // ----- TÉRMINOS DE PAGO -----
+    doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    doc.text('Subtotal:', totalX, y);
-    doc.text(formatoMoneda(subtotal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 14;
-    doc.text('IVA:', totalX, y);
-    doc.text(formatoMoneda(iva, oc.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 16;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('TOTAL:', totalX, y);
-    doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
+    doc.text('Términos de pago: 30 días', margin, y);
     y += 20;
-
-    // ----- AUTORIZACIONES -----
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('AUTORIZACIONES', margin, y + 10);
-    y += 30;
-
-    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
-    const solicitanteNombre = oc.responsable || 'No definido';
-    const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
-    const directorNombre = getDirector();
-    const colWidth = (pageWidth - 2 * margin) / 3;
-
-    function dibujarFirmaOdoo(doc, x, y, nombre, titulo, fecha) {
-        const lineWidth = colWidth - 20;
-        doc.setDrawColor(100, 100, 100);
-        doc.setLineWidth(0.5);
-        doc.line(x, y, x + lineWidth, y);
-
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.setFont('helvetica', 'normal');
-        doc.text(titulo, x + (lineWidth / 2), y - 6, { align: 'center' });
-
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text(nombre, x + (lineWidth / 2), y + 12, { align: 'center' });
-
-        doc.setFontSize(7);
-        doc.setTextColor(150, 150, 150);
-        doc.setFont('helvetica', 'normal');
-        doc.text(fecha || 'Pendiente', x + (lineWidth / 2), y + 22, { align: 'center' });
-    }
-
-    const x1 = margin;
-    const x2 = margin + colWidth;
-    const x3 = margin + colWidth * 2;
-
-    const fechaSolicitante = oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
-    const fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
-    const fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
-
-    dibujarFirmaOdoo(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
-    dibujarFirmaOdoo(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
-    dibujarFirmaOdoo(doc, x3, y, directorNombre, 'Director General', fechaDirector);
-
-    y += 50;
 
     // ----- PIE DE PÁGINA -----
     const pieY = doc.internal.pageSize.height - 40;
@@ -1724,18 +1728,20 @@ tr:hover{background:var(--gray-50)}
     doc.setLineWidth(0.5);
     doc.line(margin, pieY, pageWidth - margin, pieY);
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
     doc.setFont('helvetica', 'normal');
-    doc.text(`OC: ${oc.codigo}`, margin, pieY + 10);
+    doc.text(`GIE-OC-VC`, margin, pieY + 10);
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(8);
+    doc.setTextColor(11, 26, 51);
+    doc.setFont('helvetica', 'bold');
     doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', pageWidth / 2, pieY + 10, { align: 'center' });
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Página 1', pageWidth - margin, pieY + 10, { align: 'right' });
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Página 1 / 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
     doc.save(`OC_${oc.codigo}.pdf`);
   }
