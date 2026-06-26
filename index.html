@@ -394,7 +394,6 @@ tr:hover{background:var(--gray-50)}
   let ocPreviewData = null;
   let ocPreviewPDF = null;
 
-  // ---------- FUNCIONES DE COLOR ----------
   function getColorByEmpresa(empresa) {
     if (!empresa) return '#6b7280';
     const emp = empresa.trim().toUpperCase();
@@ -403,7 +402,6 @@ tr:hover{background:var(--gray-50)}
     return '#6b7280';
   }
 
-  // ---------- MAYÚSCULAS AUTOMÁTICAS ----------
   document.addEventListener('input', function(e) {
     const target = e.target;
     if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
@@ -414,7 +412,6 @@ tr:hover{background:var(--gray-50)}
     }
   });
 
-  // ---------- GENERAR CÓDIGO OC ----------
   function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
       const prefijos = {
           'GRUPO INDUSTRIAL EXTINGUE': {
@@ -452,7 +449,6 @@ tr:hover{background:var(--gray-50)}
       return simbolo + monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  // ---------- PERMISOS ----------
   function normalizar(str) { return str.trim().toUpperCase(); }
   function usuarioPuedeAcceder(usuario, empresa, depto) {
     if (!usuario) return false;
@@ -520,7 +516,6 @@ tr:hover{background:var(--gray-50)}
       }, 0);
   }
 
-  // ---------- SUPABASE ----------
   async function cargarDatos() {
     try {
       const { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
@@ -544,7 +539,6 @@ tr:hover{background:var(--gray-50)}
     }
   }
 
-  // ---------- ACTUALIZAR RESPONSABLES ----------
   window.actualizarResponsables = function() {
     const selectProyecto = document.getElementById('selectProyecto');
     const selectResp = document.getElementById('responsableOC');
@@ -586,7 +580,6 @@ tr:hover{background:var(--gray-50)}
     }
   };
 
-  // ---------- ELIMINAR TODO ----------
   window.eliminarTodosProyectos = async function() {
     if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
     if (!confirm('⚠️ ¿Estás seguro de eliminar TODOS los proyectos y TODAS las OC?')) return;
@@ -603,7 +596,6 @@ tr:hover{background:var(--gray-50)}
     }
   };
 
-  // ---------- LOGIN ----------
   window.login = function() {
     const userInput = document.getElementById('usuario');
     const passInput = document.getElementById('password');
@@ -732,7 +724,6 @@ tr:hover{background:var(--gray-50)}
 
   window.salir = function() { location.reload(); };
 
-  // ---------- PROYECTOS ----------
   window.crearProyecto = async function() {
     let empresa, departamento;
     if (['Director General','Administrador','Finanzas'].includes(actual.rol)) {
@@ -803,7 +794,7 @@ tr:hover{background:var(--gray-50)}
     render();
   };
 
-  // ---------- PRODUCTOS DINÁMICOS (CON CÁLCULO AUTOMÁTICO) ----------
+  // ---------- PRODUCTOS DINÁMICOS ----------
   window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0, descuento = 0, impuesto = 0) {
     const tbody = document.getElementById('cuerpoProductos');
     const fila = document.createElement('tr');
@@ -901,8 +892,8 @@ tr:hover{background:var(--gray-50)}
     const rfc = document.getElementById('rfc').value.trim().toUpperCase();
     const direccion = document.getElementById('direccion').value.trim().toUpperCase();
     const usoCFDI = document.getElementById('usoCFDI').value;
-    // Nombre correcto de la columna en BD: direcccionentrega (con tres c)
-    const direcccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
+    // El campo en el HTML se llama 'direccionEntrega' pero la columna en BD es 'direccionentrega' (minúscula)
+    const direccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
     const moneda = document.getElementById('monedaOC').value;
     const fechaPago = document.getElementById('fechaPago').value;
     const responsable = document.getElementById('responsableOC').value;
@@ -919,7 +910,7 @@ tr:hover{background:var(--gray-50)}
       tipoCambioInicial = parseFloat(tcInput);
     }
 
-    if (!proveedor || !direccion || !direcccionentrega || !fechaPago || !responsable) {
+    if (!proveedor || !direccion || !direccionentrega || !fechaPago || !responsable) {
       msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO Y RESPONSABLE.</div>';
       return null;
     }
@@ -982,7 +973,7 @@ tr:hover{background:var(--gray-50)}
       rfc: rfc || 'NA',
       direccion,
       usoCFDI,
-      direcccionentrega,  // ← nombre correcto para la BD
+      direccionentrega,      // ← clave correcta para la BD (minúscula)
       moneda,
       tipoCambioInicial,
       montoTotal,
@@ -1059,9 +1050,9 @@ tr:hover{background:var(--gray-50)}
     doc.text(`Dirección: ${datos.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const lines = doc.splitTextToSize(`Dirección: ${datos.direccion}`, pageWidth - 2*margin);
     y += lines.length * 16 + 2;
-    // Usamos el nombre correcto para mostrar
-    doc.text(`Dirección de entrega: ${datos.direcccionentrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
-    const linesEntrega = doc.splitTextToSize(`Dirección de entrega: ${datos.direcccionentrega}`, pageWidth - 2*margin);
+    // Mostrar la dirección de entrega (se obtiene del campo 'direccionentrega' en datos)
+    doc.text(`Dirección de entrega: ${datos.direccionentrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesEntrega = doc.splitTextToSize(`Dirección de entrega: ${datos.direccionentrega}`, pageWidth - 2*margin);
     y += linesEntrega.length * 16 + 2;
     doc.text(`Uso CFDI: ${datos.usoCFDI}`, margin, y);
     y += 16;
@@ -1203,7 +1194,7 @@ tr:hover{background:var(--gray-50)}
       rfc: datos.rfc,
       direccion: datos.direccion,
       usoCFDI: datos.usoCFDI,
-      direcccionentrega: datos.direcccionentrega,  // ← nombre correcto
+      direccionentrega: datos.direccionentrega,   // ← clave correcta
       moneda: datos.moneda,
       tipoCambio: datos.tipoCambioInicial,
       montoTotal: datos.montoTotal,
@@ -1268,7 +1259,7 @@ tr:hover{background:var(--gray-50)}
       rfc: datos.rfc,
       direccion: datos.direccion,
       usoCFDI: datos.usoCFDI,
-      direcccionentrega: datos.direcccionentrega,  // ← nombre correcto
+      direccionentrega: datos.direccionentrega,   // ← clave correcta
       moneda: datos.moneda,
       tipoCambio: datos.tipoCambioInicial,
       montoTotal: datos.montoTotal,
@@ -1333,8 +1324,8 @@ tr:hover{background:var(--gray-50)}
     doc.text(`Dirección: ${oc.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const linesDir = doc.splitTextToSize(`Dirección: ${oc.direccion}`, pageWidth - 2*margin);
     y += linesDir.length * 16 + 2;
-    doc.text(`Dirección de entrega: ${oc.direcccionentrega || 'No especificada'}`, margin, y, { maxWidth: pageWidth - 2*margin });
-    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direcccionentrega || 'No especificada'}`, pageWidth - 2*margin);
+    doc.text(`Dirección de entrega: ${oc.direccionentrega || 'No especificada'}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direccionentrega || 'No especificada'}`, pageWidth - 2*margin);
     y += linesEnt.length * 16 + 2;
     doc.text(`Uso CFDI: ${oc.usoCFDI}`, margin, y);
     y += 16;
