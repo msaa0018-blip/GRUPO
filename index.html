@@ -151,6 +151,10 @@ tr:hover{background:#f8fafc}
   <!-- Tabla Proyectos -->
   <div class="card" id="tablaProyectosCard">
     <h2>📊 Control por Proyecto</h2>
+    <!-- Acciones de administrador -->
+    <div id="adminActions" class="hidden" style="margin-bottom:10px;">
+      <button class="danger" onclick="window.eliminarTodosProyectos()">🗑️ Eliminar todos los proyectos y OC</button>
+    </div>
     <table>
       <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>% Pagado</th><th>Acciones</th></tr></thead>
       <tbody id="tablaProyectos"></tbody>
@@ -508,6 +512,28 @@ tr:hover{background:#f8fafc}
     }
   };
 
+  // ---------- ELIMINAR TODOS LOS PROYECTOS (SOLO ADMIN) ----------
+  window.eliminarTodosProyectos = async function() {
+    if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+    if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar TODOS los proyectos y TODAS las órdenes de compra? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Última confirmación: ¿Eliminar todo el sistema de proyectos y OC?')) return;
+
+    try {
+      const { error: errOrdenes } = await supabase.from('ordenes').delete().neq('id', 0);
+      if (errOrdenes) throw errOrdenes;
+      const { error: errProyectos } = await supabase.from('proyectos').delete().neq('id', 0);
+      if (errProyectos) throw errProyectos;
+      proyectos = [];
+      ordenes = [];
+      consecutivoOC = 1;
+      render();
+      alert('✅ Todos los proyectos y OC han sido eliminados.');
+    } catch (error) {
+      console.error('Error al eliminar todo:', error);
+      alert('❌ Error al eliminar: ' + error.message);
+    }
+  };
+
   // ---------- LOGIN ----------
   window.login = function() {
     console.log('🔵 Login ejecutado');
@@ -548,6 +574,13 @@ tr:hover{background:#f8fafc}
       infoSesion += ` - ${opciones.length} empresas/departamentos`;
     }
     document.getElementById('sesion').textContent = infoSesion;
+    
+    // Mostrar/ocultar acciones de administrador
+    if (actual.rol === 'Administrador') {
+      document.getElementById('adminActions').classList.remove('hidden');
+    } else {
+      document.getElementById('adminActions').classList.add('hidden');
+    }
     
     // Configurar campos de proyecto
     const empresaSelect = document.getElementById('empresaSelect');
@@ -712,7 +745,9 @@ tr:hover{background:#f8fafc}
       proyectos.push(data[0]);
       render();
       msgDiv.innerHTML = '<div class="success">✅ Proyecto creado.</div>';
+      // Limpiar campos de proyecto, cliente y presupuesto
       document.getElementById('nombreProyecto').value = '';
+      document.getElementById('cliente').value = '';
       document.getElementById('presupuesto').value = '';
     } catch (error) {
       console.error('Error inesperado:', error);
@@ -751,7 +786,7 @@ tr:hover{background:#f8fafc}
       <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" onchange="recalcularFila(this)"></td>
       <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" onchange="recalcularFila(this)"></td>
       <td><input class="importe" type="text" value="0.00" readonly></td>
-      <td><button class="danger" onclick="eliminarFilaProducto(this)">🗑️</button></td>
+      <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
     `;
     tbody.appendChild(fila);
     recalcularFila(fila);
@@ -1835,7 +1870,9 @@ tr:hover{background:#f8fafc}
       if (!esFinanzas) {
         botones += `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
       }
-      if (esAdmin) botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
+      if (esAdmin) {
+        botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
+      }
 
       tablaProyectos.innerHTML += `
         <tr>
