@@ -180,43 +180,8 @@ tr:hover{background:var(--gray-50)}
 .progress-bar{height:10px;background:var(--gray-200);border-radius:6px;overflow:hidden;margin-top:4px}
 .progress-bar .fill{height:100%;border-radius:6px;transition:width .4s}
 
-/* Responsive */
-@media (max-width:768px){
-  header{padding:10px 12px}
-  header .logo .company .name{font-size:16px}
-  header .logo img{height:30px}
-  header small{font-size:10px}
-  .container{padding:8px 10px}
-  .card{padding:14px 12px;margin:10px 0}
-  .card h2{font-size:1.1rem}
-  .flex{gap:6px}
-  input,select,button,textarea{padding:8px 12px;font-size:13px;min-height:40px}
-  button{min-height:40px;min-width:40px;padding:8px 14px;font-size:13px}
-  table{font-size:12px;min-width:500px}
-  th,td{padding:6px 8px}
-  .badge{font-size:11px;padding:2px 10px}
-  .productos-tabla input,.productos-tabla textarea,.productos-tabla select{font-size:12px;padding:4px 6px;min-width:40px}
-  .productos-tabla textarea.desc{min-width:80px}
-  .donut-container{width:130px;height:130px}
-  .donut-container .center-text{font-size:17px}
-  .resumen-totales{font-size:13px;padding:10px 12px;gap:10px 20px}
-  #pdfPreviewModal .modal-body iframe{height:300px}
-  .actions button{font-size:11px;padding:4px 8px;min-height:28px}
-}
-@media (max-width:480px){
-  header .logo .company .sub{display:none}
-  .card{padding:10px 8px}
-  table{font-size:11px;min-width:400px}
-  th,td{padding:4px 6px}
-  .badge{font-size:10px;padding:2px 8px}
-  input,select,button,textarea{font-size:12px;padding:6px 10px;min-height:36px}
-  button{min-height:36px;min-width:36px;padding:6px 10px;font-size:12px}
-  .productos-tabla input,.productos-tabla textarea,.productos-tabla select{font-size:11px;padding:3px 4px}
-  .donut-container{width:110px;height:110px}
-  .donut-container .center-text{font-size:15px}
-  .donut-container .center-text small{font-size:10px}
-  #pdfPreviewModal .modal-body iframe{height:250px}
-}
+/* Colores de departamentos */
+.depto-color{display:inline-block;padding:2px 10px;border-radius:12px;font-weight:500;color:white;font-size:12px}
 </style>
 </head>
 <body>
@@ -226,10 +191,10 @@ tr:hover{background:var(--gray-50)}
     <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
     <div class="company">
       <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-      <span class="sub">Workflow OC ERP v46</span>
+      <span class="sub">Workflow OC ERP v47</span>
     </div>
   </div>
-  <small>BETA · MAYÚSCULAS</small>
+  <small>BETA · Colores por empresa</small>
 </header>
 
 <div class="container">
@@ -385,7 +350,7 @@ tr:hover{background:var(--gray-50)}
     <div id="resumenTotales" class="resumen-totales"></div>
     <div class="table-wrapper">
       <table>
-        <thead><tr><th>Código</th><th>Proyecto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="tablaOC"></tbody>
       </table>
     </div>
@@ -462,12 +427,19 @@ tr:hover{background:var(--gray-50)}
   let ocPreviewData = null;
   let ocPreviewPDF = null;
 
+  // ---------- FUNCIONES DE COLOR POR EMPRESA ----------
+  function getColorByEmpresa(empresa) {
+    if (!empresa) return '#6b7280';
+    const emp = empresa.trim().toUpperCase();
+    if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return '#FF0000';
+    if (emp.includes('VEXPAR OPERACIONES')) return '#0000FF';
+    return '#6b7280'; // gris por defecto
+  }
+
   // ---------- CONVERSIÓN AUTOMÁTICA A MAYÚSCULAS EN INPUTS ----------
   document.addEventListener('input', function(e) {
     const target = e.target;
-    // Convertir a mayúsculas todos los campos de texto y textareas
     if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
-      // No aplicar a campos de búsqueda o específicos si se necesita, pero aplicamos a todos
       const start = target.selectionStart;
       const end = target.selectionEnd;
       target.value = target.value.toUpperCase();
@@ -1012,7 +984,6 @@ tr:hover{background:var(--gray-50)}
       return null;
     }
 
-    // Todos los campos de texto se convierten a mayúsculas
     const proveedor = document.getElementById('proveedor').value.trim().toUpperCase();
     const rfc = document.getElementById('rfc').value.trim().toUpperCase();
     const direccion = document.getElementById('direccion').value.trim().toUpperCase();
@@ -1847,7 +1818,7 @@ tr:hover{background:var(--gray-50)}
     render();
   };
 
-  // ---------- DASHBOARD ----------
+  // ---------- DASHBOARD (con colores) ----------
   window.mostrarDashboard = function(index) {
     const proyecto = proyectos[index];
     if (!proyecto) return;
@@ -1867,6 +1838,7 @@ tr:hover{background:var(--gray-50)}
     const saludable = porcentaje <= 60;
     const color = saludable ? '#22c55e' : '#dc2626';
     const monedaSimbolo = proyecto.moneda === 'USD' ? 'USD ' : '$';
+    const deptoColor = getColorByEmpresa(proyecto.empresa);
 
     const totales = { MXN: 0, USD: 0 };
     ocProyecto.forEach(o => {
@@ -1883,7 +1855,7 @@ tr:hover{background:var(--gray-50)}
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px">
           <div>
             <p><strong>Empresa:</strong> ${proyecto.empresa}</p>
-            <p><strong>Departamento:</strong> ${proyecto.departamento}</p>
+            <p><strong>Departamento:</strong> <span class="depto-color" style="background-color:${deptoColor}">${proyecto.departamento}</span></p>
             <p><strong>Cliente:</strong> ${proyecto.cliente}</p>
             <p><strong>Presupuesto (${proyecto.moneda}):</strong> ${formatoMoneda(proyecto.presupuesto, proyecto.moneda)}</p>
             <p><strong>Límite 60% (${proyecto.moneda}):</strong> ${formatoMoneda(proyecto.limite, proyecto.moneda)}</p>
@@ -1985,7 +1957,7 @@ tr:hover{background:var(--gray-50)}
     document.getElementById('app').style.display = 'block';
   };
 
-  // ---------- RENDER ----------
+  // ---------- RENDER (con colores) ----------
   function render() {
     const tablaProyectos = document.getElementById('tablaProyectos');
     const selectProyecto = document.getElementById('selectProyecto');
@@ -2016,6 +1988,7 @@ tr:hover{background:var(--gray-50)}
       const esAdmin = actual && actual.rol === 'Administrador';
       const esFinanzas = actual && actual.rol === 'Finanzas';
       const monedaSimbolo = p.moneda === 'USD' ? 'USD ' : '$';
+      const deptoColor = getColorByEmpresa(p.empresa);
 
       let botones = '';
       if (!esFinanzas) {
@@ -2028,7 +2001,7 @@ tr:hover{background:var(--gray-50)}
       tablaProyectos.innerHTML += `
         <tr>
           <td>${p.empresa}</td>
-          <td>${p.departamento}</td>
+          <td><span class="depto-color" style="background-color:${deptoColor}">${p.departamento}</span></td>
           <td><strong>${p.nombre}</strong></td>
           <td>${p.cliente}</td>
           <td>${formatoMoneda(p.presupuesto, p.moneda)}</td>
@@ -2163,11 +2136,13 @@ tr:hover{background:var(--gray-50)}
 
       const proyecto = proyectos.find(p => p.nombre === o.proyecto);
       const cliente = proyecto ? proyecto.cliente : '—';
+      const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
       tablaOC.innerHTML += `
         <tr>
           <td><code>${o.codigo}</code></td>
           <td>${o.proyecto}</td>
+          <td><span class="depto-color" style="background-color:${deptoColor}">${proyecto ? proyecto.departamento : '—'}</span></td>
           <td>${cliente}</td>
           <td>${o.proveedor}</td>
           <td>${o.rfc}</td>
