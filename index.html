@@ -416,10 +416,10 @@ tr:hover{background:#f8fafc}
 </div>
 
 <script>
-// ---------- CONFIGURACIÓN DE SUPABASE ----------
+// ---------- CONFIGURACIÓN DE SUPABASE (RENOMBRADO A supabaseClient) ----------
 const supabaseUrl = 'https://xhnydthskuzqddtqrpmx.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // ---------- CONFIGURACIÓN DE USUARIOS ----------
 const USUARIOS = [
@@ -495,14 +495,14 @@ function formatoMoneda(monto, moneda = 'MXN') {
     return simbolo + monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ---------- SUPABASE: CARGAR DATOS ----------
+// ---------- SUPABASE: CARGAR DATOS (usando supabaseClient) ----------
 async function cargarDatos() {
   try {
-    const { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
+    const { data: pData, error: e1 } = await supabaseClient.from('proyectos').select('*');
     if (e1) throw e1;
     proyectos = pData || [];
 
-    const { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
+    const { data: oData, error: e2 } = await supabaseClient.from('ordenes').select('*');
     if (e2) throw e2;
     ordenes = oData || [];
 
@@ -851,7 +851,7 @@ async function crearProyecto() {
     fecha_inicio: fechaInicio,
     fecha_termino: fechaTermino
   };
-  const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]);
+  const { data, error } = await supabaseClient.from('proyectos').insert([nuevoProyecto]);
   if (error) {
     msgDiv.innerHTML = `<div class="alert">⚠️ Error al crear proyecto: ${error.message}</div>`;
     return;
@@ -867,9 +867,9 @@ async function eliminarProyecto(index) {
   if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
   const proyecto = proyectos[index];
   if (!confirm(`¿Eliminar proyecto "${proyecto.nombre}" y todas sus OC asociadas?`)) return;
-  const { error: err1 } = await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
+  const { error: err1 } = await supabaseClient.from('ordenes').delete().eq('proyecto', proyecto.nombre);
   if (err1) alert('Error al eliminar OC asociadas');
-  const { error: err2 } = await supabase.from('proyectos').delete().eq('id', proyecto.id);
+  const { error: err2 } = await supabaseClient.from('proyectos').delete().eq('id', proyecto.id);
   if (err2) {
     alert('Error al eliminar proyecto');
     return;
@@ -1304,7 +1304,7 @@ async function confirmarDesdePreview() {
     elaborador: datos.elaborador
   };
 
-  const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+  const { data, error } = await supabaseClient.from('ordenes').insert([nuevaOC]);
   if (error) {
     alert('Error al guardar OC: ' + error.message);
     return;
@@ -1369,7 +1369,7 @@ async function confirmarOC() {
     elaborador: datos.elaborador
   };
 
-  const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+  const { data, error } = await supabaseClient.from('ordenes').insert([nuevaOC]);
   if (error) {
     alert('Error al guardar OC: ' + error.message);
     return;
@@ -1561,7 +1561,7 @@ async function aprobarSolicitante(index) {
     fechaAprobacionSolicitante: new Date().toISOString(),
     nombreSolicitante: actual.u
   };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   Object.assign(oc, updates);
   render();
@@ -1606,7 +1606,7 @@ async function aprobarJefe(index) {
       nombreDirector: actual.u,
       estadoPago: null
     };
-    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
     if (error) return alert('Error al actualizar OC');
     Object.assign(oc, updates);
     render();
@@ -1623,7 +1623,7 @@ async function aprobarJefe(index) {
     fechaAprobacionJefe: new Date().toISOString(),
     nombreJefe: actual.u
   };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   Object.assign(oc, updates);
   render();
@@ -1642,7 +1642,7 @@ async function autorizarDirector(index) {
       fechaAprobacionDirector: new Date().toISOString(),
       nombreDirector: actual.u
     };
-    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
     if (error) return alert('Error al actualizar OC');
     Object.assign(oc, updates);
     render();
@@ -1656,7 +1656,7 @@ async function autorizarDirector(index) {
     nombreDirector: actual.u,
     estadoPago: null
   };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   Object.assign(oc, updates);
   render();
@@ -1700,7 +1700,7 @@ async function ingresarParidad(index) {
     updates.fechaAprobacionDirector = new Date().toISOString();
     updates.nombreDirector = 'No definido';
   }
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   Object.assign(oc, updates);
   render();
@@ -1715,7 +1715,7 @@ async function marcarPagada(index) {
   const oc = ordenes[index];
   if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
   const updates = { estadoPago: 'PAGADA' };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   oc.estadoPago = 'PAGADA';
   render();
@@ -1753,7 +1753,7 @@ async function registrarFactura(index) {
     montoFactura: monto,
     estado: 'CONCLUIDA'
   };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   Object.assign(oc, updates);
   render();
@@ -1766,7 +1766,7 @@ async function marcarPendiente(index) {
   const oc = ordenes[index];
   if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
   const updates = { estadoPago: 'PENDIENTE' };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   oc.estadoPago = 'PENDIENTE';
   render();
@@ -1778,7 +1778,7 @@ async function cancelarDirector(index) {
   if (oc.pausada) return alert('⚠️ Esta OC está pausada y no puede ser cancelada.');
   if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
   const updates = { estado: 'CANCELADA' };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   oc.estado = 'CANCELADA';
   render();
@@ -1789,7 +1789,7 @@ async function eliminarOC(index) {
   if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
   const oc = ordenes[index];
   if (!confirm(`¿Eliminar OC ${oc.codigo}?`)) return;
-  const { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').delete().eq('id', oc.id);
   if (error) return alert('Error al eliminar OC');
   ordenes.splice(index, 1);
   render();
@@ -1800,7 +1800,7 @@ async function togglePausarOC(index) {
   const oc = ordenes[index];
   const nuevoEstado = !oc.pausada;
   const updates = { pausada: nuevoEstado };
-  const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+  const { error } = await supabaseClient.from('ordenes').update(updates).eq('id', oc.id);
   if (error) return alert('Error al actualizar OC');
   oc.pausada = nuevoEstado;
   render();
