@@ -155,6 +155,64 @@ tr:hover{background:var(--gray-50)}
 .progress-bar{height:10px;background:var(--gray-200);border-radius:6px;overflow:hidden;margin-top:4px}
 .progress-bar .fill{height:100%;border-radius:6px;transition:width .4s}
 .depto-color{display:inline-block;padding:2px 10px;border-radius:12px;font-weight:500;color:white;font-size:12px}
+
+/* Separador visual entre Uso CFDI y Dirección de entrega */
+.separador-cfdi-entrega {
+  display:flex;
+  align-items:center;
+  gap:0;
+  background:var(--gray-100);
+  padding:2px 6px;
+  border-radius:6px;
+  font-weight:600;
+  color:var(--gray-500);
+  font-size:13px;
+  white-space:nowrap;
+  min-width:auto;
+  flex:0 0 auto;
+  border-left:2px solid var(--gray-300);
+  border-right:2px solid var(--gray-300);
+  height:44px;
+}
+.separador-cfdi-entrega span {
+  padding:0 4px;
+}
+.fila-cfdi-entrega {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px 6px;
+  background:var(--gray-50);
+  padding:6px 8px;
+  border-radius:10px;
+  border:1px solid var(--gray-200);
+  margin-top:4px;
+}
+.fila-cfdi-entrega > * {
+  flex:1 1 auto;
+}
+.fila-cfdi-entrega select#usoCFDI {
+  flex:2;
+  min-width:120px;
+}
+.fila-cfdi-entrega input#direccionEntrega {
+  flex:3;
+  min-width:150px;
+}
+.fila-cfdi-entrega select#monedaOC {
+  flex:1;
+  min-width:100px;
+}
+.fila-cfdi-entrega input#paridadInicial {
+  flex:0.8;
+  min-width:80px;
+  width:140px;
+}
+.fila-cfdi-entrega .paridad-label {
+  flex:0.3;
+  font-size:11px;
+  color:var(--gray-500);
+}
 </style>
 </head>
 <body>
@@ -178,7 +236,7 @@ tr:hover{background:var(--gray-50)}
   <div class="flex">
     <input id="usuario" placeholder="Usuario" value="LJGR">
     <input id="password" type="password" placeholder="Contraseña" value="1234">
-    <button id="btnLogin" onclick="window.login()" type="button">Ingresar</button>
+    <button id="btnLogin" type="button">Ingresar</button>
   </div>
   <div class="text-muted mt-10">
     <strong>Usuarios:</strong><br>
@@ -246,9 +304,9 @@ tr:hover{background:var(--gray-50)}
       <input id="rfc" placeholder="RFC (opcional)" value="">
       <input id="direccion" placeholder="Dirección" value="Calle 123">
     </div>
-    <!-- Segunda fila: Uso CFDI y Dirección de entrega (con espaciado reducido) -->
-    <div class="flex" style="gap:4px 8px;">
-      <select id="usoCFDI" style="flex:2;">
+    <!-- Segunda fila: Uso CFDI y Dirección de entrega (con separador visual) -->
+    <div class="fila-cfdi-entrega">
+      <select id="usoCFDI">
         <option value="G01">G01 - ADQUISICION DE MERCANCIAS</option>
         <option value="G03">G03 - GASTOS EN GENERAL</option>
         <option value="I03">I03 - EQUIPO DE TRANSPORTE</option>
@@ -256,13 +314,14 @@ tr:hover{background:var(--gray-50)}
         <option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option>
         <option value="P01">P01 - POR DEFINIR</option>
       </select>
-      <input id="direccionEntrega" placeholder="Dirección de entrega" value="Calle Entrega 456" style="flex:3;min-width:150px;">
-      <select id="monedaOC" onchange="window.mostrarParidadInicial()" style="flex:1;min-width:100px;">
+      <div class="separador-cfdi-entrega"><span>▶</span></div>
+      <input id="direccionEntrega" placeholder="Dirección de entrega" value="Calle Entrega 456">
+      <select id="monedaOC" onchange="window.mostrarParidadInicial()">
         <option value="MXN">Pesos (MXN)</option>
         <option value="USD">Dólares (USD)</option>
       </select>
-      <input id="paridadInicial" type="number" placeholder="Tipo Cambio Inicial" value="20.00" style="width:140px;display:none;flex:0.8;min-width:80px;">
-      <span id="paridadInicialLabel" style="display:none;font-size:11px;color:var(--gray-500);flex:0.3;">(MXN/USD)</span>
+      <input id="paridadInicial" type="number" placeholder="Tipo Cambio Inicial" value="20.00" style="display:none;">
+      <span id="paridadInicialLabel" class="paridad-label" style="display:none;">(MXN/USD)</span>
     </div>
     <!-- Tercera fila: Fecha de pago y Responsable -->
     <div class="flex">
@@ -602,31 +661,19 @@ tr:hover{background:var(--gray-50)}
     }
   };
 
-  // FUNCIÓN LOGIN - AHORA CON onclick EN EL BOTÓN
   window.login = function() {
-    console.log('🔵 Login ejecutado');
     const userInput = document.getElementById('usuario');
     const passInput = document.getElementById('password');
     const errorDiv = document.getElementById('error');
-    
-    if (!userInput || !passInput) {
-      alert('❌ No se encontraron los campos');
-      return;
-    }
-    
+    if (!userInput || !passInput) { alert('❌ Campos no encontrados'); return; }
     const user = userInput.value.trim().toUpperCase();
     const pass = passInput.value.trim();
-    
-    console.log('Usuario:', user, 'Contraseña:', pass);
-    
     const encontrado = USUARIOS.find(x => x.u === user && x.p === pass);
-    
     if (!encontrado) {
       errorDiv.classList.remove('hidden');
       errorDiv.textContent = '❌ Usuario o contraseña incorrectos';
       return;
     }
-    
     errorDiv.classList.add('hidden');
     actual = encontrado;
     document.getElementById('login').classList.add('hidden');
@@ -738,8 +785,6 @@ tr:hover{background:var(--gray-50)}
 
     render();
     if (esElaborador) window.actualizarResponsables();
-    
-    console.log('✅ Login completado');
   };
 
   window.salir = function() { location.reload(); };
@@ -788,6 +833,7 @@ tr:hover{background:var(--gray-50)}
         return;
       }
 
+      // El proyecto YA está guardado en la base de datos en este punto.
       msgDiv.innerHTML = '<div class="success">✅ PROYECTO CREADO.</div>';
       document.getElementById('nombreProyecto').value = '';
       document.getElementById('cliente').value = '';
@@ -820,7 +866,7 @@ tr:hover{background:var(--gray-50)}
     render();
   };
 
-  // ---------- PRODUCTOS DINÁMICOS ----------
+  // ---------- PRODUCTOS DINÁMICOS (CON PLACEHOLDERS) ----------
   window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0, descuento = 0, impuesto = 0) {
     const tbody = document.getElementById('cuerpoProductos');
     const fila = document.createElement('tr');
@@ -830,7 +876,7 @@ tr:hover{background:var(--gray-50)}
       <td class="indice">${idx}</td>
       <td><input class="part" type="text" value="${parte.toUpperCase()}" placeholder="Núm. Parte"></td>
       <td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">${descripcion.toUpperCase()}</textarea></td>
-      <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
+      <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
       <td><select class="udm" onchange="window.recalcularFila(this)">${udmOptions}</select></td>
       <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
       <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
@@ -1257,6 +1303,9 @@ tr:hover{background:var(--gray-50)}
 
     console.log('✅ OC guardada exitosamente:', data);
 
+    // A PARTIR DE AQUÍ LA OC YA ESTÁ GUARDADA EN LA BASE DE DATOS.
+    // Cualquier error en lo que sigue (refrescar tabla, generar PDF) es solo
+    // cosmético y NUNCA debe reportarse como si la OC no se hubiera creado.
     window.cerrarPreview();
     document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
 
@@ -1286,7 +1335,7 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DIRECTAMENTE ----------
+  // ---------- CONFIRMAR DIRECTAMENTE (CORREGIDO) ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
     if (!datos) {
@@ -1295,6 +1344,7 @@ tr:hover{background:var(--gray-50)}
     }
     console.log('✅ Datos recopilados:', datos);
     
+    // Verificar que tenemos los datos necesarios
     if (!datos.empresa || !datos.departamento) {
       document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ ERROR: No se encontró empresa o departamento del proyecto.</div>';
       return;
@@ -1353,9 +1403,13 @@ tr:hover{background:var(--gray-50)}
 
     console.log('✅ OC guardada exitosamente:', data);
 
+    // A PARTIR DE AQUÍ LA OC YA ESTÁ GUARDADA EN LA BASE DE DATOS.
+    // Cualquier error en lo que sigue (refrescar tabla, generar PDF) es solo
+    // cosmético y NUNCA debe reportarse como si la OC no se hubiera creado.
     document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
 
     try {
+      // Limpiar formulario
       document.getElementById('cuerpoProductos').innerHTML = '';
       window.agregarFilaProducto();
       document.getElementById('totalProductos').textContent = '$0.00';
@@ -1371,6 +1425,7 @@ tr:hover{background:var(--gray-50)}
     }
 
     try {
+      // Generar PDF
       const doc = generarPDFParaPreview(datos);
       doc.save(`OC_${codigo}.pdf`);
     } catch (err) {
@@ -1536,7 +1591,7 @@ tr:hover{background:var(--gray-50)}
     doc.save(`OC_${oc.codigo}.pdf`);
   }
 
-  // ---------- APROBACIONES (resumidas) ----------
+  // ---------- APROBACIONES ----------
   window.aprobarSolicitante = async function(index) {
     if (!actual) return alert('No has iniciado sesión');
     if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
@@ -2163,6 +2218,10 @@ tr:hover{background:var(--gray-50)}
 
   document.addEventListener('DOMContentLoaded', function() {
     init();
+    const btnLogin = document.getElementById('btnLogin');
+    if (btnLogin) {
+      btnLogin.addEventListener('click', window.login);
+    }
   });
 
   window.recalcularFila = recalcularFila;
