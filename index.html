@@ -869,7 +869,7 @@ tr:hover{background:var(--gray-50)}
     document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
   }
 
-  // ---------- RECOPILAR DATOS OC ----------
+  // ---------- RECOPILAR DATOS OC (CORREGIDO) ----------
   function recopilarDatosOC() {
     const selectProyecto = document.getElementById('selectProyecto');
     const selectedId = parseInt(selectProyecto.value);
@@ -966,8 +966,10 @@ tr:hover{background:var(--gray-50)}
       motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
     }
 
+    // Retornamos el objeto proyecto COMPLETO y el nombre del proyecto por separado
     return {
-      proyecto: proyecto.nombre,
+      proyectoObj: proyecto,  // objeto completo
+      proyectoNombre: proyecto.nombre,
       proveedor,
       rfc: rfc || 'NA',
       direccion,
@@ -983,7 +985,9 @@ tr:hover{background:var(--gray-50)}
       productos,
       motivo,
       cliente: proyecto.cliente,
-      elaborador: actual.u
+      elaborador: actual.u,
+      empresa: proyecto.empresa,
+      departamento: proyecto.departamento
     };
   }
 
@@ -1026,22 +1030,11 @@ tr:hover{background:var(--gray-50)}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
 
-    const codigoReal = generarCodigoOC(
-      datos.proyecto, // pero necesitamos el objeto proyecto completo para empresa y depto, lo pasamos aparte
-      datos.proyecto, // temporal, pero lo ajustamos
-      datos.proveedor,
-      datos.proyecto,
-      datos.cliente,
-      datos.elaborador,
-      consecutivoOC
-    );
-    // Mejor obtenemos el proyecto completo desde la lista
-    const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
     const codigoFinal = generarCodigoOC(
-      proyectoObj ? proyectoObj.empresa : 'GIE',
-      proyectoObj ? proyectoObj.departamento : 'GENERAL',
+      datos.empresa,
+      datos.departamento,
       datos.proveedor,
-      datos.proyecto,
+      datos.proyectoNombre,
       datos.cliente,
       datos.elaborador,
       consecutivoOC
@@ -1133,7 +1126,7 @@ tr:hover{background:var(--gray-50)}
     let ay = authY + 16;
 
     const solicitante = datos.responsable || 'No definido';
-    const jefe = proyectoObj ? getJefeDepto(proyectoObj.empresa, proyectoObj.departamento) : 'No definido';
+    const jefe = getJefeDepto(datos.empresa, datos.departamento);
     const director = getDirector();
 
     function mostrarFirma(doc, x, y, nombre, fecha) {
@@ -1180,26 +1173,25 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DESDE PREVIEW ----------
+  // ---------- CONFIRMAR DESDE PREVIEW (CORREGIDO) ----------
   window.confirmarDesdePreview = async function() {
     if (!ocPreviewData) {
       alert('No hay datos para confirmar.');
       return;
     }
     const datos = ocPreviewData;
-    const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
     const codigo = generarCodigoOC(
-      proyectoObj ? proyectoObj.empresa : 'GIE',
-      proyectoObj ? proyectoObj.departamento : 'GENERAL',
+      datos.empresa,
+      datos.departamento,
       datos.proveedor,
-      datos.proyecto,
+      datos.proyectoNombre,
       datos.cliente,
       datos.elaborador
     );
 
     const nuevaOC = {
       codigo: codigo,
-      proyecto: datos.proyecto,
+      proyecto: datos.proyectoNombre,
       proveedor: datos.proveedor,
       rfc: datos.rfc,
       direccion: datos.direccion,
@@ -1249,23 +1241,27 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DIRECTAMENTE ----------
+  // ---------- CONFIRMAR DIRECTAMENTE (CORREGIDO) ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
-    if (!datos) return;
-    const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
+    if (!datos) {
+      console.log('❌ Datos inválidos, no se creará OC');
+      return;
+    }
+    console.log('✅ Datos recopilados:', datos);
+    
     const codigo = generarCodigoOC(
-      proyectoObj ? proyectoObj.empresa : 'GIE',
-      proyectoObj ? proyectoObj.departamento : 'GENERAL',
+      datos.empresa,
+      datos.departamento,
       datos.proveedor,
-      datos.proyecto,
+      datos.proyectoNombre,
       datos.cliente,
       datos.elaborador
     );
 
     const nuevaOC = {
       codigo: codigo,
-      proyecto: datos.proyecto,
+      proyecto: datos.proyectoNombre,
       proveedor: datos.proveedor,
       rfc: datos.rfc,
       direccion: datos.direccion,
@@ -1296,19 +1292,28 @@ tr:hover{background:var(--gray-50)}
       elaborador: datos.elaborador
     };
 
-    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
-    if (error) {
-      alert('Error al guardar OC: ' + error.message);
-      return;
+    console.log('📤 Enviando a Supabase:', nuevaOC);
+
+    try {
+      const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+      if (error) {
+        console.error('❌ Error de Supabase:', error);
+        alert('Error al guardar OC: ' + error.message);
+        return;
+      }
+      console.log('✅ OC guardada exitosamente:', data);
+      ordenes.push(data[0]);
+      document.getElementById('cuerpoProductos').innerHTML = '';
+      window.agregarFilaProducto();
+      document.getElementById('totalProductos').textContent = '$0.00';
+      document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+      render();
+      const doc = generarPDFParaPreview(datos);
+      doc.save(`OC_${codigo}.pdf`);
+    } catch (err) {
+      console.error('❌ Error inesperado:', err);
+      alert('Error inesperado: ' + err.message);
     }
-    ordenes.push(data[0]);
-    document.getElementById('cuerpoProductos').innerHTML = '';
-    window.agregarFilaProducto();
-    document.getElementById('totalProductos').textContent = '$0.00';
-    document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-    render();
-    const doc = generarPDFParaPreview(datos);
-    doc.save(`OC_${codigo}.pdf`);
   };
 
   // ---------- GENERAR PDF FIRMADO ----------
