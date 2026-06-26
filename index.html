@@ -413,6 +413,12 @@ tr:hover{background:var(--gray-50)}
   });
 
   function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
+      console.log('🔵 generarCodigoOC llamado con:', { empresa, departamento, proveedor, proyecto, cliente, elaborador });
+      
+      // Si empresa o departamento son undefined/null, usar valores por defecto
+      if (!empresa) empresa = 'GIE';
+      if (!departamento) departamento = 'GENERAL';
+      
       const prefijos = {
           'GRUPO INDUSTRIAL EXTINGUE': {
               'VENTAS CORPORATIVAS EXTINGUE': 'GIE',
@@ -441,7 +447,9 @@ tr:hover{background:var(--gray-50)}
       } else {
           numero = String(consecutivoOC++).padStart(4, '0');
       }
-      return `${prefijo}-OC-${fechaStr}-${proveedorClean}-${proyectoClean}-${clienteClean}-${elaboradorClean}-${numero}`;
+      const codigo = `${prefijo}-OC-${fechaStr}-${proveedorClean}-${proyectoClean}-${clienteClean}-${elaboradorClean}-${numero}`;
+      console.log('✅ Código generado:', codigo);
+      return codigo;
   }
 
   function formatoMoneda(monto, moneda = 'MXN') {
@@ -869,7 +877,7 @@ tr:hover{background:var(--gray-50)}
     document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
   }
 
-  // ---------- RECOPILAR DATOS OC (CORREGIDO) ----------
+  // ---------- RECOPILAR DATOS OC ----------
   function recopilarDatosOC() {
     const selectProyecto = document.getElementById('selectProyecto');
     const selectedId = parseInt(selectProyecto.value);
@@ -966,28 +974,30 @@ tr:hover{background:var(--gray-50)}
       motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
     }
 
-    // Retornamos el objeto proyecto COMPLETO con todos los datos necesarios
+    // Guardar empresa y departamento para usarlos en generarCodigoOC
+    const empresa = proyecto.empresa;
+    const departamento = proyecto.departamento;
+
     return {
-      proyectoObj: proyecto,
+      empresa: empresa,
+      departamento: departamento,
       proyectonombre: proyecto.nombre,
-      proveedor,
+      proveedor: proveedor,
       rfc: rfc || 'NA',
-      direccion,
-      usocfdi,
-      direccionentrega,
-      moneda,
+      direccion: direccion,
+      usocfdi: usocfdi,
+      direccionentrega: direccionentrega,
+      moneda: moneda,
       tipocambio: tipocambio,
-      montototal,
-      montomxn,
-      estado,
-      fechapago,
-      responsable,
-      productos,
-      motivo,
+      montototal: montototal,
+      montomxn: montomxn,
+      estado: estado,
+      fechapago: fechapago,
+      responsable: responsable,
+      productos: productos,
+      motivo: motivo,
       cliente: proyecto.cliente,
-      elaborador: actual.u,
-      empresa: proyecto.empresa,
-      departamento: proyecto.departamento
+      elaborador: actual.u
     };
   }
 
@@ -1241,7 +1251,7 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DIRECTAMENTE (CORREGIDO) ----------
+  // ---------- CONFIRMAR DIRECTAMENTE ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
     if (!datos) {
