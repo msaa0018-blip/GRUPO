@@ -156,7 +156,6 @@ tr:hover{background:var(--gray-50)}
 .progress-bar .fill{height:100%;border-radius:6px;transition:width .4s}
 .depto-color{display:inline-block;padding:2px 10px;border-radius:12px;font-weight:500;color:white;font-size:12px}
 
-/* Estilo para la fila de CFDI - sin marcos */
 .fila-cfdi-entrega {
   display:flex;
   flex-wrap:wrap;
@@ -192,12 +191,16 @@ tr:hover{background:var(--gray-50)}
   min-width:60px;
 }
 
-/* Grupo de formulario - solo espaciado vertical */
 .grupo-formulario {
   margin-bottom:10px;
 }
 .grupo-formulario:last-child {
   margin-bottom:0;
+}
+.campo-obligatorio::after {
+  content: " *";
+  color: var(--danger);
+  font-weight: bold;
 }
 </style>
 </head>
@@ -300,7 +303,7 @@ tr:hover{background:var(--gray-50)}
       </div>
     </div>
 
-    <!-- Tercera fila: Uso CFDI, Dirección de entrega, Moneda (sin separador ▶) -->
+    <!-- Tercera fila: Uso CFDI, Dirección de entrega, Moneda -->
     <div class="grupo-formulario">
       <div class="fila-cfdi-entrega">
         <select id="usoCFDI">
@@ -321,13 +324,39 @@ tr:hover{background:var(--gray-50)}
       </div>
     </div>
 
-    <!-- Cuarta fila: Fecha de pago y Responsable -->
+    <!-- Cuarta fila: Fecha de pago, Fecha de entrega, Responsable -->
     <div class="grupo-formulario">
       <div class="flex">
-        <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha de pago:</label>
+        <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha pago:</label>
         <input id="fechaPago" type="date" style="flex:1;">
-        <label style="font-weight:500;flex:0.4;min-width:120px;">Responsable (Solicitante):</label>
+        <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha entrega:</label>
+        <input id="fechaEntrega" type="date" style="flex:1;">
+        <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable:</label>
         <select id="responsableOC" style="flex:1.5;"></select>
+      </div>
+    </div>
+
+    <!-- Quinta fila: Datos bancarios -->
+    <div class="grupo-formulario">
+      <div class="flex">
+        <label style="font-weight:500;flex:0.15;min-width:60px;" class="campo-obligatorio">Banco:</label>
+        <input id="banco" placeholder="Nombre del banco" style="flex:1.5;">
+        <label style="font-weight:500;flex:0.15;min-width:60px;">Cuenta:</label>
+        <input id="cuenta" placeholder="Número de cuenta" style="flex:1.2;">
+        <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label>
+        <input id="clabe" placeholder="CLABE interbancaria" style="flex:1.5;">
+      </div>
+    </div>
+
+    <!-- Sexta fila: SWIFT, CIE, Referencia -->
+    <div class="grupo-formulario">
+      <div class="flex">
+        <label style="font-weight:500;flex:0.15;min-width:60px;">SWIFT:</label>
+        <input id="swift" placeholder="Código SWIFT" style="flex:1;">
+        <label style="font-weight:500;flex:0.15;min-width:60px;">CIE:</label>
+        <input id="cie" placeholder="CIE (opcional)" style="flex:1;">
+        <label style="font-weight:500;flex:0.2;min-width:70px;">Referencia:</label>
+        <input id="referencia" placeholder="Referencia (opcional)" style="flex:1.5;">
       </div>
     </div>
 
@@ -382,7 +411,7 @@ tr:hover{background:var(--gray-50)}
     <div id="resumenTotales" class="resumen-totales"></div>
     <div class="table-wrapper">
       <table>
-        <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Dirección entrega</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Dirección entrega</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="tablaOC"></tbody>
       </table>
     </div>
@@ -966,8 +995,27 @@ tr:hover{background:var(--gray-50)}
     const direccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
     const moneda = document.getElementById('monedaOC').value;
     const fechapago = document.getElementById('fechaPago').value;
+    const fechaentrega = document.getElementById('fechaEntrega').value;
     const responsable = document.getElementById('responsableOC').value;
+    const banco = document.getElementById('banco').value.trim().toUpperCase();
+    const cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
+    const clabe = document.getElementById('clabe').value.trim().toUpperCase();
+    const swift = document.getElementById('swift').value.trim().toUpperCase();
+    const cie = document.getElementById('cie').value.trim().toUpperCase();
+    const referencia = document.getElementById('referencia').value.trim().toUpperCase();
     const msgDiv = document.getElementById('mensajeOC');
+
+    // Validación: Banco es obligatorio
+    if (!banco) {
+      msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>';
+      return null;
+    }
+
+    // Validación: Cuenta o CLABE (al menos una debe estar llena)
+    if (!cuenta && !clabe) {
+      msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>';
+      return null;
+    }
 
     let tipocambio = null;
     let montomxn = 0;
@@ -980,8 +1028,8 @@ tr:hover{background:var(--gray-50)}
       tipocambio = parseFloat(tcInput);
     }
 
-    if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable) {
-      msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO Y RESPONSABLE.</div>';
+    if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable || !fechaentrega) {
+      msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
       return null;
     }
     const responsableUser = USUARIOS.find(u => u.u === responsable);
@@ -1052,11 +1100,18 @@ tr:hover{background:var(--gray-50)}
       montomxn: montomxn,
       estado: estado,
       fechapago: fechapago,
+      fechaentrega: fechaentrega,
       responsable: responsable,
       productos: productos,
       motivo: motivo,
       cliente: proyecto.cliente,
-      elaborador: actual.u
+      elaborador: actual.u,
+      banco: banco,
+      cuenta: cuenta || null,
+      clabe: clabe || null,
+      swift: swift || null,
+      cie: cie || null,
+      referencia: referencia || null
     };
   }
 
@@ -1138,6 +1193,20 @@ tr:hover{background:var(--gray-50)}
       y += 16;
     }
     doc.text(`Fecha de Pago: ${new Date(datos.fechapago).toLocaleDateString()}`, margin, y);
+    y += 16;
+    doc.text(`Fecha de Entrega: ${new Date(datos.fechaentrega).toLocaleDateString()}`, margin, y);
+    y += 16;
+    doc.text(`Banco: ${datos.banco}`, margin, y);
+    y += 16;
+    if (datos.cuenta) doc.text(`Cuenta: ${datos.cuenta}`, margin, y);
+    y += 16;
+    if (datos.clabe) doc.text(`CLABE: ${datos.clabe}`, margin, y);
+    y += 16;
+    if (datos.swift) doc.text(`SWIFT: ${datos.swift}`, margin, y);
+    y += 16;
+    if (datos.cie) doc.text(`CIE: ${datos.cie}`, margin, y);
+    y += 16;
+    if (datos.referencia) doc.text(`Referencia: ${datos.referencia}`, margin, y);
     y += 20;
 
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1273,6 +1342,7 @@ tr:hover{background:var(--gray-50)}
       estado: datos.estado,
       fechacreacion: new Date().toISOString(),
       fechapago: datos.fechapago,
+      fechaentrega: datos.fechaentrega,
       responsable: datos.responsable,
       pausada: false,
       motivo: datos.motivo || null,
@@ -1288,7 +1358,13 @@ tr:hover{background:var(--gray-50)}
       paridadinicial: datos.tipocambio,
       productos: datos.productos,
       cliente: datos.cliente,
-      elaborador: datos.elaborador
+      elaborador: datos.elaborador,
+      banco: datos.banco,
+      cuenta: datos.cuenta,
+      clabe: datos.clabe,
+      swift: datos.swift,
+      cie: datos.cie,
+      referencia: datos.referencia
     };
 
     console.log('📤 [confirmarDesdePreview] Enviando a Supabase:', nuevaOC);
@@ -1369,6 +1445,7 @@ tr:hover{background:var(--gray-50)}
       estado: datos.estado,
       fechacreacion: new Date().toISOString(),
       fechapago: datos.fechapago,
+      fechaentrega: datos.fechaentrega,
       responsable: datos.responsable,
       pausada: false,
       motivo: datos.motivo || null,
@@ -1384,7 +1461,13 @@ tr:hover{background:var(--gray-50)}
       paridadinicial: datos.tipocambio,
       productos: datos.productos,
       cliente: datos.cliente,
-      elaborador: datos.elaborador
+      elaborador: datos.elaborador,
+      banco: datos.banco,
+      cuenta: datos.cuenta,
+      clabe: datos.clabe,
+      swift: datos.swift,
+      cie: datos.cie,
+      referencia: datos.referencia
     };
 
     console.log('📤 Enviando a Supabase:', nuevaOC);
@@ -1464,6 +1547,20 @@ tr:hover{background:var(--gray-50)}
       y += 16;
     }
     doc.text(`Fecha de Pago: ${new Date(oc.fechapago).toLocaleDateString()}`, margin, y);
+    y += 16;
+    doc.text(`Fecha de Entrega: ${new Date(oc.fechaentrega).toLocaleDateString()}`, margin, y);
+    y += 16;
+    doc.text(`Banco: ${oc.banco}`, margin, y);
+    y += 16;
+    if (oc.cuenta) doc.text(`Cuenta: ${oc.cuenta}`, margin, y);
+    y += 16;
+    if (oc.clabe) doc.text(`CLABE: ${oc.clabe}`, margin, y);
+    y += 16;
+    if (oc.swift) doc.text(`SWIFT: ${oc.swift}`, margin, y);
+    y += 16;
+    if (oc.cie) doc.text(`CIE: ${oc.cie}`, margin, y);
+    y += 16;
+    if (oc.referencia) doc.text(`Referencia: ${oc.referencia}`, margin, y);
     y += 20;
 
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1887,7 +1984,7 @@ tr:hover{background:var(--gray-50)}
       ${ocProyecto.length === 0 ? '<p class="text-muted">No hay OC para este proyecto.</p>' : `
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead>
           <tbody>
             ${ocProyecto.map(o => {
               let badgeClass = '';
@@ -1934,6 +2031,7 @@ tr:hover{background:var(--gray-50)}
                 <td>${formatoMoneda(o.montototal, o.moneda)}</td>
                 <td>${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
                 <td>${new Date(o.fechapago).toLocaleDateString()}</td>
+                <td>${new Date(o.fechaentrega).toLocaleDateString()}</td>
                 <td>${o.uuidfactura || '—'}</td>
                 <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
               </tr>`;
@@ -2151,6 +2249,7 @@ tr:hover{background:var(--gray-50)}
           <td>${formatoMoneda(o.montototal, o.moneda)}</td>
           <td>${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
           <td>${new Date(o.fechapago).toLocaleDateString()}</td>
+          <td>${new Date(o.fechaentrega).toLocaleDateString()}</td>
           <td>${o.uuidfactura || '—'}</td>
           <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
           <td><div class="actions">${acciones}</div></td>
@@ -2193,17 +2292,17 @@ tr:hover{background:var(--gray-50)}
   // ---------- INICIALIZACIÓN ----------
   async function init() {
     const hoy = new Date();
-    // Establecer fecha de inicio al día actual
     const fechaHoy = hoy.toISOString().split('T')[0];
     document.getElementById('fechaInicio').value = fechaHoy;
-    // Establecer fecha de término a 6 meses después
     const fechaFin = new Date(hoy);
     fechaFin.setMonth(fechaFin.getMonth() + 6);
     document.getElementById('fechaTermino').value = fechaFin.toISOString().split('T')[0];
-    // Establecer fecha de pago a 30 días después
     const fechaPago = new Date(hoy);
     fechaPago.setDate(fechaPago.getDate() + 30);
     document.getElementById('fechaPago').value = fechaPago.toISOString().split('T')[0];
+    const fechaEntrega = new Date(hoy);
+    fechaEntrega.setDate(fechaEntrega.getDate() + 45);
+    document.getElementById('fechaEntrega').value = fechaEntrega.toISOString().split('T')[0];
 
     const ok = await cargarDatos();
     if (!ok) {
