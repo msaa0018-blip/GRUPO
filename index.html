@@ -892,7 +892,6 @@ tr:hover{background:var(--gray-50)}
     const rfc = document.getElementById('rfc').value.trim().toUpperCase();
     const direccion = document.getElementById('direccion').value.trim().toUpperCase();
     const usoCFDI = document.getElementById('usoCFDI').value;
-    // El campo en el HTML se llama 'direccionEntrega' pero la columna en BD es 'direccionentrega' (minúscula)
     const direccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
     const moneda = document.getElementById('monedaOC').value;
     const fechaPago = document.getElementById('fechaPago').value;
@@ -973,7 +972,7 @@ tr:hover{background:var(--gray-50)}
       rfc: rfc || 'NA',
       direccion,
       usoCFDI,
-      direccionentrega,      // ← clave correcta para la BD (minúscula)
+      direccionentrega,
       moneda,
       tipoCambioInicial,
       montoTotal,
@@ -1193,7 +1192,7 @@ tr:hover{background:var(--gray-50)}
       rfc: datos.rfc,
       direccion: datos.direccion,
       usoCFDI: datos.usoCFDI,
-      direccionentrega: datos.direccionentrega,   // ← clave correcta (minúscula)
+      direccionentrega: datos.direccionentrega,
       moneda: datos.moneda,
       tipoCambio: datos.tipoCambioInicial,
       montoTotal: datos.montoTotal,
@@ -1258,7 +1257,7 @@ tr:hover{background:var(--gray-50)}
       rfc: datos.rfc,
       direccion: datos.direccion,
       usoCFDI: datos.usoCFDI,
-      direccionentrega: datos.direccionentrega,   // ← clave correcta (minúscula)
+      direccionentrega: datos.direccionentrega,
       moneda: datos.moneda,
       tipoCambio: datos.tipoCambioInicial,
       montoTotal: datos.montoTotal,
@@ -1900,7 +1899,6 @@ tr:hover{background:var(--gray-50)}
       window.actualizarResponsables();
     }
 
-    // ---- TABLA DE OC CON NUEVA COLUMNA "Dirección entrega" ----
     tablaOC.innerHTML = '';
     const totalMXN = ocVisibles.filter(o => o.estadoPago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o.montoTotal, 0);
     const totalUSD = ocVisibles.filter(o => o.estadoPago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o.montoTotal, 0);
@@ -2014,7 +2012,6 @@ tr:hover{background:var(--gray-50)}
       const cliente = proyecto ? proyecto.cliente : '—';
       const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
-      // AQUÍ SE AGREGA LA CELDA DE DIRECCIÓN DE ENTREGA
       tablaOC.innerHTML += `
         <tr>
           <td><code>${o.codigo}</code></td>
@@ -2023,7 +2020,7 @@ tr:hover{background:var(--gray-50)}
           <td>${cliente}</td>
           <td>${o.proveedor}</td>
           <td>${o.rfc}</td>
-          <td>${o.direccionentrega || '—'}</td>   <!-- NUEVA COLUMNA -->
+          <td>${o.direccionentrega || '—'}</td>
           <td>${o.moneda}</td>
           <td>${formatoMoneda(o.montoTotal, o.moneda)}</td>
           <td>${formatoMoneda(o.montoMXN || 0, 'MXN')}</td>
@@ -2091,7 +2088,7 @@ tr:hover{background:var(--gray-50)}
     }
   });
 
-  // ========== EXPONER FUNCIONES AL ÁMBITO GLOBAL ==========
+  // Exponer funciones al ámbito global
   window.recalcularFila = recalcularFila;
   window.recalcularTotal = recalcularTotal;
   window.autoAjustar = autoAjustar;
