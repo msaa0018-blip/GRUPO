@@ -320,7 +320,7 @@ tr:hover{background:var(--gray-50)}
     <div id="resumenTotales" class="resumen-totales"></div>
     <div class="table-wrapper">
       <table>
-        <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Dirección entrega</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="tablaOC"></tbody>
       </table>
     </div>
@@ -1050,7 +1050,6 @@ tr:hover{background:var(--gray-50)}
     doc.text(`Dirección: ${datos.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const lines = doc.splitTextToSize(`Dirección: ${datos.direccion}`, pageWidth - 2*margin);
     y += lines.length * 16 + 2;
-    // Mostrar la dirección de entrega (se obtiene del campo 'direccionentrega' en datos)
     doc.text(`Dirección de entrega: ${datos.direccionentrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const linesEntrega = doc.splitTextToSize(`Dirección de entrega: ${datos.direccionentrega}`, pageWidth - 2*margin);
     y += linesEntrega.length * 16 + 2;
@@ -1194,7 +1193,7 @@ tr:hover{background:var(--gray-50)}
       rfc: datos.rfc,
       direccion: datos.direccion,
       usoCFDI: datos.usoCFDI,
-      direccionentrega: datos.direccionentrega,   // ← clave correcta
+      direccionentrega: datos.direccionentrega,   // ← clave correcta (minúscula)
       moneda: datos.moneda,
       tipoCambio: datos.tipoCambioInicial,
       montoTotal: datos.montoTotal,
@@ -1259,7 +1258,7 @@ tr:hover{background:var(--gray-50)}
       rfc: datos.rfc,
       direccion: datos.direccion,
       usoCFDI: datos.usoCFDI,
-      direccionentrega: datos.direccionentrega,   // ← clave correcta
+      direccionentrega: datos.direccionentrega,   // ← clave correcta (minúscula)
       moneda: datos.moneda,
       tipoCambio: datos.tipoCambioInicial,
       montoTotal: datos.montoTotal,
@@ -1901,6 +1900,7 @@ tr:hover{background:var(--gray-50)}
       window.actualizarResponsables();
     }
 
+    // ---- TABLA DE OC CON NUEVA COLUMNA "Dirección entrega" ----
     tablaOC.innerHTML = '';
     const totalMXN = ocVisibles.filter(o => o.estadoPago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o.montoTotal, 0);
     const totalUSD = ocVisibles.filter(o => o.estadoPago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o.montoTotal, 0);
@@ -2014,6 +2014,7 @@ tr:hover{background:var(--gray-50)}
       const cliente = proyecto ? proyecto.cliente : '—';
       const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
+      // AQUÍ SE AGREGA LA CELDA DE DIRECCIÓN DE ENTREGA
       tablaOC.innerHTML += `
         <tr>
           <td><code>${o.codigo}</code></td>
@@ -2022,6 +2023,7 @@ tr:hover{background:var(--gray-50)}
           <td>${cliente}</td>
           <td>${o.proveedor}</td>
           <td>${o.rfc}</td>
+          <td>${o.direccionentrega || '—'}</td>   <!-- NUEVA COLUMNA -->
           <td>${o.moneda}</td>
           <td>${formatoMoneda(o.montoTotal, o.moneda)}</td>
           <td>${formatoMoneda(o.montoMXN || 0, 'MXN')}</td>
