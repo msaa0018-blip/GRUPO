@@ -898,7 +898,7 @@ tr:hover{background:var(--gray-50)}
     const responsable = document.getElementById('responsableOC').value;
     const msgDiv = document.getElementById('mensajeOC');
 
-    let tipoCambioInicial = null;
+    let tipocambio = null;
     let montomxn = 0;
     if (moneda === 'USD') {
       const tcInput = document.getElementById('paridadInicial').value;
@@ -906,7 +906,7 @@ tr:hover{background:var(--gray-50)}
         msgDiv.innerHTML = '<div class="alert">⚠️ INGRESE UN TIPO DE CAMBIO INICIAL VÁLIDO (MXN/USD).</div>';
         return null;
       }
-      tipoCambioInicial = parseFloat(tcInput);
+      tipocambio = parseFloat(tcInput);
     }
 
     if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable) {
@@ -954,7 +954,7 @@ tr:hover{background:var(--gray-50)}
     }
 
     if (moneda === 'USD') {
-      montomxn = montototal * tipoCambioInicial;
+      montomxn = montototal * tipocambio;
     } else {
       montomxn = montototal;
     }
@@ -966,17 +966,17 @@ tr:hover{background:var(--gray-50)}
       motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
     }
 
-    // Retornamos el objeto proyecto COMPLETO y el nombre del proyecto por separado
+    // Retornamos el objeto proyecto COMPLETO con todos los datos necesarios
     return {
-      proyectoObj: proyecto,  // objeto completo
-      proyectoNombre: proyecto.nombre,
+      proyectoObj: proyecto,
+      proyectonombre: proyecto.nombre,
       proveedor,
       rfc: rfc || 'NA',
       direccion,
       usocfdi,
       direccionentrega,
       moneda,
-      tipocambio: tipoCambioInicial,
+      tipocambio: tipocambio,
       montototal,
       montomxn,
       estado,
@@ -1034,7 +1034,7 @@ tr:hover{background:var(--gray-50)}
       datos.empresa,
       datos.departamento,
       datos.proveedor,
-      datos.proyectoNombre,
+      datos.proyectonombre,
       datos.cliente,
       datos.elaborador,
       consecutivoOC
@@ -1173,7 +1173,7 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // ---------- CONFIRMAR DESDE PREVIEW (CORREGIDO) ----------
+  // ---------- CONFIRMAR DESDE PREVIEW ----------
   window.confirmarDesdePreview = async function() {
     if (!ocPreviewData) {
       alert('No hay datos para confirmar.');
@@ -1184,14 +1184,14 @@ tr:hover{background:var(--gray-50)}
       datos.empresa,
       datos.departamento,
       datos.proveedor,
-      datos.proyectoNombre,
+      datos.proyectonombre,
       datos.cliente,
       datos.elaborador
     );
 
     const nuevaOC = {
       codigo: codigo,
-      proyecto: datos.proyectoNombre,
+      proyecto: datos.proyectonombre,
       proveedor: datos.proveedor,
       rfc: datos.rfc,
       direccion: datos.direccion,
@@ -1250,18 +1250,24 @@ tr:hover{background:var(--gray-50)}
     }
     console.log('✅ Datos recopilados:', datos);
     
+    // Verificar que tenemos los datos necesarios
+    if (!datos.empresa || !datos.departamento) {
+      document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ ERROR: No se encontró empresa o departamento del proyecto.</div>';
+      return;
+    }
+    
     const codigo = generarCodigoOC(
       datos.empresa,
       datos.departamento,
       datos.proveedor,
-      datos.proyectoNombre,
+      datos.proyectonombre,
       datos.cliente,
       datos.elaborador
     );
 
     const nuevaOC = {
       codigo: codigo,
-      proyecto: datos.proyectoNombre,
+      proyecto: datos.proyectonombre,
       proveedor: datos.proveedor,
       rfc: datos.rfc,
       direccion: datos.direccion,
@@ -1298,7 +1304,7 @@ tr:hover{background:var(--gray-50)}
       const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
       if (error) {
         console.error('❌ Error de Supabase:', error);
-        alert('Error al guardar OC: ' + error.message);
+        document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR AL GUARDAR OC: ${error.message}</div>`;
         return;
       }
       console.log('✅ OC guardada exitosamente:', data);
@@ -1312,7 +1318,7 @@ tr:hover{background:var(--gray-50)}
       doc.save(`OC_${codigo}.pdf`);
     } catch (err) {
       console.error('❌ Error inesperado:', err);
-      alert('Error inesperado: ' + err.message);
+      document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR INESPERADO: ${err.message}</div>`;
     }
   };
 
