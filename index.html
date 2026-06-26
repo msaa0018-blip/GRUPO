@@ -9,28 +9,92 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--primary:#0b1a33;--primary-light:#1e3a6f;--secondary:#2563eb;--secondary-hover:#1d4ed8;--success:#16a34a;--success-hover:#15803d;--danger:#dc2626;--danger-hover:#b91c1c;--warning:#f59e0b;--warning-hover:#d97706;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;--gray-600:#475569;--gray-700:#334155;--gray-800:#1e293b;--gray-900:#0f172a;--radius:12px;--shadow:0 4px 20px rgba(0,0,0,.06);--font:Segoe UI,system-ui,-apple-system,sans-serif}
+:root{
+  --primary:#0b1a33;
+  --primary-light:#1e3a6f;
+  --secondary:#2563eb;
+  --secondary-hover:#1d4ed8;
+  --success:#16a34a;
+  --success-hover:#15803d;
+  --danger:#dc2626;
+  --danger-hover:#b91c1c;
+  --warning:#f59e0b;
+  --warning-hover:#d97706;
+  --gray-50:#f8fafc;
+  --gray-100:#f1f5f9;
+  --gray-200:#e2e8f0;
+  --gray-300:#cbd5e1;
+  --gray-400:#94a3b8;
+  --gray-500:#64748b;
+  --gray-600:#475569;
+  --gray-700:#334155;
+  --gray-800:#1e293b;
+  --gray-900:#0f172a;
+  --radius:12px;
+  --shadow:0 4px 20px rgba(0,0,0,.06);
+  --font:Segoe UI,system-ui,-apple-system,sans-serif;
+  --mobile-breakpoint:768px;
+}
 body{font-family:var(--font);background:var(--gray-100);color:var(--gray-900);line-height:1.5;padding:0;margin:0}
 a{color:var(--secondary);text-decoration:none}
 img{max-width:100%;height:auto}
+
+/* Header */
 header{background:var(--primary);color:white;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 header .logo{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 header .logo img{height:36px;width:auto;max-height:40px}
 header .logo .company .name{font-size:18px;font-weight:600;letter-spacing:.5px;display:block;line-height:1.2}
 header .logo .company .sub{font-size:10px;opacity:.75;font-weight:300;display:block}
 header small{font-size:11px;opacity:.8;text-align:right;flex-shrink:0}
+
+/* Contenedor principal */
 .container{max-width:1280px;margin:0 auto;padding:12px 16px}
+
+/* Tarjetas */
 .card{background:white;border-radius:var(--radius);padding:16px 18px;margin:12px 0;box-shadow:var(--shadow);transition:.2s}
 .card:hover{box-shadow:0 6px 24px rgba(0,0,0,.08)}
 .card h2,h3,h4{margin:0 0 12px 0;font-weight:600;color:var(--gray-800);font-size:1.2rem}
 .card h2{font-size:1.3rem;border-bottom:2px solid var(--gray-200);padding-bottom:8px}
+
+/* Formularios flexibles */
 .flex{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .flex>*{flex:1 1 auto;min-width:120px}
-input,select,button,textarea{padding:10px 14px;margin:0;border:1px solid var(--gray-300);border-radius:10px;font-size:14px;font-family:inherit;background:white;transition:border .2s,box-shadow .2s;width:100%;min-height:44px}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--secondary);box-shadow:0 0 0 3px rgba(37,99,235,.2)}
+input,select,button,textarea{
+  padding:10px 14px;
+  margin:0;
+  border:1px solid var(--gray-300);
+  border-radius:10px;
+  font-size:14px;
+  font-family:inherit;
+  background:white;
+  transition:border .2s,box-shadow .2s;
+  width:100%;
+  min-height:44px;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--secondary);
+  box-shadow:0 0 0 3px rgba(37,99,235,.2);
+}
 select:disabled,input:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed}
 textarea{resize:vertical;min-height:44px}
-button{background:var(--secondary);color:white;border:none;font-weight:600;cursor:pointer;padding:10px 18px;border-radius:10px;transition:background .2s,transform .1s;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 1 auto}
+button{
+  background:var(--secondary);
+  color:white;
+  border:none;
+  font-weight:600;
+  cursor:pointer;
+  padding:10px 18px;
+  border-radius:10px;
+  transition:background .2s,transform .1s;
+  min-height:44px;
+  min-width:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  flex:0 1 auto;
+}
 button:hover{background:var(--secondary-hover);transform:scale(1.02)}
 button:active{transform:scale(.97)}
 button.danger{background:var(--danger)}
@@ -40,6 +104,8 @@ button.success:hover{background:var(--success-hover)}
 button.warning{background:var(--warning)}
 button.warning:hover{background:var(--warning-hover)}
 button.full-width{width:100%;justify-content:center}
+
+/* Tablas responsivas */
 .table-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:10px 0}
 table{width:100%;border-collapse:collapse;font-size:14px;min-width:600px}
 th{background:var(--gray-800);color:white;padding:10px 12px;text-align:left;font-weight:500;white-space:nowrap}
@@ -64,34 +130,93 @@ tr:hover{background:var(--gray-50)}
 .hidden{display:none !important}
 .actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .actions button{font-size:12px;padding:6px 12px;min-height:32px;min-width:32px}
-.productos-tabla input,.productos-tabla textarea,.productos-tabla select{width:100%;min-width:50px;padding:6px 8px;font-size:13px;margin:2px 0;border-radius:6px}
+
+/* Productos tabla */
+.productos-tabla input,.productos-tabla textarea,.productos-tabla select{
+  width:100%;min-width:50px;padding:6px 8px;font-size:13px;margin:2px 0;border-radius:6px
+}
 .productos-tabla textarea.desc{min-width:120px;resize:vertical;height:36px;overflow:hidden}
 .productos-tabla input.part{min-width:60px}
 .productos-tabla input.precio,.productos-tabla input.importe{min-width:80px}
 .productos-tabla input.importe{background:var(--gray-100);font-weight:bold}
 .productos-tabla select.udm{min-width:60px}
+
+/* Resumen totales */
 .resumen-totales{background:var(--gray-50);padding:12px 16px;border-radius:12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:16px 30px;align-items:center;font-size:14px}
 .resumen-totales strong{font-size:15px}
+
+/* Donut */
 .donut-container{width:160px;height:160px;margin:0 auto;position:relative}
 .donut-container svg{width:100%;height:100%;transform:rotate(-90deg)}
 .donut-container .center-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;font-weight:bold;text-align:center;line-height:1.2}
 .donut-container .center-text small{display:block;font-size:12px;font-weight:normal;color:var(--gray-500)}
-#dashboardOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--gray-100);z-index:1000;overflow-y:auto;padding:16px;display:none}
+
+/* Dashboard overlay */
+#dashboardOverlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;background:var(--gray-100);z-index:1000;overflow-y:auto;padding:16px;display:none
+}
 #dashboardOverlay.active{display:block}
 #dashboardOverlay .btn-volver{background:var(--danger);color:white;border:none;padding:12px 24px;border-radius:10px;font-weight:600;cursor:pointer;margin-bottom:16px;font-size:16px}
+
+/* Login centrado */
 #login{max-width:460px;margin:40px auto;text-align:center;padding:24px}
 #login .flex{justify-content:center}
-#pdfPreviewModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px}
+
+/* Modal preview */
+#pdfPreviewModal{
+  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px
+}
 #pdfPreviewModal.active{display:flex}
-#pdfPreviewModal .modal-content{background:white;border-radius:16px;padding:16px;width:100%;max-width:1000px;max-height:95vh;display:flex;flex-direction:column}
+#pdfPreviewModal .modal-content{
+  background:white;border-radius:16px;padding:16px;width:100%;max-width:1000px;max-height:95vh;display:flex;flex-direction:column
+}
 #pdfPreviewModal .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
 #pdfPreviewModal .modal-header h3{margin:0;font-size:1.1rem}
 #pdfPreviewModal .modal-body{flex:1;overflow:auto;min-height:300px}
 #pdfPreviewModal .modal-body iframe{width:100%;height:400px;border:1px solid var(--gray-300);border-radius:8px}
 #pdfPreviewModal .modal-footer{padding-top:12px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap}
+
+/* Progress bar */
 .progress-bar{height:10px;background:var(--gray-200);border-radius:6px;overflow:hidden;margin-top:4px}
 .progress-bar .fill{height:100%;border-radius:6px;transition:width .4s}
-.depto-color{display:inline-block;padding:2px 10px;border-radius:12px;font-weight:500;color:white;font-size:12px}
+
+/* Responsive */
+@media (max-width:768px){
+  header{padding:10px 12px}
+  header .logo .company .name{font-size:16px}
+  header .logo img{height:30px}
+  header small{font-size:10px}
+  .container{padding:8px 10px}
+  .card{padding:14px 12px;margin:10px 0}
+  .card h2{font-size:1.1rem}
+  .flex{gap:6px}
+  input,select,button,textarea{padding:8px 12px;font-size:13px;min-height:40px}
+  button{min-height:40px;min-width:40px;padding:8px 14px;font-size:13px}
+  table{font-size:12px;min-width:500px}
+  th,td{padding:6px 8px}
+  .badge{font-size:11px;padding:2px 10px}
+  .productos-tabla input,.productos-tabla textarea,.productos-tabla select{font-size:12px;padding:4px 6px;min-width:40px}
+  .productos-tabla textarea.desc{min-width:80px}
+  .donut-container{width:130px;height:130px}
+  .donut-container .center-text{font-size:17px}
+  .resumen-totales{font-size:13px;padding:10px 12px;gap:10px 20px}
+  #pdfPreviewModal .modal-body iframe{height:300px}
+  .actions button{font-size:11px;padding:4px 8px;min-height:28px}
+}
+@media (max-width:480px){
+  header .logo .company .sub{display:none}
+  .card{padding:10px 8px}
+  table{font-size:11px;min-width:400px}
+  th,td{padding:4px 6px}
+  .badge{font-size:10px;padding:2px 8px}
+  input,select,button,textarea{font-size:12px;padding:6px 10px;min-height:36px}
+  button{min-height:36px;min-width:36px;padding:6px 10px;font-size:12px}
+  .productos-tabla input,.productos-tabla textarea,.productos-tabla select{font-size:11px;padding:3px 4px}
+  .donut-container{width:110px;height:110px}
+  .donut-container .center-text{font-size:15px}
+  .donut-container .center-text small{font-size:10px}
+  #pdfPreviewModal .modal-body iframe{height:250px}
+}
 </style>
 </head>
 <body>
@@ -101,14 +226,15 @@ tr:hover{background:var(--gray-50)}
     <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
     <div class="company">
       <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-      <span class="sub">Workflow OC ERP v47</span>
+      <span class="sub">Workflow OC ERP v46</span>
     </div>
   </div>
-  <small>BETA · Colores por empresa</small>
+  <small>BETA · MAYÚSCULAS</small>
 </header>
 
 <div class="container">
 
+<!-- Login -->
 <div id="login" class="card">
   <h2>🔐 Iniciar sesión</h2>
   <div class="flex">
@@ -128,6 +254,7 @@ tr:hover{background:var(--gray-50)}
   <div id="error" class="alert hidden"></div>
 </div>
 
+<!-- App -->
 <div id="app" class="hidden">
 
   <div class="card flex" style="justify-content:space-between">
@@ -135,17 +262,23 @@ tr:hover{background:var(--gray-50)}
     <button onclick="window.salir()" class="danger">Cerrar sesión</button>
   </div>
 
+  <!-- Panel Crear Proyecto (solo Elaborador) -->
   <div id="panelProyecto" class="card hidden">
     <h2>📁 Crear Proyecto</h2>
     <div class="flex">
       <select id="empresaSelect" style="min-width:160px;display:none"></select>
       <input id="empresaInput" placeholder="Empresa" style="display:none">
+      
       <select id="departamentoSelect" style="min-width:160px;display:none"></select>
       <input id="departamentoInput" placeholder="Departamento" style="display:none">
+      
       <input id="nombreProyecto" placeholder="Proyecto" value="Proyecto VC-001">
       <input id="cliente" placeholder="Cliente" value="Cliente X">
       <input id="presupuesto" type="number" placeholder="Presupuesto" value="100000">
-      <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
+      <select id="monedaProyecto">
+        <option value="MXN">MXN</option>
+        <option value="USD">USD</option>
+      </select>
       <input id="fechaInicio" type="date">
       <input id="fechaTermino" type="date">
       <button onclick="window.crearProyecto()" class="success full-width">➕ Crear</button>
@@ -153,8 +286,10 @@ tr:hover{background:var(--gray-50)}
     <div id="msgProyecto"></div>
   </div>
 
+  <!-- Tabla Proyectos -->
   <div class="card" id="tablaProyectosCard">
     <h2>📊 Control por Proyecto</h2>
+    <!-- Acciones de administrador -->
     <div id="adminActions" class="hidden" style="margin-bottom:10px;">
       <button class="danger" onclick="window.eliminarTodosProyectos()">🗑️ Eliminar todos los proyectos y OC</button>
     </div>
@@ -166,6 +301,7 @@ tr:hover{background:var(--gray-50)}
     </div>
   </div>
 
+  <!-- Panel Crear OC (solo Elaborador) -->
   <div id="panelOC" class="card hidden">
     <h2>📄 Crear Orden de Compra</h2>
     <div class="flex">
@@ -198,13 +334,29 @@ tr:hover{background:var(--gray-50)}
       <select id="responsableOC"></select>
     </div>
 
+    <!-- Tabla de productos -->
     <div style="margin-top:12px">
       <h4>Productos</h4>
       <div class="table-wrapper">
         <table class="productos-tabla" id="tablaProductos">
-          <thead><tr><th>#</th><th>Núm. Parte</th><th>Descripción</th><th>Cantidad</th><th>UDM</th><th>Precio Unit.</th><th>Dto.%</th><th>Imp.%</th><th>Importe</th><th>Acción</th></tr></thead>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Núm. Parte</th>
+              <th>Descripción</th>
+              <th>Cantidad</th>
+              <th>UDM</th>
+              <th>Precio Unit.</th>
+              <th>Dto.%</th>
+              <th>Imp.%</th>
+              <th>Importe</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
           <tbody id="cuerpoProductos"></tbody>
-          <tfoot><tr><td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td><td id="totalProductos" style="font-weight:bold;font-size:16px">$0.00</td><td></td></tr></tfoot>
+          <tfoot>
+            <tr><td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td><td id="totalProductos" style="font-weight:bold;font-size:16px">$0.00</td><td></td></tr>
+          </tfoot>
         </table>
       </div>
       <button onclick="window.agregarFilaProducto()" class="success" style="margin-top:8px;">➕ Agregar Producto</button>
@@ -217,6 +369,7 @@ tr:hover{background:var(--gray-50)}
     <div id="mensajeOC"></div>
   </div>
 
+  <!-- Bandeja OC -->
   <div class="card">
     <h2>📬 Bandeja de Órdenes de Compra</h2>
     <div class="flex" style="margin-bottom:12px;">
@@ -232,7 +385,7 @@ tr:hover{background:var(--gray-50)}
     <div id="resumenTotales" class="resumen-totales"></div>
     <div class="table-wrapper">
       <table>
-        <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Dirección entrega</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Proyecto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="tablaOC"></tbody>
       </table>
     </div>
@@ -241,11 +394,13 @@ tr:hover{background:var(--gray-50)}
 </div>
 </div>
 
+<!-- Dashboard Overlay -->
 <div id="dashboardOverlay">
   <button class="btn-volver" onclick="window.cerrarDashboard()">⬅ Volver</button>
   <div id="dashboardContent"></div>
 </div>
 
+<!-- Modal Previsualización PDF -->
 <div id="pdfPreviewModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -263,13 +418,16 @@ tr:hover{background:var(--gray-50)}
 </div>
 
 <script>
+// ---- ENVOLVEMOS TODO EN UN BLOQUE IIFE ----
 (function() {
   'use strict';
 
+  // ---------- CONFIGURACIÓN DE SUPABASE ----------
   const SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
   const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
+  // ---------- CONFIGURACIÓN DE USUARIOS ----------
   const USUARIOS = [
     {u:"LJGR", p:"1234", rol:"Director General", permisos: null},
     {u:"ADMIN", p:"admin", rol:"Administrador", permisos: null},
@@ -304,17 +462,12 @@ tr:hover{background:var(--gray-50)}
   let ocPreviewData = null;
   let ocPreviewPDF = null;
 
-  function getColorByEmpresa(empresa) {
-    if (!empresa) return '#6b7280';
-    const emp = empresa.trim().toUpperCase();
-    if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return '#FF0000';
-    if (emp.includes('VEXPAR OPERACIONES')) return '#0000FF';
-    return '#6b7280';
-  }
-
+  // ---------- CONVERSIÓN AUTOMÁTICA A MAYÚSCULAS EN INPUTS ----------
   document.addEventListener('input', function(e) {
     const target = e.target;
+    // Convertir a mayúsculas todos los campos de texto y textareas
     if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
+      // No aplicar a campos de búsqueda o específicos si se necesita, pero aplicamos a todos
       const start = target.selectionStart;
       const end = target.selectionEnd;
       target.value = target.value.toUpperCase();
@@ -322,6 +475,7 @@ tr:hover{background:var(--gray-50)}
     }
   });
 
+  // ---------- FUNCIÓN PARA GENERAR CÓDIGO DE OC ----------
   function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
       const prefijos = {
           'GRUPO INDUSTRIAL EXTINGUE': {
@@ -354,12 +508,17 @@ tr:hover{background:var(--gray-50)}
       return `${prefijo}-OC-${fechaStr}-${proveedorClean}-${proyectoClean}-${clienteClean}-${elaboradorClean}-${numero}`;
   }
 
+  // ---------- FUNCIÓN PARA FORMATEAR MONTOS ----------
   function formatoMoneda(monto, moneda = 'MXN') {
       const simbolo = moneda === 'USD' ? 'USD ' : '$';
       return simbolo + monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function normalizar(str) { return str.trim().toUpperCase(); }
+  // ---------- FUNCIONES DE PERMISOS ----------
+  function normalizar(str) {
+    return str.trim().toUpperCase();
+  }
+
   function usuarioPuedeAcceder(usuario, empresa, depto) {
     if (!usuario) return false;
     if (['Director General','Administrador','Finanzas'].includes(usuario.rol)) return true;
@@ -370,11 +529,13 @@ tr:hover{background:var(--gray-50)}
       normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm
     );
   }
+
   function filtrarProyectosSegunUsuario(usuario) {
     if (!usuario) return [];
     if (['Director General','Administrador','Finanzas'].includes(usuario.rol)) return proyectos;
     return proyectos.filter(p => usuarioPuedeAcceder(usuario, p.empresa, p.departamento));
   }
+
   function filtrarOCSegunUsuario(usuario) {
     if (!usuario) return [];
     let ocFiltradas = [];
@@ -392,40 +553,48 @@ tr:hover{background:var(--gray-50)}
     }
     return ocFiltradas;
   }
+
   function obtenerOpcionesPermisos(usuario) {
     if (!usuario || !usuario.permisos) return [];
     return usuario.permisos;
   }
+
   function getPosiblesResponsables() {
     return USUARIOS.filter(u => u.rol === 'Solicitante' || u.rol === 'Elaborador');
   }
+
   function getJefeDepto(empresa, depto) {
     const jefe = USUARIOS.find(u => 
       u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto)
     );
     return jefe ? jefe.u : 'No definido';
   }
-  function getDirector() { return 'LJGR'; }
 
+  function getDirector() {
+    return 'LJGR';
+  }
+
+  // ---------- GASTO EN MONEDA DEL PROYECTO (solo OC PAGADAS) ----------
   function gastoProyectoMoneda(nombreProyecto) {
     const proyecto = proyectos.find(p => p.nombre === nombreProyecto);
     if (!proyecto) return 0;
     const monedaProyecto = proyecto.moneda || 'MXN';
     return ordenes
-      .filter(o => o.proyecto === nombreProyecto && o.estadopago === 'PAGADA')
+      .filter(o => o.proyecto === nombreProyecto && o.estadoPago === 'PAGADA')
       .reduce((sum, oc) => {
-        let montoEnMonedaProyecto = oc.montomxn || 0;
+        let montoEnMonedaProyecto = oc.montoMXN || 0;
         if (monedaProyecto === 'USD') {
-          if (oc.tipocambio && oc.tipocambio > 0) {
-            montoEnMonedaProyecto = oc.montomxn / oc.tipocambio;
+          if (oc.tipoCambio && oc.tipoCambio > 0) {
+            montoEnMonedaProyecto = oc.montoMXN / oc.tipoCambio;
           } else {
-            montoEnMonedaProyecto = oc.montomxn / 20;
+            montoEnMonedaProyecto = oc.montoMXN / 20;
           }
         }
         return sum + montoEnMonedaProyecto;
       }, 0);
   }
 
+  // ---------- SUPABASE: CARGAR DATOS ----------
   async function cargarDatos() {
     try {
       const { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
@@ -449,6 +618,7 @@ tr:hover{background:var(--gray-50)}
     }
   }
 
+  // ---------- ACTUALIZAR RESPONSABLES ----------
   window.actualizarResponsables = function() {
     const selectProyecto = document.getElementById('selectProyecto');
     const selectResp = document.getElementById('responsableOC');
@@ -490,40 +660,58 @@ tr:hover{background:var(--gray-50)}
     }
   };
 
+  // ---------- ELIMINAR TODOS LOS PROYECTOS (SOLO ADMIN) ----------
   window.eliminarTodosProyectos = async function() {
     if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-    if (!confirm('⚠️ ¿Estás seguro de eliminar TODOS los proyectos y TODAS las OC?')) return;
+    if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar TODOS los proyectos y TODAS las órdenes de compra? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Última confirmación: ¿Eliminar todo el sistema de proyectos y OC?')) return;
+
     try {
-      await supabase.from('ordenes').delete().neq('id', 0);
-      await supabase.from('proyectos').delete().neq('id', 0);
+      const { error: errOrdenes } = await supabase.from('ordenes').delete().neq('id', 0);
+      if (errOrdenes) throw errOrdenes;
+      const { error: errProyectos } = await supabase.from('proyectos').delete().neq('id', 0);
+      if (errProyectos) throw errProyectos;
       proyectos = [];
       ordenes = [];
       consecutivoOC = 1;
       render();
-      alert('✅ Todos los proyectos y OC eliminados.');
+      alert('✅ Todos los proyectos y OC han sido eliminados.');
     } catch (error) {
-      alert('❌ Error: ' + error.message);
+      console.error('Error al eliminar todo:', error);
+      alert('❌ Error al eliminar: ' + error.message);
     }
   };
 
+  // ---------- LOGIN ----------
   window.login = function() {
+    console.log('🔵 Login ejecutado');
     const userInput = document.getElementById('usuario');
     const passInput = document.getElementById('password');
     const errorDiv = document.getElementById('error');
-    if (!userInput || !passInput) { alert('❌ Campos no encontrados'); return; }
+    
+    if (!userInput || !passInput) {
+      alert('❌ No se encontraron los campos');
+      return;
+    }
+    
     const user = userInput.value.trim().toUpperCase();
     const pass = passInput.value.trim();
+    
+    console.log('Usuario:', user, 'Contraseña:', pass);
+    
     const encontrado = USUARIOS.find(x => x.u === user && x.p === pass);
+    
     if (!encontrado) {
       errorDiv.classList.remove('hidden');
       errorDiv.textContent = '❌ Usuario o contraseña incorrectos';
       return;
     }
+    
     errorDiv.classList.add('hidden');
     actual = encontrado;
     document.getElementById('login').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-
+    
     let infoSesion = `👤 ${actual.u} (${actual.rol})`;
     const opciones = obtenerOpcionesPermisos(actual);
     if (['Director General','Administrador','Finanzas'].includes(actual.rol)) {
@@ -534,18 +722,20 @@ tr:hover{background:var(--gray-50)}
       infoSesion += ` - ${opciones.length} empresas/departamentos`;
     }
     document.getElementById('sesion').textContent = infoSesion;
-
+    
+    // Mostrar/ocultar acciones de administrador
     if (actual.rol === 'Administrador') {
       document.getElementById('adminActions').classList.remove('hidden');
     } else {
       document.getElementById('adminActions').classList.add('hidden');
     }
-
+    
+    // Configurar campos de proyecto
     const empresaSelect = document.getElementById('empresaSelect');
     const empresaInput = document.getElementById('empresaInput');
     const deptoSelect = document.getElementById('departamentoSelect');
     const deptoInput = document.getElementById('departamentoInput');
-
+    
     if (['Director General','Administrador','Finanzas'].includes(actual.rol)) {
       empresaSelect.style.display = 'none';
       empresaInput.style.display = 'inline-block';
@@ -586,11 +776,12 @@ tr:hover{background:var(--gray-50)}
       empresaSelect.disabled = (opcionesPerm.length <= 1);
       deptoSelect.disabled = (opcionesPerm.length <= 1);
     }
-
+    
     const esElaborador = actual.rol === 'Elaborador';
     document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador);
     document.getElementById('panelOC').classList.toggle('hidden', !esElaborador);
-
+    
+    // Mostrar filtros
     const filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
     const filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
     if (actual.rol === 'Director General' || actual.rol === 'Finanzas') {
@@ -603,10 +794,11 @@ tr:hover{background:var(--gray-50)}
     } else {
       filtroDeptoContainer.classList.add('hidden');
     }
-
+    
     const selectProyecto = document.getElementById('selectProyecto');
     selectProyecto.onchange = window.actualizarResponsables;
-
+    
+    // Llenar filtros
     const filtroProyecto = document.getElementById('filtroProyecto');
     filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
     proyectos.forEach(p => {
@@ -616,7 +808,7 @@ tr:hover{background:var(--gray-50)}
       filtroProyecto.appendChild(opt);
     });
     filtroProyecto.onchange = function() { render(); };
-
+    
     const filtroDepto = document.getElementById('filtroDepto');
     filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
     const deptos = [...new Set(proyectos.map(p => p.departamento))];
@@ -627,13 +819,16 @@ tr:hover{background:var(--gray-50)}
       filtroDepto.appendChild(opt);
     });
     filtroDepto.onchange = function() { render(); };
-
+    
     render();
     if (esElaborador) window.actualizarResponsables();
+    
+    console.log('✅ Login completado');
   };
 
   window.salir = function() { location.reload(); };
 
+  // ---------- PROYECTOS (TODO EN MAYÚSCULAS) ----------
   window.crearProyecto = async function() {
     let empresa, departamento;
     if (['Director General','Administrador','Finanzas'].includes(actual.rol)) {
@@ -665,31 +860,45 @@ tr:hover{background:var(--gray-50)}
     }
 
     const nuevoProyecto = {
-      empresa, departamento, nombre, cliente, presupuesto, moneda,
+      empresa,
+      departamento,
+      nombre,
+      cliente,
+      presupuesto,
+      moneda,
       limite: presupuesto * 0.60,
       fecha_inicio: fechaInicio,
       fecha_termino: fechaTermino
     };
 
+    console.log('Enviando proyecto a Supabase:', nuevoProyecto);
+
     try {
       const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]);
+
       if (error) {
-        msgDiv.innerHTML = `<div class="alert">⚠️ ERROR: ${error.message}</div>`;
+        console.error('Error de Supabase:', error);
+        msgDiv.innerHTML = `<div class="alert">⚠️ ERROR AL CREAR PROYECTO: ${error.message}</div>`;
         return;
       }
+
       if (!data || data.length === 0) {
+        console.warn('No se recibieron datos de vuelta. Recargando lista...');
         await cargarDatos();
         render();
         msgDiv.innerHTML = '<div class="success">✅ PROYECTO CREADO (RECARGA PARA VERLO).</div>';
         return;
       }
+
       proyectos.push(data[0]);
       render();
       msgDiv.innerHTML = '<div class="success">✅ PROYECTO CREADO.</div>';
+      // Limpiar campos
       document.getElementById('nombreProyecto').value = '';
       document.getElementById('cliente').value = '';
       document.getElementById('presupuesto').value = '';
     } catch (error) {
+      console.error('Error inesperado:', error);
       msgDiv.innerHTML = `<div class="alert">⚠️ ERROR INESPERADO: ${error.message}</div>`;
     }
   };
@@ -698,12 +907,18 @@ tr:hover{background:var(--gray-50)}
     if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
     const proyecto = proyectos[index];
     if (!confirm(`¿Eliminar proyecto "${proyecto.nombre}" y todas sus OC asociadas?`)) return;
-    await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
-    await supabase.from('proyectos').delete().eq('id', proyecto.id);
+    const { error: err1 } = await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
+    if (err1) alert('Error al eliminar OC asociadas');
+    const { error: err2 } = await supabase.from('proyectos').delete().eq('id', proyecto.id);
+    if (err2) {
+      alert('Error al eliminar proyecto');
+      return;
+    }
     proyectos.splice(index, 1);
     render();
   };
 
+  // ---------- PRODUCTOS DINÁMICOS ----------
   window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0, descuento = 0, impuesto = 0) {
     const tbody = document.getElementById('cuerpoProductos');
     const fila = document.createElement('tr');
@@ -712,26 +927,26 @@ tr:hover{background:var(--gray-50)}
     fila.innerHTML = `
       <td class="indice">${idx}</td>
       <td><input class="part" type="text" value="${parte.toUpperCase()}" placeholder="Núm. Parte"></td>
-      <td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">${descripcion.toUpperCase()}</textarea></td>
-      <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-      <td><select class="udm" onchange="window.recalcularFila(this)">${udmOptions}</select></td>
-      <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-      <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-      <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
+      <td><textarea class="desc" placeholder="Descripción" oninput="autoAjustar(this); recalcularFila(this)">${descripcion.toUpperCase()}</textarea></td>
+      <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" onchange="recalcularFila(this)"></td>
+      <td><select class="udm" onchange="recalcularFila(this)">${udmOptions}</select></td>
+      <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" onchange="recalcularFila(this)"></td>
+      <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" onchange="recalcularFila(this)"></td>
+      <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" onchange="recalcularFila(this)"></td>
       <td><input class="importe" type="text" value="0.00" readonly></td>
       <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
     `;
     tbody.appendChild(fila);
-    window.recalcularFila(fila);
-    window.recalcularTotal();
-    window.reindexar();
+    recalcularFila(fila);
+    recalcularTotal();
+    reindexar();
   };
 
   window.eliminarFilaProducto = function(boton) {
     const fila = boton.closest('tr');
     fila.remove();
-    window.recalcularTotal();
-    window.reindexar();
+    recalcularTotal();
+    reindexar();
   };
 
   function reindexar() {
@@ -764,7 +979,7 @@ tr:hover{background:var(--gray-50)}
 
     const importeInput = fila.querySelector('.importe');
     if (importeInput) importeInput.value = importe.toFixed(2);
-    window.recalcularTotal();
+    recalcularTotal();
   }
 
   function recalcularTotal() {
@@ -778,6 +993,7 @@ tr:hover{background:var(--gray-50)}
     document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
   }
 
+  // ---------- RECOPILAR DATOS DE LA OC (TEXTO EN MAYÚSCULAS) ----------
   function recopilarDatosOC() {
     const selectProyecto = document.getElementById('selectProyecto');
     const selectedId = parseInt(selectProyecto.value);
@@ -796,18 +1012,19 @@ tr:hover{background:var(--gray-50)}
       return null;
     }
 
+    // Todos los campos de texto se convierten a mayúsculas
     const proveedor = document.getElementById('proveedor').value.trim().toUpperCase();
     const rfc = document.getElementById('rfc').value.trim().toUpperCase();
     const direccion = document.getElementById('direccion').value.trim().toUpperCase();
-    const usocfdi = document.getElementById('usoCFDI').value;
-    const direccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
+    const usoCFDI = document.getElementById('usoCFDI').value;
+    const direccionEntrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
     const moneda = document.getElementById('monedaOC').value;
-    const fechapago = document.getElementById('fechaPago').value;
+    const fechaPago = document.getElementById('fechaPago').value;
     const responsable = document.getElementById('responsableOC').value;
     const msgDiv = document.getElementById('mensajeOC');
 
     let tipoCambioInicial = null;
-    let montomxn = 0;
+    let montoMXN = 0;
     if (moneda === 'USD') {
       const tcInput = document.getElementById('paridadInicial').value;
       if (!tcInput || parseFloat(tcInput) <= 0) {
@@ -817,7 +1034,7 @@ tr:hover{background:var(--gray-50)}
       tipoCambioInicial = parseFloat(tcInput);
     }
 
-    if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable) {
+    if (!proveedor || !direccion || !direccionEntrega || !fechaPago || !responsable) {
       msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO Y RESPONSABLE.</div>';
       return null;
     }
@@ -827,7 +1044,7 @@ tr:hover{background:var(--gray-50)}
       return null;
     }
 
-    const fechaPagoObj = new Date(fechapago);
+    const fechaPagoObj = new Date(fechaPago);
     const fechaInicioObj = new Date(proyecto.fecha_inicio);
     const fechaTerminoObj = new Date(proyecto.fecha_termino);
     const dentroRango = fechaPagoObj >= fechaInicioObj && fechaPagoObj <= fechaTerminoObj;
@@ -835,7 +1052,7 @@ tr:hover{background:var(--gray-50)}
     const tbody = document.getElementById('cuerpoProductos');
     const filas = tbody.querySelectorAll('tr');
     const productos = [];
-    let montototal = 0;
+    let montoTotal = 0;
     let valido = true;
 
     filas.forEach(fila => {
@@ -853,7 +1070,7 @@ tr:hover{background:var(--gray-50)}
         return;
       }
       productos.push({ parte, descripcion, udm, cantidad, precioUnitario: precio, descuento, impuesto, importe });
-      montototal += importe;
+      montoTotal += importe;
     });
 
     if (!valido || productos.length === 0) {
@@ -862,9 +1079,9 @@ tr:hover{background:var(--gray-50)}
     }
 
     if (moneda === 'USD') {
-      montomxn = montototal * tipoCambioInicial;
+      montoMXN = montoTotal * tipoCambioInicial;
     } else {
-      montomxn = montototal;
+      montoMXN = montoTotal;
     }
 
     let estado = 'CREADA';
@@ -875,18 +1092,18 @@ tr:hover{background:var(--gray-50)}
     }
 
     return {
-      proyecto: proyecto.nombre,
+      proyecto,
       proveedor,
       rfc: rfc || 'NA',
       direccion,
-      usocfdi,
-      direccionentrega,
+      usoCFDI,
+      direccionEntrega,
       moneda,
-      tipocambio: tipoCambioInicial,
-      montototal,
-      montomxn,
+      tipoCambioInicial,
+      montoTotal,
+      montoMXN,
       estado,
-      fechapago,
+      fechaPago,
       responsable,
       productos,
       motivo,
@@ -895,6 +1112,7 @@ tr:hover{background:var(--gray-50)}
     };
   }
 
+  // ---------- FUNCIÓN PARA ENCABEZADO MEMBRETADO ----------
   function agregarMembrete(doc, pageWidth, margin) {
       try {
           doc.addImage('https://extingue.com.mx/img/logo.png', 'PNG', pageWidth - margin - 120, margin - 10, 100, 30);
@@ -922,6 +1140,7 @@ tr:hover{background:var(--gray-50)}
       return margin + 35;
   }
 
+  // ---------- GENERAR PDF PARA PREVISUALIZACIÓN ----------
   function generarPDFParaPreview(datos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'pt', 'a4');
@@ -932,12 +1151,11 @@ tr:hover{background:var(--gray-50)}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
 
-    const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
-    const codigoFinal = generarCodigoOC(
-      proyectoObj ? proyectoObj.empresa : 'GIE',
-      proyectoObj ? proyectoObj.departamento : 'GENERAL',
+    const codigoReal = generarCodigoOC(
+      datos.proyecto.empresa,
+      datos.proyecto.departamento,
       datos.proveedor,
-      datos.proyecto,
+      datos.proyecto.nombre,
       datos.cliente,
       datos.elaborador,
       consecutivoOC
@@ -945,7 +1163,7 @@ tr:hover{background:var(--gray-50)}
 
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Código: ${codigoFinal} (Previsualización)`, margin, y);
+    doc.text(`Código: ${codigoReal} (Previsualización)`, margin, y);
     y += 16;
     doc.text(`Proveedor: ${datos.proveedor}`, margin, y);
     y += 16;
@@ -956,22 +1174,22 @@ tr:hover{background:var(--gray-50)}
     doc.text(`Dirección: ${datos.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
     const lines = doc.splitTextToSize(`Dirección: ${datos.direccion}`, pageWidth - 2*margin);
     y += lines.length * 16 + 2;
-    doc.text(`Dirección de entrega: ${datos.direccionentrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
-    const linesEntrega = doc.splitTextToSize(`Dirección de entrega: ${datos.direccionentrega}`, pageWidth - 2*margin);
-    y += linesEntrega.length * 16 + 2;
-    doc.text(`Uso CFDI: ${datos.usocfdi}`, margin, y);
+    doc.text(`Uso CFDI: ${datos.usoCFDI}`, margin, y);
     y += 16;
+    doc.text(`Dirección de entrega: ${datos.direccionEntrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesEntrega = doc.splitTextToSize(`Dirección de entrega: ${datos.direccionEntrega}`, pageWidth - 2*margin);
+    y += linesEntrega.length * 16 + 2;
     doc.text(`Moneda: ${datos.moneda}`, margin, y);
     y += 16;
-    doc.text(`Total: ${formatoMoneda(datos.montototal, datos.moneda)}`, margin, y);
+    doc.text(`Total: ${formatoMoneda(datos.montoTotal, datos.moneda)}`, margin, y);
     y += 16;
-    if (datos.moneda === 'USD' && datos.tipocambio) {
-      doc.text(`Tipo de Cambio Inicial: ${datos.tipocambio.toFixed(4)}`, margin, y);
+    if (datos.moneda === 'USD') {
+      doc.text(`Tipo de Cambio Inicial: ${datos.tipoCambioInicial.toFixed(4)}`, margin, y);
       y += 16;
-      doc.text(`Equiv. MXN (Inicial): ${formatoMoneda(datos.montomxn, 'MXN')}`, margin, y);
+      doc.text(`Equiv. MXN (Inicial): ${formatoMoneda(datos.montoMXN, 'MXN')}`, margin, y);
       y += 16;
     }
-    doc.text(`Fecha de Pago: ${new Date(datos.fechapago).toLocaleDateString()}`, margin, y);
+    doc.text(`Fecha de Pago: ${new Date(datos.fechaPago).toLocaleDateString()}`, margin, y);
     y += 20;
 
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1010,11 +1228,11 @@ tr:hover{background:var(--gray-50)}
     const finalY = doc.lastAutoTable.finalY + 16;
     const colX = margin + (pageWidth - 2*margin) * 0.64;
     doc.setFontSize(10);
-    doc.text(`Subtotal: ${formatoMoneda(datos.montototal, datos.moneda)}`, colX, finalY);
+    doc.text(`Subtotal: ${formatoMoneda(datos.montoTotal, datos.moneda)}`, colX, finalY);
     doc.text(`IVA: $0.00`, colX, finalY + 14);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(`TOTAL: ${formatoMoneda(datos.montototal, datos.moneda)}`, colX, finalY + 30);
+    doc.text(`TOTAL: ${formatoMoneda(datos.montoTotal, datos.moneda)}`, colX, finalY + 30);
     doc.setFont('helvetica', 'normal');
 
     const leyendaY = finalY + 50;
@@ -1029,7 +1247,7 @@ tr:hover{background:var(--gray-50)}
     let ay = authY + 16;
 
     const solicitante = datos.responsable || 'No definido';
-    const jefe = proyectoObj ? getJefeDepto(proyectoObj.empresa, proyectoObj.departamento) : 'No definido';
+    const jefe = getJefeDepto(datos.proyecto.empresa, datos.proyecto.departamento);
     const director = getDirector();
 
     function mostrarFirma(doc, x, y, nombre, fecha) {
@@ -1058,12 +1276,15 @@ tr:hover{background:var(--gray-50)}
     return doc;
   }
 
+  // ---------- PREVISUALIZAR OC ----------
   window.previsualizarOC = function() {
     const datos = recopilarDatosOC();
     if (!datos) return;
     ocPreviewData = datos;
+
     const doc = generarPDFParaPreview(datos);
     ocPreviewPDF = doc;
+
     const pdfData = doc.output('datauristring');
     document.getElementById('pdfPreviewFrame').src = pdfData;
     document.getElementById('pdfPreviewModal').classList.add('active');
@@ -1075,162 +1296,925 @@ tr:hover{background:var(--gray-50)}
     ocPreviewPDF = null;
   };
 
-  // CORRECCIÓN: confirmar OC sin verificar data
+  // ---------- CONFIRMAR OC DESDE PREVIEW ----------
   window.confirmarDesdePreview = async function() {
     if (!ocPreviewData) {
       alert('No hay datos para confirmar.');
       return;
     }
     const datos = ocPreviewData;
-    const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
     const codigo = generarCodigoOC(
-      proyectoObj ? proyectoObj.empresa : 'GIE',
-      proyectoObj ? proyectoObj.departamento : 'GENERAL',
+      datos.proyecto.empresa,
+      datos.proyecto.departamento,
       datos.proveedor,
-      datos.proyecto,
+      datos.proyecto.nombre,
       datos.cliente,
       datos.elaborador
     );
 
     const nuevaOC = {
       codigo: codigo,
-      proyecto: datos.proyecto,
+      proyecto: datos.proyecto.nombre,
       proveedor: datos.proveedor,
       rfc: datos.rfc,
       direccion: datos.direccion,
-      usocfdi: datos.usocfdi,
-      direccionentrega: datos.direccionentrega,
+      usoCFDI: datos.usoCFDI,
+      direccionEntrega: datos.direccionEntrega,
       moneda: datos.moneda,
-      tipocambio: datos.tipocambio,
-      montototal: datos.montototal,
-      montomxn: datos.montomxn,
+      tipoCambio: datos.tipoCambioInicial,
+      montoTotal: datos.montoTotal,
+      montoMXN: datos.montoMXN,
       estado: datos.estado,
-      fechacreacion: new Date().toISOString(),
-      fechapago: datos.fechapago,
+      fechaCreacion: new Date().toISOString(),
+      fechaPago: datos.fechaPago,
       responsable: datos.responsable,
       pausada: false,
       motivo: datos.motivo || null,
-      fechaaprobacionsolicitante: null,
-      fechaaprobacionjefe: null,
-      fechaaprobaciondirector: null,
-      nombresolicitante: null,
-      nombrejefe: null,
-      nombredirector: null,
-      estadopago: null,
-      uuidfactura: null,
-      montofactura: null,
-      paridadinicial: datos.tipocambio,
+      fechaAprobacionSolicitante: null,
+      fechaAprobacionJefe: null,
+      fechaAprobacionDirector: null,
+      nombreSolicitante: null,
+      nombreJefe: null,
+      nombreDirector: null,
+      estadoPago: null,
+      uuidFactura: null,
+      montoFactura: null,
+      paridadInicial: datos.tipoCambioInicial,
       productos: datos.productos,
       cliente: datos.cliente,
       elaborador: datos.elaborador
     };
 
-    try {
-      const { error } = await supabase.from('ordenes').insert([nuevaOC]);
-      if (error) {
-        alert('Error al guardar OC: ' + error.message);
-        return;
-      }
-
-      // Recargar datos para actualizar la bandeja
-      await cargarDatos();
-      window.cerrarPreview();
-      document.getElementById('cuerpoProductos').innerHTML = '';
-      window.agregarFilaProducto();
-      document.getElementById('totalProductos').textContent = '$0.00';
-      document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-      render();
-      if (ocPreviewPDF) {
-        ocPreviewPDF.save(`OC_${codigo}.pdf`);
-      }
-      ocPreviewData = null;
-      ocPreviewPDF = null;
-    } catch (err) {
-      alert('Error inesperado: ' + err.message);
+    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+    if (error) {
+      alert('Error al guardar OC: ' + error.message);
+      return;
     }
+    ordenes.push(data[0]);
+    window.cerrarPreview();
+    document.getElementById('cuerpoProductos').innerHTML = '';
+    window.agregarFilaProducto();
+    document.getElementById('totalProductos').textContent = '$0.00';
+    document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+    render();
+    if (ocPreviewPDF) {
+      ocPreviewPDF.save(`OC_${codigo}.pdf`);
+    }
+    ocPreviewData = null;
+    ocPreviewPDF = null;
   };
 
+  // ---------- CONFIRMAR OC DIRECTAMENTE ----------
   window.confirmarOC = async function() {
     const datos = recopilarDatosOC();
     if (!datos) return;
-    const proyectoObj = proyectos.find(p => p.nombre === datos.proyecto);
     const codigo = generarCodigoOC(
-      proyectoObj ? proyectoObj.empresa : 'GIE',
-      proyectoObj ? proyectoObj.departamento : 'GENERAL',
+      datos.proyecto.empresa,
+      datos.proyecto.departamento,
       datos.proveedor,
-      datos.proyecto,
+      datos.proyecto.nombre,
       datos.cliente,
       datos.elaborador
     );
 
     const nuevaOC = {
       codigo: codigo,
-      proyecto: datos.proyecto,
+      proyecto: datos.proyecto.nombre,
       proveedor: datos.proveedor,
       rfc: datos.rfc,
       direccion: datos.direccion,
-      usocfdi: datos.usocfdi,
-      direccionentrega: datos.direccionentrega,
+      usoCFDI: datos.usoCFDI,
+      direccionEntrega: datos.direccionEntrega,
       moneda: datos.moneda,
-      tipocambio: datos.tipocambio,
-      montototal: datos.montototal,
-      montomxn: datos.montomxn,
+      tipoCambio: datos.tipoCambioInicial,
+      montoTotal: datos.montoTotal,
+      montoMXN: datos.montoMXN,
       estado: datos.estado,
-      fechacreacion: new Date().toISOString(),
-      fechapago: datos.fechapago,
+      fechaCreacion: new Date().toISOString(),
+      fechaPago: datos.fechaPago,
       responsable: datos.responsable,
       pausada: false,
       motivo: datos.motivo || null,
-      fechaaprobacionsolicitante: null,
-      fechaaprobacionjefe: null,
-      fechaaprobaciondirector: null,
-      nombresolicitante: null,
-      nombrejefe: null,
-      nombredirector: null,
-      estadopago: null,
-      uuidfactura: null,
-      montofactura: null,
-      paridadinicial: datos.tipocambio,
+      fechaAprobacionSolicitante: null,
+      fechaAprobacionJefe: null,
+      fechaAprobacionDirector: null,
+      nombreSolicitante: null,
+      nombreJefe: null,
+      nombreDirector: null,
+      estadoPago: null,
+      uuidFactura: null,
+      montoFactura: null,
+      paridadInicial: datos.tipoCambioInicial,
       productos: datos.productos,
       cliente: datos.cliente,
       elaborador: datos.elaborador
     };
 
-    try {
-      const { error } = await supabase.from('ordenes').insert([nuevaOC]);
-      if (error) {
-        alert('Error al guardar OC: ' + error.message);
-        return;
-      }
-
-      // Recargar datos para actualizar la bandeja
-      await cargarDatos();
-      document.getElementById('cuerpoProductos').innerHTML = '';
-      window.agregarFilaProducto();
-      document.getElementById('totalProductos').textContent = '$0.00';
-      document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-      render();
-      const doc = generarPDFParaPreview(datos);
-      doc.save(`OC_${codigo}.pdf`);
-    } catch (err) {
-      alert('Error inesperado: ' + err.message);
+    const { data, error } = await supabase.from('ordenes').insert([nuevaOC]);
+    if (error) {
+      alert('Error al guardar OC: ' + error.message);
+      return;
     }
+    ordenes.push(data[0]);
+    document.getElementById('cuerpoProductos').innerHTML = '';
+    window.agregarFilaProducto();
+    document.getElementById('totalProductos').textContent = '$0.00';
+    document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+    render();
+    const doc = generarPDFParaPreview(datos);
+    doc.save(`OC_${codigo}.pdf`);
   };
 
-  // ========== RESTO DE FUNCIONES (aprobaciones, finanzas, dashboard, render, init) ==========
-  // (Aquí van todas las funciones que ya tenías, pero por brevedad las resumo)
-  // Nota: Debes incluir todo el código completo. Este es un extracto para mostrar las correcciones.
+  // ---------- GENERAR PDF FIRMADO ----------
+  function generarPDFFirmado(oc) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 40;
+    let y = agregarMembrete(doc, pageWidth, margin);
 
-  // Asegúrate de que las funciones window.aprobarSolicitante, window.aprobarJefe, 
-  // window.autorizarDirector, window.ingresarParidad, window.marcarPagada, 
-  // window.registrarFactura, window.marcarPendiente, window.cancelarDirector, 
-  // window.eliminarOC, window.togglePausarOC, window.mostrarDashboard, 
-  // window.cerrarDashboard, render, init están definidas.
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
 
-  // Por límite de espacio, asumo que las tienes de tu versión anterior.
-  // Puedes copiarlas desde el archivo funcional que te envié previamente.
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Código: ${oc.codigo}`, margin, y);
+    y += 16;
+    doc.text(`Proveedor: ${oc.proveedor}`, margin, y);
+    y += 16;
+    if (oc.rfc && oc.rfc.toUpperCase() !== 'NA') {
+      doc.text(`RFC: ${oc.rfc}`, margin, y);
+      y += 16;
+    }
+    doc.text(`Dirección: ${oc.direccion}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesDir = doc.splitTextToSize(`Dirección: ${oc.direccion}`, pageWidth - 2*margin);
+    y += linesDir.length * 16 + 2;
+    doc.text(`Uso CFDI: ${oc.usoCFDI}`, margin, y);
+    y += 16;
+    doc.text(`Dirección de entrega: ${oc.direccionEntrega}`, margin, y, { maxWidth: pageWidth - 2*margin });
+    const linesEnt = doc.splitTextToSize(`Dirección de entrega: ${oc.direccionEntrega}`, pageWidth - 2*margin);
+    y += linesEnt.length * 16 + 2;
+    doc.text(`Moneda: ${oc.moneda}`, margin, y);
+    y += 16;
+    doc.text(`Total en ${oc.moneda}: ${formatoMoneda(oc.montoTotal, oc.moneda)}`, margin, y);
+    y += 16;
+    if (oc.moneda === 'USD' && oc.tipoCambio) {
+      doc.text(`Tipo de Cambio (MXN/USD) - Final: ${oc.tipoCambio.toFixed(4)}`, margin, y);
+      y += 16;
+      doc.text(`Equivalente en MXN: ${formatoMoneda(oc.montoMXN, 'MXN')}`, margin, y);
+      y += 16;
+    }
+    doc.text(`Fecha de Pago: ${new Date(oc.fechaPago).toLocaleDateString()}`, margin, y);
+    y += 20;
 
-  // ========== INICIALIZACIÓN ==========
+    const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
+    const rows = oc.productos.map((p, i) => [
+      i+1,
+      p.parte || '',
+      p.descripcion,
+      p.cantidad,
+      p.udm || 'PZA',
+      formatoMoneda(p.precioUnitario, oc.moneda),
+      p.descuento.toFixed(2) + '%',
+      p.impuesto.toFixed(2) + '%',
+      formatoMoneda(p.importe, oc.moneda)
+    ]);
+
+    doc.autoTable({
+      head: [headers],
+      body: rows,
+      startY: y,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 9, cellPadding: 3, font: 'helvetica' },
+      headStyles: { fillColor: [30, 40, 60], fontSize: 9, font: 'helvetica' },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 50 },
+        6: { cellWidth: 35 },
+        7: { cellWidth: 35 },
+        8: { cellWidth: 50 }
+      }
+    });
+
+    let subtotal = 0, ivaTotal = 0;
+    oc.productos.forEach(p => {
+      const base = p.cantidad * p.precioUnitario;
+      const desc = base * (p.descuento / 100);
+      const baseConDesc = base - desc;
+      subtotal += baseConDesc;
+      ivaTotal += baseConDesc * (p.impuesto / 100);
+    });
+    const total = subtotal + ivaTotal;
+
+    const finalY = doc.lastAutoTable.finalY + 16;
+    const colX = margin + (pageWidth - 2*margin) * 0.64;
+    doc.setFontSize(10);
+    doc.text(`Subtotal: ${formatoMoneda(subtotal, oc.moneda)}`, colX, finalY);
+    doc.text(`IVA (incluido): ${formatoMoneda(ivaTotal, oc.moneda)}`, colX, finalY + 14);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`TOTAL: ${formatoMoneda(total, oc.moneda)}`, colX, finalY + 30);
+    doc.setFont('helvetica', 'normal');
+
+    const leyendaY = finalY + 50;
+    doc.setFontSize(10);
+    doc.setTextColor(11, 26, 51);
+    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', pageWidth - margin - 10, leyendaY, { align: 'right' });
+
+    const authY = leyendaY + 25;
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('AUTORIZACIONES', margin, authY);
+    let ay = authY + 16;
+
+    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+    const solicitanteNombre = oc.responsable || 'No definido';
+    const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
+    const directorNombre = getDirector();
+
+    function mostrarFirma(doc, x, y, nombre, fecha) {
+      doc.setFont('helvetica', 'bolditalic');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(nombre, x, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Fecha: ${fecha}`, x, y + 12);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    if (oc.nombreSolicitante) {
+      doc.text(`Solicitante:`, margin, ay);
+      mostrarFirma(doc, margin + 80, ay, oc.nombreSolicitante, oc.fechaAprobacionSolicitante ? new Date(oc.fechaAprobacionSolicitante).toLocaleString() : 'Pendiente');
+    } else {
+      doc.text(`Solicitante: ${solicitanteNombre} (Pendiente)`, margin, ay);
+      ay += 12;
+      doc.text(`Fecha: Pendiente`, margin, ay);
+    }
+    ay += 30;
+
+    if (oc.nombreJefe) {
+      doc.text(`Jefe de Departamento:`, margin, ay);
+      mostrarFirma(doc, margin + 80, ay, oc.nombreJefe, oc.fechaAprobacionJefe ? new Date(oc.fechaAprobacionJefe).toLocaleString() : 'Pendiente');
+    } else {
+      doc.text(`Jefe de Departamento: ${jefeNombre} (Pendiente)`, margin, ay);
+      ay += 12;
+      doc.text(`Fecha: Pendiente`, margin, ay);
+    }
+    ay += 30;
+
+    if (oc.nombreDirector) {
+      doc.text(`Director General:`, margin, ay);
+      mostrarFirma(doc, margin + 80, ay, oc.nombreDirector, oc.fechaAprobacionDirector ? new Date(oc.fechaAprobacionDirector).toLocaleString() : 'Pendiente');
+    } else {
+      doc.text(`Director General: ${directorNombre} (Pendiente)`, margin, ay);
+      ay += 12;
+      doc.text(`Fecha: Pendiente`, margin, ay);
+    }
+
+    doc.save(`OC_${oc.codigo}.pdf`);
+  }
+
+  // ---------- APROBACIONES (con Supabase) ----------
+  window.aprobarSolicitante = async function(index) {
+    if (!actual) return alert('No has iniciado sesión');
+    if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') {
+      return alert('No tienes permiso para aprobar en este nivel.');
+    }
+    const oc = ordenes[index];
+    if (oc.pausada) return alert('⚠️ Esta OC está pausada y no puede ser aprobada.');
+    if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
+    if (actual.u !== oc.responsable) return alert('Solo el responsable asignado puede aprobar esta OC.');
+    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+    if (!proyecto) return alert('Proyecto no encontrado');
+    if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
+      return alert('No tienes permiso para aprobar OC de este proyecto.');
+    }
+    const updates = {
+      estado: 'APROBADA_SOLICITANTE',
+      fechaAprobacionSolicitante: new Date().toISOString(),
+      nombreSolicitante: actual.u
+    };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    Object.assign(oc, updates);
+    render();
+  };
+
+  window.aprobarJefe = async function(index) {
+    if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    if (oc.pausada) return alert('⚠️ Esta OC está pausada y no puede ser aprobada.');
+    if (oc.estado !== 'APROBADA_SOLICITANTE') return alert('La OC debe estar aprobada por el Solicitante');
+    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+    if (!proyecto) return alert('Proyecto no encontrado');
+    if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
+      return alert('No tienes permiso para aprobar OC de este proyecto.');
+    }
+
+    const gastado = gastoProyectoMoneda(proyecto.nombre);
+    let montoEnMonedaProyecto = oc.montoMXN || 0;
+    if (proyecto.moneda === 'USD') {
+      if (oc.paridadInicial) {
+        montoEnMonedaProyecto = oc.montoMXN / oc.paridadInicial;
+      } else {
+        montoEnMonedaProyecto = oc.montoMXN / 20;
+      }
+    }
+
+    let nuevoEstado = 'APROBADA_JEFE';
+    let mensaje = '';
+
+    if (oc.moneda === 'USD' && !oc.tipoCambio) {
+      nuevoEstado = 'PENDIENTE_PARIDAD';
+      mensaje = '⏳ La OC está en USD. Se requiere paridad final del elaborador.';
+    } else if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
+      nuevoEstado = 'AUTORIZADA';
+      oc.estadoPago = null;
+      mensaje = '✅ OC autorizada automáticamente (dentro del límite del 60%).';
+      const updates = {
+        estado: nuevoEstado,
+        fechaAprobacionJefe: new Date().toISOString(),
+        nombreJefe: actual.u,
+        fechaAprobacionDirector: new Date().toISOString(),
+        nombreDirector: actual.u,
+        estadoPago: null
+      };
+      const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+      if (error) return alert('Error al actualizar OC');
+      Object.assign(oc, updates);
+      render();
+      generarPDFFirmado(oc);
+      alert(mensaje);
+      return;
+    } else {
+      nuevoEstado = 'PENDIENTE_DIRECTOR';
+      mensaje = '⏳ OC supera el 60% del presupuesto. Enviada a Director para autorización.';
+    }
+
+    const updates = {
+      estado: nuevoEstado,
+      fechaAprobacionJefe: new Date().toISOString(),
+      nombreJefe: actual.u
+    };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    Object.assign(oc, updates);
+    render();
+    alert(mensaje);
+  };
+
+  window.autorizarDirector = async function(index) {
+    if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    if (oc.pausada) return alert('⚠️ Esta OC está pausada y no puede ser aprobada.');
+    if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+
+    if (oc.moneda === 'USD' && !oc.tipoCambio) {
+      const updates = {
+        estado: 'PENDIENTE_PARIDAD',
+        fechaAprobacionDirector: new Date().toISOString(),
+        nombreDirector: actual.u
+      };
+      const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+      if (error) return alert('Error al actualizar OC');
+      Object.assign(oc, updates);
+      render();
+      alert('⏳ La OC está en USD. Se requiere paridad final del elaborador.');
+      return;
+    }
+
+    const updates = {
+      estado: 'AUTORIZADA',
+      fechaAprobacionDirector: new Date().toISOString(),
+      nombreDirector: actual.u,
+      estadoPago: null
+    };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    Object.assign(oc, updates);
+    render();
+    generarPDFFirmado(oc);
+    alert('✅ OC autorizada por Director.');
+  };
+
+  window.ingresarParidad = async function(index) {
+    if (!actual) return alert('No has iniciado sesión');
+    if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede ingresar la paridad final.');
+    const oc = ordenes[index];
+    if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
+    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+    if (!proyecto) return alert('Proyecto no encontrado');
+    if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
+      return alert('No tienes permiso para modificar OC de este proyecto.');
+    }
+    const tc = prompt(`Ingrese el tipo de cambio (MXN/USD) para el pago de la OC ${oc.codigo}:`);
+    if (tc === null) return;
+    const tipoCambio = parseFloat(tc);
+    if (!tipoCambio || tipoCambio <= 0) {
+      alert('Tipo de cambio inválido. Operación cancelada.');
+      return;
+    }
+    const nuevoMontoMXN = oc.montoTotal * tipoCambio;
+    const updates = {
+      tipoCambio: tipoCambio,
+      montoMXN: nuevoMontoMXN,
+      estado: 'AUTORIZADA',
+      estadoPago: null
+    };
+    if (!oc.fechaAprobacionSolicitante) {
+      updates.fechaAprobacionSolicitante = new Date().toISOString();
+      updates.nombreSolicitante = 'No definido';
+    }
+    if (!oc.fechaAprobacionJefe) {
+      updates.fechaAprobacionJefe = new Date().toISOString();
+      updates.nombreJefe = 'No definido';
+    }
+    if (!oc.fechaAprobacionDirector) {
+      updates.fechaAprobacionDirector = new Date().toISOString();
+      updates.nombreDirector = 'No definido';
+    }
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    Object.assign(oc, updates);
+    render();
+    generarPDFFirmado(oc);
+    alert('✅ Paridad final ingresada. OC autorizada y PDF generado con firmas.');
+  };
+
+  // ---------- FINANZAS ----------
+  window.marcarPagada = async function(index) {
+    if (!actual) return alert('No has iniciado sesión');
+    if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
+    const updates = { estadoPago: 'PAGADA' };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    oc.estadoPago = 'PAGADA';
+    render();
+    alert('✅ OC marcada como PAGADA. El saldo del proyecto se actualizará.');
+  };
+
+  window.registrarFactura = async function(index) {
+    if (!actual) return alert('No has iniciado sesión');
+    const oc = ordenes[index];
+    if (actual.u !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
+      return alert('Solo el responsable de la OC puede registrar la factura.');
+    }
+    if (oc.estadoPago !== 'PAGADA') return alert('La OC debe estar pagada para registrar la factura.');
+    if (oc.estado === 'CONCLUIDA') return alert('Esta OC ya está concluida.');
+
+    const uuid = prompt('Ingrese el folio UUID de la factura:');
+    if (uuid === null) return;
+    if (!uuid.trim()) {
+      alert('El UUID es obligatorio.');
+      return;
+    }
+    const montoFactura = prompt('Ingrese el monto de la factura (en la misma moneda de la OC):');
+    if (montoFactura === null) return;
+    const monto = parseFloat(montoFactura);
+    if (!monto || monto <= 0) {
+      alert('Monto inválido.');
+      return;
+    }
+    if (Math.abs(monto - oc.montoTotal) > 0.01) {
+      alert(`El monto de la factura (${monto.toFixed(2)}) no coincide con el total de la OC (${oc.montoTotal.toFixed(2)}). Operación cancelada.`);
+      return;
+    }
+    const updates = {
+      uuidFactura: uuid.trim().toUpperCase(),
+      montoFactura: monto,
+      estado: 'CONCLUIDA'
+    };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    Object.assign(oc, updates);
+    render();
+    alert('✅ Factura registrada y OC concluida.');
+  };
+
+  window.marcarPendiente = async function(index) {
+    if (!actual) return alert('No has iniciado sesión');
+    if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
+    const updates = { estadoPago: 'PENDIENTE' };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    oc.estadoPago = 'PENDIENTE';
+    render();
+  };
+
+  window.cancelarDirector = async function(index) {
+    if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    if (oc.pausada) return alert('⚠️ Esta OC está pausada y no puede ser cancelada.');
+    if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+    const updates = { estado: 'CANCELADA' };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    oc.estado = 'CANCELADA';
+    render();
+    alert('❌ OC cancelada por Director.');
+  };
+
+  window.eliminarOC = async function(index) {
+    if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    if (!confirm(`¿Eliminar OC ${oc.codigo}?`)) return;
+    const { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
+    if (error) return alert('Error al eliminar OC');
+    ordenes.splice(index, 1);
+    render();
+  };
+
+  window.togglePausarOC = async function(index) {
+    if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+    const oc = ordenes[index];
+    const nuevoEstado = !oc.pausada;
+    const updates = { pausada: nuevoEstado };
+    const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+    if (error) return alert('Error al actualizar OC');
+    oc.pausada = nuevoEstado;
+    render();
+  };
+
+  // ---------- DASHBOARD ----------
+  window.mostrarDashboard = function(index) {
+    const proyecto = proyectos[index];
+    if (!proyecto) return;
+    if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
+      alert('No tienes permiso para ver este proyecto.');
+      return;
+    }
+    if (actual.rol === 'Finanzas') {
+      alert('Finanzas no puede ver dashboards.');
+      return;
+    }
+
+    const ocProyecto = ordenes.filter(o => o.proyecto === proyecto.nombre);
+    const gastado = gastoProyectoMoneda(proyecto.nombre);
+    const disponible = proyecto.limite - gastado;
+    const porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
+    const saludable = porcentaje <= 60;
+    const color = saludable ? '#22c55e' : '#dc2626';
+    const monedaSimbolo = proyecto.moneda === 'USD' ? 'USD ' : '$';
+
+    const totales = { MXN: 0, USD: 0 };
+    ocProyecto.forEach(o => {
+      if (o.estadoPago === 'PAGADA') {
+        if (o.moneda === 'MXN') totales.MXN += o.montoTotal;
+        else if (o.moneda === 'USD') totales.USD += o.montoTotal;
+      }
+    });
+    const totalMXNEquiv = ocProyecto.filter(o => o.estadoPago === 'PAGADA').reduce((s, o) => s + (o.montoMXN || 0), 0);
+
+    const html = `
+      <h1>📊 Dashboard: ${proyecto.nombre}</h1>
+      <div class="card">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px">
+          <div>
+            <p><strong>Empresa:</strong> ${proyecto.empresa}</p>
+            <p><strong>Departamento:</strong> ${proyecto.departamento}</p>
+            <p><strong>Cliente:</strong> ${proyecto.cliente}</p>
+            <p><strong>Presupuesto (${proyecto.moneda}):</strong> ${formatoMoneda(proyecto.presupuesto, proyecto.moneda)}</p>
+            <p><strong>Límite 60% (${proyecto.moneda}):</strong> ${formatoMoneda(proyecto.limite, proyecto.moneda)}</p>
+            <p><strong>Pagado (${proyecto.moneda}):</strong> ${formatoMoneda(gastado, proyecto.moneda)}</p>
+            <p><strong>Disponible (${proyecto.moneda}):</strong> ${formatoMoneda(disponible, proyecto.moneda)}</p>
+            <p><strong>Fecha Inicio:</strong> ${new Date(proyecto.fecha_inicio).toLocaleDateString()}</p>
+            <p><strong>Fecha Término:</strong> ${new Date(proyecto.fecha_termino).toLocaleDateString()}</p>
+          </div>
+          <div>
+            <div class="donut-container">
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="${color}" stroke-width="12"
+                        stroke-dasharray="${porcentaje * 2.513} ${100 * 2.513 - porcentaje * 2.513}"
+                        stroke-linecap="round"/>
+              </svg>
+              <div class="center-text">
+                ${porcentaje.toFixed(1)}%
+                <small>${saludable ? '✅ Saludable' : '⚠️ Excedido'}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>📋 Órdenes de Compra</h3>
+      ${ocProyecto.length === 0 ? '<p class="text-muted">No hay OC para este proyecto.</p>' : `
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>UUID</th><th>Estado</th></tr></thead>
+          <tbody>
+            ${ocProyecto.map(o => {
+              let badgeClass = '';
+              let estadoMostrado = o.estado;
+              if (o.estado === 'AUTORIZADA') {
+                if (o.estadoPago === 'PAGADA') {
+                  badgeClass = 'badge-autorizada-pagada';
+                  estadoMostrado = 'AUTORIZADA - PAGADA';
+                } else if (o.estadoPago === 'PENDIENTE') {
+                  const fechaAut = new Date(o.fechaAprobacionDirector || o.fechaAprobacionJefe || Date.now());
+                  const ahora = new Date();
+                  const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                  if (diffDias > 1) {
+                    badgeClass = 'badge-autorizada-vencida';
+                    estadoMostrado = 'AUTORIZADA - PENDIENTE (⚠️ Vencida)';
+                  } else {
+                    badgeClass = 'badge-autorizada-pendiente';
+                    estadoMostrado = 'AUTORIZADA - PENDIENTE';
+                  }
+                } else {
+                  badgeClass = 'badge-autorizada-pendiente';
+                  estadoMostrado = 'AUTORIZADA - PENDIENTE (Pago pendiente)';
+                }
+              } else if (o.estado === 'CONCLUIDA') {
+                badgeClass = 'badge-concluida';
+                estadoMostrado = 'CONCLUIDA';
+              } else {
+                const classes = {
+                  'CREADA': 'badge-creada',
+                  'APROBADA_SOLICITANTE': 'badge-solicitante',
+                  'APROBADA_JEFE': 'badge-jefe',
+                  'PENDIENTE_DIRECTOR': 'badge-pendiente',
+                  'PENDIENTE_PARIDAD': 'badge-paridad',
+                  'CANCELADA': 'badge-cancelada'
+                };
+                badgeClass = classes[o.estado] || '';
+              }
+              return `<tr>
+                <td><code>${o.codigo}</code></td>
+                <td>${o.proveedor}</td>
+                <td>${o.rfc}</td>
+                <td>${o.responsable}</td>
+                <td>${o.moneda}</td>
+                <td>${formatoMoneda(o.montoTotal, o.moneda)}</td>
+                <td>${formatoMoneda(o.montoMXN || 0, 'MXN')}</td>
+                <td>${new Date(o.fechaPago).toLocaleDateString()}</td>
+                <td>${o.uuidFactura || '—'}</td>
+                <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      `}
+      <div class="resumen-totales">
+        <strong>Totales pagados:</strong>
+        <span>MXN: ${formatoMoneda(totales.MXN, 'MXN')}</span>
+        ${totales.USD > 0 ? `<span>USD: ${formatoMoneda(totales.USD, 'USD')} (equiv. MXN: ${formatoMoneda(totalMXNEquiv, 'MXN')})</span>` : ''}
+      </div>
+    `;
+
+    document.getElementById('dashboardContent').innerHTML = html;
+    document.getElementById('dashboardOverlay').classList.add('active');
+    document.getElementById('app').style.display = 'none';
+  };
+
+  window.cerrarDashboard = function() {
+    document.getElementById('dashboardOverlay').classList.remove('active');
+    document.getElementById('app').style.display = 'block';
+  };
+
+  // ---------- RENDER ----------
+  function render() {
+    const tablaProyectos = document.getElementById('tablaProyectos');
+    const selectProyecto = document.getElementById('selectProyecto');
+    const tablaOC = document.getElementById('tablaOC');
+    const resumenTotales = document.getElementById('resumenTotales');
+
+    const proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+    let ocVisibles = filtrarOCSegunUsuario(actual);
+
+    const filtroProyecto = document.getElementById('filtroProyecto');
+    if (filtroProyecto && filtroProyecto.value) {
+      ocVisibles = ocVisibles.filter(o => o.proyecto === filtroProyecto.value);
+    }
+    const filtroDepto = document.getElementById('filtroDepto');
+    if (filtroDepto && filtroDepto.value) {
+      ocVisibles = ocVisibles.filter(o => {
+        const p = proyectos.find(proj => proj.nombre === o.proyecto);
+        return p && p.departamento === filtroDepto.value;
+      });
+    }
+
+    tablaProyectos.innerHTML = '';
+    selectProyecto.innerHTML = '';
+    proyectosVisibles.forEach((p, idx) => {
+      const gastado = gastoProyectoMoneda(p.nombre);
+      const disponible = p.limite - gastado;
+      const porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
+      const esAdmin = actual && actual.rol === 'Administrador';
+      const esFinanzas = actual && actual.rol === 'Finanzas';
+      const monedaSimbolo = p.moneda === 'USD' ? 'USD ' : '$';
+
+      let botones = '';
+      if (!esFinanzas) {
+        botones += `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
+      }
+      if (esAdmin) {
+        botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
+      }
+
+      tablaProyectos.innerHTML += `
+        <tr>
+          <td>${p.empresa}</td>
+          <td>${p.departamento}</td>
+          <td><strong>${p.nombre}</strong></td>
+          <td>${p.cliente}</td>
+          <td>${formatoMoneda(p.presupuesto, p.moneda)}</td>
+          <td>${formatoMoneda(p.limite, p.moneda)}</td>
+          <td>${formatoMoneda(gastado, p.moneda)}</td>
+          <td style="color:${disponible < 0 ? '#b91c1c' : '#166534'}">${formatoMoneda(disponible, p.moneda)}</td>
+          <td>
+            <span>${porcentaje.toFixed(2)}%</span>
+            <div class="progress-bar"><div class="fill" style="width:${Math.min(porcentaje, 100)}%; background:${porcentaje > 60 ? '#dc2626' : '#22c55e'}"></div></div>
+          </td>
+          <td><div class="actions">${botones}</div></td>
+        </tr>
+      `;
+      selectProyecto.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+    });
+
+    if (actual && actual.rol === 'Elaborador') {
+      if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
+        selectProyecto.selectedIndex = 0;
+      }
+      window.actualizarResponsables();
+    }
+
+    tablaOC.innerHTML = '';
+    const totalMXN = ocVisibles.filter(o => o.estadoPago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o.montoTotal, 0);
+    const totalUSD = ocVisibles.filter(o => o.estadoPago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o.montoTotal, 0);
+    const totalMXNEquiv = ocVisibles.filter(o => o.estadoPago === 'PAGADA').reduce((s, o) => s + (o.montoMXN || 0), 0);
+    resumenTotales.innerHTML = `
+      <strong>Totales pagados (visibles):</strong>
+      <span>MXN: ${formatoMoneda(totalMXN, 'MXN')}</span>
+      ${totalUSD > 0 ? `<span>USD: ${formatoMoneda(totalUSD, 'USD')} (equiv. MXN: ${formatoMoneda(totalMXNEquiv, 'MXN')})</span>` : ''}
+      <span><strong>Total MXN equivalente:</strong> ${formatoMoneda(totalMXNEquiv, 'MXN')}</span>
+    `;
+
+    ocVisibles.forEach((o, i) => {
+      const idxOriginal = ordenes.indexOf(o);
+      let badgeClass = '';
+      let estadoMostrado = o.estado;
+      let esVencida = false;
+
+      if (o.estado === 'AUTORIZADA') {
+        if (o.estadoPago === 'PAGADA') {
+          badgeClass = 'badge-autorizada-pagada';
+          estadoMostrado = 'AUTORIZADA - PAGADA';
+        } else if (o.estadoPago === 'PENDIENTE') {
+          const fechaAut = new Date(o.fechaAprobacionDirector || o.fechaAprobacionJefe || Date.now());
+          const ahora = new Date();
+          const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+          if (diffDias > 1) {
+            badgeClass = 'badge-autorizada-vencida';
+            estadoMostrado = 'AUTORIZADA - PENDIENTE (⚠️ Vencida)';
+            esVencida = true;
+          } else {
+            badgeClass = 'badge-autorizada-pendiente';
+            estadoMostrado = 'AUTORIZADA - PENDIENTE';
+          }
+        } else {
+          badgeClass = 'badge-autorizada-pendiente';
+          estadoMostrado = 'AUTORIZADA - PENDIENTE (Pago pendiente)';
+        }
+      } else if (o.estado === 'CONCLUIDA') {
+        badgeClass = 'badge-concluida';
+        estadoMostrado = 'CONCLUIDA';
+      } else {
+        const classes = {
+          'CREADA': 'badge-creada',
+          'APROBADA_SOLICITANTE': 'badge-solicitante',
+          'APROBADA_JEFE': 'badge-jefe',
+          'PENDIENTE_DIRECTOR': 'badge-pendiente',
+          'PENDIENTE_PARIDAD': 'badge-paridad',
+          'CANCELADA': 'badge-cancelada'
+        };
+        badgeClass = classes[o.estado] || '';
+      }
+      if (o.pausada) badgeClass += ' badge-pausada';
+      if (esVencida) badgeClass = 'badge-autorizada-vencida';
+
+      let acciones = '';
+      const rol = actual ? actual.rol : '';
+
+      if (rol === 'Finanzas') {
+        if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA') {
+          if (o.estadoPago === 'PAGADA') {
+            acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+          } else {
+            acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+          }
+        } else {
+          acciones = '—';
+        }
+      } else {
+        if (rol === 'Administrador') {
+          const textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
+          acciones += `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
+          acciones += `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
+          if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA') {
+            if (o.estadoPago === 'PAGADA') {
+              acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+            } else {
+              acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+            }
+          }
+          if (o.estadoPago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+            acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+          }
+        } else {
+          if (!o.pausada) {
+            if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
+              acciones += `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
+            }
+            if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
+              acciones += `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe)</button>`;
+            }
+            if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
+              acciones += `
+                <button class="success" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
+                <button class="danger" onclick="window.cancelarDirector(${idxOriginal})">❌ Cancelar</button>
+              `;
+            }
+            if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
+              acciones += `<button class="warning" onclick="window.ingresarParidad(${idxOriginal})">💰 Ingresar Paridad Final</button>`;
+            }
+            if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadoPago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+              acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+            }
+          } else {
+            acciones = '⏸️ Pausada';
+          }
+        }
+        if (!acciones) acciones = '—';
+      }
+
+      const proyecto = proyectos.find(p => p.nombre === o.proyecto);
+      const cliente = proyecto ? proyecto.cliente : '—';
+
+      tablaOC.innerHTML += `
+        <tr>
+          <td><code>${o.codigo}</code></td>
+          <td>${o.proyecto}</td>
+          <td>${cliente}</td>
+          <td>${o.proveedor}</td>
+          <td>${o.rfc}</td>
+          <td>${o.moneda}</td>
+          <td>${formatoMoneda(o.montoTotal, o.moneda)}</td>
+          <td>${formatoMoneda(o.montoMXN || 0, 'MXN')}</td>
+          <td>${new Date(o.fechaPago).toLocaleDateString()}</td>
+          <td>${o.uuidFactura || '—'}</td>
+          <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
+          <td><div class="actions">${acciones}</div></td>
+        </tr>
+      `;
+    });
+
+    const cuerpo = document.getElementById('cuerpoProductos');
+    if (cuerpo && cuerpo.children.length === 0) {
+      window.agregarFilaProducto();
+    }
+
+    const filtroProyectoSelect = document.getElementById('filtroProyecto');
+    if (filtroProyectoSelect) {
+      const currentVal = filtroProyectoSelect.value;
+      filtroProyectoSelect.innerHTML = '<option value="">Todos los proyectos</option>';
+      proyectosVisibles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.nombre;
+        opt.textContent = p.nombre;
+        if (p.nombre === currentVal) opt.selected = true;
+        filtroProyectoSelect.appendChild(opt);
+      });
+    }
+    const filtroDeptoSelect = document.getElementById('filtroDepto');
+    if (filtroDeptoSelect) {
+      const currentVal = filtroDeptoSelect.value;
+      filtroDeptoSelect.innerHTML = '<option value="">Todos los departamentos</option>';
+      const deptos = [...new Set(proyectosVisibles.map(p => p.departamento))];
+      deptos.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        if (d === currentVal) opt.selected = true;
+        filtroDeptoSelect.appendChild(opt);
+      });
+    }
+  }
+
+  // ---------- INICIALIZACIÓN ----------
   async function init() {
     const hoy = new Date();
     const year = hoy.getFullYear();
@@ -1246,6 +2230,7 @@ tr:hover{background:var(--gray-50)}
     }
   }
 
+  // Ejecutar al cargar la página
   document.addEventListener('DOMContentLoaded', function() {
     init();
     const btnLogin = document.getElementById('btnLogin');
@@ -1254,12 +2239,7 @@ tr:hover{background:var(--gray-50)}
     }
   });
 
-  window.recalcularFila = recalcularFila;
-  window.recalcularTotal = recalcularTotal;
-  window.autoAjustar = autoAjustar;
-  window.reindexar = reindexar;
-
-})();
+})(); // Fin del IIFE
 </script>
 </body>
 </html>
