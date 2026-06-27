@@ -1138,11 +1138,16 @@ tr:hover{background:var(--gray-50)}
     doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
     y += 18;
 
-    // ----- TÍTULO ORDEN DE COMPRA -----
+    // ----- TÍTULO ORDEN DE COMPRA (eliminado, solo texto) -----
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE COMPRA', margin, y);
+    y += 8;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Documento generado por Workflow OC ERP', margin, y);
     y += 14;
 
     // Línea separadora
@@ -1151,7 +1156,7 @@ tr:hover{background:var(--gray-50)}
     doc.line(margin, y, pageWidth - margin, y);
     y += 14;
 
-    // ----- DATOS DE LA OC (formato clave: valor) -----
+    // ----- DATOS DE LA OC (en columnas para mejor distribución) -----
     const codigoFinal = generarCodigoOC(
       datos.empresa,
       datos.departamento,
@@ -1166,37 +1171,45 @@ tr:hover{background:var(--gray-50)}
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 
-    // Lista de datos en dos columnas
+    // Organizar datos en 3 columnas
     const datosLista = [
       { label: 'Código:', value: codigoFinal },
       { label: 'Proveedor:', value: datos.proveedor },
       { label: 'RFC:', value: datos.rfc },
+      { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
       { label: 'Dirección:', value: datos.direccion },
       { label: 'Dirección de entrega:', value: datos.direccionentrega },
-      { label: 'Uso CFDI:', value: datos.usocfdi },
-      { label: 'Moneda:', value: datos.moneda },
-      { label: 'Total:', value: formatoMoneda(datos.montototal, datos.moneda) },
-      { label: 'Fecha de Pago:', value: new Date(datos.fechapago).toLocaleDateString() },
-      { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
-      { label: 'Banco:', value: datos.banco },
       { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-      { label: 'CLABE:', value: datos.clabe || 'N/A' }
+      { label: 'Uso CFDI:', value: datos.usocfdi },
+      { label: 'CLABE:', value: datos.clabe || 'N/A' },
+      { label: 'Moneda:', value: datos.moneda }
     ];
 
-    // Dos columnas para los datos
-    const col1Width = 180;
-    const col2X = margin + col1Width + 30;
+    // 3 columnas
+    const col1Width = 160;
+    const col2Width = 160;
+    const col3X = margin + col1Width + 30;
+    const col3Width = pageWidth - margin - col3X - margin;
 
     datosLista.forEach((item, index) => {
-      const x = index < 7 ? margin : col2X;
-      const rowIndex = index < 7 ? index : index - 7;
-      const yPos = y + (rowIndex * 16);
+      let x;
+      if (index < 4) {
+        x = margin;
+      } else if (index < 7) {
+        x = col3X;
+      } else {
+        x = col3X + col2Width + 20;
+      }
+      const rowIndex = index < 4 ? index : (index < 7 ? index - 4 : index - 7);
+      const yPos = y + (rowIndex * 18);
 
       doc.setFont('helvetica', 'bold');
       doc.text(item.label, x, yPos);
       doc.setFont('helvetica', 'normal');
       const labelWidth = doc.getTextWidth(item.label) + 8;
-      doc.text(item.value, x + labelWidth, yPos);
+      const maxWidth = index < 4 ? 140 : (index < 7 ? 140 : 120);
+      const textLines = doc.splitTextToSize(item.value, maxWidth);
+      doc.text(textLines, x + labelWidth, yPos);
     });
 
     y += 130;
@@ -1246,17 +1259,14 @@ tr:hover{background:var(--gray-50)}
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
 
-    // Subtotal
     doc.text('Subtotal:', totalX, y);
     doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
     y += 14;
 
-    // IVA
     doc.text('IVA:', totalX, y);
     doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
     y += 16;
 
-    // TOTAL (en negrita)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', totalX, y);
@@ -1270,7 +1280,7 @@ tr:hover{background:var(--gray-50)}
     doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', margin, y);
     y += 20;
 
-    // ----- AUTORIZACIONES (en paralelo) -----
+    // ----- AUTORIZACIONES (con espacio para firma y línea) -----
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
@@ -1291,17 +1301,23 @@ tr:hover{background:var(--gray-50)}
       doc.setFont('helvetica', 'normal');
       doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-      // Nombre en negrita
+      // Nombre en negrita (2 saltos de línea después)
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
-      doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 12, { align: 'center' });
+      doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 16, { align: 'center' });
+
+      // Línea de firma (2 saltos de línea después del nombre)
+      doc.setDrawColor(80, 80, 80);
+      doc.setLineWidth(0.8);
+      const lineY = y + 40;
+      doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
       // Fecha
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.setFont('helvetica', 'normal');
-      doc.text('Fecha: Pendiente', x + (lineWidth / 2), y + 24, { align: 'center' });
+      doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 12, { align: 'center' });
     }
 
     const x1 = margin;
@@ -1547,11 +1563,15 @@ tr:hover{background:var(--gray-50)}
     doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
     y += 18;
 
-    // ----- TÍTULO -----
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE COMPRA', margin, y);
+    y += 8;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Documento generado por Workflow OC ERP', margin, y);
     y += 14;
 
     doc.setDrawColor(200, 200, 200);
@@ -1568,31 +1588,38 @@ tr:hover{background:var(--gray-50)}
       { label: 'Código:', value: oc.codigo },
       { label: 'Proveedor:', value: oc.proveedor },
       { label: 'RFC:', value: oc.rfc },
+      { label: 'Fecha de Entrega:', value: new Date(oc.fechaentrega).toLocaleDateString() },
       { label: 'Dirección:', value: oc.direccion },
       { label: 'Dirección de entrega:', value: oc.direccionentrega || 'No especificada' },
-      { label: 'Uso CFDI:', value: oc.usocfdi },
-      { label: 'Moneda:', value: oc.moneda },
-      { label: 'Total:', value: formatoMoneda(oc.montototal, oc.moneda) },
-      { label: 'Fecha de Pago:', value: new Date(oc.fechapago).toLocaleDateString() },
-      { label: 'Fecha de Entrega:', value: new Date(oc.fechaentrega).toLocaleDateString() },
-      { label: 'Banco:', value: oc.banco || 'N/A' },
       { label: 'Cuenta:', value: oc.cuenta || 'N/A' },
-      { label: 'CLABE:', value: oc.clabe || 'N/A' }
+      { label: 'Uso CFDI:', value: oc.usocfdi },
+      { label: 'CLABE:', value: oc.clabe || 'N/A' },
+      { label: 'Moneda:', value: oc.moneda }
     ];
 
-    const col1Width = 180;
-    const col2X = margin + col1Width + 30;
+    const col1Width = 160;
+    const col2Width = 160;
+    const col3X = margin + col1Width + 30;
 
     datosLista.forEach((item, index) => {
-      const x = index < 7 ? margin : col2X;
-      const rowIndex = index < 7 ? index : index - 7;
-      const yPos = y + (rowIndex * 16);
+      let x;
+      if (index < 4) {
+        x = margin;
+      } else if (index < 7) {
+        x = col3X;
+      } else {
+        x = col3X + col2Width + 20;
+      }
+      const rowIndex = index < 4 ? index : (index < 7 ? index - 4 : index - 7);
+      const yPos = y + (rowIndex * 18);
 
       doc.setFont('helvetica', 'bold');
       doc.text(item.label, x, yPos);
       doc.setFont('helvetica', 'normal');
       const labelWidth = doc.getTextWidth(item.label) + 8;
-      doc.text(item.value, x + labelWidth, yPos);
+      const maxWidth = index < 4 ? 140 : (index < 7 ? 140 : 120);
+      const textLines = doc.splitTextToSize(item.value, maxWidth);
+      doc.text(textLines, x + labelWidth, yPos);
     });
 
     y += 130;
@@ -1656,14 +1683,13 @@ tr:hover{background:var(--gray-50)}
     doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
     y += 20;
 
-    // ----- MENSAJE DE AGRADECIMIENTO -----
     doc.setFontSize(10);
     doc.setTextColor(11, 26, 51);
     doc.setFont('helvetica', 'bold');
     doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', margin, y);
     y += 20;
 
-    // ----- AUTORIZACIONES -----
+    // ----- AUTORIZACIONES CON FIRMA -----
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
@@ -1687,12 +1713,17 @@ tr:hover{background:var(--gray-50)}
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
       const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-      doc.text(nombre + estado, x + (lineWidth / 2), y + 12, { align: 'center' });
+      doc.text(nombre + estado, x + (lineWidth / 2), y + 16, { align: 'center' });
+
+      doc.setDrawColor(80, 80, 80);
+      doc.setLineWidth(0.8);
+      const lineY = y + 40;
+      doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.setFont('helvetica', 'normal');
-      doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), y + 24, { align: 'center' });
+      doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 12, { align: 'center' });
     }
 
     const x1 = margin;
