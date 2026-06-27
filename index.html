@@ -1586,20 +1586,18 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('ORDEN DE COMPRA', margin, y);
-        y += 14;
+        y += 10;
 
         // Línea separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 20;
+        y += 5;
 
-        // ----- DATOS DE LA OC (SIN CÓDIGO) -----
+        // ----- DATOS DE LA OC (SIN CÓDIGO) - ESPACIADO 9 PUNTOS -----
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
-
-        // El código ya no se muestra aquí, se mostrará en el pie de página
 
         const datosLista = [
           { label: 'Proveedor:', value: datos.proveedor },
@@ -1621,10 +1619,10 @@
           const maxWidth = pageWidth - margin - labelWidth - 20;
           const textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 20 + 2;
+          y += textLines.length * 9 + 2; // Espaciado de 9 puntos
         });
 
-        y += 6;
+        y += 5;
 
         // ----- TABLA DE PRODUCTOS -----
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1661,7 +1659,7 @@
           }
         });
 
-        y = doc.lastAutoTable.finalY + 16;
+        y = doc.lastAutoTable.finalY + 10;
 
         // ----- TOTALES -----
         const subtotal = datos.montototal / (1 + (datos.productos[0]?.impuesto || 0) / 100);
@@ -1674,25 +1672,25 @@
 
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 20;
+        y += 9;
 
         const impuestoPorcentaje = datos.productos[0]?.impuesto || 0;
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 24;
+        y += 9;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 30;
+        y += 15;
 
         // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 20;
+        y += 9;
 
         const solicitante = datos.responsable || 'No definido';
         const jefe = getJefeDepto(datos.empresa, datos.departamento);
@@ -1710,17 +1708,18 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 20, { align: 'center' });
+          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 10, { align: 'center' });
 
+          // Línea de firma
+          const lineY = y + 25;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
-          const lineY = y + 45;
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 12, { align: 'center' });
+          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10, { align: 'center' });
         }
 
         const x1 = margin;
@@ -1741,7 +1740,7 @@
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
-        doc.text(leyendaPie, pageWidth / 2, pieY + 12, { align: 'center' });
+        doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
         // Código de la OC (debajo de la leyenda, centrado)
         const codigoFinal = generarCodigoOC(
@@ -1756,13 +1755,13 @@
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        doc.text('Código: ' + codigoFinal, pageWidth / 2, pieY + 24, { align: 'center' });
+        doc.text('Código: ' + codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
 
         // Número de página (derecha)
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        doc.text('Página 1 de 1', pageWidth - margin, pieY + 12, { align: 'right' });
+        doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
         return doc;
       }
@@ -2007,15 +2006,15 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('ORDEN DE COMPRA', margin, y);
-        y += 14;
+        y += 10;
 
         // Línea separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 20;
+        y += 5;
 
-        // ----- DATOS DE LA OC (SIN CÓDIGO) -----
+        // ----- DATOS DE LA OC (SIN CÓDIGO) - ESPACIADO 9 PUNTOS -----
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
@@ -2040,10 +2039,10 @@
           const maxWidth = pageWidth - margin - labelWidth - 20;
           const textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 20 + 2;
+          y += textLines.length * 9 + 2; // Espaciado de 9 puntos
         });
 
-        y += 6;
+        y += 5;
 
         // ----- TABLA DE PRODUCTOS -----
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -2080,7 +2079,7 @@
           }
         });
 
-        y = doc.lastAutoTable.finalY + 16;
+        y = doc.lastAutoTable.finalY + 10;
 
         // ----- TOTALES -----
         const subtotal = oc.montototal / (1 + (oc.productos[0]?.impuesto || 0) / 100);
@@ -2093,25 +2092,25 @@
 
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 20;
+        y += 9;
 
         const impuestoPorcentaje = oc.productos[0]?.impuesto || 0;
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 24;
+        y += 9;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 30;
+        y += 15;
 
         // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 20;
+        y += 9;
 
         const solicitanteNombre = oc.responsable || 'No definido';
         const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
@@ -2130,17 +2129,18 @@
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-          doc.text(nombre + estado, x + (lineWidth / 2), y + 20, { align: 'center' });
+          doc.text(nombre + estado, x + (lineWidth / 2), y + 10, { align: 'center' });
 
+          // Línea de firma
+          const lineY = y + 25;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
-          const lineY = y + 45;
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 12, { align: 'center' });
+          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10, { align: 'center' });
         }
 
         const x1 = margin;
@@ -2167,19 +2167,19 @@
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
-        doc.text(leyendaPie, pageWidth / 2, pieY + 12, { align: 'center' });
+        doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
         // Código de la OC (debajo de la leyenda, centrado)
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        doc.text('Código: ' + oc.codigo, pageWidth / 2, pieY + 24, { align: 'center' });
+        doc.text('Código: ' + oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
 
         // Número de página (derecha)
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        doc.text('Página 1 de 1', pageWidth - margin, pieY + 12, { align: 'right' });
+        doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
         doc.save(`OC_${oc.codigo}.pdf`);
       }
