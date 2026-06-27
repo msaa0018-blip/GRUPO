@@ -493,6 +493,14 @@ tr:hover{background:var(--gray-50)}
     return '#6b7280';
   }
 
+  function getNombreMembrete(empresa) {
+    if (!empresa) return 'GRUPO INDUSTRIAL EXTINGUE';
+    const emp = empresa.trim().toUpperCase();
+    if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return 'GRUPO INDUSTRIAL EXTINGUE';
+    if (emp.includes('VEXPAR OPERACIONES')) return 'VEXPAR OPERACIONES';
+    return 'GRUPO INDUSTRIAL EXTINGUE';
+  }
+
   document.addEventListener('input', function(e) {
     const target = e.target;
     if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
@@ -1121,24 +1129,31 @@ tr:hover{background:var(--gray-50)}
     const margin = 40;
     let y = margin;
 
-    // ----- ENCABEZADO -----
-    doc.setFontSize(18);
+    const nombreEmpresa = getNombreMembrete(datos.empresa);
+
+    // ----- MEMBRETE (DERECHA) -----
+    doc.setFontSize(12);
     doc.setTextColor(11, 26, 51);
     doc.setFont('helvetica', 'bold');
-    doc.text('GRUPO INDUSTRIAL EXTINGUE', margin, y);
-    y += 14;
-    doc.setFontSize(10);
+    doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+    y += 12;
+    doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'normal');
-    doc.text('Workflow OC ERP', margin, y);
-    y += 20;
+    doc.text('Workflow OC ERP', pageWidth - margin - 10, y, { align: 'right' });
+    y += 18;
 
-    // Título ORDEN DE COMPRA
+    // ----- TÍTULO ORDEN DE COMPRA -----
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE COMPRA', margin, y);
-    y += 20;
+    y += 8;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Documento generado por Workflow OC ERP', margin, y);
+    y += 14;
 
     // Línea separadora
     doc.setDrawColor(200, 200, 200);
@@ -1146,7 +1161,7 @@ tr:hover{background:var(--gray-50)}
     doc.line(margin, y, pageWidth - margin, y);
     y += 12;
 
-    // ----- DATOS DE LA OC -----
+    // ----- DATOS DE LA OC (formato clave: valor) -----
     const codigoFinal = generarCodigoOC(
       datos.empresa,
       datos.departamento,
@@ -1161,8 +1176,9 @@ tr:hover{background:var(--gray-50)}
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 
-    const datosOC = [
-      { label: 'Código:', value: codigoFinal },
+    // Lista de datos en dos columnas
+    const datosLista = [
+      { label: 'Código:', value: codigoFinal + ' (Previsualización)' },
       { label: 'Proveedor:', value: datos.proveedor },
       { label: 'RFC:', value: datos.rfc },
       { label: 'Dirección:', value: datos.direccion },
@@ -1177,16 +1193,23 @@ tr:hover{background:var(--gray-50)}
       { label: 'CLABE:', value: datos.clabe || 'N/A' }
     ];
 
-    datosOC.forEach(item => {
+    // Dos columnas para los datos
+    const col1Width = 180;
+    const col2X = margin + col1Width + 30;
+
+    datosLista.forEach((item, index) => {
+      const x = index < 7 ? margin : col2X;
+      const rowIndex = index < 7 ? index : index - 7;
+      const yPos = y + (rowIndex * 16);
+
       doc.setFont('helvetica', 'bold');
-      doc.text(item.label, margin, y);
+      doc.text(item.label, x, yPos);
       doc.setFont('helvetica', 'normal');
-      const labelWidth = doc.getTextWidth(item.label) + 10;
-      doc.text(item.value, margin + labelWidth, y);
-      y += 14;
+      const labelWidth = doc.getTextWidth(item.label) + 8;
+      doc.text(item.value, x + labelWidth, yPos);
     });
 
-    y += 6;
+    y += 130;
 
     // ----- TABLA DE PRODUCTOS -----
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1228,28 +1251,41 @@ tr:hover{background:var(--gray-50)}
     const subtotal = datos.montototal / (1 + (datos.productos[0]?.impuesto || 0) / 100);
     const iva = datos.montototal - subtotal;
 
-    const totalX = pageWidth - margin - 100;
+    const totalX = pageWidth - margin - 120;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
+
+    // Subtotal
     doc.text('Subtotal:', totalX, y);
     doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
     y += 14;
+
+    // IVA
     doc.text('IVA:', totalX, y);
     doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
     y += 16;
+
+    // TOTAL (en negrita)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', totalX, y);
     doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 25;
+    y += 20;
+
+    // ----- MENSAJE DE AGRADECIMIENTO -----
+    doc.setFontSize(10);
+    doc.setTextColor(11, 26, 51);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', margin, y);
+    y += 20;
 
     // ----- AUTORIZACIONES (en paralelo) -----
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('AUTORIZACIONES', margin, y);
-    y += 20;
+    y += 16;
 
     const solicitante = datos.responsable || 'No definido';
     const jefe = getJefeDepto(datos.empresa, datos.departamento);
@@ -1259,23 +1295,23 @@ tr:hover{background:var(--gray-50)}
     function dibujarAutorizacion(doc, x, y, nombre, titulo) {
       const lineWidth = colWidth - 20;
 
-      // Nombre en negrita
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.text(nombre, x + (lineWidth / 2), y, { align: 'center' });
-
       // Título
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       doc.setFont('helvetica', 'normal');
-      doc.text(titulo, x + (lineWidth / 2), y + 12, { align: 'center' });
+      doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-      // Estado "Pendiente"
+      // Nombre en negrita
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 12, { align: 'center' });
+
+      // Fecha
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Pendiente', x + (lineWidth / 2), y + 24, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.text('Fecha: Pendiente', x + (lineWidth / 2), y + 24, { align: 'center' });
     }
 
     const x1 = margin;
@@ -1511,23 +1547,32 @@ tr:hover{background:var(--gray-50)}
     const margin = 40;
     let y = margin;
 
-    // ----- ENCABEZADO -----
-    doc.setFontSize(18);
+    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+    const nombreEmpresa = proyecto ? getNombreMembrete(proyecto.empresa) : 'GRUPO INDUSTRIAL EXTINGUE';
+
+    // ----- MEMBRETE (DERECHA) -----
+    doc.setFontSize(12);
     doc.setTextColor(11, 26, 51);
     doc.setFont('helvetica', 'bold');
-    doc.text('GRUPO INDUSTRIAL EXTINGUE', margin, y);
-    y += 14;
-    doc.setFontSize(10);
+    doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+    y += 12;
+    doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.setFont('helvetica', 'normal');
-    doc.text('Workflow OC ERP', margin, y);
-    y += 20;
+    doc.text('Workflow OC ERP', pageWidth - margin - 10, y, { align: 'right' });
+    y += 18;
 
+    // ----- TÍTULO -----
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE COMPRA', margin, y);
-    y += 20;
+    y += 8;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Documento generado por Workflow OC ERP', margin, y);
+    y += 14;
 
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
@@ -1539,7 +1584,7 @@ tr:hover{background:var(--gray-50)}
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 
-    const datosOC = [
+    const datosLista = [
       { label: 'Código:', value: oc.codigo },
       { label: 'Proveedor:', value: oc.proveedor },
       { label: 'RFC:', value: oc.rfc },
@@ -1555,16 +1600,22 @@ tr:hover{background:var(--gray-50)}
       { label: 'CLABE:', value: oc.clabe || 'N/A' }
     ];
 
-    datosOC.forEach(item => {
+    const col1Width = 180;
+    const col2X = margin + col1Width + 30;
+
+    datosLista.forEach((item, index) => {
+      const x = index < 7 ? margin : col2X;
+      const rowIndex = index < 7 ? index : index - 7;
+      const yPos = y + (rowIndex * 16);
+
       doc.setFont('helvetica', 'bold');
-      doc.text(item.label, margin, y);
+      doc.text(item.label, x, yPos);
       doc.setFont('helvetica', 'normal');
-      const labelWidth = doc.getTextWidth(item.label) + 10;
-      doc.text(item.value, margin + labelWidth, y);
-      y += 14;
+      const labelWidth = doc.getTextWidth(item.label) + 8;
+      doc.text(item.value, x + labelWidth, yPos);
     });
 
-    y += 6;
+    y += 130;
 
     // ----- TABLA DE PRODUCTOS -----
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1606,30 +1657,39 @@ tr:hover{background:var(--gray-50)}
     const subtotal = oc.montototal / (1 + (oc.productos[0]?.impuesto || 0) / 100);
     const iva = oc.montototal - subtotal;
 
-    const totalX = pageWidth - margin - 100;
+    const totalX = pageWidth - margin - 120;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
+
     doc.text('Subtotal:', totalX, y);
     doc.text(formatoMoneda(subtotal, oc.moneda), pageWidth - margin, y, { align: 'right' });
     y += 14;
+
     doc.text('IVA:', totalX, y);
     doc.text(formatoMoneda(iva, oc.moneda), pageWidth - margin, y, { align: 'right' });
     y += 16;
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', totalX, y);
     doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 25;
+    y += 20;
+
+    // ----- MENSAJE DE AGRADECIMIENTO -----
+    doc.setFontSize(10);
+    doc.setTextColor(11, 26, 51);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', margin, y);
+    y += 20;
 
     // ----- AUTORIZACIONES -----
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('AUTORIZACIONES', margin, y);
-    y += 20;
+    y += 16;
 
-    const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
     const solicitanteNombre = oc.responsable || 'No definido';
     const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
     const directorNombre = getDirector();
@@ -1638,20 +1698,21 @@ tr:hover{background:var(--gray-50)}
     function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
       const lineWidth = colWidth - 20;
 
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.text(nombre, x + (lineWidth / 2), y, { align: 'center' });
-
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       doc.setFont('helvetica', 'normal');
-      doc.text(titulo, x + (lineWidth / 2), y + 12, { align: 'center' });
+      doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
+      doc.text(nombre + estado, x + (lineWidth / 2), y + 12, { align: 'center' });
 
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.setFont('helvetica', 'italic');
-      doc.text(fecha || 'Pendiente', x + (lineWidth / 2), y + 24, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), y + 24, { align: 'center' });
     }
 
     const x1 = margin;
@@ -1669,7 +1730,7 @@ tr:hover{background:var(--gray-50)}
     doc.save(`OC_${oc.codigo}.pdf`);
   }
 
-  // ---------- APROBACIONES (resumidas para mantener el código manejable) ----------
+  // ---------- APROBACIONES ----------
   window.aprobarSolicitante = async function(index) {
     if (!actual) return alert('No has iniciado sesión');
     if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
