@@ -1138,7 +1138,7 @@ tr:hover{background:var(--gray-50)}
     doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
     y += 18;
 
-    // ----- TÍTULO ORDEN DE COMPRA (eliminado, solo texto) -----
+    // ----- TÍTULO ORDEN DE COMPRA -----
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
@@ -1156,7 +1156,7 @@ tr:hover{background:var(--gray-50)}
     doc.line(margin, y, pageWidth - margin, y);
     y += 14;
 
-    // ----- DATOS DE LA OC (en columnas para mejor distribución) -----
+    // ----- DATOS DE LA OC (UNA SOLA COLUMNA A LA IZQUIERDA) -----
     const codigoFinal = generarCodigoOC(
       datos.empresa,
       datos.departamento,
@@ -1171,7 +1171,7 @@ tr:hover{background:var(--gray-50)}
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 
-    // Organizar datos en 3 columnas
+    // Lista de datos en una sola columna
     const datosLista = [
       { label: 'Código:', value: codigoFinal },
       { label: 'Proveedor:', value: datos.proveedor },
@@ -1185,34 +1185,18 @@ tr:hover{background:var(--gray-50)}
       { label: 'Moneda:', value: datos.moneda }
     ];
 
-    // 3 columnas
-    const col1Width = 160;
-    const col2Width = 160;
-    const col3X = margin + col1Width + 30;
-    const col3Width = pageWidth - margin - col3X - margin;
-
-    datosLista.forEach((item, index) => {
-      let x;
-      if (index < 4) {
-        x = margin;
-      } else if (index < 7) {
-        x = col3X;
-      } else {
-        x = col3X + col2Width + 20;
-      }
-      const rowIndex = index < 4 ? index : (index < 7 ? index - 4 : index - 7);
-      const yPos = y + (rowIndex * 18);
-
+    datosLista.forEach((item) => {
       doc.setFont('helvetica', 'bold');
-      doc.text(item.label, x, yPos);
+      doc.text(item.label, margin, y);
       doc.setFont('helvetica', 'normal');
       const labelWidth = doc.getTextWidth(item.label) + 8;
-      const maxWidth = index < 4 ? 140 : (index < 7 ? 140 : 120);
+      const maxWidth = pageWidth - margin - labelWidth - 20;
       const textLines = doc.splitTextToSize(item.value, maxWidth);
-      doc.text(textLines, x + labelWidth, yPos);
+      doc.text(textLines, margin + labelWidth, y);
+      y += textLines.length * 14 + 2;
     });
 
-    y += 130;
+    y += 6;
 
     // ----- TABLA DE PRODUCTOS -----
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1250,23 +1234,27 @@ tr:hover{background:var(--gray-50)}
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ----- TOTALES -----
+    // ----- TOTALES (recorridos 30 píxeles a la izquierda) -----
     const subtotal = datos.montototal / (1 + (datos.productos[0]?.impuesto || 0) / 100);
     const iva = datos.montototal - subtotal;
 
-    const totalX = pageWidth - margin - 120;
+    const totalX = margin - 30; // Recorrer 30 píxeles a la izquierda
+
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
 
+    // Subtotal
     doc.text('Subtotal:', totalX, y);
     doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
     y += 14;
 
+    // IVA
     doc.text('IVA:', totalX, y);
     doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
     y += 16;
 
+    // TOTAL (en negrita)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL:', totalX, y);
@@ -1579,7 +1567,7 @@ tr:hover{background:var(--gray-50)}
     doc.line(margin, y, pageWidth - margin, y);
     y += 14;
 
-    // ----- DATOS DE LA OC -----
+    // ----- DATOS DE LA OC (UNA SOLA COLUMNA) -----
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
@@ -1597,32 +1585,18 @@ tr:hover{background:var(--gray-50)}
       { label: 'Moneda:', value: oc.moneda }
     ];
 
-    const col1Width = 160;
-    const col2Width = 160;
-    const col3X = margin + col1Width + 30;
-
-    datosLista.forEach((item, index) => {
-      let x;
-      if (index < 4) {
-        x = margin;
-      } else if (index < 7) {
-        x = col3X;
-      } else {
-        x = col3X + col2Width + 20;
-      }
-      const rowIndex = index < 4 ? index : (index < 7 ? index - 4 : index - 7);
-      const yPos = y + (rowIndex * 18);
-
+    datosLista.forEach((item) => {
       doc.setFont('helvetica', 'bold');
-      doc.text(item.label, x, yPos);
+      doc.text(item.label, margin, y);
       doc.setFont('helvetica', 'normal');
       const labelWidth = doc.getTextWidth(item.label) + 8;
-      const maxWidth = index < 4 ? 140 : (index < 7 ? 140 : 120);
+      const maxWidth = pageWidth - margin - labelWidth - 20;
       const textLines = doc.splitTextToSize(item.value, maxWidth);
-      doc.text(textLines, x + labelWidth, yPos);
+      doc.text(textLines, margin + labelWidth, y);
+      y += textLines.length * 14 + 2;
     });
 
-    y += 130;
+    y += 6;
 
     // ----- TABLA DE PRODUCTOS -----
     const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1660,11 +1634,12 @@ tr:hover{background:var(--gray-50)}
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ----- TOTALES -----
+    // ----- TOTALES (recorridos 30 píxeles a la izquierda) -----
     const subtotal = oc.montototal / (1 + (oc.productos[0]?.impuesto || 0) / 100);
     const iva = oc.montototal - subtotal;
 
-    const totalX = pageWidth - margin - 120;
+    const totalX = margin - 30;
+
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
