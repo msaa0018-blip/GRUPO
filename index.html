@@ -1574,43 +1574,32 @@
         const nombreEmpresa = getNombreMembrete(datos.empresa);
         const leyendaPie = getLeyendaPie(datos.empresa);
 
-        // ----- MEMBRETE (DERECHA) TAMAÑO AUMENTADO -----
+        // ----- MEMBRETE (DERECHA) -----
         doc.setFontSize(18);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-        y += 60; // Aumentado de 24 a 60
+        y += 60; // Espacio especial después del membrete
 
         // ----- TÍTULO ORDEN DE COMPRA -----
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('ORDEN DE COMPRA', margin, y);
-        y += 14;
+        y += 10;
 
         // Línea separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 20; // Aumentado de 14 a 20
+        y += 5;
 
-        // ----- DATOS DE LA OC (UNA SOLA COLUMNA A LA IZQUIERDA) -----
-        const codigoFinal = generarCodigoOC(
-          datos.empresa,
-          datos.departamento,
-          datos.proveedor,
-          datos.proyectonombre,
-          datos.cliente,
-          datos.elaborador,
-          consecutivoOC
-        );
-
+        // ----- DATOS DE LA OC (SIN CÓDIGO) -----
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
         const datosLista = [
-          { label: 'Código:', value: codigoFinal },
           { label: 'Proveedor:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
           { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
@@ -1630,10 +1619,10 @@
           const maxWidth = pageWidth - margin - labelWidth - 20;
           const textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 20 + 2; // Aumentado de 14 a 20
+          y += textLines.length * 5 + 2;
         });
 
-        y += 6;
+        y += 5;
 
         // ----- TABLA DE PRODUCTOS -----
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -1644,8 +1633,8 @@
           p.cantidad,
           p.udm || 'PZA',
           formatoMoneda(p.precioUnitario, datos.moneda),
-          p.descuento.toFixed(2) + '%', // Formato en una sola línea
-          p.impuesto.toFixed(2) + '%', // Formato en una sola línea
+          p.descuento.toFixed(2) + '%',
+          p.impuesto.toFixed(2) + '%',
           formatoMoneda(p.importe, datos.moneda)
         ]);
 
@@ -1670,12 +1659,11 @@
           }
         });
 
-        y = doc.lastAutoTable.finalY + 16;
+        y = doc.lastAutoTable.finalY + 10;
 
-        // ----- TOTALES (3/4 de la página, lado derecho) -----
+        // ----- TOTALES -----
         const subtotal = datos.montototal / (1 + (datos.productos[0]?.impuesto || 0) / 100);
         const iva = datos.montototal - subtotal;
-
         const totalX = pageWidth * 0.72;
 
         doc.setFontSize(10);
@@ -1684,25 +1672,25 @@
 
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 20; // Aumentado de 16 a 20
+        y += 5;
 
         const impuestoPorcentaje = datos.productos[0]?.impuesto || 0;
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 24; // Aumentado de 20 a 24
+        y += 5;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 30;
+        y += 15;
 
         // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 20; // Aumentado de 16 a 20
+        y += 5;
 
         const solicitante = datos.responsable || 'No definido';
         const jefe = getJefeDepto(datos.empresa, datos.departamento);
@@ -1720,17 +1708,18 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 20, { align: 'center' }); // Aumentado de 18 a 20
+          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 10, { align: 'center' });
 
+          // Línea de firma
+          const lineY = y + 25;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
-          const lineY = y + 45;
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 12, { align: 'center' });
+          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10, { align: 'center' });
         }
 
         const x1 = margin;
@@ -1741,21 +1730,38 @@
         dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
         dibujarAutorizacion(doc, x3, y, director, 'Director General');
 
-        // ----- PIE DE PÁGINA -----
-        const pieY = doc.internal.pageSize.height - 45;
+        // ----- PIE DE PÁGINA CON CÓDIGO -----
+        const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
 
+        // Leyenda (centrada)
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
-        doc.text(leyendaPie, pageWidth / 2, pieY + 12, { align: 'center' });
+        doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
+        // Código de la OC (debajo de la leyenda, centrado)
+        const codigoFinal = generarCodigoOC(
+          datos.empresa,
+          datos.departamento,
+          datos.proveedor,
+          datos.proyectonombre,
+          datos.cliente,
+          datos.elaborador,
+          consecutivoOC
+        );
+        doc.setFontSize(7);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Código: ' + codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
+
+        // Número de página (derecha)
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        doc.text('Página 1 de 1', pageWidth - margin, pieY + 12, { align: 'right' });
+        doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
         return doc;
       }
@@ -1988,29 +1994,32 @@
         const nombreEmpresa = proyecto ? getNombreMembrete(proyecto.empresa) : 'GRUPO INDUSTRIAL EXTINGUE';
         const leyendaPie = proyecto ? getLeyendaPie(proyecto.empresa) : 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
 
+        // ----- MEMBRETE (DERECHA) -----
         doc.setFontSize(18);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-        y += 60; // Aumentado de 24 a 60
+        y += 60;
 
+        // ----- TÍTULO ORDEN DE COMPRA -----
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('ORDEN DE COMPRA', margin, y);
-        y += 14;
+        y += 10;
 
+        // Línea separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 20; // Aumentado de 14 a 20
+        y += 5;
 
+        // ----- DATOS DE LA OC (SIN CÓDIGO) -----
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
         const datosLista = [
-          { label: 'Código:', value: oc.codigo },
           { label: 'Proveedor:', value: oc.proveedor },
           { label: 'RFC:', value: oc.rfc },
           { label: 'Fecha de Entrega:', value: new Date(oc.fechaentrega).toLocaleDateString() },
@@ -2030,11 +2039,12 @@
           const maxWidth = pageWidth - margin - labelWidth - 20;
           const textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 20 + 2; // Aumentado de 14 a 20
+          y += textLines.length * 5 + 2;
         });
 
-        y += 6;
+        y += 5;
 
+        // ----- TABLA DE PRODUCTOS -----
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         const rows = oc.productos.map((p, i) => [
           i + 1,
@@ -2043,8 +2053,8 @@
           p.cantidad,
           p.udm || 'PZA',
           formatoMoneda(p.precioUnitario, oc.moneda),
-          p.descuento.toFixed(2) + '%', // Formato en una sola línea
-          p.impuesto.toFixed(2) + '%', // Formato en una sola línea
+          p.descuento.toFixed(2) + '%',
+          p.impuesto.toFixed(2) + '%',
           formatoMoneda(p.importe, oc.moneda)
         ]);
 
@@ -2069,11 +2079,11 @@
           }
         });
 
-        y = doc.lastAutoTable.finalY + 16;
+        y = doc.lastAutoTable.finalY + 10;
 
+        // ----- TOTALES -----
         const subtotal = oc.montototal / (1 + (oc.productos[0]?.impuesto || 0) / 100);
         const iva = oc.montototal - subtotal;
-
         const totalX = pageWidth * 0.72;
 
         doc.setFontSize(10);
@@ -2082,24 +2092,25 @@
 
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 20; // Aumentado de 16 a 20
+        y += 5;
 
         const impuestoPorcentaje = oc.productos[0]?.impuesto || 0;
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 24; // Aumentado de 20 a 24
+        y += 5;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 30;
+        y += 15;
 
+        // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 20; // Aumentado de 16 a 20
+        y += 5;
 
         const solicitanteNombre = oc.responsable || 'No definido';
         const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
@@ -2118,17 +2129,18 @@
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-          doc.text(nombre + estado, x + (lineWidth / 2), y + 20, { align: 'center' }); // Aumentado de 18 a 20
+          doc.text(nombre + estado, x + (lineWidth / 2), y + 10, { align: 'center' });
 
+          // Línea de firma
+          const lineY = y + 25;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
-          const lineY = y + 45;
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 12, { align: 'center' });
+          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10, { align: 'center' });
         }
 
         const x1 = margin;
@@ -2145,20 +2157,29 @@
         dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
 
-        const pieY = doc.internal.pageSize.height - 45;
+        // ----- PIE DE PÁGINA CON CÓDIGO -----
+        const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
 
+        // Leyenda (centrada)
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
-        doc.text(leyendaPie, pageWidth / 2, pieY + 12, { align: 'center' });
+        doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
+        // Código de la OC (debajo de la leyenda, centrado)
+        doc.setFontSize(7);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Código: ' + oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
+
+        // Número de página (derecha)
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        doc.text('Página 1 de 1', pageWidth - margin, pieY + 12, { align: 'right' });
+        doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
         doc.save(`OC_${oc.codigo}.pdf`);
       }
