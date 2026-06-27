@@ -501,6 +501,14 @@ tr:hover{background:var(--gray-50)}
     return 'GRUPO INDUSTRIAL EXTINGUE';
   }
 
+  function getLeyendaPie(empresa) {
+    if (!empresa) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
+    const emp = empresa.trim().toUpperCase();
+    if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
+    if (emp.includes('VEXPAR OPERACIONES')) return 'SUMINISTROS ESPECIALES INDUSTRIALES';
+    return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
+  }
+
   document.addEventListener('input', function(e) {
     const target = e.target;
     if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
@@ -1130,24 +1138,20 @@ tr:hover{background:var(--gray-50)}
     let y = margin;
 
     const nombreEmpresa = getNombreMembrete(datos.empresa);
+    const leyendaPie = getLeyendaPie(datos.empresa);
 
-    // ----- MEMBRETE (DERECHA) -----
-    doc.setFontSize(14);
+    // ----- MEMBRETE (DERECHA) TAMAÑO AUMENTADO -----
+    doc.setFontSize(18);
     doc.setTextColor(11, 26, 51);
     doc.setFont('helvetica', 'bold');
     doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-    y += 18;
+    y += 24;
 
-    // ----- TÍTULO ORDEN DE COMPRA -----
+    // ----- TÍTULO ORDEN DE COMPRA (eliminado "Documento generado por...") -----
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE COMPRA', margin, y);
-    y += 8;
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Documento generado por Workflow OC ERP', margin, y);
     y += 14;
 
     // Línea separadora
@@ -1234,11 +1238,12 @@ tr:hover{background:var(--gray-50)}
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ----- TOTALES (recorridos 30 píxeles a la izquierda) -----
+    // ----- TOTALES (3/4 de la página, lado derecho) -----
     const subtotal = datos.montototal / (1 + (datos.productos[0]?.impuesto || 0) / 100);
     const iva = datos.montototal - subtotal;
 
-    const totalX = margin - 30; // Recorrer 30 píxeles a la izquierda
+    // Calcular 3/4 de la página (75% del ancho)
+    const totalX = pageWidth * 0.75;
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -1259,14 +1264,7 @@ tr:hover{background:var(--gray-50)}
     doc.setFontSize(12);
     doc.text('TOTAL:', totalX, y);
     doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 20;
-
-    // ----- MENSAJE DE AGRADECIMIENTO -----
-    doc.setFontSize(10);
-    doc.setTextColor(11, 26, 51);
-    doc.setFont('helvetica', 'bold');
-    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', margin, y);
-    y += 20;
+    y += 30;
 
     // ----- AUTORIZACIONES (con espacio para firma y línea) -----
     doc.setFontSize(11);
@@ -1289,16 +1287,16 @@ tr:hover{background:var(--gray-50)}
       doc.setFont('helvetica', 'normal');
       doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-      // Nombre en negrita (2 saltos de línea después)
+      // Nombre en negrita (con más espacio vertical)
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
-      doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 16, { align: 'center' });
+      doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 18, { align: 'center' });
 
-      // Línea de firma (2 saltos de línea después del nombre)
+      // Línea de firma (más espacio vertical entre nombre y línea)
       doc.setDrawColor(80, 80, 80);
       doc.setLineWidth(0.8);
-      const lineY = y + 40;
+      const lineY = y + 45;
       doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
       // Fecha
@@ -1315,6 +1313,24 @@ tr:hover{background:var(--gray-50)}
     dibujarAutorizacion(doc, x1, y, solicitante, 'Solicitante');
     dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
     dibujarAutorizacion(doc, x3, y, director, 'Director General');
+
+    // ----- PIE DE PÁGINA (con leyenda según empresa y número de página) -----
+    const pieY = doc.internal.pageSize.height - 45;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pieY, pageWidth - margin, pieY);
+
+    // Leyenda centrada
+    doc.setFontSize(9);
+    doc.setTextColor(11, 26, 51);
+    doc.setFont('helvetica', 'bold');
+    doc.text(leyendaPie, pageWidth / 2, pieY + 12, { align: 'center' });
+
+    // Número de página (estilo Word)
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Página 1 de 1', pageWidth - margin, pieY + 12, { align: 'right' });
 
     return doc;
   }
@@ -1543,23 +1559,19 @@ tr:hover{background:var(--gray-50)}
 
     const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
     const nombreEmpresa = proyecto ? getNombreMembrete(proyecto.empresa) : 'GRUPO INDUSTRIAL EXTINGUE';
+    const leyendaPie = proyecto ? getLeyendaPie(proyecto.empresa) : 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
 
-    // ----- MEMBRETE (DERECHA) -----
-    doc.setFontSize(14);
+    // ----- MEMBRETE (DERECHA) TAMAÑO AUMENTADO -----
+    doc.setFontSize(18);
     doc.setTextColor(11, 26, 51);
     doc.setFont('helvetica', 'bold');
     doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-    y += 18;
+    y += 24;
 
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE COMPRA', margin, y);
-    y += 8;
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Documento generado por Workflow OC ERP', margin, y);
     y += 14;
 
     doc.setDrawColor(200, 200, 200);
@@ -1634,11 +1646,11 @@ tr:hover{background:var(--gray-50)}
 
     y = doc.lastAutoTable.finalY + 10;
 
-    // ----- TOTALES (recorridos 30 píxeles a la izquierda) -----
+    // ----- TOTALES (3/4 de la página) -----
     const subtotal = oc.montototal / (1 + (oc.productos[0]?.impuesto || 0) / 100);
     const iva = oc.montototal - subtotal;
 
-    const totalX = margin - 30;
+    const totalX = pageWidth * 0.75;
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -1656,13 +1668,7 @@ tr:hover{background:var(--gray-50)}
     doc.setFontSize(12);
     doc.text('TOTAL:', totalX, y);
     doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-    y += 20;
-
-    doc.setFontSize(10);
-    doc.setTextColor(11, 26, 51);
-    doc.setFont('helvetica', 'bold');
-    doc.text('GRACIAS POR CONFIARNOS TU SEGURIDAD', margin, y);
-    y += 20;
+    y += 30;
 
     // ----- AUTORIZACIONES CON FIRMA -----
     doc.setFontSize(11);
@@ -1688,11 +1694,11 @@ tr:hover{background:var(--gray-50)}
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
       const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-      doc.text(nombre + estado, x + (lineWidth / 2), y + 16, { align: 'center' });
+      doc.text(nombre + estado, x + (lineWidth / 2), y + 18, { align: 'center' });
 
       doc.setDrawColor(80, 80, 80);
       doc.setLineWidth(0.8);
-      const lineY = y + 40;
+      const lineY = y + 45;
       doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
       doc.setFontSize(8);
@@ -1712,6 +1718,22 @@ tr:hover{background:var(--gray-50)}
     dibujarAutorizacionFirmada(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
     dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
     dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
+
+    // ----- PIE DE PÁGINA -----
+    const pieY = doc.internal.pageSize.height - 45;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pieY, pageWidth - margin, pieY);
+
+    doc.setFontSize(9);
+    doc.setTextColor(11, 26, 51);
+    doc.setFont('helvetica', 'bold');
+    doc.text(leyendaPie, pageWidth / 2, pieY + 12, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Página 1 de 1', pageWidth - margin, pieY + 12, { align: 'right' });
 
     doc.save(`OC_${oc.codigo}.pdf`);
   }
