@@ -1619,7 +1619,7 @@
           const maxWidth = pageWidth - margin - labelWidth - 20;
           const textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 9 + 2; // Espaciado de 9 puntos
+          y += textLines.length * 9 + 2;
         });
 
         y += 5;
@@ -1683,14 +1683,14 @@
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 15;
+        y += 20;
 
         // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 9;
+        y += 12;
 
         const solicitante = datos.responsable || 'No definido';
         const jefe = getJefeDepto(datos.empresa, datos.departamento);
@@ -1708,10 +1708,9 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 10, { align: 'center' });
+          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma
-          const lineY = y + 25;
+          const lineY = y + 30;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
@@ -1719,7 +1718,7 @@
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10, { align: 'center' });
+          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 12, { align: 'center' });
         }
 
         const x1 = margin;
@@ -1730,19 +1729,19 @@
         dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
         dibujarAutorizacion(doc, x3, y, director, 'Director General');
 
+        y += 50;
+
         // ----- PIE DE PÁGINA CON CÓDIGO -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
 
-        // Leyenda (centrada)
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
-        // Código de la OC (debajo de la leyenda, centrado)
         const codigoFinal = generarCodigoOC(
           datos.empresa,
           datos.departamento,
@@ -1757,7 +1756,6 @@
         doc.setFont('helvetica', 'normal');
         doc.text('Código: ' + codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
 
-        // Número de página (derecha)
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
@@ -2039,7 +2037,7 @@
           const maxWidth = pageWidth - margin - labelWidth - 20;
           const textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 9 + 2; // Espaciado de 9 puntos
+          y += textLines.length * 9 + 2;
         });
 
         y += 5;
@@ -2103,14 +2101,14 @@
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 15;
+        y += 20;
 
         // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 9;
+        y += 12;
 
         const solicitanteNombre = oc.responsable || 'No definido';
         const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
@@ -2129,10 +2127,9 @@
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-          doc.text(nombre + estado, x + (lineWidth / 2), y + 10, { align: 'center' });
+          doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma
-          const lineY = y + 25;
+          const lineY = y + 30;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
@@ -2140,7 +2137,7 @@
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10, { align: 'center' });
+          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 12, { align: 'center' });
         }
 
         const x1 = margin;
@@ -2157,25 +2154,24 @@
         dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
 
+        y += 50;
+
         // ----- PIE DE PÁGINA CON CÓDIGO -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
 
-        // Leyenda (centrada)
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
-        // Código de la OC (debajo de la leyenda, centrado)
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
         doc.text('Código: ' + oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
 
-        // Número de página (derecha)
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
