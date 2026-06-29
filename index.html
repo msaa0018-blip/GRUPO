@@ -628,6 +628,10 @@
         <button id="btnLogin" type="button">Ingresar</button>
       </div>
       <div id="error" class="alert hidden"></div>
+      <div class="text-muted mt-10" style="font-size:11px">
+        <strong>Usuarios disponibles:</strong> ADMIN, LJGR, VAPF1, AAMS1, RCN, FINANZAS, VAPF2, CRSS, JATM, MCCH, CATS<br>
+        <strong>Contraseña:</strong> 1234 (ADMIN: admin)
+      </div>
     </div>
 
     <!-- App -->
@@ -1132,22 +1136,39 @@
         console.log('🔑 Intentando login:', user);
 
         // Cargar usuarios desde Supabase
-        await cargarUsuarios();
+        const { data, error } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('usuario', user)
+          .eq('password', pass);
 
-        const encontrado = usuariosDB.find(x => x.usuario === user && x.password === pass);
-        if (!encontrado) {
+        if (error) {
+          console.error('❌ Error en login:', error);
           errorDiv.classList.remove('hidden');
-          errorDiv.textContent = '❌ Usuario o contraseña incorrectos';
-          console.log('❌ Login fallido para:', user);
+          errorDiv.textContent = '❌ Error de conexión con la base de datos';
           return;
         }
+
+        console.log('📊 Resultado:', data);
+
+        if (!data || data.length === 0) {
+          errorDiv.classList.remove('hidden');
+          errorDiv.textContent = '❌ Usuario o contraseña incorrectos';
+          return;
+        }
+
+        const encontrado = data[0];
+        console.log('✅ Usuario encontrado:', encontrado);
+
         if (!encontrado.activo) {
           errorDiv.classList.remove('hidden');
           errorDiv.textContent = '❌ Usuario inactivo. Contacta al administrador.';
           return;
         }
 
-        console.log('✅ Login exitoso:', user);
+        // Actualizar la lista de usuarios
+        await cargarUsuarios();
+
         errorDiv.classList.add('hidden');
         actual = encontrado;
         document.getElementById('login').classList.add('hidden');
@@ -1448,9 +1469,6 @@
         if (!tbody) return;
         tbody.innerHTML = '';
         usuariosDB.forEach(u => {
-          const permisosStr = u.permisos && u.permisos.length > 0 ?
-            u.permisos.map(p => `${p.empresa || 'N/A'}/${p.depto || 'N/A'}`).join('; ') :
-            'Sin permisos';
           tbody.innerHTML += `
             <tr>
               <td><strong>${u.usuario}</strong></td>
