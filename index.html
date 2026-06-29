@@ -1563,8 +1563,8 @@
         };
       }
 
-      // ---------- FUNCIÓN PARA GENERAR PDF CON NUEVO DISEÑO ----------
-      function generarPDFParaPreview(datos) {
+      // ---------- FUNCIÓN PARA GENERAR PDF CON LOGO EN MEMBRETE ----------
+      async function generarPDFParaPreview(datos) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -1573,13 +1573,47 @@
 
         const nombreEmpresa = getNombreMembrete(datos.empresa);
         const leyendaPie = getLeyendaPie(datos.empresa);
+        const esExtingue = datos.empresa && datos.empresa.toUpperCase().includes('GRUPO INDUSTRIAL EXTINGUE');
 
         // ----- MEMBRETE (DERECHA) -----
-        doc.setFontSize(18);
-        doc.setTextColor(11, 26, 51);
-        doc.setFont('helvetica', 'bold');
-        doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-        y += 60;
+        if (esExtingue) {
+            // Intentar cargar el logo desde GitHub
+            try {
+                const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+                const response = await fetch(imgUrl);
+                if (!response.ok) throw new Error('No se pudo cargar la imagen');
+                const blob = await response.blob();
+                const imgData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(blob);
+                });
+                
+                // Ajustar tamaño del logo (ancho 140px, alto automático)
+                const img = new Image();
+                img.src = imgData;
+                await new Promise((resolve) => { img.onload = resolve; });
+                const imgWidth = 140;
+                const imgHeight = (img.height / img.width) * imgWidth;
+                doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+                y += imgHeight + 25;
+            } catch (e) {
+                // Si falla la imagen, usar texto como respaldo
+                console.warn('No se pudo cargar el logo, usando texto:', e);
+                doc.setFontSize(18);
+                doc.setTextColor(11, 26, 51);
+                doc.setFont('helvetica', 'bold');
+                doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth - margin - 10, y, { align: 'right' });
+                y += 60;
+            }
+        } else {
+            // Para otras empresas, usar texto normal
+            doc.setFontSize(18);
+            doc.setTextColor(11, 26, 51);
+            doc.setFont('helvetica', 'bold');
+            doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+            y += 60;
+        }
 
         // ----- TÍTULO ORDEN DE COMPRA -----
         doc.setFontSize(16);
@@ -1644,8 +1678,7 @@
           startY: y,
           margin: { left: margin, right: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica',
-            fontStyle: 'bold' },
+          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
           columnStyles: {
             0: { cellWidth: 20 },
             1: { cellWidth: 40 },
@@ -1664,7 +1697,7 @@
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
 
-        // ----- TOTALES CON ESPACIADO REDUCIDO (mitad) -----
+        // ----- TOTALES -----
         let subtotal = 0;
         let iva = 0;
         let impuestoPorcentaje = 0;
@@ -1705,7 +1738,7 @@
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += 30;
 
-        // ----- AUTORIZACIONES CON ESPACIADO REDUCIDO -----
+        // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
@@ -1730,13 +1763,11 @@
           doc.setFont('helvetica', 'bold');
           doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma
           const lineY = y + 14 + 20 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Fecha
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
@@ -1753,7 +1784,7 @@
 
         y += 70;
 
-        // ----- PIE DE PÁGINA CON CÓDIGO (sin la leyenda "Código:") -----
+        // ----- PIE DE PÁGINA CON CÓDIGO -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
@@ -1776,7 +1807,6 @@
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        // Quitamos la leyenda "Código:" y solo mostramos el código
         doc.text(codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
 
         doc.setFontSize(8);
@@ -1788,11 +1818,11 @@
       }
 
       // ---------- PREVISUALIZAR ----------
-      window.previsualizarOC = function() {
+      window.previsualizarOC = async function() {
         const datos = recopilarDatosOC();
         if (!datos) return;
         ocPreviewData = datos;
-        const doc = generarPDFParaPreview(datos);
+        const doc = await generarPDFParaPreview(datos);
         ocPreviewPDF = doc;
         const pdfData = doc.output('datauristring');
         document.getElementById('pdfPreviewFrame').src = pdfData;
@@ -1890,7 +1920,7 @@
         }
 
         try {
-          const docFinal = ocPreviewPDF || generarPDFParaPreview(datos);
+          const docFinal = ocPreviewPDF || await generarPDFParaPreview(datos);
           docFinal.save(`OC_${codigo}.pdf`);
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
@@ -1994,7 +2024,7 @@
         }
 
         try {
-          const doc = generarPDFParaPreview(datos);
+          const doc = await generarPDFParaPreview(datos);
           doc.save(`OC_${codigo}.pdf`);
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
