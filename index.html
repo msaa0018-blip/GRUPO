@@ -1731,16 +1731,16 @@
           doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
 
           // Línea de firma
-          const lineY = y + 14 + 20 + 10; // Reducido de +20 a +10 para línea
+          const lineY = y + 14 + 20 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Fecha - ahora con espaciado reducido de +10 en lugar de +20
+          // Fecha
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' }); // Reducido de +20 a +10
+          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
         const x1 = margin;
@@ -1753,7 +1753,7 @@
 
         y += 70;
 
-        // ----- PIE DE PÁGINA CON CÓDIGO -----
+        // ----- PIE DE PÁGINA CON CÓDIGO (sin la leyenda "Código:") -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
@@ -1776,7 +1776,8 @@
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        doc.text('Código: ' + codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
+        // Quitamos la leyenda "Código:" y solo mostramos el código
+        doc.text(codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
 
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
@@ -2171,17 +2172,17 @@
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
           doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma - reducido de +20 a +10
-          const lineY = y + 14 + 10 + 10; // Reducido de +20 a +10
+          // Línea de firma
+          const lineY = y + 14 + 10 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Fecha - ahora con espaciado reducido de +10 en lugar de +20
+          // Fecha
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' }); // Reducido de +20 a +10
+          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
         const x1 = margin;
@@ -2200,7 +2201,7 @@
 
         y += 70;
 
-        // ----- PIE DE PÁGINA CON CÓDIGO -----
+        // ----- PIE DE PÁGINA CON CÓDIGO (sin la leyenda "Código:") -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
@@ -2214,7 +2215,8 @@
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        doc.text('Código: ' + oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
+        // Quitamos la leyenda "Código:" y solo mostramos el código
+        doc.text(oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
 
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
@@ -2846,16 +2848,20 @@
       async function init() {
         const hoy = new Date();
         const fechaHoy = hoy.toISOString().split('T')[0];
+
+        // Fecha de inicio: hoy
         document.getElementById('fechaInicio').value = fechaHoy;
+
+        // Fecha de término: hoy + 6 meses
         const fechaFin = new Date(hoy);
         fechaFin.setMonth(fechaFin.getMonth() + 6);
         document.getElementById('fechaTermino').value = fechaFin.toISOString().split('T')[0];
-        const fechaPago = new Date(hoy);
-        fechaPago.setDate(fechaPago.getDate() + 30);
-        document.getElementById('fechaPago').value = fechaPago.toISOString().split('T')[0];
-        const fechaEntrega = new Date(hoy);
-        fechaEntrega.setDate(fechaEntrega.getDate() + 45);
-        document.getElementById('fechaEntrega').value = fechaEntrega.toISOString().split('T')[0];
+
+        // Fecha de pago: hoy (referencia al día actual)
+        document.getElementById('fechaPago').value = fechaHoy;
+
+        // Fecha de entrega: hoy (referencia al día actual)
+        document.getElementById('fechaEntrega').value = fechaHoy;
 
         const ok = await cargarDatos();
         if (!ok) {
