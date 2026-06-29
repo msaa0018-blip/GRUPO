@@ -564,6 +564,41 @@
     color: var(--danger);
     font-weight: bold;
   }
+
+  /* Estilos para administración de usuarios */
+  #adminUsuarios {
+    margin-top: 16px;
+    border-top: 2px solid var(--gray-200);
+    padding-top: 16px;
+  }
+  #adminUsuarios h3 {
+    color: var(--primary);
+  }
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-overlay .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
 </style>
 </head>
 <body>
@@ -588,15 +623,6 @@
         <input id="usuario" placeholder="Usuario" value="LJGR">
         <input id="password" type="password" placeholder="Contraseña" value="1234">
         <button id="btnLogin" type="button">Ingresar</button>
-      </div>
-      <div class="text-muted mt-10">
-        <strong>Usuarios:</strong><br>
-        Director: LJGR/1234 (todo)<br>
-        Jefes: VAPF1, VAPF2, CRSS, JATM, MCCH, CATS (1234)<br>
-        Elaboradores: AAMS1, AAMS2, JMAM, MVR, SGG, OJAT (1234)<br>
-        Solicitantes: RCN, MNB, PSR, JCGG, GJBC, MCCC, CATS (1234)<br>
-        Administrador: ADMIN/admin (pausar OC)<br>
-        Finanzas: FINANZAS/1234 (gestión de pago y conciliación)
       </div>
       <div id="error" class="alert hidden"></div>
     </div>
@@ -636,6 +662,7 @@
         <h2>📊 Control por Proyecto</h2>
         <div id="adminActions" class="hidden" style="margin-bottom:10px;">
           <button class="danger" onclick="window.eliminarTodosProyectos()">🗑️ Eliminar todos los proyectos y OC</button>
+          <button class="warning" onclick="window.mostrarAdminUsuarios()">👥 Administrar Usuarios</button>
         </div>
         <div class="table-wrapper">
           <table>
@@ -817,6 +844,57 @@
     </div>
   </div>
 
+  <!-- Modal Administrar Usuarios -->
+  <div id="modalUsuarios" class="modal-overlay">
+    <div class="modal-content">
+      <h2>👥 Administrar Usuarios</h2>
+      <div style="margin: 12px 0;">
+        <button class="success" onclick="window.mostrarFormNuevoUsuario()">➕ Nuevo Usuario</button>
+        <button class="danger" onclick="window.cerrarAdminUsuarios()">✕ Cerrar</button>
+      </div>
+      <div id="formNuevoUsuario" style="display:none; background: var(--gray-50); padding: 12px; border-radius: 10px; margin-bottom: 12px;">
+        <h4>Nuevo Usuario</h4>
+        <div class="flex">
+          <input id="nuevoUsuario" placeholder="Usuario">
+          <input id="nuevaPassword" type="password" placeholder="Contraseña">
+          <select id="nuevoRol">
+            <option value="Director General">Director General</option>
+            <option value="Administrador">Administrador</option>
+            <option value="Finanzas">Finanzas</option>
+            <option value="Jefe Departamento">Jefe Departamento</option>
+            <option value="Elaborador">Elaborador</option>
+            <option value="Solicitante">Solicitante</option>
+          </select>
+        </div>
+        <div class="flex" style="margin-top: 8px;">
+          <input id="nuevaEmpresa" placeholder="Empresa (opcional)">
+          <input id="nuevoDepto" placeholder="Departamento (opcional)">
+          <button class="success" onclick="window.crearUsuario()">✅ Crear</button>
+          <button class="danger" onclick="window.cancelarNuevoUsuario()">❌ Cancelar</button>
+        </div>
+        <div id="msgNuevoUsuario" style="margin-top: 6px;"></div>
+      </div>
+      <div id="listaUsuarios">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Empresa</th>
+                <th>Departamento</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaUsuarios"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="msgUsuarios"></div>
+    </div>
+  </div>
+
   <!-- Dashboard Overlay -->
   <div id="dashboardOverlay">
     <button class="btn-volver" onclick="window.cerrarDashboard()">⬅ Volver</button>
@@ -849,54 +927,8 @@
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
       const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-      const USUARIOS = [
-        { u: "LJGR", p: "1234", rol: "Director General", permisos: null },
-        { u: "ADMIN", p: "admin", rol: "Administrador", permisos: null },
-        { u: "FINANZAS", p: "1234", rol: "Finanzas", permisos: null },
-        { u: "VAPF1", p: "1234", rol: "Jefe Departamento", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "VENTAS CORPORATIVAS EXTINGUE" }] },
-        { u: "VAPF2", p: "1234", rol: "Jefe Departamento", permisos: [{ empresa: "VEXPAR OPERACIONES",
-            depto: "VENTAS CORPORATIVAS VEXPAR" }] },
-        { u: "CRSS", p: "1234", rol: "Jefe Departamento", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "INGENIERIA EN SISTEMAS CONTRA INCENDIO" }] },
-        { u: "JATM", p: "1234", rol: "Jefe Departamento", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "SUMINISERVICES" }] },
-        { u: "MCCH", p: "1234", rol: "Jefe Departamento", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "FINANZAS" }] },
-        { u: "CATS", p: "1234", rol: "Jefe Departamento", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "SERVICIOS" }] },
-        { u: "AAMS1", p: "1234", rol: "Elaborador", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "VENTAS CORPORATIVAS EXTINGUE" }] },
-        { u: "AAMS2", p: "1234", rol: "Elaborador", permisos: [{ empresa: "VEXPAR OPERACIONES",
-            depto: "VENTAS CORPORATIVAS VEXPAR" }] },
-        { u: "JMAM", p: "1234", rol: "Elaborador", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "INGENIERIA EN SISTEMAS CONTRA INCENDIO" }] },
-        { u: "MVR", p: "1234", rol: "Elaborador", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "SUMINISERVICES" }] },
-        { u: "SGG", p: "1234", rol: "Elaborador", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "FINANZAS" }] },
-        { u: "OJAT", p: "1234", rol: "Elaborador", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "SERVICIOS" }] },
-        { u: "RCN", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "VENTAS CORPORATIVAS EXTINGUE" }, { empresa: "VEXPAR OPERACIONES",
-            depto: "VENTAS CORPORATIVAS VEXPAR" }] },
-        { u: "MNB", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "VENTAS CORPORATIVAS EXTINGUE" }, { empresa: "VEXPAR OPERACIONES",
-            depto: "VENTAS CORPORATIVAS VEXPAR" }] },
-        { u: "PSR", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "VENTAS CORPORATIVAS EXTINGUE" }, { empresa: "VEXPAR OPERACIONES",
-            depto: "VENTAS CORPORATIVAS VEXPAR" }] },
-        { u: "JCGG", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "INGENIERIA EN SISTEMAS CONTRA INCENDIO" }] },
-        { u: "GJBC", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "SUMINISERVICES" }] },
-        { u: "MCCC", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "FINANZAS" }] },
-        { u: "CATS", p: "1234", rol: "Solicitante", permisos: [{ empresa: "GRUPO INDUSTRIAL EXTINGUE",
-            depto: "SERVICIOS" }] }
-      ];
-
-      const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA'];
+      // Ya no tenemos USUARIOS fijos en código, ahora se cargan desde Supabase
+      let usuariosDB = [];
       let actual = null;
       let proyectos = [];
       let ordenes = [];
@@ -905,6 +937,9 @@
       let ocPreviewData = null;
       let ocPreviewPDF = null;
 
+      const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA'];
+
+      // ----- FUNCIONES DE COLOR Y MEMBRETE -----
       function getColorByEmpresa(empresa) {
         if (!empresa) return '#6b7280';
         const emp = empresa.trim().toUpperCase();
@@ -929,16 +964,7 @@
         return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
       }
 
-      document.addEventListener('input', function(e) {
-        const target = e.target;
-        if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
-          const start = target.selectionStart;
-          const end = target.selectionEnd;
-          target.value = target.value.toUpperCase();
-          target.setSelectionRange(start, end);
-        }
-      });
-
+      // ----- FUNCIONES DE UTILIDAD -----
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
         if (!empresa) empresa = 'GIE';
         if (!departamento) departamento = 'GENERAL';
@@ -981,76 +1007,17 @@
 
       function normalizar(str) { return str.trim().toUpperCase(); }
 
-      function usuarioPuedeAcceder(usuario, empresa, depto) {
-        if (!usuario) return false;
-        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) return true;
-        if (!usuario.permisos) return false;
-        const empNorm = normalizar(empresa);
-        const deptoNorm = normalizar(depto);
-        return usuario.permisos.some(p =>
-          normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm
-        );
-      }
-
-      function filtrarProyectosSegunUsuario(usuario) {
-        if (!usuario) return [];
-        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) return proyectos;
-        return proyectos.filter(p => usuarioPuedeAcceder(usuario, p.empresa, p.departamento));
-      }
-
-      function filtrarOCSegunUsuario(usuario) {
-        if (!usuario) return [];
-        let ocFiltradas = [];
-        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) {
-          ocFiltradas = ordenes.slice();
-        } else {
-          ocFiltradas = ordenes.filter(o => {
-            const p = proyectos.find(proj => proj.nombre === o.proyecto);
-            if (!p) return false;
-            return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
-          });
+      // ----- FUNCIONES CON SUPABASE -----
+      async function cargarUsuarios() {
+        try {
+          const { data, error } = await supabase.from('usuarios').select('*').eq('activo', true);
+          if (error) throw error;
+          usuariosDB = data || [];
+          return true;
+        } catch (e) {
+          console.error('Error cargando usuarios', e);
+          return false;
         }
-        if (usuario.rol === 'Solicitante') {
-          ocFiltradas = ocFiltradas.filter(o => o.responsable === usuario.u);
-        }
-        return ocFiltradas;
-      }
-
-      function obtenerOpcionesPermisos(usuario) {
-        if (!usuario || !usuario.permisos) return [];
-        return usuario.permisos;
-      }
-
-      function getPosiblesResponsables() {
-        return USUARIOS.filter(u => u.rol === 'Solicitante' || u.rol === 'Elaborador');
-      }
-
-      function getJefeDepto(empresa, depto) {
-        const jefe = USUARIOS.find(u =>
-          u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto)
-        );
-        return jefe ? jefe.u : 'No definido';
-      }
-
-      function getDirector() { return 'LJGR'; }
-
-      function gastoProyectoMoneda(nombreProyecto) {
-        const proyecto = proyectos.find(p => p.nombre === nombreProyecto);
-        if (!proyecto) return 0;
-        const monedaProyecto = proyecto.moneda || 'MXN';
-        return ordenes
-          .filter(o => o.proyecto === nombreProyecto && o.estadopago === 'PAGADA')
-          .reduce((sum, oc) => {
-            let montoEnMonedaProyecto = oc.montomxn || 0;
-            if (monedaProyecto === 'USD') {
-              if (oc.tipocambio && oc.tipocambio > 0) {
-                montoEnMonedaProyecto = oc.montomxn / oc.tipocambio;
-              } else {
-                montoEnMonedaProyecto = oc.montomxn / 20;
-              }
-            }
-            return sum + montoEnMonedaProyecto;
-          }, 0);
       }
 
       async function cargarDatos() {
@@ -1076,87 +1043,114 @@
         }
       }
 
-      window.actualizarResponsables = function() {
-        const selectProyecto = document.getElementById('selectProyecto');
-        const selectResp = document.getElementById('responsableOC');
-        const selectedId = parseInt(selectProyecto.value);
-        if (!selectedId) {
-          selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
-          return;
-        }
-        const proyecto = proyectos.find(p => p.id === selectedId);
-        if (!proyecto) {
-          selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
-          return;
-        }
-        const posibles = getPosiblesResponsables();
-        const filtrados = posibles.filter(u => usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento));
-        selectResp.innerHTML = '';
-        if (filtrados.length === 0) {
-          selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
+      // ----- FUNCIONES DE USUARIOS -----
+      function usuarioPuedeAcceder(usuario, empresa, depto) {
+        if (!usuario) return false;
+        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) return true;
+        if (!usuario.permisos || !Array.isArray(usuario.permisos)) return false;
+        const empNorm = normalizar(empresa);
+        const deptoNorm = normalizar(depto);
+        return usuario.permisos.some(p =>
+          normalizar(p.empresa || '') === empNorm && normalizar(p.depto || '') === deptoNorm
+        );
+      }
+
+      function filtrarProyectosSegunUsuario(usuario) {
+        if (!usuario) return [];
+        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) return proyectos;
+        return proyectos.filter(p => usuarioPuedeAcceder(usuario, p.empresa, p.departamento));
+      }
+
+      function filtrarOCSegunUsuario(usuario) {
+        if (!usuario) return [];
+        let ocFiltradas = [];
+        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) {
+          ocFiltradas = ordenes.slice();
         } else {
-          filtrados.forEach(u => {
-            const opt = document.createElement('option');
-            opt.value = u.u;
-            opt.textContent = `${u.u} (${u.rol})`;
-            selectResp.appendChild(opt);
+          ocFiltradas = ordenes.filter(o => {
+            const p = proyectos.find(proj => proj.nombre === o.proyecto);
+            if (!p) return false;
+            return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
           });
         }
-      };
-
-      window.mostrarParidadInicial = function() {
-        const moneda = document.getElementById('monedaOC').value;
-        const paridadInput = document.getElementById('paridadInicial');
-        const paridadLabel = document.getElementById('paridadInicialLabel');
-        if (moneda === 'USD') {
-          paridadInput.style.display = 'inline-block';
-          paridadLabel.style.display = 'inline-block';
-        } else {
-          paridadInput.style.display = 'none';
-          paridadLabel.style.display = 'none';
+        if (usuario.rol === 'Solicitante') {
+          ocFiltradas = ocFiltradas.filter(o => o.responsable === usuario.usuario);
         }
-      };
+        return ocFiltradas;
+      }
 
-      window.eliminarTodosProyectos = async function() {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        if (!confirm('⚠️ ¿Estás seguro de eliminar TODOS los proyectos y TODAS las OC?')) return;
-        try {
-          await supabase.from('ordenes').delete().neq('id', 0);
-          await supabase.from('proyectos').delete().neq('id', 0);
-          proyectos = [];
-          ordenes = [];
-          consecutivoOC = 1;
-          render();
-          alert('✅ Todos los proyectos y OC eliminados.');
-        } catch (error) {
-          alert('❌ Error: ' + error.message);
-        }
-      };
+      function obtenerOpcionesPermisos(usuario) {
+        if (!usuario || !usuario.permisos) return [];
+        return usuario.permisos;
+      }
 
-      window.login = function() {
+      function getPosiblesResponsables() {
+        return usuariosDB.filter(u => u.rol === 'Solicitante' || u.rol === 'Elaborador');
+      }
+
+      function getJefeDepto(empresa, depto) {
+        const jefe = usuariosDB.find(u =>
+          u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto)
+        );
+        return jefe ? jefe.usuario : 'No definido';
+      }
+
+      function getDirector() { return 'LJGR'; }
+
+      function gastoProyectoMoneda(nombreProyecto) {
+        const proyecto = proyectos.find(p => p.nombre === nombreProyecto);
+        if (!proyecto) return 0;
+        const monedaProyecto = proyecto.moneda || 'MXN';
+        return ordenes
+          .filter(o => o.proyecto === nombreProyecto && o.estadopago === 'PAGADA')
+          .reduce((sum, oc) => {
+            let montoEnMonedaProyecto = oc.montomxn || 0;
+            if (monedaProyecto === 'USD') {
+              if (oc.tipocambio && oc.tipocambio > 0) {
+                montoEnMonedaProyecto = oc.montomxn / oc.tipocambio;
+              } else {
+                montoEnMonedaProyecto = oc.montomxn / 20;
+              }
+            }
+            return sum + montoEnMonedaProyecto;
+          }, 0);
+      }
+
+      // ----- LOGIN -----
+      window.login = async function() {
         const userInput = document.getElementById('usuario');
         const passInput = document.getElementById('password');
         const errorDiv = document.getElementById('error');
         if (!userInput || !passInput) { alert('❌ Campos no encontrados'); return; }
         const user = userInput.value.trim().toUpperCase();
         const pass = passInput.value.trim();
-        const encontrado = USUARIOS.find(x => x.u === user && x.p === pass);
+
+        // Cargar usuarios desde Supabase
+        await cargarUsuarios();
+
+        const encontrado = usuariosDB.find(x => x.usuario === user && x.password === pass);
         if (!encontrado) {
           errorDiv.classList.remove('hidden');
           errorDiv.textContent = '❌ Usuario o contraseña incorrectos';
           return;
         }
+        if (!encontrado.activo) {
+          errorDiv.classList.remove('hidden');
+          errorDiv.textContent = '❌ Usuario inactivo. Contacta al administrador.';
+          return;
+        }
+
         errorDiv.classList.add('hidden');
         actual = encontrado;
         document.getElementById('login').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
 
-        let infoSesion = `👤 ${actual.u} (${actual.rol})`;
+        let infoSesion = `👤 ${actual.usuario} (${actual.rol})`;
         const opciones = obtenerOpcionesPermisos(actual);
         if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
           infoSesion += ' - Acceso total';
         } else if (opciones.length === 1) {
-          infoSesion += ` - ${opciones[0].empresa} / ${opciones[0].depto}`;
+          infoSesion += ` - ${opciones[0].empresa || 'N/A'} / ${opciones[0].depto || 'N/A'}`;
         } else if (opciones.length > 1) {
           infoSesion += ` - ${opciones.length} empresas/departamentos`;
         }
@@ -1194,12 +1188,12 @@
           deptoSelect.innerHTML = '';
           opcionesPerm.forEach((p, idx) => {
             const optEmp = document.createElement('option');
-            optEmp.value = p.empresa;
-            optEmp.textContent = p.empresa;
+            optEmp.value = p.empresa || '';
+            optEmp.textContent = p.empresa || 'Sin empresa';
             empresaSelect.appendChild(optEmp);
             const optDepto = document.createElement('option');
-            optDepto.value = p.depto;
-            optDepto.textContent = p.depto;
+            optDepto.value = p.depto || '';
+            optDepto.textContent = p.depto || 'Sin departamento';
             deptoSelect.appendChild(optDepto);
           });
           empresaSelect.onchange = function() {
@@ -1261,6 +1255,259 @@
 
       window.salir = function() { location.reload(); };
 
+      // ----- ADMINISTRACIÓN DE USUARIOS -----
+      window.mostrarAdminUsuarios = function() {
+        if (!actual || actual.rol !== 'Administrador') {
+          alert('Solo el Administrador puede gestionar usuarios.');
+          return;
+        }
+        document.getElementById('modalUsuarios').classList.add('active');
+        renderTablaUsuarios();
+      };
+
+      window.cerrarAdminUsuarios = function() {
+        document.getElementById('modalUsuarios').classList.remove('active');
+        document.getElementById('formNuevoUsuario').style.display = 'none';
+        document.getElementById('msgNuevoUsuario').innerHTML = '';
+        document.getElementById('msgUsuarios').innerHTML = '';
+      };
+
+      window.mostrarFormNuevoUsuario = function() {
+        const form = document.getElementById('formNuevoUsuario');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        document.getElementById('nuevoUsuario').value = '';
+        document.getElementById('nuevaPassword').value = '';
+        document.getElementById('nuevaEmpresa').value = '';
+        document.getElementById('nuevoDepto').value = '';
+        document.getElementById('msgNuevoUsuario').innerHTML = '';
+      };
+
+      window.cancelarNuevoUsuario = function() {
+        document.getElementById('formNuevoUsuario').style.display = 'none';
+        document.getElementById('msgNuevoUsuario').innerHTML = '';
+      };
+
+      window.crearUsuario = async function() {
+        const usuario = document.getElementById('nuevoUsuario').value.trim().toUpperCase();
+        const password = document.getElementById('nuevaPassword').value.trim();
+        const rol = document.getElementById('nuevoRol').value;
+        const empresa = document.getElementById('nuevaEmpresa').value.trim().toUpperCase();
+        const depto = document.getElementById('nuevoDepto').value.trim().toUpperCase();
+        const msgDiv = document.getElementById('msgNuevoUsuario');
+
+        if (!usuario || !password) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ Usuario y contraseña son obligatorios.</div>';
+          return;
+        }
+        if (password.length < 4) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ La contraseña debe tener al menos 4 caracteres.</div>';
+          return;
+        }
+
+        // Verificar si el usuario ya existe
+        const existe = usuariosDB.find(u => u.usuario === usuario);
+        if (existe) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ El usuario ya existe.</div>';
+          return;
+        }
+
+        let permisos = [];
+        if (empresa && depto) {
+          permisos = [{ empresa, depto }];
+        } else if (empresa) {
+          permisos = [{ empresa, depto: 'GENERAL' }];
+        }
+
+        const nuevoUsuario = {
+          usuario,
+          password,
+          rol,
+          permisos,
+          activo: true
+        };
+
+        try {
+          const { data, error } = await supabase.from('usuarios').insert([nuevoUsuario]).select();
+          if (error) {
+            msgDiv.innerHTML = `<div class="alert">⚠️ Error: ${error.message}</div>`;
+            return;
+          }
+          msgDiv.innerHTML = '<div class="success">✅ Usuario creado exitosamente.</div>';
+          // Recargar usuarios y actualizar tabla
+          await cargarUsuarios();
+          renderTablaUsuarios();
+          // Limpiar campos
+          document.getElementById('nuevoUsuario').value = '';
+          document.getElementById('nuevaPassword').value = '';
+          document.getElementById('nuevaEmpresa').value = '';
+          document.getElementById('nuevoDepto').value = '';
+          // Actualizar responsables en el panel OC
+          window.actualizarResponsables();
+        } catch (e) {
+          msgDiv.innerHTML = `<div class="alert">⚠️ Error inesperado: ${e.message}</div>`;
+        }
+      };
+
+      window.cambiarPassword = async function(usuarioId) {
+        if (!actual || actual.rol !== 'Administrador') {
+          alert('Solo el Administrador puede cambiar contraseñas.');
+          return;
+        }
+        const nuevaPass = prompt('Ingrese la nueva contraseña para el usuario:');
+        if (nuevaPass === null) return;
+        if (nuevaPass.trim().length < 4) {
+          alert('La contraseña debe tener al menos 4 caracteres.');
+          return;
+        }
+        try {
+          const { error } = await supabase
+            .from('usuarios')
+            .update({ password: nuevaPass.trim() })
+            .eq('id', usuarioId);
+          if (error) {
+            alert('Error al actualizar contraseña: ' + error.message);
+            return;
+          }
+          alert('✅ Contraseña actualizada correctamente.');
+          await cargarUsuarios();
+          renderTablaUsuarios();
+        } catch (e) {
+          alert('Error inesperado: ' + e.message);
+        }
+      };
+
+      window.toggleActivoUsuario = async function(usuarioId, activoActual) {
+        if (!actual || actual.rol !== 'Administrador') {
+          alert('Solo el Administrador puede modificar usuarios.');
+          return;
+        }
+        const nuevoEstado = !activoActual;
+        try {
+          const { error } = await supabase
+            .from('usuarios')
+            .update({ activo: nuevoEstado })
+            .eq('id', usuarioId);
+          if (error) {
+            alert('Error al actualizar usuario: ' + error.message);
+            return;
+          }
+          await cargarUsuarios();
+          renderTablaUsuarios();
+        } catch (e) {
+          alert('Error inesperado: ' + e.message);
+        }
+      };
+
+      window.editarPermisos = async function(usuarioId) {
+        if (!actual || actual.rol !== 'Administrador') {
+          alert('Solo el Administrador puede editar permisos.');
+          return;
+        }
+        const usuario = usuariosDB.find(u => u.id === usuarioId);
+        if (!usuario) return;
+
+        const empresaActual = usuario.permisos && usuario.permisos.length > 0 ? usuario.permisos[0].empresa || '' : '';
+        const deptoActual = usuario.permisos && usuario.permisos.length > 0 ? usuario.permisos[0].depto || '' : '';
+
+        const nuevaEmpresa = prompt('Ingrese la empresa (dejar vacío para quitar):', empresaActual);
+        if (nuevaEmpresa === null) return;
+        const nuevoDepto = prompt('Ingrese el departamento (dejar vacío para quitar):', deptoActual);
+        if (nuevoDepto === null) return;
+
+        let permisos = [];
+        if (nuevaEmpresa.trim() && nuevoDepto.trim()) {
+          permisos = [{ empresa: nuevaEmpresa.trim().toUpperCase(), depto: nuevoDepto.trim().toUpperCase() }];
+        } else if (nuevaEmpresa.trim()) {
+          permisos = [{ empresa: nuevaEmpresa.trim().toUpperCase(), depto: 'GENERAL' }];
+        }
+
+        try {
+          const { error } = await supabase
+            .from('usuarios')
+            .update({ permisos })
+            .eq('id', usuarioId);
+          if (error) {
+            alert('Error al actualizar permisos: ' + error.message);
+            return;
+          }
+          alert('✅ Permisos actualizados correctamente.');
+          await cargarUsuarios();
+          renderTablaUsuarios();
+        } catch (e) {
+          alert('Error inesperado: ' + e.message);
+        }
+      };
+
+      function renderTablaUsuarios() {
+        const tbody = document.getElementById('tablaUsuarios');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        usuariosDB.forEach(u => {
+          const permisosStr = u.permisos && u.permisos.length > 0 ?
+            u.permisos.map(p => `${p.empresa || 'N/A'}/${p.depto || 'N/A'}`).join('; ') :
+            'Sin permisos';
+          tbody.innerHTML += `
+            <tr>
+              <td><strong>${u.usuario}</strong></td>
+              <td>${u.rol}</td>
+              <td>${u.permisos && u.permisos.length > 0 ? u.permisos[0].empresa || '—' : '—'}</td>
+              <td>${u.permisos && u.permisos.length > 0 ? u.permisos[0].depto || '—' : '—'}</td>
+              <td><span class="badge ${u.activo ? 'badge-autorizada-pagada' : 'badge-cancelada'}">${u.activo ? '✅ Activo' : '❌ Inactivo'}</span></td>
+              <td>
+                <div class="actions">
+                  <button class="warning" onclick="window.cambiarPassword(${u.id})">🔑</button>
+                  <button class="${u.activo ? 'danger' : 'success'}" onclick="window.toggleActivoUsuario(${u.id}, ${u.activo})">${u.activo ? '❌' : '✅'}</button>
+                  <button class="secondary" onclick="window.editarPermisos(${u.id})">📝</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+      }
+
+      // ----- FUNCIONES DEL FLUJO DE TRABAJO -----
+      window.actualizarResponsables = function() {
+        const selectProyecto = document.getElementById('selectProyecto');
+        const selectResp = document.getElementById('responsableOC');
+        const selectedId = parseInt(selectProyecto.value);
+        if (!selectedId) {
+          selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
+          return;
+        }
+        const proyecto = proyectos.find(p => p.id === selectedId);
+        if (!proyecto) {
+          selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
+          return;
+        }
+        const posibles = getPosiblesResponsables();
+        const filtrados = posibles.filter(u => usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento));
+        selectResp.innerHTML = '';
+        if (filtrados.length === 0) {
+          selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
+        } else {
+          filtrados.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.usuario;
+            opt.textContent = `${u.usuario} (${u.rol})`;
+            selectResp.appendChild(opt);
+          });
+        }
+      };
+
+      window.mostrarParidadInicial = function() {
+        const moneda = document.getElementById('monedaOC').value;
+        const paridadInput = document.getElementById('paridadInicial');
+        const paridadLabel = document.getElementById('paridadInicialLabel');
+        if (moneda === 'USD') {
+          paridadInput.style.display = 'inline-block';
+          paridadLabel.style.display = 'inline-block';
+        } else {
+          paridadInput.style.display = 'none';
+          paridadLabel.style.display = 'none';
+        }
+      };
+
+      // ----- PROYECTOS -----
       window.crearProyecto = async function() {
         let empresa, departamento;
         if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
@@ -1342,7 +1589,23 @@
         render();
       };
 
-      // ---------- PRODUCTOS DINÁMICOS ----------
+      window.eliminarTodosProyectos = async function() {
+        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        if (!confirm('⚠️ ¿Estás seguro de eliminar TODOS los proyectos y TODAS las OC?')) return;
+        try {
+          await supabase.from('ordenes').delete().neq('id', 0);
+          await supabase.from('proyectos').delete().neq('id', 0);
+          proyectos = [];
+          ordenes = [];
+          consecutivoOC = 1;
+          render();
+          alert('✅ Todos los proyectos y OC eliminados.');
+        } catch (error) {
+          alert('❌ Error: ' + error.message);
+        }
+      };
+
+      // ----- PRODUCTOS DINÁMICOS -----
       window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0,
         descuento = 0, impuesto = 0) {
         const tbody = document.getElementById('cuerpoProductos');
@@ -1418,7 +1681,7 @@
         document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
       }
 
-      // ---------- RECOPILAR DATOS OC ----------
+      // ----- RECOPILAR DATOS OC -----
       function recopilarDatosOC() {
         const selectProyecto = document.getElementById('selectProyecto');
         const selectedId = parseInt(selectProyecto.value);
@@ -1480,7 +1743,7 @@
             '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
           return null;
         }
-        const responsableUser = USUARIOS.find(u => u.u === responsable);
+        const responsableUser = usuariosDB.find(u => u.usuario === responsable);
         if (!responsableUser || !usuarioPuedeAcceder(responsableUser, proyecto.empresa, proyecto.departamento)) {
           msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
           return null;
@@ -1553,7 +1816,7 @@
           productos: productos,
           motivo: motivo,
           cliente: proyecto.cliente,
-          elaborador: actual.u,
+          elaborador: actual.usuario,
           banco: banco,
           cuenta: cuenta || null,
           clabe: clabe || null,
@@ -1563,7 +1826,7 @@
         };
       }
 
-      // ---------- FUNCIÓN PARA GENERAR PDF CON LOGOS POR EMPRESA ----------
+      // ----- GENERAR PDF CON LOGOS -----
       async function generarPDFParaPreview(datos) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -1578,7 +1841,6 @@
 
         // ----- MEMBRETE (DERECHA) -----
         if (esExtingue) {
-            // Logo para GRUPO INDUSTRIAL EXTINGUE
             try {
                 const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
                 const response = await fetch(imgUrl);
@@ -1606,7 +1868,6 @@
                 y += 60;
             }
         } else if (esVexpar) {
-            // Logo para VEXPAR OPERACIONES
             try {
                 const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
                 const response = await fetch(imgUrl);
@@ -1634,7 +1895,6 @@
                 y += 60;
             }
         } else {
-            // Para otras empresas, usar texto normal
             doc.setFontSize(18);
             doc.setTextColor(11, 26, 51);
             doc.setFont('helvetica', 'bold');
@@ -1649,7 +1909,6 @@
         doc.text('ORDEN DE COMPRA', margin, y);
         y += 12;
 
-        // Línea separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
@@ -1811,7 +2070,7 @@
 
         y += 70;
 
-        // ----- PIE DE PÁGINA CON CÓDIGO -----
+        // ----- PIE DE PÁGINA -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
@@ -1844,7 +2103,7 @@
         return doc;
       }
 
-      // ---------- PREVISUALIZAR ----------
+      // ----- PREVISUALIZAR -----
       window.previsualizarOC = async function() {
         const datos = recopilarDatosOC();
         if (!datos) return;
@@ -1862,7 +2121,7 @@
         ocPreviewPDF = null;
       };
 
-      // ---------- CONFIRMAR DESDE PREVIEW ----------
+      // ----- CONFIRMAR DESDE PREVIEW -----
       window.confirmarDesdePreview = async function() {
         if (!ocPreviewData) {
           alert('No hay datos para confirmar.');
@@ -1959,7 +2218,7 @@
         ocPreviewPDF = null;
       };
 
-      // ---------- CONFIRMAR DIRECTAMENTE ----------
+      // ----- CONFIRMAR DIRECTAMENTE -----
       window.confirmarOC = async function() {
         const datos = recopilarDatosOC();
         if (!datos) {
@@ -2060,7 +2319,7 @@
         }
       };
 
-      // ---------- GENERAR PDF FIRMADO ----------
+      // ----- GENERAR PDF FIRMADO -----
       function generarPDFFirmado(oc) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -2072,27 +2331,23 @@
         const nombreEmpresa = proyecto ? getNombreMembrete(proyecto.empresa) : 'GRUPO INDUSTRIAL EXTINGUE';
         const leyendaPie = proyecto ? getLeyendaPie(proyecto.empresa) : 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
 
-        // ----- MEMBRETE (DERECHA) -----
         doc.setFontSize(18);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
         y += 60;
 
-        // ----- TÍTULO ORDEN DE COMPRA -----
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('ORDEN DE COMPRA', margin, y);
         y += 12;
 
-        // Línea separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
         y += 10;
 
-        // ----- DATOS DE LA OC -----
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
@@ -2122,7 +2377,6 @@
 
         y += 5;
 
-        // ----- TABLA DE PRODUCTOS -----
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         const rows = oc.productos.map((p, i) => [
           i + 1,
@@ -2162,7 +2416,6 @@
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
 
-        // ----- TOTALES CON ESPACIADO REDUCIDO (mitad) -----
         let subtotal = 0;
         let iva = 0;
         let impuestoPorcentaje = 0;
@@ -2203,7 +2456,6 @@
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
         y += 30;
 
-        // ----- AUTORIZACIONES CON ESPACIADO REDUCIDO -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
@@ -2229,13 +2481,11 @@
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
           doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma
           const lineY = y + 14 + 10 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Fecha
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
@@ -2258,7 +2508,6 @@
 
         y += 70;
 
-        // ----- PIE DE PÁGINA CON CÓDIGO (sin la leyenda "Código:") -----
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
@@ -2272,7 +2521,6 @@
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        // Quitamos la leyenda "Código:" y solo mostramos el código
         doc.text(oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
 
         doc.setFontSize(8);
@@ -2283,21 +2531,21 @@
         doc.save(`OC_${oc.codigo}.pdf`);
       }
 
-      // ---------- APROBACIONES ----------
+      // ----- APROBACIONES -----
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
         const oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
-        if (actual.u !== oc.responsable) return alert('Solo el responsable puede aprobar');
+        if (actual.usuario !== oc.responsable) return alert('Solo el responsable puede aprobar');
         const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
         const updates = {
           estado: 'APROBADA_SOLICITANTE',
           fechaaprobacionsolicitante: new Date().toISOString(),
-          nombresolicitante: actual.u
+          nombresolicitante: actual.usuario
         };
         const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
@@ -2334,9 +2582,9 @@
           const updates = {
             estado: nuevoEstado,
             fechaaprobacionjefe: new Date().toISOString(),
-            nombrejefe: actual.u,
+            nombrejefe: actual.usuario,
             fechaaprobaciondirector: new Date().toISOString(),
-            nombredirector: actual.u,
+            nombredirector: actual.usuario,
             estadopago: null
           };
           const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
@@ -2354,7 +2602,7 @@
         const updates = {
           estado: nuevoEstado,
           fechaaprobacionjefe: new Date().toISOString(),
-          nombrejefe: actual.u
+          nombrejefe: actual.usuario
         };
         const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
@@ -2373,7 +2621,7 @@
           const updates = {
             estado: 'PENDIENTE_PARIDAD',
             fechaaprobaciondirector: new Date().toISOString(),
-            nombredirector: actual.u
+            nombredirector: actual.usuario
           };
           const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) return alert('Error al actualizar OC');
@@ -2386,7 +2634,7 @@
         const updates = {
           estado: 'AUTORIZADA',
           fechaaprobaciondirector: new Date().toISOString(),
-          nombredirector: actual.u,
+          nombredirector: actual.usuario,
           estadopago: null
         };
         const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
@@ -2436,7 +2684,7 @@
         alert('✅ Paridad ingresada. OC autorizada.');
       };
 
-      // ---------- FINANZAS ----------
+      // ----- FINANZAS -----
       window.marcarPagada = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
@@ -2453,7 +2701,7 @@
       window.registrarFactura = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         const oc = ordenes[index];
-        if (actual.u !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
+        if (actual.usuario !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
           return alert('Solo el responsable de la OC puede registrar la factura.');
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
@@ -2527,7 +2775,7 @@
         render();
       };
 
-      // ---------- DASHBOARD ----------
+      // ----- DASHBOARD -----
       window.mostrarDashboard = function(index) {
         const proyecto = proyectos[index];
         if (!proyecto) return;
@@ -2661,7 +2909,7 @@
         document.getElementById('app').style.display = 'block';
       };
 
-      // ---------- RENDER ----------
+      // ----- RENDER -----
       function render() {
         const tablaProyectos = document.getElementById('tablaProyectos');
         const selectProyecto = document.getElementById('selectProyecto');
@@ -2901,25 +3149,20 @@
         }
       }
 
-      // ---------- INICIALIZACIÓN ----------
+      // ----- INICIALIZACIÓN -----
       async function init() {
         const hoy = new Date();
         const fechaHoy = hoy.toISOString().split('T')[0];
 
-        // Fecha de inicio: hoy
         document.getElementById('fechaInicio').value = fechaHoy;
-
-        // Fecha de término: hoy + 6 meses
         const fechaFin = new Date(hoy);
         fechaFin.setMonth(fechaFin.getMonth() + 6);
         document.getElementById('fechaTermino').value = fechaFin.toISOString().split('T')[0];
-
-        // Fecha de pago: hoy (referencia al día actual)
         document.getElementById('fechaPago').value = fechaHoy;
-
-        // Fecha de entrega: hoy (referencia al día actual)
         document.getElementById('fechaEntrega').value = fechaHoy;
 
+        // Cargar usuarios y datos
+        await cargarUsuarios();
         const ok = await cargarDatos();
         if (!ok) {
           alert('No se pudieron cargar los datos de la base de datos. Verifica tu conexión y credenciales.');
