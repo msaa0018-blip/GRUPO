@@ -594,10 +594,13 @@
     background: white;
     border-radius: 16px;
     padding: 24px;
-    max-width: 600px;
+    max-width: 700px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
+  }
+  .modal-overlay .modal-content .flex {
+    margin-bottom: 8px;
   }
 </style>
 </head>
@@ -620,7 +623,7 @@
     <div id="login" class="card">
       <h2>🔐 Iniciar sesión</h2>
       <div class="flex">
-        <input id="usuario" placeholder="Usuario" value="LJGR">
+        <input id="usuario" placeholder="Usuario" value="AAMS1">
         <input id="password" type="password" placeholder="Contraseña" value="1234">
         <button id="btnLogin" type="button">Ingresar</button>
       </div>
@@ -927,7 +930,7 @@
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
       const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-      // Ya no tenemos USUARIOS fijos en código, ahora se cargan desde Supabase
+      // Variables globales
       let usuariosDB = [];
       let actual = null;
       let proyectos = [];
@@ -1013,6 +1016,7 @@
           const { data, error } = await supabase.from('usuarios').select('*').eq('activo', true);
           if (error) throw error;
           usuariosDB = data || [];
+          console.log('✅ Usuarios cargados:', usuariosDB.length);
           return true;
         } catch (e) {
           console.error('Error cargando usuarios', e);
@@ -1125,6 +1129,8 @@
         const user = userInput.value.trim().toUpperCase();
         const pass = passInput.value.trim();
 
+        console.log('🔑 Intentando login:', user);
+
         // Cargar usuarios desde Supabase
         await cargarUsuarios();
 
@@ -1132,6 +1138,7 @@
         if (!encontrado) {
           errorDiv.classList.remove('hidden');
           errorDiv.textContent = '❌ Usuario o contraseña incorrectos';
+          console.log('❌ Login fallido para:', user);
           return;
         }
         if (!encontrado.activo) {
@@ -1140,6 +1147,7 @@
           return;
         }
 
+        console.log('✅ Login exitoso:', user);
         errorDiv.classList.add('hidden');
         actual = encontrado;
         document.getElementById('login').classList.add('hidden');
@@ -1333,15 +1341,12 @@
             return;
           }
           msgDiv.innerHTML = '<div class="success">✅ Usuario creado exitosamente.</div>';
-          // Recargar usuarios y actualizar tabla
           await cargarUsuarios();
           renderTablaUsuarios();
-          // Limpiar campos
           document.getElementById('nuevoUsuario').value = '';
           document.getElementById('nuevaPassword').value = '';
           document.getElementById('nuevaEmpresa').value = '';
           document.getElementById('nuevoDepto').value = '';
-          // Actualizar responsables en el panel OC
           window.actualizarResponsables();
         } catch (e) {
           msgDiv.innerHTML = `<div class="alert">⚠️ Error inesperado: ${e.message}</div>`;
@@ -1455,9 +1460,9 @@
               <td><span class="badge ${u.activo ? 'badge-autorizada-pagada' : 'badge-cancelada'}">${u.activo ? '✅ Activo' : '❌ Inactivo'}</span></td>
               <td>
                 <div class="actions">
-                  <button class="warning" onclick="window.cambiarPassword(${u.id})">🔑</button>
-                  <button class="${u.activo ? 'danger' : 'success'}" onclick="window.toggleActivoUsuario(${u.id}, ${u.activo})">${u.activo ? '❌' : '✅'}</button>
-                  <button class="secondary" onclick="window.editarPermisos(${u.id})">📝</button>
+                  <button class="warning" onclick="window.cambiarPassword(${u.id})" title="Cambiar contraseña">🔑</button>
+                  <button class="${u.activo ? 'danger' : 'success'}" onclick="window.toggleActivoUsuario(${u.id}, ${u.activo})" title="${u.activo ? 'Desactivar' : 'Activar'}">${u.activo ? '❌' : '✅'}</button>
+                  <button class="secondary" onclick="window.editarPermisos(${u.id})" title="Editar permisos">📝</button>
                 </div>
               </td>
             </tr>
@@ -1504,6 +1509,22 @@
         } else {
           paridadInput.style.display = 'none';
           paridadLabel.style.display = 'none';
+        }
+      };
+
+      window.eliminarTodosProyectos = async function() {
+        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        if (!confirm('⚠️ ¿Estás seguro de eliminar TODOS los proyectos y TODAS las OC?')) return;
+        try {
+          await supabase.from('ordenes').delete().neq('id', 0);
+          await supabase.from('proyectos').delete().neq('id', 0);
+          proyectos = [];
+          ordenes = [];
+          consecutivoOC = 1;
+          render();
+          alert('✅ Todos los proyectos y OC eliminados.');
+        } catch (error) {
+          alert('❌ Error: ' + error.message);
         }
       };
 
@@ -1587,22 +1608,6 @@
         await supabase.from('proyectos').delete().eq('id', proyecto.id);
         proyectos.splice(index, 1);
         render();
-      };
-
-      window.eliminarTodosProyectos = async function() {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        if (!confirm('⚠️ ¿Estás seguro de eliminar TODOS los proyectos y TODAS las OC?')) return;
-        try {
-          await supabase.from('ordenes').delete().neq('id', 0);
-          await supabase.from('proyectos').delete().neq('id', 0);
-          proyectos = [];
-          ordenes = [];
-          consecutivoOC = 1;
-          render();
-          alert('✅ Todos los proyectos y OC eliminados.');
-        } catch (error) {
-          alert('❌ Error: ' + error.message);
-        }
       };
 
       // ----- PRODUCTOS DINÁMICOS -----
