@@ -1664,7 +1664,7 @@
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
 
-        // ----- TOTALES CON MÁS ESPACIADO -----
+        // ----- TOTALES CON ESPACIADO REDUCIDO (mitad) -----
         let subtotal = 0;
         let iva = 0;
         let impuestoPorcentaje = 0;
@@ -1678,7 +1678,7 @@
         }
 
         const totalX = pageWidth * 0.72;
-        const lineSpacing = 26;
+        const lineSpacing = 13; // Reducido de 26 a 13 (mitad)
 
         y += 15;
 
@@ -1707,14 +1707,14 @@
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 40;
+        y += 30;
 
-        // ----- AUTORIZACIONES CON MÁS ESPACIADO VERTICAL -----
+        // ----- AUTORIZACIONES CON 20 PUNTOS DE ESPACIO ADICIONAL -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 20;
+        y += 12;
 
         const solicitante = datos.responsable || 'No definido';
         const jefe = getJefeDepto(datos.empresa, datos.departamento);
@@ -1729,23 +1729,23 @@
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-          // Nombre del autorizador (más separación vertical)
+          // Nombre del autorizador
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 18, { align: 'center' });
+          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma (más separación vertical)
-          const lineY = y + 52;
+          // Línea de firma con 20 puntos adicionales de espacio
+          const lineY = y + 14 + 20 + 16; // 14 (nombre) + 20 (espacio adicional) + 16 (separación)
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Texto "Fecha: Pendiente" (más separación vertical)
+          // Texto "Fecha: Pendiente" con 20 puntos adicionales de espacio
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 18, { align: 'center' });
+          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 12 + 20, { align: 'center' });
         }
 
         const x1 = margin;
@@ -1756,7 +1756,7 @@
         dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
         dibujarAutorizacion(doc, x3, y, director, 'Director General');
 
-        y += 85;
+        y += 70;
 
         // ----- PIE DE PÁGINA CON CÓDIGO -----
         const pieY = doc.internal.pageSize.height - 55;
@@ -2109,7 +2109,7 @@
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
 
-        // ----- TOTALES CON MÁS ESPACIADO -----
+        // ----- TOTALES CON ESPACIADO REDUCIDO (mitad) -----
         let subtotal = 0;
         let iva = 0;
         let impuestoPorcentaje = 0;
@@ -2123,7 +2123,7 @@
         }
 
         const totalX = pageWidth * 0.72;
-        const lineSpacing = 26;
+        const lineSpacing = 13; // Reducido de 26 a 13 (mitad)
 
         y += 15;
 
@@ -2148,14 +2148,14 @@
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 40;
+        y += 30;
 
-        // ----- AUTORIZACIONES CON MÁS ESPACIADO VERTICAL -----
+        // ----- AUTORIZACIONES CON 20 PUNTOS DE ESPACIO ADICIONAL -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 20;
+        y += 12;
 
         const solicitanteNombre = oc.responsable || 'No definido';
         const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
@@ -2170,24 +2170,24 @@
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-          // Nombre del autorizador (más separación vertical)
+          // Nombre del autorizador
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-          doc.text(nombre + estado, x + (lineWidth / 2), y + 18, { align: 'center' });
+          doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma (más separación vertical)
-          const lineY = y + 52;
+          // Línea de firma con 20 puntos adicionales de espacio
+          const lineY = y + 14 + 20 + 16; // 14 (nombre) + 20 (espacio adicional) + 16 (separación)
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Texto "Fecha: Pendiente" (más separación vertical)
+          // Texto "Fecha: Pendiente" con 20 puntos adicionales de espacio
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 18, { align: 'center' });
+          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 12 + 20, { align: 'center' });
         }
 
         const x1 = margin;
@@ -2204,7 +2204,7 @@
         dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
 
-        y += 85;
+        y += 70;
 
         // ----- PIE DE PÁGINA CON CÓDIGO -----
         const pieY = doc.internal.pageSize.height - 55;
