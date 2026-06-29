@@ -1693,25 +1693,25 @@
         // Subtotal
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += lineSpacing;
+        y += lineSpacing+10;
 
         // IVA
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += lineSpacing;
+        y += lineSpacing+10;
 
         // Línea separadora antes del total
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
         doc.line(totalX, y, pageWidth - margin, y);
-        y += lineSpacing;
+        y += lineSpacing+10;
 
         // TOTAL (en negrita y más grande)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 30; // Espacio extra después del total
+        y += 30+10; // Espacio extra después del total
 
         // ----- AUTORIZACIONES -----
         doc.setFontSize(11);
@@ -1741,7 +1741,7 @@
           const lineY = y + 30;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
-          doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
+          doc.line(x + 10, lineY, x + lineWidth - 10, lineY+10);
 
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
@@ -1753,9 +1753,9 @@
         const x2 = margin + colWidth;
         const x3 = margin + colWidth * 2;
 
-        dibujarAutorizacion(doc, x1, y, solicitante, 'Solicitante');
-        dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
-        dibujarAutorizacion(doc, x3, y, director, 'Director General');
+        dibujarAutorizacion(doc, x1, y+10, solicitante, 'Solicitante');
+        dibujarAutorizacion(doc, x2, y+10, jefe, 'Jefe de Departamento');
+        dibujarAutorizacion(doc, x3, y+10, director, 'Director General');
 
         y += 50;
 
