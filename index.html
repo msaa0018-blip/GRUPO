@@ -1678,7 +1678,7 @@
         }
 
         const totalX = pageWidth * 0.72;
-        const lineSpacing = 13; // Reducido de 26 a 13 (mitad)
+        const lineSpacing = 13;
 
         y += 15;
 
@@ -1686,30 +1686,26 @@
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
 
-        // Subtotal
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
 
-        // IVA
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
 
-        // Línea separadora antes del total
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
         doc.line(totalX, y, pageWidth - margin, y);
         y += lineSpacing;
 
-        // TOTAL (en negrita y más grande)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += 30;
 
-        // ----- AUTORIZACIONES CON 20 PUNTOS DE ESPACIO ADICIONAL -----
+        // ----- AUTORIZACIONES CON ESPACIADO REDUCIDO -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
@@ -1729,23 +1725,22 @@
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-          // Nombre del autorizador
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma con 20 puntos adicionales de espacio
-          const lineY = y + 14 + 20 + 16; // 14 (nombre) + 20 (espacio adicional) + 16 (separación)
+          // Línea de firma
+          const lineY = y + 14 + 20 + 10; // Reducido de +20 a +10 para línea
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Texto "Fecha: Pendiente" con 20 puntos adicionales de espacio
+          // Fecha - ahora con espaciado reducido de +10 en lugar de +20
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 12 + 20, { align: 'center' });
+          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' }); // Reducido de +20 a +10
         }
 
         const x1 = margin;
@@ -2123,7 +2118,7 @@
         }
 
         const totalX = pageWidth * 0.72;
-        const lineSpacing = 13; // Reducido de 26 a 13 (mitad)
+        const lineSpacing = 13;
 
         y += 15;
 
@@ -2150,7 +2145,7 @@
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
         y += 30;
 
-        // ----- AUTORIZACIONES CON 20 PUNTOS DE ESPACIO ADICIONAL -----
+        // ----- AUTORIZACIONES CON ESPACIADO REDUCIDO -----
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
@@ -2170,24 +2165,23 @@
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
 
-          // Nombre del autorizador
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
           doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
 
-          // Línea de firma con 20 puntos adicionales de espacio
-          const lineY = y + 14 + 20 + 16; // 14 (nombre) + 20 (espacio adicional) + 16 (separación)
+          // Línea de firma - reducido de +20 a +10
+          const lineY = y + 14 + 10 + 10; // Reducido de +20 a +10
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
 
-          // Texto "Fecha: Pendiente" con 20 puntos adicionales de espacio
+          // Fecha - ahora con espaciado reducido de +10 en lugar de +20
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 12 + 20, { align: 'center' });
+          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' }); // Reducido de +20 a +10
         }
 
         const x1 = margin;
