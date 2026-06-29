@@ -1563,7 +1563,7 @@
         };
       }
 
-      // ---------- FUNCIÓN PARA GENERAR PDF CON LOGO EN MEMBRETE ----------
+      // ---------- FUNCIÓN PARA GENERAR PDF CON LOGOS POR EMPRESA ----------
       async function generarPDFParaPreview(datos) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -1574,10 +1574,11 @@
         const nombreEmpresa = getNombreMembrete(datos.empresa);
         const leyendaPie = getLeyendaPie(datos.empresa);
         const esExtingue = datos.empresa && datos.empresa.toUpperCase().includes('GRUPO INDUSTRIAL EXTINGUE');
+        const esVexpar = datos.empresa && datos.empresa.toUpperCase().includes('VEXPAR OPERACIONES');
 
         // ----- MEMBRETE (DERECHA) -----
         if (esExtingue) {
-            // Intentar cargar el logo desde GitHub
+            // Logo para GRUPO INDUSTRIAL EXTINGUE
             try {
                 const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
                 const response = await fetch(imgUrl);
@@ -1589,7 +1590,6 @@
                     reader.readAsDataURL(blob);
                 });
                 
-                // Ajustar tamaño del logo (ancho 140px, alto automático)
                 const img = new Image();
                 img.src = imgData;
                 await new Promise((resolve) => { img.onload = resolve; });
@@ -1598,12 +1598,39 @@
                 doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
                 y += imgHeight + 25;
             } catch (e) {
-                // Si falla la imagen, usar texto como respaldo
-                console.warn('No se pudo cargar el logo, usando texto:', e);
+                console.warn('No se pudo cargar el logo de Extingue, usando texto:', e);
                 doc.setFontSize(18);
                 doc.setTextColor(11, 26, 51);
                 doc.setFont('helvetica', 'bold');
                 doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth - margin - 10, y, { align: 'right' });
+                y += 60;
+            }
+        } else if (esVexpar) {
+            // Logo para VEXPAR OPERACIONES
+            try {
+                const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
+                const response = await fetch(imgUrl);
+                if (!response.ok) throw new Error('No se pudo cargar la imagen');
+                const blob = await response.blob();
+                const imgData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(blob);
+                });
+                
+                const img = new Image();
+                img.src = imgData;
+                await new Promise((resolve) => { img.onload = resolve; });
+                const imgWidth = 140;
+                const imgHeight = (img.height / img.width) * imgWidth;
+                doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+                y += imgHeight + 25;
+            } catch (e) {
+                console.warn('No se pudo cargar el logo de Vexpar, usando texto:', e);
+                doc.setFontSize(18);
+                doc.setTextColor(11, 26, 51);
+                doc.setFont('helvetica', 'bold');
+                doc.text('VEXPAR OPERACIONES', pageWidth - margin - 10, y, { align: 'right' });
                 y += 60;
             }
         } else {
