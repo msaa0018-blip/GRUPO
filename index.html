@@ -1105,156 +1105,193 @@
         }
       };
 
-      // Función de login actualizada para usar Supabase
-      window.login = async function() {
-        const userInput = document.getElementById('usuario');
-        const passInput = document.getElementById('password');
-        const errorDiv = document.getElementById('error');
-        
-        if (!userInput || !passInput) { 
-          alert('❌ Campos no encontrados'); 
-          return; 
-        }
-        
-        const user = userInput.value.trim().toUpperCase();
-        const pass = passInput.value.trim();
 
-        // Verificar credenciales contra la base de datos
-        const usuarioEncontrado = buscarUsuarioDB(user);
-        
-        if (!usuarioEncontrado) {
-          errorDiv.classList.remove('hidden');
-          errorDiv.textContent = '❌ Usuario no encontrado';
-          return;
-        }
 
-        if (usuarioEncontrado.password !== pass) {
-          errorDiv.classList.remove('hidden');
-          errorDiv.textContent = '❌ Contraseña incorrecta';
-          return;
-        }
+window.login = async function() {
 
-        // Login exitoso
-        errorDiv.classList.add('hidden');
-        
-        // Crear objeto de usuario con la estructura esperada por el resto del código
-        actual = {
-          u: usuarioEncontrado.usuario,
-          password: usuarioEncontrado.password,
-          rol: usuarioEncontrado.rol,
-          permisos: usuarioEncontrado.permisos || []
-        };
+  const userInput = document.getElementById('usuario');
+  const passInput = document.getElementById('password');
+  const errorDiv = document.getElementById('error');
 
-        document.getElementById('login').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
+  if (!userInput || !passInput) {
+    alert('❌ Campos no encontrados');
+    return;
+  }
 
-        let infoSesion = `👤 ${actual.u} (${actual.rol})`;
-        const opciones = obtenerOpcionesPermisos(actual);
-        if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
-          infoSesion += ' - Acceso total';
-        } else if (opciones.length === 1) {
-          infoSesion += ` - ${opciones[0].empresa} / ${opciones[0].depto}`;
-        } else if (opciones.length > 1) {
-          infoSesion += ` - ${opciones.length} empresas/departamentos`;
-        }
-        document.getElementById('sesion').textContent = infoSesion;
 
-        if (actual.rol === 'Administrador') {
-          document.getElementById('adminActions').classList.remove('hidden');
-        } else {
-          document.getElementById('adminActions').classList.add('hidden');
-        }
+  // 🔥 CORRECCIÓN:
+  // cargar usuarios desde Supabase antes de validar
 
-        const empresaSelect = document.getElementById('empresaSelect');
-        const empresaInput = document.getElementById('empresaInput');
-        const deptoSelect = document.getElementById('departamentoSelect');
-        const deptoInput = document.getElementById('departamentoInput');
+  const cargado = await cargarUsuarios();
 
-        if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
-          empresaSelect.style.display = 'none';
-          empresaInput.style.display = 'inline-block';
-          deptoSelect.style.display = 'none';
-          deptoInput.style.display = 'inline-block';
-          empresaInput.disabled = false;
-          deptoInput.disabled = false;
-          empresaInput.value = '';
-          deptoInput.value = '';
-          empresaInput.placeholder = 'Empresa';
-          deptoInput.placeholder = 'Departamento';
-        } else {
-          empresaSelect.style.display = 'inline-block';
-          empresaInput.style.display = 'none';
-          deptoSelect.style.display = 'inline-block';
-          deptoInput.style.display = 'none';
-          const opcionesPerm = obtenerOpcionesPermisos(actual);
-          empresaSelect.innerHTML = '';
-          deptoSelect.innerHTML = '';
-          opcionesPerm.forEach((p, idx) => {
-            const optEmp = document.createElement('option');
-            optEmp.value = p.empresa;
-            optEmp.textContent = p.empresa;
-            empresaSelect.appendChild(optEmp);
-            const optDepto = document.createElement('option');
-            optDepto.value = p.depto;
-            optDepto.textContent = p.depto;
-            deptoSelect.appendChild(optDepto);
-          });
-          empresaSelect.onchange = function() {
-            const idx = empresaSelect.selectedIndex;
-            if (deptoSelect.options[idx]) deptoSelect.selectedIndex = idx;
-          };
-          if (opcionesPerm.length > 0) {
-            empresaSelect.selectedIndex = 0;
-            deptoSelect.selectedIndex = 0;
-          }
-          empresaSelect.disabled = (opcionesPerm.length <= 1);
-          deptoSelect.disabled = (opcionesPerm.length <= 1);
-        }
 
-        const esElaborador = actual.rol === 'Elaborador';
-        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador);
-        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador);
+  if (!cargado) {
 
-        const filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
-        const filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
-        if (actual.rol === 'Director General' || actual.rol === 'Finanzas') {
-          filtroProyectoContainer.classList.remove('hidden');
-        } else {
-          filtroProyectoContainer.classList.add('hidden');
-        }
-        if (actual.rol === 'Finanzas') {
-          filtroDeptoContainer.classList.remove('hidden');
-        } else {
-          filtroDeptoContainer.classList.add('hidden');
-        }
+    errorDiv.classList.remove('hidden');
+    errorDiv.textContent =
+      '❌ No se pudieron cargar usuarios desde Supabase';
 
-        const selectProyecto = document.getElementById('selectProyecto');
-        selectProyecto.onchange = window.actualizarResponsables;
+    return;
+  }
 
-        const filtroProyecto = document.getElementById('filtroProyecto');
-        filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
-        proyectos.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.nombre;
-          opt.textContent = p.nombre;
-          filtroProyecto.appendChild(opt);
-        });
-        filtroProyecto.onchange = function() { render(); };
 
-        const filtroDepto = document.getElementById('filtroDepto');
-        filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
-        const deptos = [...new Set(proyectos.map(p => p.departamento))];
-        deptos.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d;
-          opt.textContent = d;
-          filtroDepto.appendChild(opt);
-        });
-        filtroDepto.onchange = function() { render(); };
 
-        render();
-        if (esElaborador) window.actualizarResponsables();
-      };
+  console.log(
+    "Usuarios disponibles:",
+    usuariosDB
+  );
+
+
+
+  const user =
+    userInput.value.trim().toUpperCase();
+
+
+  const pass =
+    passInput.value.trim();
+
+
+
+  const usuarioEncontrado =
+    buscarUsuarioDB(user);
+
+
+
+  if (!usuarioEncontrado) {
+
+    errorDiv.classList.remove('hidden');
+
+    errorDiv.textContent =
+      '❌ Usuario no encontrado';
+
+    return;
+
+  }
+
+
+
+  if (
+    usuarioEncontrado.password.toString()
+    !== pass
+  ){
+
+    errorDiv.classList.remove('hidden');
+
+    errorDiv.textContent =
+      '❌ Contraseña incorrecta';
+
+    return;
+
+  }
+
+
+
+  errorDiv.classList.add('hidden');
+
+
+
+  actual = {
+
+    u: usuarioEncontrado.usuario,
+
+    usuario: usuarioEncontrado.usuario,
+
+    password: usuarioEncontrado.password,
+
+    rol: usuarioEncontrado.rol,
+
+    permisos:
+      usuarioEncontrado.permisos || []
+
+  };
+
+
+
+  console.log(
+    "LOGIN CORRECTO:",
+    actual
+  );
+
+
+
+  document
+  .getElementById('login')
+  .classList.add('hidden');
+
+
+  document
+  .getElementById('app')
+  .classList.remove('hidden');
+
+
+
+  let infoSesion =
+    `👤 ${actual.u} (${actual.rol})`;
+
+
+
+  const opciones =
+    obtenerOpcionesPermisos(actual);
+
+
+
+  if (
+    [
+      'Director General',
+      'Administrador',
+      'Finanzas'
+    ].includes(actual.rol)
+  ){
+
+    infoSesion +=
+    ' - Acceso total';
+
+  }
+
+  else if(opciones.length === 1){
+
+    infoSesion +=
+    ` - ${opciones[0].empresa} / ${opciones[0].depto}`;
+
+  }
+
+  else if(opciones.length > 1){
+
+    infoSesion +=
+    ` - ${opciones.length} permisos`;
+
+  }
+
+
+
+  document
+  .getElementById('sesion')
+  .textContent = infoSesion;
+
+
+
+  if(actual.rol === 'Administrador'){
+
+    document
+    .getElementById('adminActions')
+    .classList.remove('hidden');
+
+  }
+  else{
+
+    document
+    .getElementById('adminActions')
+    .classList.add('hidden');
+
+  }
+
+
+
+  render();
+
+};
+
+     
 
       window.salir = function() { location.reload(); };
 
