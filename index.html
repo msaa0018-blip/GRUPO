@@ -564,6 +564,128 @@
     color: var(--danger);
     font-weight: bold;
   }
+
+  /* Menú principal Odoo-style */
+  #menuPrincipal {
+    background: var(--gray-100);
+    padding: 30px 20px;
+    text-align: center;
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #menuPrincipal h2 {
+    color: var(--gray-800);
+    margin-bottom: 30px;
+    font-weight: 300;
+    font-size: 1.5rem;
+  }
+  .modulos-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    justify-items: center;
+  }
+  .modulo-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 80px;
+  }
+  .modulo-item .modulo-cuadro {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    background: white;
+    border: 2px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .modulo-item .modulo-cuadro:hover {
+    transform: scale(1.05);
+    border-color: var(--secondary);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+  }
+  .modulo-item .modulo-cuadro.funcional:hover {
+    background: var(--gray-50);
+  }
+  .modulo-item .modulo-cuadro.en-construccion {
+    opacity: 0.7;
+    border-style: dashed;
+    cursor: not-allowed;
+  }
+  .modulo-item .modulo-cuadro.en-construccion:hover {
+    transform: none;
+    border-color: var(--gray-300);
+    box-shadow: none;
+  }
+  .modulo-item .modulo-leyenda {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+    text-align: center;
+  }
+  .modulo-item .modulo-leyenda.construccion {
+    color: var(--gray-400);
+    font-weight: 400;
+    font-size: 11px;
+  }
+
+  @media (max-width: 600px) {
+    .modulos-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      max-width: 100%;
+    }
+    .modulo-item {
+      width: 60px;
+    }
+    .modulo-item .modulo-cuadro {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+    }
+    .modulo-item .modulo-leyenda {
+      font-size: 11px;
+    }
+  }
+
+  #contenidoApp {
+    display: none;
+  }
+
+  .btn-volver-menu {
+    background: var(--gray-600);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  .btn-volver-menu:hover {
+    background: var(--gray-700);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 </style>
 </head>
 <body>
@@ -576,7 +698,10 @@
         <span class="sub">Workflow OC ERP v47</span>
       </div>
     </div>
-    <small>BETA · Colores por empresa</small>
+    <div class="header-actions">
+      <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">⬅ Volver</button>
+      <small>BETA · Colores por empresa</small>
+    </div>
   </header>
 
   <div class="container">
@@ -592,8 +717,55 @@
       <div id="error" class="alert hidden"></div>
     </div>
 
-    <!-- App -->
-    <div id="app" class="hidden">
+    <!-- Menú Principal Odoo-style -->
+    <div id="menuPrincipal" class="hidden">
+      <h2>🏠 Selecciona un módulo</h2>
+      <div class="modulos-grid" id="modulosGrid">
+        <!-- Módulo 1: OC -->
+        <div class="modulo-item" data-modulo="oc">
+          <div class="modulo-cuadro funcional">📄</div>
+          <span class="modulo-leyenda">OC</span>
+        </div>
+        <!-- Módulo 2: Proyectos -->
+        <div class="modulo-item" data-modulo="proyectos">
+          <div class="modulo-cuadro funcional">📊</div>
+          <span class="modulo-leyenda">Proyectos</span>
+        </div>
+        <!-- Módulo 3: Contactos -->
+        <div class="modulo-item" data-modulo="construccion">
+          <div class="modulo-cuadro en-construccion">👥</div>
+          <span class="modulo-leyenda construccion">Contactos</span>
+        </div>
+        <!-- Módulo 4: Inventario -->
+        <div class="modulo-item" data-modulo="construccion">
+          <div class="modulo-cuadro en-construccion">🏭</div>
+          <span class="modulo-leyenda construccion">Inventario</span>
+        </div>
+        <!-- Módulo 5: Ventas -->
+        <div class="modulo-item" data-modulo="construccion">
+          <div class="modulo-cuadro en-construccion">📦</div>
+          <span class="modulo-leyenda construccion">Ventas</span>
+        </div>
+        <!-- Módulo 6: Finanzas -->
+        <div class="modulo-item" data-modulo="construccion">
+          <div class="modulo-cuadro en-construccion">💰</div>
+          <span class="modulo-leyenda construccion">Finanzas</span>
+        </div>
+        <!-- Módulo 7: Repositorio -->
+        <div class="modulo-item" data-modulo="construccion">
+          <div class="modulo-cuadro en-construccion">🗂️</div>
+          <span class="modulo-leyenda construccion">Repositorio</span>
+        </div>
+        <!-- Módulo 8: Reportes -->
+        <div class="modulo-item" data-modulo="construccion">
+          <div class="modulo-cuadro en-construccion">📋</div>
+          <span class="modulo-leyenda construccion">Reportes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- App (contenido funcional) -->
+    <div id="contenidoApp" class="hidden">
 
       <div class="card flex" style="justify-content:space-between">
         <span id="sesion" style="font-weight:600"></span>
@@ -836,14 +1008,10 @@
       'use strict';
 
       const SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
-      // ⚠️ IMPORTANTE: Si sigue el error 401, ve a Supabase Dashboard → Settings → API
-      // y copia de nuevo la "anon public" key. El header JWT debe comenzar con:
-      // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9  (contiene "InR5" no "R5")
       const SB_KEY =
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
       const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-      // Ya no tenemos USUARIOS hardcodeados, se cargarán desde la base de datos
       let usuariosDB = [];
       let actual = null;
       let proyectos = [];
@@ -853,6 +1021,7 @@
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA'];
       let ocPreviewData = null;
       let ocPreviewPDF = null;
+      let moduloActual = null; // 'oc' o 'proyectos'
 
       function getColorByEmpresa(empresa) {
         if (!empresa) return '#6b7280';
@@ -878,7 +1047,6 @@
         return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
       }
 
-      // Función para cargar usuarios desde Supabase (solo se llama después del login)
       async function cargarUsuarios() {
         try {
           const { data, error } = await supabase.from('usuarios').select('*');
@@ -944,7 +1112,6 @@
 
       function normalizar(str) { return str.trim().toUpperCase(); }
 
-      // Función para buscar usuario en la base de datos
       function buscarUsuarioDB(usuario) {
         return usuariosDB.find(u => u.usuario && u.usuario.toUpperCase() === usuario.toUpperCase());
       }
@@ -990,7 +1157,6 @@
       }
 
       function getPosiblesResponsables() {
-        // Ahora buscamos en la base de datos
         return usuariosDB.filter(u => u.rol === 'Solicitante' || u.rol === 'Elaborador');
       }
 
@@ -1027,7 +1193,6 @@
 
       async function cargarDatos() {
         try {
-          // Cargar usuarios para validaciones internas (jefes, responsables, director)
           await cargarUsuarios();
 
           const { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
@@ -1050,6 +1215,62 @@
           console.error('Error cargando datos', e);
           return false;
         }
+      }
+
+      // Navegación entre menú y módulos
+      window.mostrarMenu = function() {
+        document.getElementById('menuPrincipal').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.add('hidden');
+        document.getElementById('btnVolverMenu').classList.add('hidden');
+        moduloActual = null;
+      };
+
+      window.mostrarModulo = function(modulo) {
+        moduloActual = modulo;
+        document.getElementById('menuPrincipal').classList.add('hidden');
+        document.getElementById('contenidoApp').classList.remove('hidden');
+        document.getElementById('btnVolverMenu').classList.remove('hidden');
+
+        // Mostrar/ocultar secciones según el módulo
+        const panelOC = document.getElementById('panelOC');
+        const panelProyecto = document.getElementById('panelProyecto');
+        const tablaProyectosCard = document.getElementById('tablaProyectosCard');
+
+        if (modulo === 'oc') {
+          panelOC.classList.remove('hidden');
+          panelProyecto.classList.add('hidden');
+          tablaProyectosCard.classList.add('hidden');
+        } else if (modulo === 'proyectos') {
+          panelOC.classList.add('hidden');
+          panelProyecto.classList.remove('hidden');
+          tablaProyectosCard.classList.remove('hidden');
+        }
+        render();
+      };
+
+      window.volverAlMenu = function() {
+        window.mostrarMenu();
+      };
+
+      // Módulos en construcción
+      function mostrarConstruccion() {
+        alert('🚧 Módulo en construcción');
+      }
+
+      // Configurar eventos de los módulos
+      function configurarModulos() {
+        document.querySelectorAll('.modulo-item').forEach(item => {
+          item.addEventListener('click', function() {
+            const modulo = this.dataset.modulo;
+            if (modulo === 'oc') {
+              window.mostrarModulo('oc');
+            } else if (modulo === 'proyectos') {
+              window.mostrarModulo('proyectos');
+            } else {
+              mostrarConstruccion();
+            }
+          });
+        });
       }
 
       window.actualizarResponsables = function() {
@@ -1109,7 +1330,6 @@
         }
       };
 
-      // Función de login: consulta Supabase directamente (no depende de carga previa)
       window.login = async function() {
         const userInput = document.getElementById('usuario');
         const passInput = document.getElementById('password');
@@ -1135,7 +1355,6 @@
         errorDiv.classList.add('hidden');
 
         try {
-          // Consultar Supabase directamente por el usuario específico
           const { data: userData, error: authError } = await supabase
             .from('usuarios')
             .select('*')
@@ -1160,7 +1379,6 @@
             return;
           }
 
-          // Credenciales válidas — cargar resto de datos
           const cargaOk = await cargarDatos();
           if (!cargaOk) {
             errorDiv.classList.remove('hidden');
@@ -1170,7 +1388,6 @@
             return;
           }
 
-          // Crear objeto de usuario con ambas propiedades para compatibilidad
           actual = {
             usuario: userData.usuario,
             u: userData.usuario,
@@ -1188,13 +1405,17 @@
           return;
         }
 
-        // Login exitoso — restaurar botón y continuar
         btnLogin.disabled = false;
         btnLogin.textContent = 'Ingresar';
         errorDiv.classList.add('hidden');
 
+        // Ocultar login, mostrar menú
         document.getElementById('login').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('menuPrincipal').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.add('hidden');
+
+        // Configurar módulos
+        configurarModulos();
 
         let infoSesion = `👤 ${actual.u} (${actual.rol})`;
         const opciones = obtenerOpcionesPermisos(actual);
@@ -1387,7 +1608,7 @@
         render();
       };
 
-      // ---------- PRODUCTOS DINÁMICOS ----------
+      // PRODUCTOS DINÁMICOS
       window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0,
         descuento = 0, impuesto = 0) {
         const tbody = document.getElementById('cuerpoProductos');
@@ -1463,7 +1684,6 @@
         document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
       }
 
-      // ---------- RECOPILAR DATOS OC ----------
       function recopilarDatosOC() {
         const selectProyecto = document.getElementById('selectProyecto');
         const selectedId = parseInt(selectProyecto.value);
@@ -1526,7 +1746,6 @@
           return null;
         }
         
-        // Buscar usuario responsable en la base de datos
         const responsableUser = buscarUsuarioDB(responsable);
         if (!responsableUser || !usuarioPuedeAcceder(responsableUser, proyecto.empresa, proyecto.departamento)) {
           msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
@@ -1610,7 +1829,6 @@
         };
       }
 
-      // ---------- FUNCIÓN PARA GENERAR PDF CON LOGOS POR EMPRESA ----------
       async function generarPDFParaPreview(datos) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -1623,7 +1841,6 @@
         const esExtingue = datos.empresa && datos.empresa.toUpperCase().includes('GRUPO INDUSTRIAL EXTINGUE');
         const esVexpar = datos.empresa && datos.empresa.toUpperCase().includes('VEXPAR OPERACIONES');
 
-        // ----- MEMBRETE (DERECHA) -----
         if (esExtingue) {
             try {
                 const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
@@ -1686,7 +1903,6 @@
             y += 60;
         }
 
-        // ----- TÍTULO ORDEN DE COMPRA -----
         doc.setFontSize(16);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
@@ -2673,12 +2889,12 @@
         `;
         document.getElementById('dashboardContent').innerHTML = html;
         document.getElementById('dashboardOverlay').classList.add('active');
-        document.getElementById('app').style.display = 'none';
+        document.getElementById('contenidoApp').style.display = 'none';
       };
 
       window.cerrarDashboard = function() {
         document.getElementById('dashboardOverlay').classList.remove('active');
-        document.getElementById('app').style.display = 'block';
+        document.getElementById('contenidoApp').style.display = 'block';
       };
 
       function render() {
@@ -2930,7 +3146,6 @@
         document.getElementById('fechaTermino').value = fechaFin.toISOString().split('T')[0];
         document.getElementById('fechaPago').value = fechaHoy;
         document.getElementById('fechaEntrega').value = fechaHoy;
-        // Los datos se cargan DESPUÉS del login, no aquí
       }
 
       document.addEventListener('DOMContentLoaded', function() {
@@ -2939,7 +3154,6 @@
         if (btnLogin) {
           btnLogin.addEventListener('click', window.login);
         }
-        // Permitir login con Enter
         const passInput = document.getElementById('password');
         if (passInput) {
           passInput.addEventListener('keydown', function(e) {
