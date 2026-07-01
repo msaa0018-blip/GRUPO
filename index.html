@@ -290,12 +290,20 @@
     color: #991b1b
   }
   .badge-pausada {
-    background: #f3f4f6;
-    color: #4b5563
+    background: #ffedd5;
+    color: #9a3412
   }
   .badge-paridad {
     background: #fef3c7;
     color: #92400e
+  }
+  .badge-vencida {
+    background: #fee2e2;
+    color: #991b1b
+  }
+  .badge-pendiente-pago {
+    background: #dcfce7;
+    color: #166534
   }
   .alert {
     background: #fef2f2;
@@ -305,7 +313,7 @@
     color: #991b1b;
     margin: 8px 0
   }
-  .success {
+  .success-msg {
     background: #f0fdf4;
     border-left: 5px solid var(--success);
     padding: 12px 16px;
@@ -686,6 +694,46 @@
     align-items: center;
     gap: 12px;
   }
+  
+  .btn-pendientes-pagar {
+    background: var(--warning);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  .btn-pendientes-pagar:hover {
+    background: var(--warning-hover);
+  }
+
+  .filtros-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .filtros-container .filtro-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .filtros-container .filtro-item label {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--gray-700);
+    white-space: nowrap;
+  }
+  .filtros-container .filtro-item select {
+    min-width: 150px;
+    padding: 6px 10px;
+    min-height: 36px;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -719,6 +767,9 @@
 
     <!-- Menú Principal Odoo-style -->
     <div id="menuPrincipal" class="hidden">
+      <div style="display:flex; justify-content:flex-end; width:100%; max-width:600px; margin:0 auto 20px auto;">
+        <button onclick="window.salir()" class="danger" style="padding:8px 20px; font-size:14px;">🚪 Cerrar sesión</button>
+      </div>
       <h2>🏠 Selecciona un módulo</h2>
       <div class="modulos-grid" id="modulosGrid">
         <!-- Módulo 1: OC -->
@@ -940,15 +991,21 @@
       <!-- Bandeja OC -->
       <div class="card">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
-        <div class="flex" style="margin-bottom:12px;">
-          <div id="filtroProyectoContainer" class="hidden">
-            <label>Filtrar por proyecto:</label>
-            <select id="filtroProyecto"><option value="">Todos los proyectos</option></select>
+        <div class="filtros-container">
+          <div id="filtroProyectoContainer" class="filtro-item hidden">
+            <label>Proyecto:</label>
+            <select id="filtroProyecto"><option value="">Todos</option></select>
           </div>
-          <div id="filtroDeptoContainer" class="hidden">
-            <label>Filtrar por departamento:</label>
-            <select id="filtroDepto"><option value="">Todos los departamentos</option></select>
+          <div id="filtroDeptoContainer" class="filtro-item hidden">
+            <label>Departamento:</label>
+            <select id="filtroDepto"><option value="">Todos</option></select>
           </div>
+          <button id="btnPendientesPagar" class="btn-pendientes-pagar hidden" onclick="window.filtrarPendientesPagar()">
+            💰 Pendientes por Pagar
+          </button>
+          <button id="btnLimpiarFiltros" class="btn-pendientes-pagar hidden" onclick="window.limpiarFiltros()" style="background:var(--gray-500);">
+            🗑️ Limpiar Filtros
+          </button>
         </div>
         <div id="resumenTotales" class="resumen-totales"></div>
         <div class="table-wrapper">
@@ -1022,6 +1079,7 @@
       let ocPreviewData = null;
       let ocPreviewPDF = null;
       let moduloActual = null; // 'oc' o 'proyectos'
+      let filtroPendientesActivo = false;
 
       function getColorByEmpresa(empresa) {
         if (!empresa) return '#6b7280';
@@ -1217,12 +1275,12 @@
         }
       }
 
-      // Navegación entre menú y módulos
       window.mostrarMenu = function() {
         document.getElementById('menuPrincipal').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
         moduloActual = null;
+        filtroPendientesActivo = false;
       };
 
       window.mostrarModulo = function(modulo) {
@@ -1230,8 +1288,8 @@
         document.getElementById('menuPrincipal').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('hidden');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
+        filtroPendientesActivo = false;
 
-        // Mostrar/ocultar secciones según el módulo
         const panelOC = document.getElementById('panelOC');
         const panelProyecto = document.getElementById('panelProyecto');
         const tablaProyectosCard = document.getElementById('tablaProyectosCard');
@@ -1252,12 +1310,10 @@
         window.mostrarMenu();
       };
 
-      // Módulos en construcción
       function mostrarConstruccion() {
         alert('🚧 Módulo en construcción');
       }
 
-      // Configurar eventos de los módulos
       function configurarModulos() {
         document.querySelectorAll('.modulo-item').forEach(item => {
           item.addEventListener('click', function() {
@@ -1271,6 +1327,55 @@
             }
           });
         });
+      }
+
+      window.filtrarPendientesPagar = function() {
+        filtroPendientesActivo = !filtroPendientesActivo;
+        const btn = document.getElementById('btnPendientesPagar');
+        if (filtroPendientesActivo) {
+          btn.style.background = 'var(--danger)';
+          btn.textContent = '💰 Mostrar Todas';
+          const pendientes = contarPendientesPagar();
+          if (pendientes > 0) {
+            btn.textContent = `💰 Mostrar Todas (${pendientes} pendientes)`;
+          }
+        } else {
+          btn.style.background = 'var(--warning)';
+          const pendientes = contarPendientesPagar();
+          btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+        }
+        render();
+      };
+
+      window.limpiarFiltros = function() {
+        document.getElementById('filtroProyecto').value = '';
+        document.getElementById('filtroDepto').value = '';
+        filtroPendientesActivo = false;
+        const btn = document.getElementById('btnPendientesPagar');
+        btn.style.background = 'var(--warning)';
+        const pendientes = contarPendientesPagar();
+        btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+        render();
+      };
+
+      function contarPendientesPagar() {
+        let ocVisibles = filtrarOCSegunUsuario(actual);
+        const filtroProyecto = document.getElementById('filtroProyecto');
+        if (filtroProyecto && filtroProyecto.value) {
+          ocVisibles = ocVisibles.filter(o => o.proyecto === filtroProyecto.value);
+        }
+        const filtroDepto = document.getElementById('filtroDepto');
+        if (filtroDepto && filtroDepto.value) {
+          ocVisibles = ocVisibles.filter(o => {
+            const p = proyectos.find(proj => proj.nombre === o.proyecto);
+            return p && p.departamento === filtroDepto.value;
+          });
+        }
+        return ocVisibles.filter(o => 
+          o.estado === 'AUTORIZADA' && 
+          o.estadopago !== 'PAGADA' &&
+          !o.pausada
+        ).length;
       }
 
       window.actualizarResponsables = function() {
@@ -1409,12 +1514,10 @@
         btnLogin.textContent = 'Ingresar';
         errorDiv.classList.add('hidden');
 
-        // Ocultar login, mostrar menú
         document.getElementById('login').classList.add('hidden');
         document.getElementById('menuPrincipal').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.add('hidden');
 
-        // Configurar módulos
         configurarModulos();
 
         let infoSesion = `👤 ${actual.u} (${actual.rol})`;
@@ -1486,15 +1589,31 @@
 
         const filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
         const filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
-        if (actual.rol === 'Director General' || actual.rol === 'Finanzas') {
+        const btnPendientes = document.getElementById('btnPendientesPagar');
+        const btnLimpiar = document.getElementById('btnLimpiarFiltros');
+
+        // Filtro de proyectos visible para Director General, Administrador y Finanzas
+        if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           filtroProyectoContainer.classList.remove('hidden');
         } else {
           filtroProyectoContainer.classList.add('hidden');
         }
-        if (actual.rol === 'Finanzas') {
+        // Filtro de departamentos visible para Director General, Administrador y Finanzas
+        if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           filtroDeptoContainer.classList.remove('hidden');
         } else {
           filtroDeptoContainer.classList.add('hidden');
+        }
+
+        // Botón de pendientes visible solo para Finanzas
+        if (actual.rol === 'Finanzas') {
+          btnPendientes.classList.remove('hidden');
+          btnLimpiar.classList.remove('hidden');
+          const pendientes = contarPendientesPagar();
+          btnPendientes.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+        } else {
+          btnPendientes.classList.add('hidden');
+          btnLimpiar.classList.add('hidden');
         }
 
         const selectProyecto = document.getElementById('selectProyecto');
@@ -1508,7 +1627,17 @@
           opt.textContent = p.nombre;
           filtroProyecto.appendChild(opt);
         });
-        filtroProyecto.onchange = function() { render(); };
+        filtroProyecto.onchange = function() { 
+          if (actual.rol === 'Finanzas') {
+            const pendientes = contarPendientesPagar();
+            const btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) {
+              btn.style.background = 'var(--warning)';
+            }
+          }
+          render(); 
+        };
 
         const filtroDepto = document.getElementById('filtroDepto');
         filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
@@ -1519,7 +1648,17 @@
           opt.textContent = d;
           filtroDepto.appendChild(opt);
         });
-        filtroDepto.onchange = function() { render(); };
+        filtroDepto.onchange = function() {
+          if (actual.rol === 'Finanzas') {
+            const pendientes = contarPendientesPagar();
+            const btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) {
+              btn.style.background = 'var(--warning)';
+            }
+          }
+          render();
+        };
 
         render();
         if (esElaborador) window.actualizarResponsables();
@@ -1576,7 +1715,7 @@
             return;
           }
 
-          msgDiv.innerHTML = '<div class="success">✅ PROYECTO CREADO.</div>';
+          msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO.</div>';
           document.getElementById('nombreProyecto').value = '';
           document.getElementById('cliente').value = '';
           document.getElementById('presupuesto').value = '';
@@ -1608,7 +1747,6 @@
         render();
       };
 
-      // PRODUCTOS DINÁMICOS
       window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0,
         descuento = 0, impuesto = 0) {
         const tbody = document.getElementById('cuerpoProductos');
@@ -2182,7 +2320,7 @@
         console.log('✅ OC guardada exitosamente:', data);
 
         window.cerrarPreview();
-        document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+        document.getElementById('mensajeOC').innerHTML = `<div class="success-msg">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
 
         try {
           document.getElementById('cuerpoProductos').innerHTML = '';
@@ -2284,7 +2422,7 @@
 
         console.log('✅ OC guardada exitosamente:', data);
 
-        document.getElementById('mensajeOC').innerHTML = `<div class="success">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+        document.getElementById('mensajeOC').innerHTML = `<div class="success-msg">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
 
         try {
           document.getElementById('cuerpoProductos').innerHTML = '';
@@ -2918,6 +3056,15 @@
           });
         }
 
+        // Filtro de pendientes por pagar para Finanzas
+        if (filtroPendientesActivo && actual && actual.rol === 'Finanzas') {
+          ocVisibles = ocVisibles.filter(o => 
+            o.estado === 'AUTORIZADA' && 
+            o.estadopago !== 'PAGADA' &&
+            !o.pausada
+          );
+        }
+
         tablaProyectos.innerHTML = '';
         selectProyecto.innerHTML = '';
         proyectosVisibles.forEach((p, idx) => {
@@ -2979,33 +3126,41 @@
         ocVisibles.forEach((o, i) => {
           const idxOriginal = ordenes.indexOf(o);
           let badgeClass = '';
-          let estadoMostrado = o.estado;
-          let esVencida = false;
-
-          if (o.estado === 'AUTORIZADA') {
+          let estadoMostrado = '';
+          
+          // Determinar estado y clase CSS según prioridad
+          if (o.pausada) {
+            // 🟠 PAUSADA - Naranja (prioridad máxima)
+            badgeClass = 'badge-pausada';
+            estadoMostrado = '⏸️ PAUSADA';
+          } else if (o.estado === 'AUTORIZADA') {
             if (o.estadopago === 'PAGADA') {
+              // ✅ PAGADA - Verde claro
               badgeClass = 'badge-autorizada-pagada';
-              estadoMostrado = 'AUTORIZADA - PAGADA';
-            } else if (o.estadopago === 'PENDIENTE') {
+              estadoMostrado = '✅ PAGADA';
+            } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
               const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
               const ahora = new Date();
               const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
               if (diffDias > 1) {
-                badgeClass = 'badge-autorizada-vencida';
-                estadoMostrado = 'AUTORIZADA - PENDIENTE (⚠️ Vencida)';
-                esVencida = true;
+                // 🔴 VENCIDA - Rojo
+                badgeClass = 'badge-vencida';
+                estadoMostrado = '🔴 VENCIDA';
               } else {
-                badgeClass = 'badge-autorizada-pendiente';
-                estadoMostrado = 'AUTORIZADA - PENDIENTE';
+                // 🟢 PENDIENTE - Verde
+                badgeClass = 'badge-pendiente-pago';
+                estadoMostrado = '🟢 PENDIENTE';
               }
             } else {
-              badgeClass = 'badge-autorizada-pendiente';
-              estadoMostrado = 'AUTORIZADA - PENDIENTE (Pago pendiente)';
+              // 🟢 PENDIENTE por defecto
+              badgeClass = 'badge-pendiente-pago';
+              estadoMostrado = '🟢 PENDIENTE';
             }
           } else if (o.estado === 'CONCLUIDA') {
             badgeClass = 'badge-concluida';
-            estadoMostrado = 'CONCLUIDA';
+            estadoMostrado = '✅ CONCLUIDA';
           } else {
+            // Otros estados
             const classes = {
               'CREADA': 'badge-creada',
               'APROBADA_SOLICITANTE': 'badge-solicitante',
@@ -3015,15 +3170,14 @@
               'CANCELADA': 'badge-cancelada'
             };
             badgeClass = classes[o.estado] || '';
+            estadoMostrado = o.estado;
           }
-          if (o.pausada) badgeClass += ' badge-pausada';
-          if (esVencida) badgeClass = 'badge-autorizada-vencida';
 
           let acciones = '';
           const rol = actual ? actual.rol : '';
 
           if (rol === 'Finanzas') {
-            if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA') {
+            if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
               if (o.estadopago === 'PAGADA') {
                 acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
               } else {
@@ -3037,7 +3191,7 @@
               const textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
               acciones += `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
               acciones += `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
-              if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA') {
+              if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                 if (o.estadopago === 'PAGADA') {
                   acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
                 } else {
