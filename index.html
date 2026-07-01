@@ -671,10 +671,10 @@
   }
 
   #contenidoApp {
-    display: none;
+    display: none !important;
   }
   #contenidoApp.visible {
-    display: block;
+    display: block !important;
   }
 
   .btn-volver-menu {
@@ -736,6 +736,13 @@
     padding: 6px 10px;
     min-height: 36px;
     font-size: 13px;
+  }
+
+  .mensaje-sin-datos {
+    padding: 20px;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 14px;
   }
 </style>
 </head>
@@ -1271,6 +1278,8 @@
             return isNaN(num) ? max : (num > max ? num : max);
           }, 0);
           consecutivoOC = maxCodigo + 1;
+          
+          console.log('📊 Datos cargados - Proyectos:', proyectos.length, 'OC:', ordenes.length);
           return true;
         } catch (e) {
           console.error('Error cargando datos', e);
@@ -1280,6 +1289,7 @@
 
       window.mostrarMenu = function() {
         document.getElementById('menuPrincipal').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
         moduloActual = null;
@@ -1290,30 +1300,32 @@
         moduloActual = modulo;
         document.getElementById('menuPrincipal').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.add('visible');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
 
         const panelOC = document.getElementById('panelOC');
         const panelProyecto = document.getElementById('panelProyecto');
         const tablaProyectosCard = document.getElementById('tablaProyectosCard');
 
-        // Mostrar/ocultar según el módulo seleccionado
         if (modulo === 'oc') {
           panelOC.classList.remove('hidden');
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
+          // Asegurar que la bandeja OC sea visible
+          document.querySelector('#contenidoApp .card:last-child')?.classList.remove('hidden');
         } else if (modulo === 'proyectos') {
           panelOC.classList.add('hidden');
           panelProyecto.classList.remove('hidden');
           tablaProyectosCard.classList.remove('hidden');
         }
         
-        // Forzar renderizado
+        // Forzar renderizado después de un breve delay
         setTimeout(function() {
           render();
           if (modulo === 'oc' && actual && actual.rol === 'Elaborador') {
             window.actualizarResponsables();
           }
-        }, 50);
+        }, 100);
       };
 
       window.volverAlMenu = function() {
@@ -1670,7 +1682,7 @@
         // Render inicial después del login
         setTimeout(function() {
           render();
-        }, 100);
+        }, 200);
       };
 
       window.salir = function() { location.reload(); };
@@ -3045,6 +3057,8 @@
       };
 
       function render() {
+        console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
+        
         const tablaProyectos = document.getElementById('tablaProyectos');
         const selectProyecto = document.getElementById('selectProyecto');
         const tablaOC = document.getElementById('tablaOC');
@@ -3073,43 +3087,49 @@
           );
         }
 
+        // Renderizar proyectos
         tablaProyectos.innerHTML = '';
         selectProyecto.innerHTML = '';
-        proyectosVisibles.forEach((p, idx) => {
-          const gastado = gastoProyectoMoneda(p.nombre);
-          const disponible = p.limite - gastado;
-          const porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
-          const esAdmin = actual && actual.rol === 'Administrador';
-          const esFinanzas = actual && actual.rol === 'Finanzas';
-          const deptoColor = getColorByEmpresa(p.empresa);
+        
+        if (proyectosVisibles.length === 0) {
+          tablaProyectos.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>`;
+        } else {
+          proyectosVisibles.forEach((p, idx) => {
+            const gastado = gastoProyectoMoneda(p.nombre);
+            const disponible = p.limite - gastado;
+            const porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
+            const esAdmin = actual && actual.rol === 'Administrador';
+            const esFinanzas = actual && actual.rol === 'Finanzas';
+            const deptoColor = getColorByEmpresa(p.empresa);
 
-          let botones = '';
-          if (!esFinanzas) {
-            botones += `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
-          }
-          if (esAdmin) {
-            botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
-          }
+            let botones = '';
+            if (!esFinanzas) {
+              botones += `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
+            }
+            if (esAdmin) {
+              botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
+            }
 
-          tablaProyectos.innerHTML += `
-            <tr>
-              <td>${p.empresa}</td>
-              <td><span class="depto-color" style="background-color:${deptoColor}">${p.departamento}</span></td>
-              <td><strong>${p.nombre}</strong></td>
-              <td>${p.cliente}</td>
-              <td>${formatoMoneda(p.presupuesto, p.moneda)}</td>
-              <td>${formatoMoneda(p.limite, p.moneda)}</td>
-              <td>${formatoMoneda(gastado, p.moneda)}</td>
-              <td style="color:${disponible < 0 ? '#b91c1c' : '#166534'}">${formatoMoneda(disponible, p.moneda)}</td>
-              <td>
-                <span>${porcentaje.toFixed(2)}%</span>
-                <div class="progress-bar"><div class="fill" style="width:${Math.min(porcentaje, 100)}%; background:${porcentaje > 60 ? '#dc2626' : '#22c55e'}"></div></div>
-              </td>
-              <td><div class="actions">${botones}</div></td>
-            </tr>
-          `;
-          selectProyecto.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
-        });
+            tablaProyectos.innerHTML += `
+              <tr>
+                <td>${p.empresa}</td>
+                <td><span class="depto-color" style="background-color:${deptoColor}">${p.departamento}</span></td>
+                <td><strong>${p.nombre}</strong></td>
+                <td>${p.cliente}</td>
+                <td>${formatoMoneda(p.presupuesto, p.moneda)}</td>
+                <td>${formatoMoneda(p.limite, p.moneda)}</td>
+                <td>${formatoMoneda(gastado, p.moneda)}</td>
+                <td style="color:${disponible < 0 ? '#b91c1c' : '#166534'}">${formatoMoneda(disponible, p.moneda)}</td>
+                <td>
+                  <span>${porcentaje.toFixed(2)}%</span>
+                  <div class="progress-bar"><div class="fill" style="width:${Math.min(porcentaje, 100)}%; background:${porcentaje > 60 ? '#dc2626' : '#22c55e'}"></div></div>
+                </td>
+                <td><div class="actions">${botones}</div></td>
+              </tr>
+            `;
+            selectProyecto.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+          });
+        }
 
         if (actual && actual.rol === 'Elaborador') {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
@@ -3118,146 +3138,152 @@
           window.actualizarResponsables();
         }
 
+        // Renderizar OC
         tablaOC.innerHTML = '';
-        const totalMXN = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o
-          .montototal, 0);
-        const totalUSD = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o
-          .montototal, 0);
-        const totalMXNEquiv = ocVisibles.filter(o => o.estadopago === 'PAGADA').reduce((s, o) => s + (o.montomxn || 0), 0);
-        resumenTotales.innerHTML = `
-          <strong>Totales pagados (visibles):</strong>
-          <span>MXN: ${formatoMoneda(totalMXN, 'MXN')}</span>
-          ${totalUSD > 0 ? `<span>USD: ${formatoMoneda(totalUSD, 'USD')} (equiv. MXN: ${formatoMoneda(totalMXNEquiv, 'MXN')})</span>` : ''}
-          <span><strong>Total MXN equivalente:</strong> ${formatoMoneda(totalMXNEquiv, 'MXN')}</span>
-        `;
+        
+        if (ocVisibles.length === 0) {
+          tablaOC.innerHTML = `<tr><td colspan="15" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>`;
+        } else {
+          const totalMXN = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o
+            .montototal, 0);
+          const totalUSD = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o
+            .montototal, 0);
+          const totalMXNEquiv = ocVisibles.filter(o => o.estadopago === 'PAGADA').reduce((s, o) => s + (o.montomxn || 0), 0);
+          resumenTotales.innerHTML = `
+            <strong>Totales pagados (visibles):</strong>
+            <span>MXN: ${formatoMoneda(totalMXN, 'MXN')}</span>
+            ${totalUSD > 0 ? `<span>USD: ${formatoMoneda(totalUSD, 'USD')} (equiv. MXN: ${formatoMoneda(totalMXNEquiv, 'MXN')})</span>` : ''}
+            <span><strong>Total MXN equivalente:</strong> ${formatoMoneda(totalMXNEquiv, 'MXN')}</span>
+          `;
 
-        ocVisibles.forEach((o, i) => {
-          const idxOriginal = ordenes.indexOf(o);
-          let badgeClass = '';
-          let estadoMostrado = '';
-          
-          if (o.pausada) {
-            badgeClass = 'badge-pausada';
-            estadoMostrado = '⏸️ PAUSADA';
-          } else if (o.estado === 'AUTORIZADA') {
-            if (o.estadopago === 'PAGADA') {
-              badgeClass = 'badge-autorizada-pagada';
-              estadoMostrado = '✅ PAGADA';
-            } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
-              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              const ahora = new Date();
-              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-              if (diffDias > 1) {
-                badgeClass = 'badge-vencida';
-                estadoMostrado = '🔴 VENCIDA';
+          ocVisibles.forEach((o, i) => {
+            const idxOriginal = ordenes.indexOf(o);
+            let badgeClass = '';
+            let estadoMostrado = '';
+            
+            if (o.pausada) {
+              badgeClass = 'badge-pausada';
+              estadoMostrado = '⏸️ PAUSADA';
+            } else if (o.estado === 'AUTORIZADA') {
+              if (o.estadopago === 'PAGADA') {
+                badgeClass = 'badge-autorizada-pagada';
+                estadoMostrado = '✅ PAGADA';
+              } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
+                const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                const ahora = new Date();
+                const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                if (diffDias > 1) {
+                  badgeClass = 'badge-vencida';
+                  estadoMostrado = '🔴 VENCIDA';
+                } else {
+                  badgeClass = 'badge-pendiente-pago';
+                  estadoMostrado = '🟢 PENDIENTE';
+                }
               } else {
                 badgeClass = 'badge-pendiente-pago';
                 estadoMostrado = '🟢 PENDIENTE';
               }
+            } else if (o.estado === 'CONCLUIDA') {
+              badgeClass = 'badge-concluida';
+              estadoMostrado = '✅ CONCLUIDA';
             } else {
-              badgeClass = 'badge-pendiente-pago';
-              estadoMostrado = '🟢 PENDIENTE';
+              const classes = {
+                'CREADA': 'badge-creada',
+                'APROBADA_SOLICITANTE': 'badge-solicitante',
+                'APROBADA_JEFE': 'badge-jefe',
+                'PENDIENTE_DIRECTOR': 'badge-pendiente',
+                'PENDIENTE_PARIDAD': 'badge-paridad',
+                'CANCELADA': 'badge-cancelada'
+              };
+              badgeClass = classes[o.estado] || '';
+              estadoMostrado = o.estado;
             }
-          } else if (o.estado === 'CONCLUIDA') {
-            badgeClass = 'badge-concluida';
-            estadoMostrado = '✅ CONCLUIDA';
-          } else {
-            const classes = {
-              'CREADA': 'badge-creada',
-              'APROBADA_SOLICITANTE': 'badge-solicitante',
-              'APROBADA_JEFE': 'badge-jefe',
-              'PENDIENTE_DIRECTOR': 'badge-pendiente',
-              'PENDIENTE_PARIDAD': 'badge-paridad',
-              'CANCELADA': 'badge-cancelada'
-            };
-            badgeClass = classes[o.estado] || '';
-            estadoMostrado = o.estado;
-          }
 
-          let acciones = '';
-          const rol = actual ? actual.rol : '';
+            let acciones = '';
+            const rol = actual ? actual.rol : '';
 
-          if (rol === 'Finanzas') {
-            if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
-              if (o.estadopago === 'PAGADA') {
-                acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
-              } else {
-                acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
-              }
-            } else {
-              acciones = '—';
-            }
-          } else {
-            if (rol === 'Administrador') {
-              const textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
-              acciones += `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
-              acciones += `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
+            if (rol === 'Finanzas') {
               if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                 if (o.estadopago === 'PAGADA') {
                   acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
                 } else {
                   acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
                 }
-              }
-              if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+              } else {
+                acciones = '—';
               }
             } else {
-              if (!o.pausada) {
-                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
-                  acciones +=
-                    `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
+              if (rol === 'Administrador') {
+                const textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
+                acciones += `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
+                acciones += `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
+                if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
+                  if (o.estadopago === 'PAGADA') {
+                    acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+                  } else {
+                    acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+                  }
                 }
-                if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
-                  acciones +=
-                    `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe)</button>`;
-                }
-                if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
-                  acciones += `
-                    <button class="success" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
-                    <button class="danger" onclick="window.cancelarDirector(${idxOriginal})">❌ Cancelar</button>
-                  `;
-                }
-                if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
-                  acciones +=
-                    `<button class="warning" onclick="window.ingresarParidad(${idxOriginal})">💰 Ingresar Paridad Final</button>`;
-                }
-                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !==
-                  'CONCLUIDA') {
-                  acciones +=
-                    `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+                if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                  acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
                 }
               } else {
-                acciones = '⏸️ Pausada';
+                if (!o.pausada) {
+                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
+                    acciones +=
+                      `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
+                  }
+                  if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
+                    acciones +=
+                      `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe)</button>`;
+                  }
+                  if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
+                    acciones += `
+                      <button class="success" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
+                      <button class="danger" onclick="window.cancelarDirector(${idxOriginal})">❌ Cancelar</button>
+                    `;
+                  }
+                  if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
+                    acciones +=
+                      `<button class="warning" onclick="window.ingresarParidad(${idxOriginal})">💰 Ingresar Paridad Final</button>`;
+                  }
+                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !==
+                    'CONCLUIDA') {
+                    acciones +=
+                      `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+                  }
+                } else {
+                  acciones = '⏸️ Pausada';
+                }
               }
+              if (!acciones) acciones = '—';
             }
-            if (!acciones) acciones = '—';
-          }
 
-          const proyecto = proyectos.find(p => p.nombre === o.proyecto);
-          const cliente = proyecto ? proyecto.cliente : '—';
-          const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
+            const proyecto = proyectos.find(p => p.nombre === o.proyecto);
+            const cliente = proyecto ? proyecto.cliente : '—';
+            const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
-          tablaOC.innerHTML += `
-            <tr>
-              <td><code>${o.codigo}</code></td>
-              <td>${o.proyecto}</td>
-              <td><span class="depto-color" style="background-color:${deptoColor}">${proyecto ? proyecto.departamento : '—'}</span></td>
-              <td>${cliente}</td>
-              <td>${o.proveedor}</td>
-              <td>${o.rfc}</td>
-              <td>${o.direccionentrega || '—'}</td>
-              <td>${o.moneda}</td>
-              <td>${formatoMoneda(o.montototal, o.moneda)}</td>
-              <td>${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
-              <td>${new Date(o.fechapago).toLocaleDateString()}</td>
-              <td>${new Date(o.fechaentrega).toLocaleDateString()}</td>
-              <td>${o.uuidfactura || '—'}</td>
-              <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
-              <td><div class="actions">${acciones}</div></td>
-            </tr>
-          `;
-        });
+            tablaOC.innerHTML += `
+              <tr>
+                <td><code>${o.codigo}</code></td>
+                <td>${o.proyecto}</td>
+                <td><span class="depto-color" style="background-color:${deptoColor}">${proyecto ? proyecto.departamento : '—'}</span></td>
+                <td>${cliente}</td>
+                <td>${o.proveedor}</td>
+                <td>${o.rfc}</td>
+                <td>${o.direccionentrega || '—'}</td>
+                <td>${o.moneda}</td>
+                <td>${formatoMoneda(o.montototal, o.moneda)}</td>
+                <td>${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
+                <td>${new Date(o.fechapago).toLocaleDateString()}</td>
+                <td>${new Date(o.fechaentrega).toLocaleDateString()}</td>
+                <td>${o.uuidfactura || '—'}</td>
+                <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
+                <td><div class="actions">${acciones}</div></td>
+              </tr>
+            `;
+          });
+        }
 
         const cuerpo = document.getElementById('cuerpoProductos');
         if (cuerpo && cuerpo.children.length === 0) {
