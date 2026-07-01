@@ -673,6 +673,9 @@
   #contenidoApp {
     display: none;
   }
+  #contenidoApp.visible {
+    display: block;
+  }
 
   .btn-volver-menu {
     background: var(--gray-600);
@@ -1078,7 +1081,7 @@
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA'];
       let ocPreviewData = null;
       let ocPreviewPDF = null;
-      let moduloActual = null; // 'oc' o 'proyectos'
+      let moduloActual = null;
       let filtroPendientesActivo = false;
 
       function getColorByEmpresa(empresa) {
@@ -1288,12 +1291,12 @@
         document.getElementById('menuPrincipal').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('hidden');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
-        filtroPendientesActivo = false;
 
         const panelOC = document.getElementById('panelOC');
         const panelProyecto = document.getElementById('panelProyecto');
         const tablaProyectosCard = document.getElementById('tablaProyectosCard');
 
+        // Mostrar/ocultar según el módulo seleccionado
         if (modulo === 'oc') {
           panelOC.classList.remove('hidden');
           panelProyecto.classList.add('hidden');
@@ -1303,7 +1306,14 @@
           panelProyecto.classList.remove('hidden');
           tablaProyectosCard.classList.remove('hidden');
         }
-        render();
+        
+        // Forzar renderizado
+        setTimeout(function() {
+          render();
+          if (modulo === 'oc' && actual && actual.rol === 'Elaborador') {
+            window.actualizarResponsables();
+          }
+        }, 50);
       };
 
       window.volverAlMenu = function() {
@@ -1592,20 +1602,17 @@
         const btnPendientes = document.getElementById('btnPendientesPagar');
         const btnLimpiar = document.getElementById('btnLimpiarFiltros');
 
-        // Filtro de proyectos visible para Director General, Administrador y Finanzas
         if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           filtroProyectoContainer.classList.remove('hidden');
         } else {
           filtroProyectoContainer.classList.add('hidden');
         }
-        // Filtro de departamentos visible para Director General, Administrador y Finanzas
         if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           filtroDeptoContainer.classList.remove('hidden');
         } else {
           filtroDeptoContainer.classList.add('hidden');
         }
 
-        // Botón de pendientes visible solo para Finanzas
         if (actual.rol === 'Finanzas') {
           btnPendientes.classList.remove('hidden');
           btnLimpiar.classList.remove('hidden');
@@ -1660,8 +1667,10 @@
           render();
         };
 
-        render();
-        if (esElaborador) window.actualizarResponsables();
+        // Render inicial después del login
+        setTimeout(function() {
+          render();
+        }, 100);
       };
 
       window.salir = function() { location.reload(); };
@@ -3056,7 +3065,6 @@
           });
         }
 
-        // Filtro de pendientes por pagar para Finanzas
         if (filtroPendientesActivo && actual && actual.rol === 'Finanzas') {
           ocVisibles = ocVisibles.filter(o => 
             o.estado === 'AUTORIZADA' && 
@@ -3128,14 +3136,11 @@
           let badgeClass = '';
           let estadoMostrado = '';
           
-          // Determinar estado y clase CSS según prioridad
           if (o.pausada) {
-            // 🟠 PAUSADA - Naranja (prioridad máxima)
             badgeClass = 'badge-pausada';
             estadoMostrado = '⏸️ PAUSADA';
           } else if (o.estado === 'AUTORIZADA') {
             if (o.estadopago === 'PAGADA') {
-              // ✅ PAGADA - Verde claro
               badgeClass = 'badge-autorizada-pagada';
               estadoMostrado = '✅ PAGADA';
             } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
@@ -3143,16 +3148,13 @@
               const ahora = new Date();
               const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
               if (diffDias > 1) {
-                // 🔴 VENCIDA - Rojo
                 badgeClass = 'badge-vencida';
                 estadoMostrado = '🔴 VENCIDA';
               } else {
-                // 🟢 PENDIENTE - Verde
                 badgeClass = 'badge-pendiente-pago';
                 estadoMostrado = '🟢 PENDIENTE';
               }
             } else {
-              // 🟢 PENDIENTE por defecto
               badgeClass = 'badge-pendiente-pago';
               estadoMostrado = '🟢 PENDIENTE';
             }
@@ -3160,7 +3162,6 @@
             badgeClass = 'badge-concluida';
             estadoMostrado = '✅ CONCLUIDA';
           } else {
-            // Otros estados
             const classes = {
               'CREADA': 'badge-creada',
               'APROBADA_SOLICITANTE': 'badge-solicitante',
