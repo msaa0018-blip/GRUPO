@@ -365,8 +365,10 @@
   .productos-tabla input.importe {
     background: var(--gray-100);
     font-weight: bold;
-    min-width: 120px;
-    width: 140px;
+    min-width: 150px;
+    width: 170px;
+    font-size: 15px;
+    padding: 6px 10px;
   }
   .productos-tabla select.udm {
     min-width: 60px
@@ -571,15 +573,17 @@
     font-weight: bold;
   }
 
+  /* Columna Importe con más espacio */
   .productos-tabla th:nth-child(9),
   .productos-tabla td:nth-child(9) {
-    min-width: 130px;
-    width: 150px;
+    min-width: 170px;
+    width: 190px;
   }
   .productos-tabla input.importe {
-    min-width: 120px;
-    width: 140px;
-    font-size: 14px;
+    min-width: 150px;
+    width: 170px;
+    font-size: 15px;
+    padding: 6px 10px;
   }
 
   .condicion-pago-info {
@@ -599,7 +603,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v50</span>
+        <span class="sub">Workflow OC ERP v51</span>
       </div>
     </div>
     <small>BETA · Colores por empresa</small>
@@ -784,7 +788,7 @@
                   <th style="width:100px;">Precio Unit.</th>
                   <th style="width:60px;">Dto.%</th>
                   <th style="width:60px;">Imp.%</th>
-                  <th style="min-width:130px; width:150px;">Importe</th>
+                  <th style="min-width:170px; width:190px;">Importe</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -792,7 +796,7 @@
               <tfoot>
                 <tr>
                   <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:130px;">$0.00</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:170px;">$0.00</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1141,7 +1145,6 @@
         if (info) {
           infoDiv.innerHTML = `<span>📋 ${info.label}</span><br><small style="color:var(--gray-500);">${info.desc}</small>`;
         }
-        // Ajustar fecha de pago según condición
         const fechaPagoInput = document.getElementById('fechaPago');
         if (condicion === 'credito30' && fechaPagoInput.value) {
           const fecha = new Date(fechaPagoInput.value);
@@ -1460,7 +1463,7 @@
           <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:120px;width:140px;"></td>
+          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:150px;width:170px;font-size:15px;padding:6px 10px;"></td>
           <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
         `;
         tbody.appendChild(fila);
@@ -1608,7 +1611,6 @@
           return null;
         }
 
-        // Calcular fecha de pago según condición
         const fechaCreacion = new Date().toISOString().split('T')[0];
         let fechaPagoCalculada = calcularFechaPago(condicionPago, fechapago, fechaCreacion);
 
@@ -1661,7 +1663,6 @@
           motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
         }
 
-        // Para postembarque, se requiere autorización del jefe
         if (condicionPago === 'postembarque') {
           estado = 'PENDIENTE_JEFE_EMBARQUE';
           motivo = 'PAGO POST EMBARQUE - REQUIERE AUTORIZACIÓN DEL JEFE';
@@ -1686,7 +1687,7 @@
           fechapagoOriginal: fechapago,
           fechaentrega: fechaentrega,
           responsable: responsable,
-          condicionpago: condicionPago,  // <-- CAMBIADO: minúsculas
+          condicionpago: condicionPago,
           productos: productos,
           motivo: motivo,
           cliente: proyecto.cliente,
@@ -1793,20 +1794,31 @@
 
         const condicionInfo = CONDICIONES_PAGO[datos.condicionpago] || { label: 'No definida' };
 
+        // Mostrar solo datos con valores
         const datosLista = [
           { label: 'Proveedor:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
-          { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
           { label: 'Dirección:', value: datos.direccion },
-          { label: 'Dirección de entrega:', value: datos.direccionentrega },
           { label: 'C.P.:', value: datos.cp || 'N/A' },
+          { label: 'Dirección de entrega:', value: datos.direccionentrega },
+          { label: 'Fecha de entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
           { label: 'Condición de Pago:', value: condicionInfo.label },
-          { label: 'Fecha de Pago:', value: new Date(datos.fechapago).toLocaleDateString() },
+          { label: 'Banco:', value: datos.banco },
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-          { label: 'Uso CFDI:', value: datos.usocfdi },
-          { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Moneda:', value: datos.moneda }
+          { label: 'CLABE:', value: datos.clabe || 'N/A' }
         ];
+
+        // Agregar opcionales solo si tienen valor
+        if (datos.swift && datos.swift !== '') {
+          datosLista.push({ label: 'SWIFT:', value: datos.swift });
+        }
+        if (datos.cie && datos.cie !== '') {
+          datosLista.push({ label: 'CIE:', value: datos.cie });
+        }
+        if (datos.referencia && datos.referencia !== '') {
+          datosLista.push({ label: 'Referencia:', value: datos.referencia });
+        }
+        datosLista.push({ label: 'Moneda:', value: datos.moneda });
 
         datosLista.forEach((item) => {
           doc.setFont('helvetica', 'bold');
@@ -1850,7 +1862,7 @@
             5: { cellWidth: 45 },
             6: { cellWidth: 40 },
             7: { cellWidth: 40 },
-            8: { cellWidth: 55 }
+            8: { cellWidth: 65 }
           },
           didDrawPage: function(data) {
             window._tableFinalY = data.cursor.y;
@@ -2024,10 +2036,10 @@
           estado: datos.estado,
           fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago,
-          fechapagooriginal: datos.fechapagoOriginal,  // <-- CAMBIADO: minúsculas
+          fechapagooriginal: datos.fechapagoOriginal,
           fechaentrega: datos.fechaentrega,
           responsable: datos.responsable,
-          condicionpago: datos.condicionpago,  // <-- CAMBIADO: minúsculas
+          condicionpago: datos.condicionpago,
           pausada: false,
           motivo: datos.motivo || null,
           fechaaprobacionsolicitante: null,
@@ -2049,8 +2061,8 @@
           swift: datos.swift,
           cie: datos.cie,
           referencia: datos.referencia,
-          montopagado: 0,  // <-- CAMBIADO: minúsculas
-          montopendiente: datos.montototal  // <-- CAMBIADO: minúsculas
+          montopagado: 0,
+          montopendiente: datos.montototal
         };
 
         console.log('📤 [confirmarDesdePreview] Enviando a Supabase:', nuevaOC);
@@ -2132,10 +2144,10 @@
           estado: datos.estado,
           fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago,
-          fechapagooriginal: datos.fechapagoOriginal,  // <-- CAMBIADO: minúsculas
+          fechapagooriginal: datos.fechapagoOriginal,
           fechaentrega: datos.fechaentrega,
           responsable: datos.responsable,
-          condicionpago: datos.condicionpago,  // <-- CAMBIADO: minúsculas
+          condicionpago: datos.condicionpago,
           pausada: false,
           motivo: datos.motivo || null,
           fechaaprobacionsolicitante: null,
@@ -2157,8 +2169,8 @@
           swift: datos.swift,
           cie: datos.cie,
           referencia: datos.referencia,
-          montopagado: 0,  // <-- CAMBIADO: minúsculas
-          montopendiente: datos.montototal  // <-- CAMBIADO: minúsculas
+          montopagado: 0,
+          montopendiente: datos.montototal
         };
 
         console.log('📤 Enviando a Supabase:', nuevaOC);
@@ -2231,22 +2243,31 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
-        const condicionInfo = CONDICIONES_PAGO[oc.condicionpago] || { label: 'No definida' };  // <-- CAMBIADO: minúsculas
+        const condicionInfo = CONDICIONES_PAGO[oc.condicionpago] || { label: 'No definida' };
 
         const datosLista = [
           { label: 'Proveedor:', value: oc.proveedor },
           { label: 'RFC:', value: oc.rfc },
-          { label: 'Fecha de Entrega:', value: new Date(oc.fechaentrega).toLocaleDateString() },
           { label: 'Dirección:', value: oc.direccion },
-          { label: 'Dirección de entrega:', value: oc.direccionentrega || 'No especificada' },
           { label: 'C.P.:', value: oc.cp || 'N/A' },
+          { label: 'Dirección de entrega:', value: oc.direccionentrega || 'No especificada' },
+          { label: 'Fecha de entrega:', value: new Date(oc.fechaentrega).toLocaleDateString() },
           { label: 'Condición de Pago:', value: condicionInfo.label },
-          { label: 'Fecha de Pago:', value: new Date(oc.fechapago).toLocaleDateString() },
+          { label: 'Banco:', value: oc.banco },
           { label: 'Cuenta:', value: oc.cuenta || 'N/A' },
-          { label: 'Uso CFDI:', value: oc.usocfdi },
-          { label: 'CLABE:', value: oc.clabe || 'N/A' },
-          { label: 'Moneda:', value: oc.moneda }
+          { label: 'CLABE:', value: oc.clabe || 'N/A' }
         ];
+
+        if (oc.swift && oc.swift !== '') {
+          datosLista.push({ label: 'SWIFT:', value: oc.swift });
+        }
+        if (oc.cie && oc.cie !== '') {
+          datosLista.push({ label: 'CIE:', value: oc.cie });
+        }
+        if (oc.referencia && oc.referencia !== '') {
+          datosLista.push({ label: 'Referencia:', value: oc.referencia });
+        }
+        datosLista.push({ label: 'Moneda:', value: oc.moneda });
 
         datosLista.forEach((item) => {
           doc.setFont('helvetica', 'bold');
@@ -2291,7 +2312,7 @@
             5: { cellWidth: 45 },
             6: { cellWidth: 40 },
             7: { cellWidth: 40 },
-            8: { cellWidth: 55 }
+            8: { cellWidth: 65 }
           },
           didDrawPage: function(data) {
             window._tableFinalY = data.cursor.y;
@@ -2340,17 +2361,16 @@
         doc.text(formatoMoneda(oc.montototal, oc.moneda), pageWidth - margin, y, { align: 'right' });
         y += 30;
 
-        // Mostrar información de pago según condición
-        if (oc.condicionpago === '50_50' && oc.estadopago === 'PAGADA') {  // <-- CAMBIADO: minúsculas
+        if (oc.condicionpago === '50_50' && oc.estadopago === 'PAGADA') {
           const mitad = oc.montototal / 2;
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'normal');
           doc.text('Pago: 50% Anticipo / 50% Finiquito', margin, y);
           y += 14;
-          doc.text('Monto Pagado: ' + formatoMoneda(oc.montopagado || 0, oc.moneda), margin, y);  // <-- CAMBIADO: minúsculas
+          doc.text('Monto Pagado: ' + formatoMoneda(oc.montopagado || 0, oc.moneda), margin, y);
           y += 14;
-          doc.text('Saldo Pendiente: ' + formatoMoneda(oc.montopendiente || oc.montototal, oc.moneda), margin, y);  // <-- CAMBIADO: minúsculas
+          doc.text('Saldo Pendiente: ' + formatoMoneda(oc.montopendiente || oc.montototal, oc.moneda), margin, y);
           y += 20;
         }
 
@@ -2429,16 +2449,15 @@
         doc.save(`OC_${oc.codigo}.pdf`);
       }
 
-      // Función para registrar pago parcial (50/50)
       window.registrarPagoParcial = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
         const oc = ordenes[index];
-        if (oc.condicionpago !== '50_50') return alert('Esta OC no tiene condición 50/50');  // <-- CAMBIADO: minúsculas
+        if (oc.condicionpago !== '50_50') return alert('Esta OC no tiene condición 50/50');
         if (oc.estado !== 'AUTORIZADA') return alert('La OC debe estar autorizada');
         if (oc.estadopago === 'PAGADA') return alert('La OC ya está completamente pagada');
 
-        const montoPagadoActual = oc.montopagado || 0;  // <-- CAMBIADO: minúsculas
+        const montoPagadoActual = oc.montopagado || 0;
         const total = oc.montototal;
         const mitad = total / 2;
         const pendiente = total - montoPagadoActual;
@@ -2461,8 +2480,8 @@
         }
 
         const updates = {
-          montopagado: nuevoMontoPagado,  // <-- CAMBIADO: minúsculas
-          montopendiente: nuevoPendiente,  // <-- CAMBIADO: minúsculas
+          montopagado: nuevoMontoPagado,
+          montopendiente: nuevoPendiente,
           estadopago: nuevoEstadoPago,
           estado: nuevoEstadoOC
         };
@@ -2474,18 +2493,16 @@
         alert(`✅ Pago registrado. Pagado: ${formatoMoneda(nuevoMontoPagado, oc.moneda)}, Pendiente: ${formatoMoneda(nuevoPendiente, oc.moneda)}`);
       };
 
-      // Aprobar pago post embarque (solo Jefe de Departamento)
       window.aprobarPostEmbarque = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('Solo el Jefe de Departamento puede autorizar el pago post embarque');
         const oc = ordenes[index];
-        if (oc.condicionpago !== 'postembarque') return alert('Esta OC no tiene condición "Pago post embarque"');  // <-- CAMBIADO: minúsculas
+        if (oc.condicionpago !== 'postembarque') return alert('Esta OC no tiene condición "Pago post embarque"');
         if (oc.estado !== 'PENDIENTE_JEFE_EMBARQUE') return alert('La OC no está en estado de espera de autorización de embarque');
 
         const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso para autorizar');
 
-        // Verificar si el usuario es el jefe del departamento
         const jefe = getJefeDepto(proyecto.empresa, proyecto.departamento);
         if (actual.u !== jefe) return alert('Solo el jefe de departamento puede autorizar el pago post embarque');
 
@@ -2544,8 +2561,7 @@
         let nuevoEstado = 'APROBADA_JEFE';
         let mensaje = '';
 
-        // Verificar si es postembarque
-        if (oc.condicionpago === 'postembarque') {  // <-- CAMBIADO: minúsculas
+        if (oc.condicionpago === 'postembarque') {
           nuevoEstado = 'PENDIENTE_JEFE_EMBARQUE';
           mensaje = '⏳ Pago post embarque - Pendiente de autorización del Jefe de Departamento.';
         } else if (oc.moneda === 'USD' && !oc.tipocambio) {
@@ -2665,16 +2681,15 @@
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
         const oc = ordenes[index];
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
-        if (oc.condicionpago === '50_50') {  // <-- CAMBIADO: minúsculas
-          // Para 50/50 usar la función específica
+        if (oc.condicionpago === '50_50') {
           return window.registrarPagoParcial(index);
         }
-        const updates = { estadopago: 'PAGADA', montopagado: oc.montototal, montopendiente: 0 };  // <-- CAMBIADO: minúsculas
+        const updates = { estadopago: 'PAGADA', montopagado: oc.montototal, montopendiente: 0 };
         const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PAGADA';
-        oc.montopagado = oc.montototal;  // <-- CAMBIADO: minúsculas
-        oc.montopendiente = 0;  // <-- CAMBIADO: minúsculas
+        oc.montopagado = oc.montototal;
+        oc.montopendiente = 0;
         render();
         alert('✅ OC marcada como PAGADA.');
       };
@@ -3100,7 +3115,7 @@
           const proyecto = proyectos.find(p => p.nombre === o.proyecto);
           const cliente = proyecto ? proyecto.cliente : '—';
           const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
-          const condicionInfo = CONDICIONES_PAGO[o.condicionpago] || { label: '—' };  // <-- CAMBIADO: minúsculas
+          const condicionInfo = CONDICIONES_PAGO[o.condicionpago] || { label: '—' };
 
           tablaOC.innerHTML += `
             <tr>
