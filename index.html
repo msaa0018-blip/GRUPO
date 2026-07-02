@@ -858,9 +858,9 @@
         <!-- Segunda fila: Proveedor, RFC, Dirección -->
         <div class="grupo-formulario">
           <div class="flex">
-            <input id="proveedor" placeholder="Proveedor" style="flex:1.5;">
+            <input id="proveedor" placeholder="Proveedor *" style="flex:1.5;" required>
             <input id="rfc" placeholder="RFC (opcional)" style="flex:1;">
-            <input id="direccion" placeholder="Dirección" style="flex:1.5;">
+            <input id="direccion" placeholder="Dirección *" style="flex:1.5;" required>
           </div>
         </div>
 
@@ -875,8 +875,8 @@
               <option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option>
               <option value="P01">P01 - POR DEFINIR</option>
             </select>
-            <input id="direccionEntrega" placeholder="Dirección de entrega">
-            <input id="cp" placeholder="C.P. (Código Postal)" style="flex:0.7; min-width:100px;">
+            <input id="direccionEntrega" placeholder="Dirección de entrega *" required>
+            <input id="cp" placeholder="C.P. *" style="flex:0.7; min-width:100px;" maxlength="5" inputmode="numeric" required>
             <select id="monedaOC" onchange="window.mostrarParidadInicial()">
               <option value="MXN">Pesos (MXN)</option>
               <option value="USD">Dólares (USD)</option>
@@ -1792,9 +1792,14 @@
           tipocambio = parseFloat(tcInput);
         }
 
-        if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable || !fechaentrega) {
+        if (!proveedor || !direccion || !direccionentrega || !cp || !fechapago || !responsable || !fechaentrega) {
           msgDiv.innerHTML =
-            '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
+            '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, C.P., FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
+          return null;
+        }
+
+        if (!/^\d{4,5}$/.test(cp)) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ EL C.P. (CÓDIGO POSTAL) DEBE CONTENER SOLO NÚMEROS (4 O 5 DÍGITOS).</div>';
           return null;
         }
         
