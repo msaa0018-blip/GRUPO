@@ -599,7 +599,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v49</span>
+        <span class="sub">Workflow OC ERP v50</span>
       </div>
     </div>
     <small>BETA · Colores por empresa</small>
@@ -1053,7 +1053,7 @@
         if (!proyecto) return 0;
         const monedaProyecto = proyecto.moneda || 'MXN';
         return ordenes
-          .filter(o => o.proyecto === nombreProyecto && o.estadopago === 'PAGADA')
+          .filter(o => o.proyecto === nombreProyecto && (o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL'))
           .reduce((sum, oc) => {
             let montoEnMonedaProyecto = oc.montomxn || 0;
             if (monedaProyecto === 'USD') {
@@ -1532,7 +1532,6 @@
           fecha.setDate(fecha.getDate() + 15);
           return fecha.toISOString().split('T')[0];
         } else if (condicion === 'postembarque') {
-          // Mantiene la fecha original pero requiere autorización del jefe
           return fechaPagoOriginal;
         } else { // 50_50
           return fechaPagoOriginal;
@@ -1687,7 +1686,7 @@
           fechapagoOriginal: fechapago,
           fechaentrega: fechaentrega,
           responsable: responsable,
-          condicionPago: condicionPago,
+          condicionpago: condicionPago,  // <-- CAMBIADO: minúsculas
           productos: productos,
           motivo: motivo,
           cliente: proyecto.cliente,
@@ -1792,7 +1791,7 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
-        const condicionInfo = CONDICIONES_PAGO[datos.condicionPago] || { label: 'No definida' };
+        const condicionInfo = CONDICIONES_PAGO[datos.condicionpago] || { label: 'No definida' };
 
         const datosLista = [
           { label: 'Proveedor:', value: datos.proveedor },
@@ -2025,10 +2024,10 @@
           estado: datos.estado,
           fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago,
-          fechapagoOriginal: datos.fechapagoOriginal,
+          fechapagooriginal: datos.fechapagoOriginal,  // <-- CAMBIADO: minúsculas
           fechaentrega: datos.fechaentrega,
           responsable: datos.responsable,
-          condicionPago: datos.condicionPago,
+          condicionpago: datos.condicionpago,  // <-- CAMBIADO: minúsculas
           pausada: false,
           motivo: datos.motivo || null,
           fechaaprobacionsolicitante: null,
@@ -2050,8 +2049,8 @@
           swift: datos.swift,
           cie: datos.cie,
           referencia: datos.referencia,
-          montoPagado: 0,
-          montoPendiente: datos.montototal
+          montopagado: 0,  // <-- CAMBIADO: minúsculas
+          montopendiente: datos.montototal  // <-- CAMBIADO: minúsculas
         };
 
         console.log('📤 [confirmarDesdePreview] Enviando a Supabase:', nuevaOC);
@@ -2133,10 +2132,10 @@
           estado: datos.estado,
           fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago,
-          fechapagoOriginal: datos.fechapagoOriginal,
+          fechapagooriginal: datos.fechapagoOriginal,  // <-- CAMBIADO: minúsculas
           fechaentrega: datos.fechaentrega,
           responsable: datos.responsable,
-          condicionPago: datos.condicionPago,
+          condicionpago: datos.condicionpago,  // <-- CAMBIADO: minúsculas
           pausada: false,
           motivo: datos.motivo || null,
           fechaaprobacionsolicitante: null,
@@ -2158,8 +2157,8 @@
           swift: datos.swift,
           cie: datos.cie,
           referencia: datos.referencia,
-          montoPagado: 0,
-          montoPendiente: datos.montototal
+          montopagado: 0,  // <-- CAMBIADO: minúsculas
+          montopendiente: datos.montototal  // <-- CAMBIADO: minúsculas
         };
 
         console.log('📤 Enviando a Supabase:', nuevaOC);
@@ -2232,7 +2231,7 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
-        const condicionInfo = CONDICIONES_PAGO[oc.condicionPago] || { label: 'No definida' };
+        const condicionInfo = CONDICIONES_PAGO[oc.condicionpago] || { label: 'No definida' };  // <-- CAMBIADO: minúsculas
 
         const datosLista = [
           { label: 'Proveedor:', value: oc.proveedor },
@@ -2342,16 +2341,16 @@
         y += 30;
 
         // Mostrar información de pago según condición
-        if (oc.condicionPago === '50_50' && oc.estadopago === 'PAGADA') {
+        if (oc.condicionpago === '50_50' && oc.estadopago === 'PAGADA') {  // <-- CAMBIADO: minúsculas
           const mitad = oc.montototal / 2;
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'normal');
           doc.text('Pago: 50% Anticipo / 50% Finiquito', margin, y);
           y += 14;
-          doc.text('Monto Pagado: ' + formatoMoneda(oc.montoPagado || 0, oc.moneda), margin, y);
+          doc.text('Monto Pagado: ' + formatoMoneda(oc.montopagado || 0, oc.moneda), margin, y);  // <-- CAMBIADO: minúsculas
           y += 14;
-          doc.text('Saldo Pendiente: ' + formatoMoneda(oc.montoPendiente || oc.montototal, oc.moneda), margin, y);
+          doc.text('Saldo Pendiente: ' + formatoMoneda(oc.montopendiente || oc.montototal, oc.moneda), margin, y);  // <-- CAMBIADO: minúsculas
           y += 20;
         }
 
@@ -2435,11 +2434,11 @@
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
         const oc = ordenes[index];
-        if (oc.condicionPago !== '50_50') return alert('Esta OC no tiene condición 50/50');
+        if (oc.condicionpago !== '50_50') return alert('Esta OC no tiene condición 50/50');  // <-- CAMBIADO: minúsculas
         if (oc.estado !== 'AUTORIZADA') return alert('La OC debe estar autorizada');
         if (oc.estadopago === 'PAGADA') return alert('La OC ya está completamente pagada');
 
-        const montoPagadoActual = oc.montoPagado || 0;
+        const montoPagadoActual = oc.montopagado || 0;  // <-- CAMBIADO: minúsculas
         const total = oc.montototal;
         const mitad = total / 2;
         const pendiente = total - montoPagadoActual;
@@ -2462,8 +2461,8 @@
         }
 
         const updates = {
-          montoPagado: nuevoMontoPagado,
-          montoPendiente: nuevoPendiente,
+          montopagado: nuevoMontoPagado,  // <-- CAMBIADO: minúsculas
+          montopendiente: nuevoPendiente,  // <-- CAMBIADO: minúsculas
           estadopago: nuevoEstadoPago,
           estado: nuevoEstadoOC
         };
@@ -2479,7 +2478,7 @@
       window.aprobarPostEmbarque = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('Solo el Jefe de Departamento puede autorizar el pago post embarque');
         const oc = ordenes[index];
-        if (oc.condicionPago !== 'postembarque') return alert('Esta OC no tiene condición "Pago post embarque"');
+        if (oc.condicionpago !== 'postembarque') return alert('Esta OC no tiene condición "Pago post embarque"');  // <-- CAMBIADO: minúsculas
         if (oc.estado !== 'PENDIENTE_JEFE_EMBARQUE') return alert('La OC no está en estado de espera de autorización de embarque');
 
         const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
@@ -2546,7 +2545,7 @@
         let mensaje = '';
 
         // Verificar si es postembarque
-        if (oc.condicionPago === 'postembarque') {
+        if (oc.condicionpago === 'postembarque') {  // <-- CAMBIADO: minúsculas
           nuevoEstado = 'PENDIENTE_JEFE_EMBARQUE';
           mensaje = '⏳ Pago post embarque - Pendiente de autorización del Jefe de Departamento.';
         } else if (oc.moneda === 'USD' && !oc.tipocambio) {
@@ -2666,16 +2665,16 @@
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
         const oc = ordenes[index];
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
-        if (oc.condicionPago === '50_50') {
+        if (oc.condicionpago === '50_50') {  // <-- CAMBIADO: minúsculas
           // Para 50/50 usar la función específica
           return window.registrarPagoParcial(index);
         }
-        const updates = { estadopago: 'PAGADA', montoPagado: oc.montototal, montoPendiente: 0 };
+        const updates = { estadopago: 'PAGADA', montopagado: oc.montototal, montopendiente: 0 };  // <-- CAMBIADO: minúsculas
         const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PAGADA';
-        oc.montoPagado = oc.montototal;
-        oc.montoPendiente = 0;
+        oc.montopagado = oc.montototal;  // <-- CAMBIADO: minúsculas
+        oc.montopendiente = 0;  // <-- CAMBIADO: minúsculas
         render();
         alert('✅ OC marcada como PAGADA.');
       };
@@ -2777,8 +2776,8 @@
         const totales = { MXN: 0, USD: 0 };
         ocProyecto.forEach(o => {
           if (o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL') {
-            if (o.moneda === 'MXN') totales.MXN += (o.montoPagado || o.montototal);
-            else if (o.moneda === 'USD') totales.USD += (o.montoPagado || o.montototal);
+            if (o.moneda === 'MXN') totales.MXN += (o.montopagado || o.montototal);
+            else if (o.moneda === 'USD') totales.USD += (o.montopagado || o.montototal);
           }
         });
         const totalMXNEquiv = ocProyecto.filter(o => o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL').reduce((s, o) => s + (o.montomxn || 0), 0);
@@ -2829,7 +2828,7 @@
                       estadoMostrado = 'AUTORIZADA - PAGADA';
                     } else if (o.estadopago === 'PAGO_PARCIAL') {
                       badgeClass = 'badge-pago-parcial';
-                      estadoMostrado = `AUTORIZADA - ${Math.round((o.montoPagado/o.montototal)*100)}% PAGADO`;
+                      estadoMostrado = `AUTORIZADA - ${Math.round((o.montopagado/o.montototal)*100)}% PAGADO`;
                     } else if (o.estadopago === 'PENDIENTE') {
                       const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
                       const ahora = new Date();
@@ -2867,8 +2866,8 @@
                     <td>${o.responsable}</td>
                     <td>${o.moneda}</td>
                     <td>${formatoMoneda(o.montototal, o.moneda)}</td>
-                    <td>${formatoMoneda(o.montoPagado || 0, o.moneda)}</td>
-                    <td>${formatoMoneda(o.montoPendiente || o.montototal, o.moneda)}</td>
+                    <td>${formatoMoneda(o.montopagado || 0, o.moneda)}</td>
+                    <td>${formatoMoneda(o.montopendiente || o.montototal, o.moneda)}</td>
                     <td>${new Date(o.fechapago).toLocaleDateString()}</td>
                     <td>${o.uuidfactura || '—'}</td>
                     <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
@@ -2961,8 +2960,8 @@
         }
 
         tablaOC.innerHTML = '';
-        const totalMXN = ocVisibles.filter(o => (o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL') && o.moneda === 'MXN').reduce((s, o) => s + (o.montoPagado || o.montototal), 0);
-        const totalUSD = ocVisibles.filter(o => (o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL') && o.moneda === 'USD').reduce((s, o) => s + (o.montoPagado || o.montototal), 0);
+        const totalMXN = ocVisibles.filter(o => (o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL') && o.moneda === 'MXN').reduce((s, o) => s + (o.montopagado || o.montototal), 0);
+        const totalUSD = ocVisibles.filter(o => (o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL') && o.moneda === 'USD').reduce((s, o) => s + (o.montopagado || o.montototal), 0);
         const totalMXNEquiv = ocVisibles.filter(o => o.estadopago === 'PAGADA' || o.estadopago === 'PAGO_PARCIAL').reduce((s, o) => s + (o.montomxn || 0), 0);
         resumenTotales.innerHTML = `
           <strong>Totales pagados (visibles):</strong>
@@ -2983,7 +2982,7 @@
               estadoMostrado = 'AUTORIZADA - PAGADA';
             } else if (o.estadopago === 'PAGO_PARCIAL') {
               badgeClass = 'badge-pago-parcial';
-              estadoMostrado = `AUTORIZADA - ${Math.round((o.montoPagado/o.montototal)*100)}% PAGADO`;
+              estadoMostrado = `AUTORIZADA - ${Math.round((o.montopagado/o.montototal)*100)}% PAGADO`;
             } else if (o.estadopago === 'PENDIENTE') {
               const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
               const ahora = new Date();
@@ -3026,11 +3025,11 @@
               if (o.estadopago === 'PAGADA') {
                 acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
               } else if (o.estadopago === 'PAGO_PARCIAL') {
-                if (o.condicionPago === '50_50') {
+                if (o.condicionpago === '50_50') {
                   acciones += `<button class="success" onclick="window.registrarPagoParcial(${idxOriginal})">💰 Registrar Pago</button>`;
                 }
               } else {
-                if (o.condicionPago === '50_50') {
+                if (o.condicionpago === '50_50') {
                   acciones += `<button class="success" onclick="window.registrarPagoParcial(${idxOriginal})">💰 Registrar Anticipo</button>`;
                 } else {
                   acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
@@ -3048,11 +3047,11 @@
                 if (o.estadopago === 'PAGADA') {
                   acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
                 } else if (o.estadopago === 'PAGO_PARCIAL') {
-                  if (o.condicionPago === '50_50') {
+                  if (o.condicionpago === '50_50') {
                     acciones += `<button class="success" onclick="window.registrarPagoParcial(${idxOriginal})">💰 Registrar Pago</button>`;
                   }
                 } else {
-                  if (o.condicionPago === '50_50') {
+                  if (o.condicionpago === '50_50') {
                     acciones += `<button class="success" onclick="window.registrarPagoParcial(${idxOriginal})">💰 Registrar Anticipo</button>`;
                   } else {
                     acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
@@ -3101,7 +3100,7 @@
           const proyecto = proyectos.find(p => p.nombre === o.proyecto);
           const cliente = proyecto ? proyecto.cliente : '—';
           const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
-          const condicionInfo = CONDICIONES_PAGO[o.condicionPago] || { label: '—' };
+          const condicionInfo = CONDICIONES_PAGO[o.condicionpago] || { label: '—' };  // <-- CAMBIADO: minúsculas
 
           tablaOC.innerHTML += `
             <tr>
@@ -3114,8 +3113,8 @@
               <td style="font-size:11px;">${condicionInfo.label}</td>
               <td>${o.moneda}</td>
               <td>${formatoMoneda(o.montototal, o.moneda)}</td>
-              <td>${formatoMoneda(o.montoPagado || 0, o.moneda)}</td>
-              <td>${formatoMoneda(o.montoPendiente || o.montototal, o.moneda)}</td>
+              <td>${formatoMoneda(o.montopagado || 0, o.moneda)}</td>
+              <td>${formatoMoneda(o.montopendiente || o.montototal, o.moneda)}</td>
               <td>${new Date(o.fechapago).toLocaleDateString()}</td>
               <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
               <td><div class="actions">${acciones}</div></td>
