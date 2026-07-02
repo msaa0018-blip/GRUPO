@@ -487,6 +487,114 @@
     margin: 0;
     font-size: 1.1rem
   }
+  /* ===== Odoo-style Module Launcher ===== */
+  #moduleSelector {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 16px 60px;
+  }
+  #moduleSelector.hidden { display: none; }
+  .launcher-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .launcher-header h2 {
+    font-size: 20px;
+    color: var(--gray-900);
+  }
+  .launcher-header span {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 18px;
+  }
+  .app-tile {
+    background: white;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 20px 12px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid var(--gray-200);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    position: relative;
+    user-select: none;
+  }
+  .app-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .12);
+    border-color: var(--secondary);
+  }
+  .app-tile:active { transform: translateY(-1px); }
+  .app-tile.disabled {
+    cursor: not-allowed;
+    opacity: .55;
+  }
+  .app-tile.disabled:hover {
+    transform: none;
+    box-shadow: var(--shadow);
+    border-color: var(--gray-200);
+  }
+  .app-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: white;
+    box-shadow: inset 0 -4px 8px rgba(0, 0, 0, .12);
+  }
+  .app-tile .app-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+    line-height: 1.25;
+  }
+  .app-tile .app-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--gray-200);
+    color: var(--gray-600);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 20px;
+    letter-spacing: .3px;
+  }
+  .icon-oc { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+  .icon-proyectos { background: linear-gradient(135deg, #16a34a, #15803d); }
+  .icon-inventario { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .icon-ventas { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+  .icon-rh { background: linear-gradient(135deg, #9333ea, #7e22ce); }
+  .icon-reportes { background: linear-gradient(135deg, #0891b2, #0e7490); }
+  .icon-config { background: linear-gradient(135deg, #64748b, #475569); }
+  .icon-contabilidad { background: linear-gradient(135deg, #ca8a04, #a16207); }
+  .btn-volver-modulos {
+    background: var(--gray-200);
+    color: var(--gray-800);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-volver-modulos:hover { background: var(--gray-300); }
   #pdfPreviewModal .modal-body {
     flex: 1;
     overflow: auto;
@@ -622,14 +730,67 @@
       <div id="error" class="alert hidden"></div>
     </div>
 
+    <!-- Selector de Módulos (estilo Odoo) -->
+    <div id="moduleSelector" class="hidden">
+      <div class="launcher-header">
+        <h2>🧩 Módulos</h2>
+        <span id="sesionModulos"></span>
+      </div>
+      <div class="app-grid">
+        <div class="app-tile" onclick="window.abrirModulo('oc')">
+          <div class="app-icon icon-oc">📄</div>
+          <div class="app-label">Órdenes de<br>Compra</div>
+        </div>
+        <div class="app-tile" onclick="window.abrirModulo('proyectos')">
+          <div class="app-icon icon-proyectos">📁</div>
+          <div class="app-label">Proyectos</div>
+        </div>
+        <div class="app-tile disabled" onclick="window.moduloProximamente('Inventario')">
+          <span class="app-badge">PRÓXIMAMENTE</span>
+          <div class="app-icon icon-inventario">📦</div>
+          <div class="app-label">Inventario</div>
+        </div>
+        <div class="app-tile disabled" onclick="window.moduloProximamente('Ventas')">
+          <span class="app-badge">PRÓXIMAMENTE</span>
+          <div class="app-icon icon-ventas">💰</div>
+          <div class="app-label">Ventas</div>
+        </div>
+        <div class="app-tile disabled" onclick="window.moduloProximamente('Recursos Humanos')">
+          <span class="app-badge">PRÓXIMAMENTE</span>
+          <div class="app-icon icon-rh">👥</div>
+          <div class="app-label">Recursos<br>Humanos</div>
+        </div>
+        <div class="app-tile disabled" onclick="window.moduloProximamente('Reportes')">
+          <span class="app-badge">PRÓXIMAMENTE</span>
+          <div class="app-icon icon-reportes">📊</div>
+          <div class="app-label">Reportes</div>
+        </div>
+        <div class="app-tile disabled" onclick="window.moduloProximamente('Contabilidad')">
+          <span class="app-badge">PRÓXIMAMENTE</span>
+          <div class="app-icon icon-contabilidad">🧾</div>
+          <div class="app-label">Contabilidad</div>
+        </div>
+        <div class="app-tile disabled" onclick="window.moduloProximamente('Configuración')">
+          <span class="app-badge">PRÓXIMAMENTE</span>
+          <div class="app-icon icon-config">⚙️</div>
+          <div class="app-label">Configuración</div>
+        </div>
+      </div>
+    </div>
+
     <!-- App -->
     <div id="app" class="hidden">
 
       <div class="card flex" style="justify-content:space-between">
         <span id="sesion" style="font-weight:600"></span>
-        <button onclick="window.salir()" class="danger">Cerrar sesión</button>
+        <div class="flex" style="gap:8px;">
+          <button onclick="window.volverModulos()" class="btn-volver-modulos">🧩 Cambiar módulo</button>
+          <button onclick="window.salir()" class="danger">Cerrar sesión</button>
+        </div>
       </div>
 
+      <!-- Módulo: Proyectos -->
+      <div id="moduloProyectos">
       <!-- Panel Crear Proyecto -->
       <div id="panelProyecto" class="card hidden">
         <h2>📁 Crear Proyecto</h2>
@@ -678,7 +839,11 @@
           </table>
         </div>
       </div>
+      </div>
+      <!-- /Módulo: Proyectos -->
 
+      <!-- Módulo: Órdenes de Compra -->
+      <div id="moduloOC">
       <!-- Panel Crear OC -->
       <div id="panelOC" class="card hidden">
         <h2>📄 Crear Orden de Compra</h2>
@@ -850,6 +1015,8 @@
           </table>
         </div>
       </div>
+      </div>
+      <!-- /Módulo: Órdenes de Compra -->
 
     </div>
   </div>
@@ -1254,7 +1421,7 @@
         errorDiv.classList.add('hidden');
 
         document.getElementById('login').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('moduleSelector').classList.remove('hidden');
 
         let infoSesion = `👤 ${actual.u} (${actual.rol})`;
         const opciones = obtenerOpcionesPermisos(actual);
@@ -1266,6 +1433,7 @@
           infoSesion += ` - ${opciones.length} empresas/departamentos`;
         }
         document.getElementById('sesion').textContent = infoSesion;
+        document.getElementById('sesionModulos').textContent = infoSesion;
 
         if (actual.rol === 'Administrador') {
           document.getElementById('adminActions').classList.remove('hidden');
@@ -1366,6 +1534,31 @@
       };
 
       window.salir = function() { location.reload(); };
+
+      window.abrirModulo = function(mod) {
+        document.getElementById('moduleSelector').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        const modProyectos = document.getElementById('moduloProyectos');
+        const modOC = document.getElementById('moduloOC');
+        if (mod === 'proyectos') {
+          modProyectos.style.display = '';
+          modOC.style.display = 'none';
+        } else if (mod === 'oc') {
+          modProyectos.style.display = 'none';
+          modOC.style.display = '';
+        }
+        window.scrollTo(0, 0);
+      };
+
+      window.volverModulos = function() {
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('moduleSelector').classList.remove('hidden');
+        window.scrollTo(0, 0);
+      };
+
+      window.moduloProximamente = function(nombre) {
+        alert(`🚧 El módulo "${nombre}" está en desarrollo y estará disponible próximamente.`);
+      };
 
       window.crearProyecto = async function() {
         let empresa, departamento;
