@@ -11,7 +11,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 </script>
 <style>
-  /* ===== ESTILOS COMPLETOS ===== */
   * {
     box-sizing: border-box;
     margin: 0;
@@ -259,7 +258,7 @@
     background: var(--gray-50)
   }
   
-  /* ===== AURAS PARA OC PENDIENTES DE DIRECTOR ===== */
+  /* ===== AURA AMARILLA - SOLO para la OC que generó la notificación ===== */
   tr.pendiente-director-notificada {
     animation: pulse-aura-amarilla 1.5s ease-in-out infinite;
     border-left: 6px solid #f59e0b;
@@ -268,19 +267,19 @@
   tr.pendiente-director-notificada:hover {
     background: #fef3c7 !important;
   }
-  tr.pendiente-director-otras {
-    border-left: 4px solid #ea580c;
-    background: #fff7ed;
-  }
-  tr.pendiente-director-otras:hover {
-    background: #ffedd5;
-  }
   
   @keyframes pulse-aura-amarilla {
-    0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); background: #fffbeb; }
-    50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), inset 0 0 25px rgba(245, 158, 11, 0.2); background: #fef3c7; }
+    0%, 100% {
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+      background: #fffbeb;
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), inset 0 0 25px rgba(245, 158, 11, 0.2);
+      background: #fef3c7;
+    }
   }
   
+  /* Botón con aura para la OC notificada */
   .btn-aura-amarilla {
     animation: pulse-aura-amarilla-boton 1.5s ease-in-out infinite !important;
     border: 2px solid #f59e0b !important;
@@ -292,8 +291,23 @@
   }
   
   @keyframes pulse-aura-amarilla-boton {
-    0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); border-color: #f59e0b; }
-    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); border-color: #fbbf24; }
+    0%, 100% {
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+      border-color: #f59e0b;
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.8);
+      border-color: #fbbf24;
+    }
+  }
+  
+  /* ===== ESTILO PARA DESTACAR LA OC NOTIFICADA EN EL SCROLL ===== */
+  .highlight-row {
+    animation: highlight-pulse 2s ease-in-out 3;
+  }
+  @keyframes highlight-pulse {
+    0%, 100% { background-color: #fffbeb; }
+    50% { background-color: #fbbf24; }
   }
   
   .badge {
@@ -1553,6 +1567,25 @@
           const cuerpo = document.getElementById('cuerpoProductos');
           if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
             window.agregarFilaProducto();
+          }
+          
+          // Si hay una OC notificada, hacer scroll a ella y resaltarla
+          if (ocNotificadaId) {
+            setTimeout(function() {
+              const row = document.querySelector(`tr[data-oc-id="${ocNotificadaId}"]`);
+              if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.classList.add('highlight-row');
+                // Enfocar el botón de autorizar
+                setTimeout(function() {
+                  const btn = row.querySelector('.btn-aura-amarilla');
+                  if (btn) {
+                    btn.focus();
+                    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 500);
+              }
+            }, 800);
           }
         }, 200);
       };
@@ -2954,16 +2987,14 @@
             let rowClass = '';
             let botonAura = '';
 
-            // SOLO LA OC QUE DETONÓ LA NOTIFICACIÓN tiene aura AMARILLA
+            // 🟡 SOLO LA OC QUE GENERÓ LA NOTIFICACIÓN tiene AURA AMARILLA
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
                 botonAura = 'btn-aura-amarilla';
                 console.log('🟡 Aura AMARILLA para OC notificada:', o.codigo);
-              } else {
-                rowClass = 'pendiente-director-otras';
-                console.log('🟠 Aura NARANJA para OC pendiente:', o.codigo);
               }
+              // Las demás OC pendientes NO tienen aura especial
             }
 
             if (o.pausada) {
@@ -3071,7 +3102,7 @@
             const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
             tablaOC.innerHTML += `
-              <tr class="${rowClass}">
+              <tr class="${rowClass}" data-oc-id="${o.id}">
                 <td data-label="Código"><code>${o.codigo}</code></td>
                 <td data-label="Proyecto">${o.proyecto}</td>
                 <td data-label="Depto"><span class="depto-color" style="background-color:${deptoColor}">${proyecto ? proyecto.departamento : '—'}</span></td>
