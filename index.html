@@ -1317,7 +1317,6 @@
         const porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
         const excedente = gastado - proyecto.limite;
 
-        // Generar link directo al sistema con el ID de la OC
         const urlBase = window.location.origin + window.location.pathname;
         const linkOC = `${urlBase}?oc=${ocId}`;
 
@@ -1908,7 +1907,7 @@
           render();
         };
 
-        // Verificar si hay un ID de OC en la URL (para resaltar)
+        // Verificar si hay un ID de OC en la URL
         const urlParams = new URLSearchParams(window.location.search);
         const ocParam = urlParams.get('oc');
         if (ocParam) {
@@ -2769,6 +2768,7 @@
         
         // Si era la OC notificada, limpiar el flag
         if (oc.id === ocNotificadaId) {
+          await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
           ocNotificadaId = null;
         }
         
@@ -2871,6 +2871,7 @@
         
         // Si era la OC notificada, limpiar el flag
         if (oc.id === ocNotificadaId) {
+          await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
           ocNotificadaId = null;
         }
         
