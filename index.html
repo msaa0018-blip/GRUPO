@@ -40,7 +40,7 @@
     --radius: 12px;
     --shadow: 0 4px 20px rgba(0, 0, 0, .06);
     --font: Segoe UI, system-ui, -apple-system, sans-serif;
-    --mango: #FFBF00; /* Amarillo mango */
+    --orange-gold: #C87A0F; /* Naranja quemado-dorado */
   }
   body {
     font-family: var(--font);
@@ -259,44 +259,43 @@
     background: var(--gray-50)
   }
   
-  /* ===== AURA AMARILLA MANGO - SOLO para la OC que generó la notificación ===== */
+  /* ===== AURA NARANJA QUEMADO Y DORADO ===== */
   tr.pendiente-director-notificada {
-    animation: pulse-aura-mango 2s ease-in-out infinite;
-    border-left: 6px solid var(--mango);
-    background: #fff8e1 !important; /* Fondo muy claro */
+    animation: pulse-aura-orange-gold 2.5s ease-in-out infinite;
+    border-left: 6px solid #C05000; /* Naranja quemado */
+    background: #fff5e6 !important; /* Fondo muy suave */
   }
-  /* Eliminamos el hover para que la animación sea constante */
   
-  @keyframes pulse-aura-mango {
+  @keyframes pulse-aura-orange-gold {
     0%, 100% {
-      box-shadow: 0 0 15px rgba(255, 191, 0, 0.3);
-      background: #fff8e1;
+      box-shadow: 0 0 15px rgba(192, 80, 0, 0.25), 0 0 30px rgba(255, 215, 0, 0.1);
+      background: #fff5e6;
     }
     50% {
-      box-shadow: 0 0 30px rgba(255, 191, 0, 0.5), inset 0 0 15px rgba(255, 191, 0, 0.15);
-      background: #ffecb3;
+      box-shadow: 0 0 30px rgba(192, 80, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.2);
+      background: #ffebd1;
     }
   }
   
-  /* Botón con aura para la OC notificada */
-  .btn-aura-mango {
-    animation: pulse-aura-mango-boton 2s ease-in-out infinite !important;
-    border: 2px solid var(--mango) !important;
-    background: var(--mango) !important;
-    color: #000 !important;
+  /* Botón con aura naranja quemado y dorado */
+  .btn-aura-orange-gold {
+    animation: pulse-aura-orange-gold-boton 2.5s ease-in-out infinite !important;
+    border: 2px solid #C05000 !important;
+    background: #C87A0F !important;
+    color: #fff !important;
   }
-  .btn-aura-mango:hover {
-    background: #e6a800 !important;
+  .btn-aura-orange-gold:hover {
+    background: #a86000 !important;
   }
   
-  @keyframes pulse-aura-mango-boton {
+  @keyframes pulse-aura-orange-gold-boton {
     0%, 100% {
-      box-shadow: 0 0 10px rgba(255, 191, 0, 0.2);
-      border-color: var(--mango);
+      box-shadow: 0 0 10px rgba(192, 80, 0, 0.2);
+      border-color: #C05000;
     }
     50% {
-      box-shadow: 0 0 25px rgba(255, 191, 0, 0.5);
-      border-color: #ffd633;
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+      border-color: #FFD700;
     }
   }
   
@@ -1457,7 +1456,7 @@
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // Enfocar el botón de autorizar
                 setTimeout(function() {
-                  const btn = row.querySelector('.btn-aura-mango');
+                  const btn = row.querySelector('.btn-aura-orange-gold');
                   if (btn) {
                     btn.focus();
                     btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3010,14 +3009,13 @@
             let rowClass = '';
             let botonAura = '';
 
-            // 🟡 SOLO LA OC QUE GENERÓ LA NOTIFICACIÓN tiene AURA AMARILLA MANGO
+            // 🟠 AURA NARANJA QUEMADO Y DORADO - SOLO para la OC notificada
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
-                botonAura = 'btn-aura-mango';
-                console.log('🟡 Aura AMARILLA MANGO para OC notificada:', o.codigo);
+                botonAura = 'btn-aura-orange-gold';
+                console.log('🟠 Aura Naranja Quemado y Dorado para OC notificada:', o.codigo);
               }
-              // Las demás OC pendientes NO tienen aura especial
             }
 
             if (o.pausada) {
