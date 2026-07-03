@@ -1187,9 +1187,8 @@
       'use strict';
 
       // ============================================================
-      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
+      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM (CORREGIDA)
       // ============================================================
-      // ⚠️ REEMPLAZA ESTOS VALORES CON LOS TUYOS:
       const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFr1Rb6KcKPSyF5RJBuRAxBXu51m_U';
       const TELEGRAM_CHAT_ID = '5425017187';
       // ============================================================
@@ -1200,42 +1199,58 @@
       const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
       // ============================================================
-      // 📨 FUNCIÓN PARA ENVIAR NOTIFICACIÓN POR TELEGRAM
+      // 📨 FUNCIÓN MEJORADA PARA ENVIAR NOTIFICACIÓN POR TELEGRAM
       // ============================================================
       async function enviarNotificacionTelegram(mensaje) {
         try {
+          console.log('📤 Intentando enviar notificación a Telegram...');
+          
           if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'TU_TOKEN_BOT_AQUI') {
-            console.warn('⚠️ Token de Telegram no configurado. Las notificaciones no se enviarán.');
+            console.error('❌ Token de Telegram no configurado.');
             return false;
           }
           if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'CHAT_ID_DIRECTOR_AQUI') {
-            console.warn('⚠️ Chat ID de Telegram no configurado. Las notificaciones no se enviarán.');
+            console.error('❌ Chat ID de Telegram no configurado.');
+            return false;
+          }
+
+          if (!mensaje || mensaje.trim() === '') {
+            console.error('❌ Mensaje vacío, no se enviará.');
             return false;
           }
 
           const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+          console.log('📡 URL de la petición:', url.replace(TELEGRAM_BOT_TOKEN, '***'));
+
+          const payload = {
+            chat_id: TELEGRAM_CHAT_ID,
+            text: mensaje,
+            parse_mode: 'HTML',
+          };
+          console.log('📨 Payload:', payload);
+
           const response = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: mensaje,
-              parse_mode: 'HTML',
-            }),
+            body: JSON.stringify(payload),
           });
 
           const data = await response.json();
+          console.log('📨 Respuesta de Telegram:', data);
+
           if (data.ok) {
             console.log('✅ Notificación enviada a Telegram');
             return true;
           } else {
             console.error('❌ Error al enviar notificación:', data.description);
+            console.error('Código de error:', data.error_code);
             return false;
           }
         } catch (error) {
           console.error('❌ Error al enviar notificación:', error);
+          console.error('Stack:', error.stack);
           return false;
         }
       }
@@ -2565,7 +2580,13 @@
           const proyecto = proyectos.find(p => p.nombre === datos.proyectonombre);
           if (proyecto) {
             const mensaje = formatearMensajeOC({ ...datos, codigo }, proyecto);
-            enviarNotificacionTelegram(mensaje);
+            console.log('📨 Enviando notificación por superar el 60%...');
+            const enviado = await enviarNotificacionTelegram(mensaje);
+            if (enviado) {
+              console.log('✅ Notificación enviada exitosamente');
+            } else {
+              console.warn('⚠️ La notificación no pudo ser enviada');
+            }
           }
         }
 
@@ -2672,7 +2693,13 @@
           const proyecto = proyectos.find(p => p.nombre === datos.proyectonombre);
           if (proyecto) {
             const mensaje = formatearMensajeOC({ ...datos, codigo }, proyecto);
-            enviarNotificacionTelegram(mensaje);
+            console.log('📨 Enviando notificación por superar el 60%...');
+            const enviado = await enviarNotificacionTelegram(mensaje);
+            if (enviado) {
+              console.log('✅ Notificación enviada exitosamente');
+            } else {
+              console.warn('⚠️ La notificación no pudo ser enviada');
+            }
           }
         }
 
