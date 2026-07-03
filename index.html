@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 </script>
 <style>
+  /* ===== ESTILOS COMPLETOS ===== */
   * {
     box-sizing: border-box;
     margin: 0;
@@ -259,7 +260,6 @@
   }
   
   /* ===== AURAS PARA OC PENDIENTES DE DIRECTOR ===== */
-  /* Aura AMARILLA - SOLO la OC que desencadenó la notificación */
   tr.pendiente-director-notificada {
     animation: pulse-aura-amarilla 1.5s ease-in-out infinite;
     border-left: 6px solid #f59e0b;
@@ -268,8 +268,6 @@
   tr.pendiente-director-notificada:hover {
     background: #fef3c7 !important;
   }
-  
-  /* Aura NARANJA - Otras OC pendientes de Director (sin parpadeo) */
   tr.pendiente-director-otras {
     border-left: 4px solid #ea580c;
     background: #fff7ed;
@@ -279,17 +277,10 @@
   }
   
   @keyframes pulse-aura-amarilla {
-    0%, 100% {
-      box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
-      background: #fffbeb;
-    }
-    50% {
-      box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), inset 0 0 25px rgba(245, 158, 11, 0.2);
-      background: #fef3c7;
-    }
+    0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); background: #fffbeb; }
+    50% { box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), inset 0 0 25px rgba(245, 158, 11, 0.2); background: #fef3c7; }
   }
   
-  /* Botón con aura para la OC notificada - SOLO para la OC que detonó la notificación */
   .btn-aura-amarilla {
     animation: pulse-aura-amarilla-boton 1.5s ease-in-out infinite !important;
     border: 2px solid #f59e0b !important;
@@ -301,14 +292,8 @@
   }
   
   @keyframes pulse-aura-amarilla-boton {
-    0%, 100% {
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-      border-color: #f59e0b;
-    }
-    50% {
-      box-shadow: 0 0 30px rgba(245, 158, 11, 0.8);
-      border-color: #fbbf24;
-    }
+    0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); border-color: #f59e0b; }
+    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); border-color: #fbbf24; }
   }
   
   .badge {
@@ -2291,6 +2276,7 @@
       // APROBACIONES Y AUTORIZACIONES
       // ============================================================
 
+      // 1. SOLICITANTE (Responsable) aprueba
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
@@ -2313,6 +2299,7 @@
         alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
       };
 
+      // 2. JEFE DE DEPARTAMENTO aprueba (evalúa 60%)
       window.aprobarJefe = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2329,6 +2316,7 @@
           else montoEnMonedaProyecto = oc.montomxn / 20;
         }
 
+        // Caso 1: OC en USD sin paridad
         if (oc.moneda === 'USD' && !oc.tipocambio) {
           const updates = {
             estado: 'PENDIENTE_PARIDAD',
@@ -2343,6 +2331,7 @@
           return;
         }
 
+        // Caso 2: OC DENTRO del 60%
         if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
           const updates = {
             estado: 'AUTORIZADA',
@@ -2362,7 +2351,7 @@
           return;
         }
 
-        // SUPERA EL 60%
+        // Caso 3: OC SUPERA el 60% - Enviar al Director
         const updates = {
           estado: 'PENDIENTE_DIRECTOR',
           fechaaprobacionjefe: new Date().toISOString(),
@@ -2372,6 +2361,7 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
+        // 📨 ENVIAR NOTIFICACIÓN AL DIRECTOR
         try {
           let productos = oc.productos || [];
           if (typeof productos === 'string') {
@@ -2413,6 +2403,7 @@
         alert('⏳ OC supera el 60%. Enviada a Director para autorización.');
       };
 
+      // 3. DIRECTOR autoriza
       window.autorizarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2439,6 +2430,7 @@
         alert('✅ OC autorizada por Director.');
       };
 
+      // 4. DIRECTOR cancela
       window.cancelarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2962,15 +2954,13 @@
             let rowClass = '';
             let botonAura = '';
 
-            // 🔥 SOLO LA OC QUE DETONÓ LA NOTIFICACIÓN tiene aura AMARILLA
+            // SOLO LA OC QUE DETONÓ LA NOTIFICACIÓN tiene aura AMARILLA
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
-              // Verificar si es la OC que desencadenó la notificación
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
                 botonAura = 'btn-aura-amarilla';
                 console.log('🟡 Aura AMARILLA para OC notificada:', o.codigo);
               } else {
-                // Otras OC pendientes de Director tienen AURA NARANJA (sin parpadeo)
                 rowClass = 'pendiente-director-otras';
                 console.log('🟠 Aura NARANJA para OC pendiente:', o.codigo);
               }
@@ -3014,7 +3004,7 @@
             let acciones = '';
             const rol = actual ? actual.rol : '';
 
-            // Botón VISUALIZAR para todas las OC (siempre visible)
+            // Botón VISUALIZAR para todas las OC
             acciones += `<button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Visualizar OC</button>`;
             
             // Botón IMPRIMIR para OC autorizadas o concluidas
@@ -3048,12 +3038,15 @@
                 }
               } else {
                 if (!o.pausada) {
+                  // 1. SOLICITANTE (Responsable) aprueba
                   if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
                     acciones += `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
                   }
+                  // 2. JEFE DE DEPARTAMENTO aprueba
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
                     acciones += `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe Depto)</button>`;
                   }
+                  // 3. DIRECTOR autoriza o cancela
                   if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
                     acciones += `
                       <button class="success ${botonAura}" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
