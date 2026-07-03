@@ -259,16 +259,18 @@
   }
   
   /* ===== AURAS PARA OC PENDIENTES DE DIRECTOR ===== */
+  /* Aura AMARILLA - SOLO la OC que desencadenó la notificación */
   tr.pendiente-director-notificada {
     animation: pulse-aura-amarilla 1.5s ease-in-out infinite;
     border-left: 6px solid #f59e0b;
-    background: #fffbeb;
+    background: #fffbeb !important;
   }
   tr.pendiente-director-notificada:hover {
-    background: #fef3c7;
+    background: #fef3c7 !important;
   }
+  
+  /* Aura NARANJA - Otras OC pendientes de Director (sin parpadeo) */
   tr.pendiente-director-otras {
-    animation: pulse-aura-naranja 2s ease-in-out infinite;
     border-left: 4px solid #ea580c;
     background: #fff7ed;
   }
@@ -277,16 +279,19 @@
   }
   
   @keyframes pulse-aura-amarilla {
-    0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
-    50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.9), inset 0 0 20px rgba(245, 158, 11, 0.15); }
-  }
-  @keyframes pulse-aura-naranja {
-    0%, 100% { box-shadow: 0 0 10px rgba(234, 88, 12, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(234, 88, 12, 0.6), inset 0 0 10px rgba(234, 88, 12, 0.1); }
+    0%, 100% {
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+      background: #fffbeb;
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(245, 158, 11, 0.9), inset 0 0 25px rgba(245, 158, 11, 0.2);
+      background: #fef3c7;
+    }
   }
   
+  /* Botón con aura para la OC notificada - SOLO para la OC que detonó la notificación */
   .btn-aura-amarilla {
-    animation: pulse-aura-amarilla 1.5s ease-in-out infinite !important;
+    animation: pulse-aura-amarilla-boton 1.5s ease-in-out infinite !important;
     border: 2px solid #f59e0b !important;
     background: #f59e0b !important;
     color: #000 !important;
@@ -294,9 +299,16 @@
   .btn-aura-amarilla:hover {
     background: #d97706 !important;
   }
-  .btn-aura-naranja {
-    animation: pulse-aura-naranja 2s ease-in-out infinite !important;
-    border: 2px solid #ea580c !important;
+  
+  @keyframes pulse-aura-amarilla-boton {
+    0%, 100% {
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+      border-color: #f59e0b;
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.8);
+      border-color: #fbbf24;
+    }
   }
   
   .badge {
@@ -362,8 +374,8 @@
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
   .productos-tabla input.precio { min-width: 80px }
-  .productos-tabla input.importe { min-width: 120px; background: var(--gray-100); font-weight: bold }
-  .productos-tabla select.udm { min-width: 60px }
+  .productos-tabla input.importe { min-width: 130px; background: var(--gray-100); font-weight: bold }
+  .productos-tabla select.udm { min-width: 80px }
   .resumen-totales {
     background: var(--gray-50);
     padding: 12px 16px;
@@ -820,11 +832,11 @@
                   <th style="width:100px;">Núm. Parte</th>
                   <th style="min-width:150px;">Descripción</th>
                   <th style="width:80px;">Cantidad</th>
-                  <th style="width:70px;">UDM</th>
+                  <th style="min-width:80px;">UDM</th>
                   <th style="width:100px;">Precio Unit.</th>
                   <th style="width:60px;">Dto.%</th>
                   <th style="width:60px;">Imp.%</th>
-                  <th style="min-width:120px;">Importe</th>
+                  <th style="min-width:130px;">Importe</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -832,7 +844,7 @@
               <tfoot>
                 <tr>
                   <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:120px;">$0.00</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:130px;">$0.00</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1639,11 +1651,11 @@
           <td><input class="part" type="text" value="${parte.toUpperCase()}" placeholder="Núm. Parte"></td>
           <td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">${descripcion.toUpperCase()}</textarea></td>
           <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><select class="udm" onchange="window.recalcularFila(this)">${udmOptions}</select></td>
+          <td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:80px;">${udmOptions}</select></td>
           <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:120px;"></td>
+          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:130px;"></td>
           <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
         `;
         tbody.appendChild(fila);
@@ -1792,11 +1804,9 @@
         if (moneda === 'USD') montomxn = montototal * tipocambio;
         else montomxn = montototal;
 
-        // SIEMPRE CREAR COMO 'CREADA'
         let estado = 'CREADA';
         let motivo = '';
 
-        // Validación de fechas solo como advertencia
         const fechaPagoObj = new Date(fechapago);
         const fechaInicioObj = new Date(proyecto.fecha_inicio);
         const fechaTerminoObj = new Date(proyecto.fecha_termino);
@@ -2952,13 +2962,17 @@
             let rowClass = '';
             let botonAura = '';
 
+            // 🔥 SOLO LA OC QUE DETONÓ LA NOTIFICACIÓN tiene aura AMARILLA
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
+              // Verificar si es la OC que desencadenó la notificación
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
                 botonAura = 'btn-aura-amarilla';
+                console.log('🟡 Aura AMARILLA para OC notificada:', o.codigo);
               } else {
+                // Otras OC pendientes de Director tienen AURA NARANJA (sin parpadeo)
                 rowClass = 'pendiente-director-otras';
-                botonAura = 'btn-aura-naranja';
+                console.log('🟠 Aura NARANJA para OC pendiente:', o.codigo);
               }
             }
 
@@ -3000,12 +3014,11 @@
             let acciones = '';
             const rol = actual ? actual.rol : '';
 
-            // Botón IMPRIMIR para OC autorizadas o concluidas
-            const puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
-            
             // Botón VISUALIZAR para todas las OC (siempre visible)
             acciones += `<button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Visualizar OC</button>`;
             
+            // Botón IMPRIMIR para OC autorizadas o concluidas
+            const puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
             if (puedeImprimir) {
               acciones += `<button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️ Imprimir</button>`;
             }
