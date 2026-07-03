@@ -224,6 +224,12 @@
   button.btn-imprimir:hover {
     background: #4b5563;
   }
+  button.btn-visualizar {
+    background: #0891b2;
+  }
+  button.btn-visualizar:hover {
+    background: #0e7490;
+  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -355,8 +361,8 @@
   }
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
-  .productos-tabla input.precio, .productos-tabla input.importe { min-width: 80px }
-  .productos-tabla input.importe { background: var(--gray-100); font-weight: bold }
+  .productos-tabla input.precio { min-width: 80px }
+  .productos-tabla input.importe { min-width: 120px; background: var(--gray-100); font-weight: bold }
   .productos-tabla select.udm { min-width: 60px }
   .resumen-totales {
     background: var(--gray-50);
@@ -450,6 +456,53 @@
     border-radius: 8px
   }
   #pdfPreviewModal .modal-footer {
+    padding-top: 12px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap
+  }
+  #visualizarModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, .6);
+    z-index: 2001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px
+  }
+  #visualizarModal.active { display: flex }
+  #visualizarModal .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    width: 100%;
+    max-width: 1000px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column
+  }
+  #visualizarModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px
+  }
+  #visualizarModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
+  #visualizarModal .modal-body iframe {
+    width: 100%;
+    height: 400px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px
+  }
+  #visualizarModal .modal-footer {
     padding-top: 12px;
     display: flex;
     gap: 12px;
@@ -761,9 +814,28 @@
           <h4>Productos</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaProductos">
-              <thead><tr><th style="width:40px;">#</th><th style="width:100px;">Núm. Parte</th><th style="min-width:150px;">Descripción</th><th style="width:80px;">Cantidad</th><th style="width:70px;">UDM</th><th style="width:100px;">Precio Unit.</th><th style="width:60px;">Dto.%</th><th style="width:60px;">Imp.%</th><th style="width:100px;">Importe</th><th style="width:60px;">Acción</th></tr></thead>
+              <thead>
+                <tr>
+                  <th style="width:40px;">#</th>
+                  <th style="width:100px;">Núm. Parte</th>
+                  <th style="min-width:150px;">Descripción</th>
+                  <th style="width:80px;">Cantidad</th>
+                  <th style="width:70px;">UDM</th>
+                  <th style="width:100px;">Precio Unit.</th>
+                  <th style="width:60px;">Dto.%</th>
+                  <th style="width:60px;">Imp.%</th>
+                  <th style="min-width:120px;">Importe</th>
+                  <th style="width:60px;">Acción</th>
+                </tr>
+              </thead>
               <tbody id="cuerpoProductos"></tbody>
-              <tfoot><tr><td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td><td id="totalProductos" style="font-weight:bold;font-size:16px">$0.00</td><td></td></tr></tfoot>
+              <tfoot>
+                <tr>
+                  <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:120px;">$0.00</td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
           <button onclick="window.agregarFilaProducto()" class="success" style="margin-top:8px;">➕ Agregar Producto</button>
@@ -787,7 +859,26 @@
         <div id="resumenTotales" class="resumen-totales"></div>
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Dirección entrega</th><th>CP</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Proyecto</th>
+                <th>Depto</th>
+                <th>Cliente</th>
+                <th>Proveedor</th>
+                <th>RFC</th>
+                <th>Dirección entrega</th>
+                <th>CP</th>
+                <th>Moneda</th>
+                <th>Total</th>
+                <th>Equiv. MXN</th>
+                <th>F.Pago</th>
+                <th>F.Entrega</th>
+                <th>UUID</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
             <tbody id="tablaOC"></tbody>
           </table>
         </div>
@@ -809,6 +900,18 @@
       <div class="modal-footer">
         <button class="danger" onclick="window.cerrarPreview()">Cancelar</button>
         <button class="success" onclick="window.confirmarDesdePreview()">✅ Confirmar y Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Visualizar OC -->
+  <div id="visualizarModal">
+    <div class="modal-content">
+      <div class="modal-header"><h3>📄 Visualizar Orden de Compra</h3><button class="danger" onclick="window.cerrarVisualizar()">✕ Cerrar</button></div>
+      <div class="modal-body"><iframe id="visualizarFrame"></iframe></div>
+      <div class="modal-footer">
+        <button class="danger" onclick="window.cerrarVisualizar()">Cerrar</button>
+        <button class="btn-imprimir" onclick="window.imprimirDesdeVisualizar()">🖨️ Imprimir PDF</button>
       </div>
     </div>
   </div>
@@ -838,6 +941,8 @@
       let ocPreviewPDF = null;
       let moduloActual = null;
       let filtroPendientesActivo = false;
+      let visualizarOCData = null;
+      let visualizarOCPDF = null;
 
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -1538,7 +1643,7 @@
           <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly></td>
+          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:120px;"></td>
           <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
         `;
         tbody.appendChild(fila);
@@ -1687,25 +1792,47 @@
         if (moneda === 'USD') montomxn = montototal * tipocambio;
         else montomxn = montototal;
 
+        // SIEMPRE CREAR COMO 'CREADA'
         let estado = 'CREADA';
         let motivo = '';
+
+        // Validación de fechas solo como advertencia
         const fechaPagoObj = new Date(fechapago);
         const fechaInicioObj = new Date(proyecto.fecha_inicio);
         const fechaTerminoObj = new Date(proyecto.fecha_termino);
         if (!(fechaPagoObj >= fechaInicioObj && fechaPagoObj <= fechaTerminoObj)) {
-          estado = 'PENDIENTE_DIRECTOR';
-          motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
+          motivo = '⚠️ Fecha de pago fuera del rango del proyecto';
+          console.warn('⚠️ Fecha de pago fuera del rango del proyecto:', fechapago, 'Rango:', proyecto.fecha_inicio, 'a', proyecto.fecha_termino);
         }
 
         return {
-          empresa: proyecto.empresa, departamento: proyecto.departamento,
-          proyectonombre: proyecto.nombre, proveedor, rfc: rfc || 'NA',
-          direccion, usocfdi, direccionentrega, cp: cp || '',
-          moneda, tipocambio, montototal, montomxn, estado,
-          fechapago, fechaentrega, responsable, productos, motivo,
-          cliente: proyecto.cliente, elaborador: actual.u,
-          banco, cuenta: cuenta || null, clabe: clabe || null,
-          swift: swift || null, cie: cie || null, referencia: referencia || null
+          empresa: proyecto.empresa,
+          departamento: proyecto.departamento,
+          proyectonombre: proyecto.nombre,
+          proveedor,
+          rfc: rfc || 'NA',
+          direccion,
+          usocfdi,
+          direccionentrega,
+          cp: cp || '',
+          moneda,
+          tipocambio,
+          montototal,
+          montomxn,
+          estado,
+          fechapago,
+          fechaentrega,
+          responsable,
+          productos,
+          motivo,
+          cliente: proyecto.cliente,
+          elaborador: actual.u,
+          banco,
+          cuenta: cuenta || null,
+          clabe: clabe || null,
+          swift: swift || null,
+          cie: cie || null,
+          referencia: referencia || null
         };
       }
 
@@ -1928,6 +2055,63 @@
       }
 
       // ============================================================
+      // FUNCIONES DE VISUALIZACIÓN
+      // ============================================================
+      window.visualizarOC = async function(index) {
+        const oc = ordenes[index];
+        if (!oc) return alert('OC no encontrada');
+        try {
+          const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+          if (!proyecto) return alert('Proyecto no encontrado');
+          let productos = oc.productos || [];
+          if (typeof productos === 'string') {
+            try { productos = JSON.parse(productos); } catch(e) { productos = []; }
+          }
+          if (!Array.isArray(productos)) productos = [];
+          const datosOC = {
+            empresa: proyecto.empresa, departamento: proyecto.departamento,
+            proyectonombre: oc.proyecto, proveedor: oc.proveedor,
+            rfc: oc.rfc || 'NA', direccion: oc.direccion,
+            usocfdi: oc.usocfdi, direccionentrega: oc.direccionentrega || '',
+            cp: oc.cp || '', moneda: oc.moneda || 'MXN',
+            tipocambio: oc.tipocambio || null, montototal: oc.montototal || 0,
+            montomxn: oc.montomxn || 0, estado: oc.estado,
+            fechapago: oc.fechapago || new Date().toISOString(),
+            fechaentrega: oc.fechaentrega || new Date().toISOString(),
+            responsable: oc.responsable || 'No definido',
+            productos: productos, cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            elaborador: oc.elaborador || 'Desconocido', banco: oc.banco || 'No especificado',
+            cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
+            swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A'
+          };
+          const doc = await generarPDFParaPreview(datosOC);
+          visualizarOCPDF = doc;
+          visualizarOCData = datosOC;
+          const pdfData = doc.output('datauristring');
+          document.getElementById('visualizarFrame').src = pdfData;
+          document.getElementById('visualizarModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al visualizar OC:', error);
+          alert('Error al visualizar la OC: ' + error.message);
+        }
+      };
+
+      window.cerrarVisualizar = function() {
+        document.getElementById('visualizarModal').classList.remove('active');
+        visualizarOCData = null;
+        visualizarOCPDF = null;
+      };
+
+      window.imprimirDesdeVisualizar = function() {
+        if (visualizarOCPDF) {
+          const codigo = visualizarOCData?.codigo || 'OC';
+          visualizarOCPDF.save(`OC_${codigo}.pdf`);
+        } else {
+          alert('No hay PDF para imprimir');
+        }
+      };
+
+      // ============================================================
       // PREVISUALIZAR Y CONFIRMAR OC
       // ============================================================
       window.previsualizarOC = async function() {
@@ -2097,7 +2281,6 @@
       // APROBACIONES Y AUTORIZACIONES
       // ============================================================
 
-      // 1. SOLICITANTE (Responsable) aprueba
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
@@ -2120,7 +2303,6 @@
         alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
       };
 
-      // 2. JEFE DE DEPARTAMENTO aprueba (evalúa 60%)
       window.aprobarJefe = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2137,7 +2319,6 @@
           else montoEnMonedaProyecto = oc.montomxn / 20;
         }
 
-        // Caso 1: OC en USD sin paridad
         if (oc.moneda === 'USD' && !oc.tipocambio) {
           const updates = {
             estado: 'PENDIENTE_PARIDAD',
@@ -2152,7 +2333,6 @@
           return;
         }
 
-        // Caso 2: OC DENTRO del 60%
         if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
           const updates = {
             estado: 'AUTORIZADA',
@@ -2172,7 +2352,7 @@
           return;
         }
 
-        // Caso 3: OC SUPERA el 60% - Enviar al Director
+        // SUPERA EL 60%
         const updates = {
           estado: 'PENDIENTE_DIRECTOR',
           fechaaprobacionjefe: new Date().toISOString(),
@@ -2182,7 +2362,6 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
-        // 📨 ENVIAR NOTIFICACIÓN AL DIRECTOR
         try {
           let productos = oc.productos || [];
           if (typeof productos === 'string') {
@@ -2224,7 +2403,6 @@
         alert('⏳ OC supera el 60%. Enviada a Director para autorización.');
       };
 
-      // 3. DIRECTOR autoriza
       window.autorizarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2251,7 +2429,6 @@
         alert('✅ OC autorizada por Director.');
       };
 
-      // 4. DIRECTOR cancela
       window.cancelarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2274,9 +2451,6 @@
         alert('❌ OC cancelada por Director.');
       };
 
-      // ============================================================
-      // FUNCIONES ADICIONALES
-      // ============================================================
       window.ingresarParidad = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede ingresar la paridad final.');
@@ -2828,6 +3002,10 @@
 
             // Botón IMPRIMIR para OC autorizadas o concluidas
             const puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
+            
+            // Botón VISUALIZAR para todas las OC (siempre visible)
+            acciones += `<button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Visualizar OC</button>`;
+            
             if (puedeImprimir) {
               acciones += `<button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️ Imprimir</button>`;
             }
@@ -2857,15 +3035,12 @@
                 }
               } else {
                 if (!o.pausada) {
-                  // 1. SOLICITANTE aprueba
                   if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
                     acciones += `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
                   }
-                  // 2. JEFE DE DEPARTAMENTO aprueba
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
                     acciones += `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe Depto)</button>`;
                   }
-                  // 3. DIRECTOR autoriza o cancela
                   if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
                     acciones += `
                       <button class="success ${botonAura}" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
