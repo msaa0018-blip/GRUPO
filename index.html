@@ -219,6 +219,12 @@
     width: 100%;
     justify-content: center
   }
+  button.btn-imprimir {
+    background: #6b7280;
+  }
+  button.btn-imprimir:hover {
+    background: #4b5563;
+  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -2433,6 +2439,62 @@
         return doc;
       }
 
+      // ===== FUNCIÓN PARA IMPRIMIR OC =====
+      window.imprimirOC = async function(index) {
+        const oc = ordenes[index];
+        if (!oc) return alert('OC no encontrada');
+        
+        try {
+          // Buscar el proyecto asociado
+          const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+          if (!proyecto) return alert('Proyecto no encontrado');
+          
+          // Preparar los datos para el PDF
+          let productos = oc.productos || [];
+          if (typeof productos === 'string') {
+            try { productos = JSON.parse(productos); } catch(e) { productos = []; }
+          }
+          if (!Array.isArray(productos)) productos = [];
+          
+          const datosOC = {
+            empresa: proyecto.empresa,
+            departamento: proyecto.departamento,
+            proyectonombre: oc.proyecto,
+            proveedor: oc.proveedor,
+            rfc: oc.rfc || 'NA',
+            direccion: oc.direccion,
+            usocfdi: oc.usocfdi,
+            direccionentrega: oc.direccionentrega || '',
+            cp: oc.cp || '',
+            moneda: oc.moneda || 'MXN',
+            tipocambio: oc.tipocambio || null,
+            montototal: oc.montototal || 0,
+            montomxn: oc.montomxn || 0,
+            estado: oc.estado,
+            fechapago: oc.fechapago || new Date().toISOString(),
+            fechaentrega: oc.fechaentrega || new Date().toISOString(),
+            responsable: oc.responsable || 'No definido',
+            productos: productos,
+            cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            elaborador: oc.elaborador || 'Desconocido',
+            banco: oc.banco || 'No especificado',
+            cuenta: oc.cuenta || 'N/A',
+            clabe: oc.clabe || 'N/A',
+            swift: oc.swift || 'N/A',
+            cie: oc.cie || 'N/A',
+            referencia: oc.referencia || 'N/A'
+          };
+          
+          // Generar el PDF
+          const doc = await generarPDFParaPreview(datosOC);
+          doc.save(`OC_${oc.codigo}.pdf`);
+          
+        } catch (error) {
+          console.error('❌ Error al imprimir OC:', error);
+          alert('Error al generar el PDF: ' + error.message);
+        }
+      };
+
       // ===== PREVISUALIZAR Y CONFIRMAR OC =====
       window.previsualizarOC = async function() {
         const datos = recopilarDatosOC();
@@ -2511,24 +2573,7 @@
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
           if (data && data.length > 0) {
-            const nuevaOCGuardada = data[0];
-            ordenes.push(nuevaOCGuardada);
-            
-            // 📨 Enviar notificación si supera el 60%
-            if (datos.estado === 'PENDIENTE_DIRECTOR') {
-              const proyecto = proyectos.find(p => p.nombre === datos.proyectonombre);
-              if (proyecto) {
-                // Marcar la OC como notificada
-                await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', nuevaOCGuardada.id);
-                nuevaOCGuardada.notificacion_enviada = true;
-                
-                const mensajeTelegram = formatearMensajeOC({ ...datos, codigo }, proyecto, nuevaOCGuardada.id);
-                await enviarNotificacionTelegram(mensajeTelegram);
-                
-                // Guardar el ID de la OC notificada para resaltarla
-                ocNotificadaId = nuevaOCGuardada.id;
-              }
-            }
+            ordenes.push(data[0]);
           } else {
             await cargarDatos();
           }
@@ -2617,24 +2662,7 @@
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
           if (data && data.length > 0) {
-            const nuevaOCGuardada = data[0];
-            ordenes.push(nuevaOCGuardada);
-            
-            // 📨 Enviar notificación si supera el 60%
-            if (datos.estado === 'PENDIENTE_DIRECTOR') {
-              const proyecto = proyectos.find(p => p.nombre === datos.proyectonombre);
-              if (proyecto) {
-                // Marcar la OC como notificada
-                await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', nuevaOCGuardada.id);
-                nuevaOCGuardada.notificacion_enviada = true;
-                
-                const mensajeTelegram = formatearMensajeOC({ ...datos, codigo }, proyecto, nuevaOCGuardada.id);
-                await enviarNotificacionTelegram(mensajeTelegram);
-                
-                // Guardar el ID de la OC notificada para resaltarla
-                ocNotificadaId = nuevaOCGuardada.id;
-              }
-            }
+            ordenes.push(data[0]);
           } else {
             await cargarDatos();
           }
@@ -2670,7 +2698,7 @@
         render();
       };
 
-      // ===== APROBACIÓN JEFE =====
+      // ===== APROBACIÓN JEFE - AQUÍ SE EVALÚA EL 60% Y SE ENVÍA NOTIFICACIÓN =====
       window.aprobarJefe = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2690,6 +2718,7 @@
         let nuevoEstado = 'APROBADA_JEFE';
         let mensaje = '';
 
+        // Caso 1: OC en USD sin paridad
         if (oc.moneda === 'USD' && !oc.tipocambio) {
           nuevoEstado = 'PENDIENTE_PARIDAD';
           mensaje = '⏳ OC en USD. Requiere paridad final.';
@@ -2706,6 +2735,7 @@
           alert(mensaje);
           return;
 
+        // Caso 2: OC DENTRO del 60%
         } else if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
           nuevoEstado = 'AUTORIZADA';
           oc.estadopago = null;
@@ -2716,7 +2746,8 @@
             nombrejefe: actual.u,
             fechaaprobaciondirector: new Date().toISOString(),
             nombredirector: actual.u,
-            estadopago: null
+            estadopago: null,
+            notificacion_enviada: false
           };
           const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) return alert('Error al actualizar OC');
@@ -2726,9 +2757,52 @@
           alert(mensaje);
           return;
 
+        // Caso 3: OC SUPERA el 60% - Enviar notificación al Director
         } else {
           nuevoEstado = 'PENDIENTE_DIRECTOR';
           mensaje = '⏳ OC supera el 60%. Enviada a Director.';
+
+          // 📨 ENVIAR NOTIFICACIÓN POR TELEGRAM
+          try {
+            let productos = oc.productos || [];
+            if (typeof productos === 'string') {
+              try { productos = JSON.parse(productos); } catch (e) { productos = []; }
+            }
+            if (!Array.isArray(productos)) productos = [];
+
+            const datosOC = {
+              codigo: oc.codigo || 'Generando...',
+              proyectonombre: oc.proyecto,
+              empresa: proyecto.empresa,
+              departamento: proyecto.departamento,
+              cliente: oc.cliente || proyecto.cliente || 'No especificado',
+              proveedor: oc.proveedor || 'No especificado',
+              rfc: oc.rfc || 'No especificado',
+              responsable: oc.responsable || 'No especificado',
+              elaborador: oc.elaborador || 'Desconocido',
+              moneda: oc.moneda || 'MXN',
+              montototal: oc.montototal || 0,
+              montomxn: oc.montomxn || 0,
+              fechapago: oc.fechapago || new Date().toISOString(),
+              fechaentrega: oc.fechaentrega || new Date().toISOString(),
+              productos: productos
+            };
+
+            const mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id);
+            console.log('📨 Mensaje generado (primeros 200 caracteres):', mensajeTelegram.substring(0, 200) + '...');
+
+            const enviado = await enviarNotificacionTelegram(mensajeTelegram);
+            if (enviado) {
+              console.log('✅ Notificación enviada exitosamente a Telegram');
+              await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+              oc.notificacion_enviada = true;
+              ocNotificadaId = oc.id;
+            } else {
+              console.warn('⚠️ La notificación no pudo ser enviada');
+            }
+          } catch (error) {
+            console.error('❌ Error al enviar notificación:', error);
+          }
         }
 
         const updates = {
@@ -2743,6 +2817,7 @@
         alert(mensaje);
       };
 
+      // ===== AUTORIZAR DIRECTOR =====
       window.autorizarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2775,6 +2850,30 @@
         render();
         generarPDFFirmado(oc);
         alert('✅ OC autorizada por Director.');
+      };
+
+      // ===== CANCELAR DIRECTOR =====
+      window.cancelarDirector = async function(index) {
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.pausada) return alert('⚠️ OC pausada');
+        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+        
+        if (!confirm(`¿Estás seguro de CANCELAR la OC ${oc.codigo}?`)) return;
+        
+        const updates = { estado: 'CANCELADA' };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        
+        // Si era la OC notificada, limpiar el flag
+        if (oc.id === ocNotificadaId) {
+          await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
+          ocNotificadaId = null;
+        }
+        
+        render();
+        alert('❌ OC cancelada por Director.');
       };
 
       window.ingresarParidad = async function(index) {
@@ -2857,26 +2956,6 @@
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PENDIENTE';
         render();
-      };
-
-      window.cancelarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
-        const updates = { estado: 'CANCELADA' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        Object.assign(oc, updates);
-        
-        // Si era la OC notificada, limpiar el flag
-        if (oc.id === ocNotificadaId) {
-          await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
-          ocNotificadaId = null;
-        }
-        
-        render();
-        alert('❌ OC cancelada por Director.');
       };
 
       window.eliminarOC = async function(index) {
@@ -3377,6 +3456,13 @@
             let acciones = '';
             const rol = actual ? actual.rol : '';
 
+            // Botón IMPRIMIR para OC autorizadas o concluidas (firmadas)
+            const puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
+            
+            if (puedeImprimir) {
+              acciones += `<button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️ Imprimir</button>`;
+            }
+
             if (rol === 'Finanzas') {
               if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                 if (o.estadopago === 'PAGADA') {
@@ -3386,8 +3472,6 @@
                   acciones +=
                     `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
                 }
-              } else {
-                acciones = '—';
               }
             } else {
               if (rol === 'Administrador') {
@@ -3422,7 +3506,7 @@
                   if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
                     acciones += `
                       <button class="success ${botonAura}" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
-                      <button class="danger" onclick="window.cancelarDirector(${idxOriginal})">❌ Cancelar</button>
+                      <button class="danger" onclick="window.cancelarDirector(${idxOriginal})">❌ Cancelar OC</button>
                     `;
                   }
                   if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
@@ -3438,8 +3522,8 @@
                   acciones = '⏸️ Pausada';
                 }
               }
-              if (!acciones) acciones = '—';
             }
+            if (!acciones) acciones = '—';
 
             const proyecto = proyectos.find(p => p.nombre === o.proyecto);
             const cliente = proyecto ? proyecto.cliente : '—';
