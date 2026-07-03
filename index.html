@@ -11,903 +11,194 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 </script>
 <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0
-  }
+  /* ===== TODOS LOS ESTILOS ===== */
+  * { box-sizing: border-box; margin: 0; padding: 0 }
   :root {
-    --primary: #0b1a33;
-    --primary-light: #1e3a6f;
-    --secondary: #2563eb;
-    --secondary-hover: #1d4ed8;
-    --success: #16a34a;
-    --success-hover: #15803d;
-    --danger: #dc2626;
-    --danger-hover: #b91c1c;
-    --warning: #f59e0b;
-    --warning-hover: #d97706;
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-300: #cbd5e1;
-    --gray-400: #94a3b8;
-    --gray-500: #64748b;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-800: #1e293b;
-    --gray-900: #0f172a;
-    --radius: 12px;
-    --shadow: 0 4px 20px rgba(0, 0, 0, .06);
-    --font: Segoe UI, system-ui, -apple-system, sans-serif;
+    --primary: #0b1a33; --primary-light: #1e3a6f; --secondary: #2563eb;
+    --secondary-hover: #1d4ed8; --success: #16a34a; --success-hover: #15803d;
+    --danger: #dc2626; --danger-hover: #b91c1c; --warning: #f59e0b;
+    --warning-hover: #d97706; --gray-50: #f8fafc; --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0; --gray-300: #cbd5e1; --gray-400: #94a3b8;
+    --gray-500: #64748b; --gray-600: #475569; --gray-700: #334155;
+    --gray-800: #1e293b; --gray-900: #0f172a; --radius: 12px;
+    --shadow: 0 4px 20px rgba(0,0,0,.06); --font: Segoe UI, system-ui, sans-serif;
   }
-  body {
-    font-family: var(--font);
-    background: var(--gray-100);
-    color: var(--gray-900);
-    line-height: 1.5;
-    padding: 0;
-    margin: 0
-  }
-  a {
-    color: var(--secondary);
-    text-decoration: none
-  }
-  img {
-    max-width: 100%;
-    height: auto
-  }
+  body { font-family: var(--font); background: var(--gray-100); color: var(--gray-900); line-height: 1.5; padding: 0; margin: 0 }
+  a { color: var(--secondary); text-decoration: none }
+  img { max-width: 100%; height: auto }
   header {
-    background: var(--primary);
-    color: white;
-    padding: 12px 16px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .2)
+    background: var(--primary); color: white; padding: 12px 16px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2)
   }
-  header .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap
+  header .logo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+  header .logo img { height: 36px; width: auto; max-height: 40px }
+  header .logo .company .name { font-size: 18px; font-weight: 600; letter-spacing: .5px; display: block; line-height: 1.2 }
+  header .logo .company .sub { font-size: 10px; opacity: .75; font-weight: 300; display: block }
+  header small { font-size: 11px; opacity: .8; text-align: right; flex-shrink: 0 }
+  .container { max-width: 1280px; margin: 0 auto; padding: 12px 16px }
+  .card { background: white; border-radius: var(--radius); padding: 16px 18px; margin: 12px 0; box-shadow: var(--shadow); transition: .2s }
+  .card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.08) }
+  .card h2, h3, h4 { margin: 0 0 12px 0; font-weight: 600; color: var(--gray-800); font-size: 1.2rem }
+  .card h2 { font-size: 1.3rem; border-bottom: 2px solid var(--gray-200); padding-bottom: 8px }
+  .flex { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px }
+  .flex>* { flex: 1 1 auto; min-width: 120px }
+  input, select, button, textarea {
+    padding: 10px 14px; margin: 0; border: 1px solid var(--gray-300); border-radius: 10px;
+    font-size: 14px; font-family: inherit; background: white; transition: border .2s, box-shadow .2s;
+    width: 100%; min-height: 44px;
   }
-  header .logo img {
-    height: 36px;
-    width: auto;
-    max-height: 40px
-  }
-  header .logo .company .name {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: .5px;
-    display: block;
-    line-height: 1.2
-  }
-  header .logo .company .sub {
-    font-size: 10px;
-    opacity: .75;
-    font-weight: 300;
-    display: block
-  }
-  header small {
-    font-size: 11px;
-    opacity: .8;
-    text-align: right;
-    flex-shrink: 0
-  }
-  .container {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 12px 16px
-  }
-  .card {
-    background: white;
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    margin: 12px 0;
-    box-shadow: var(--shadow);
-    transition: .2s
-  }
-  .card:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, .08)
-  }
-  .card h2,
-  h3,
-  h4 {
-    margin: 0 0 12px 0;
-    font-weight: 600;
-    color: var(--gray-800);
-    font-size: 1.2rem
-  }
-  .card h2 {
-    font-size: 1.3rem;
-    border-bottom: 2px solid var(--gray-200);
-    padding-bottom: 8px
-  }
-  .flex {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 14px
-  }
-  .flex>* {
-    flex: 1 1 auto;
-    min-width: 120px
-  }
-  input,
-  select,
-  button,
-  textarea {
-    padding: 10px 14px;
-    margin: 0;
-    border: 1px solid var(--gray-300);
-    border-radius: 10px;
-    font-size: 14px;
-    font-family: inherit;
-    background: white;
-    transition: border .2s, box-shadow .2s;
-    width: 100%;
-    min-height: 44px;
-  }
-  input:focus,
-  select:focus,
-  textarea:focus {
-    outline: none;
-    border-color: var(--secondary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, .2);
-  }
-  select:disabled,
-  input:disabled {
-    background: var(--gray-200);
-    color: var(--gray-500);
-    cursor: not-allowed
-  }
-  textarea {
-    resize: vertical;
-    min-height: 44px
-  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(37,99,235,.2) }
+  select:disabled, input:disabled { background: var(--gray-200); color: var(--gray-500); cursor: not-allowed }
+  textarea { resize: vertical; min-height: 44px }
   button {
-    background: var(--secondary);
-    color: white;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 10px 18px;
-    border-radius: 10px;
-    transition: background .2s, transform .1s;
-    min-height: 44px;
-    min-width: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex: 0 1 auto;
+    background: var(--secondary); color: white; border: none; font-weight: 600; cursor: pointer;
+    padding: 10px 18px; border-radius: 10px; transition: background .2s, transform .1s;
+    min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; flex: 0 1 auto;
   }
-  button:hover {
-    background: var(--secondary-hover);
-    transform: scale(1.02)
-  }
-  button:active {
-    transform: scale(.97)
-  }
-  button.danger {
-    background: var(--danger)
-  }
-  button.danger:hover {
-    background: var(--danger-hover)
-  }
-  button.success {
-    background: var(--success)
-  }
-  button.success:hover {
-    background: var(--success-hover)
-  }
-  button.warning {
-    background: var(--warning)
-  }
-  button.warning:hover {
-    background: var(--warning-hover)
-  }
-  button.full-width {
-    width: 100%;
-    justify-content: center
-  }
-  .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin: 10px 0
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-    min-width: 600px
-  }
-  th {
-    background: var(--gray-800);
-    color: white;
-    padding: 10px 12px;
-    text-align: left;
-    font-weight: 500;
-    white-space: nowrap
-  }
-  td {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--gray-200);
-    vertical-align: middle
-  }
-  tr:hover {
-    background: var(--gray-50)
-  }
+  button:hover { background: var(--secondary-hover); transform: scale(1.02) }
+  button:active { transform: scale(.97) }
+  button.danger { background: var(--danger) }
+  button.danger:hover { background: var(--danger-hover) }
+  button.success { background: var(--success) }
+  button.success:hover { background: var(--success-hover) }
+  button.warning { background: var(--warning) }
+  button.warning:hover { background: var(--warning-hover) }
+  button.full-width { width: 100%; justify-content: center }
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 10px 0 }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px }
+  th { background: var(--gray-800); color: white; padding: 10px 12px; text-align: left; font-weight: 500; white-space: nowrap }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--gray-200); vertical-align: middle }
+  tr:hover { background: var(--gray-50) }
   .badge {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap
+    display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap
   }
-  .badge-autorizada-pagada {
-    background: #dcfce7;
-    color: #166534
+  .badge-autorizada-pagada { background: #dcfce7; color: #166534 }
+  .badge-autorizada-pendiente { background: #fef9c3; color: #854d0e }
+  .badge-autorizada-vencida { background: #fee2e2; color: #991b1b }
+  .badge-concluida { background: #e5e7eb; color: #4b5563 }
+  .badge-pendiente { background: #fef9c3; color: #854d0e }
+  .badge-creada { background: #e0f2fe; color: #0369a1 }
+  .badge-solicitante { background: #dbeafe; color: #1e40af }
+  .badge-jefe { background: #fae8ff; color: #7e22ce }
+  .badge-cancelada { background: #fee2e2; color: #991b1b }
+  .badge-pausada { background: #ffedd5; color: #9a3412 }
+  .badge-paridad { background: #fef3c7; color: #92400e }
+  .badge-vencida { background: #fee2e2; color: #991b1b }
+  .badge-pendiente-pago { background: #dcfce7; color: #166534 }
+  .alert { background: #fef2f2; border-left: 5px solid var(--danger); padding: 12px 16px; border-radius: 10px; color: #991b1b; margin: 8px 0 }
+  .success-msg { background: #f0fdf4; border-left: 5px solid var(--success); padding: 12px 16px; border-radius: 10px; color: #166534; margin: 8px 0 }
+  .text-muted { color: var(--gray-500); font-size: 13px }
+  .mt-10 { margin-top: 10px }
+  .hidden { display: none !important }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+  .actions button { font-size: 12px; padding: 6px 12px; min-height: 32px; min-width: 32px }
+  .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
+    width: 100%; min-width: 50px; padding: 6px 8px; font-size: 13px; margin: 2px 0; border-radius: 6px
   }
-  .badge-autorizada-pendiente {
-    background: #fef9c3;
-    color: #854d0e
-  }
-  .badge-autorizada-vencida {
-    background: #fee2e2;
-    color: #991b1b
-  }
-  .badge-concluida {
-    background: #e5e7eb;
-    color: #4b5563
-  }
-  .badge-pendiente {
-    background: #fef9c3;
-    color: #854d0e
-  }
-  .badge-creada {
-    background: #e0f2fe;
-    color: #0369a1
-  }
-  .badge-solicitante {
-    background: #dbeafe;
-    color: #1e40af
-  }
-  .badge-jefe {
-    background: #fae8ff;
-    color: #7e22ce
-  }
-  .badge-cancelada {
-    background: #fee2e2;
-    color: #991b1b
-  }
-  .badge-pausada {
-    background: #ffedd5;
-    color: #9a3412
-  }
-  .badge-paridad {
-    background: #fef3c7;
-    color: #92400e
-  }
-  .badge-vencida {
-    background: #fee2e2;
-    color: #991b1b
-  }
-  .badge-pendiente-pago {
-    background: #dcfce7;
-    color: #166534
-  }
-  .alert {
-    background: #fef2f2;
-    border-left: 5px solid var(--danger);
-    padding: 12px 16px;
-    border-radius: 10px;
-    color: #991b1b;
-    margin: 8px 0
-  }
-  .success-msg {
-    background: #f0fdf4;
-    border-left: 5px solid var(--success);
-    padding: 12px 16px;
-    border-radius: 10px;
-    color: #166534;
-    margin: 8px 0
-  }
-  .text-muted {
-    color: var(--gray-500);
-    font-size: 13px
-  }
-  .mt-10 {
-    margin-top: 10px
-  }
-  .hidden {
-    display: none !important
-  }
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center
-  }
-  .actions button {
-    font-size: 12px;
-    padding: 6px 12px;
-    min-height: 32px;
-    min-width: 32px
-  }
-  .productos-tabla input,
-  .productos-tabla textarea,
-  .productos-tabla select {
-    width: 100%;
-    min-width: 50px;
-    padding: 6px 8px;
-    font-size: 13px;
-    margin: 2px 0;
-    border-radius: 6px
-  }
-  .productos-tabla textarea.desc {
-    min-width: 120px;
-    resize: vertical;
-    height: 36px;
-    overflow: hidden
-  }
-  .productos-tabla input.part {
-    min-width: 60px
-  }
-  .productos-tabla input.precio,
-  .productos-tabla input.importe {
-    min-width: 80px
-  }
-  .productos-tabla input.importe {
-    background: var(--gray-100);
-    font-weight: bold
-  }
-  .productos-tabla select.udm {
-    min-width: 60px
-  }
-  .resumen-totales {
-    background: var(--gray-50);
-    padding: 12px 16px;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 30px;
-    align-items: center;
-    font-size: 14px
-  }
-  .resumen-totales strong {
-    font-size: 15px
-  }
-  .donut-container {
-    width: 160px;
-    height: 160px;
-    margin: 0 auto;
-    position: relative
-  }
-  .donut-container svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg)
-  }
-  .donut-container .center-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 20px;
-    font-weight: bold;
-    text-align: center;
-    line-height: 1.2
-  }
-  .donut-container .center-text small {
-    display: block;
-    font-size: 12px;
-    font-weight: normal;
-    color: var(--gray-500)
-  }
-  #dashboardOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--gray-100);
-    z-index: 1000;
-    overflow-y: auto;
-    padding: 16px;
-    display: none
-  }
-  #dashboardOverlay.active {
-    display: block
-  }
-  #dashboardOverlay .btn-volver {
-    background: var(--danger);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 16px;
-    font-size: 16px
-  }
-  #login {
-    max-width: 460px;
-    margin: 40px auto;
-    text-align: center;
-    padding: 24px
-  }
-  #login .flex {
-    justify-content: center
-  }
-  #pdfPreviewModal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, .6);
-    z-index: 2000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 16px
-  }
-  #pdfPreviewModal.active {
-    display: flex
-  }
-  #pdfPreviewModal .modal-content {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    width: 100%;
-    max-width: 1000px;
-    max-height: 95vh;
-    display: flex;
-    flex-direction: column
-  }
-  #pdfPreviewModal .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-    gap: 8px
-  }
-  #pdfPreviewModal .modal-header h3 {
-    margin: 0;
-    font-size: 1.1rem
-  }
-  #pdfPreviewModal .modal-body {
-    flex: 1;
-    overflow: auto;
-    min-height: 300px
-  }
-  #pdfPreviewModal .modal-body iframe {
-    width: 100%;
-    height: 400px;
-    border: 1px solid var(--gray-300);
-    border-radius: 8px
-  }
-  #pdfPreviewModal .modal-footer {
-    padding-top: 12px;
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    flex-wrap: wrap
-  }
-  .progress-bar {
-    height: 10px;
-    background: var(--gray-200);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: 4px
-  }
-  .progress-bar .fill {
-    height: 100%;
-    border-radius: 6px;
-    transition: width .4s
-  }
-  .depto-color {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-weight: 500;
-    color: white;
-    font-size: 12px
-  }
-  .fila-cfdi-entrega {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 14px;
-    width: 100%;
-  }
-  .fila-cfdi-entrega>* {
-    flex: 1 1 auto;
-    min-width: 120px;
-  }
-  .fila-cfdi-entrega select#usoCFDI {
-    flex: 2;
-    min-width: 150px;
-  }
-  .fila-cfdi-entrega input#direccionEntrega {
-    flex: 3;
-    min-width: 180px;
-  }
-  .fila-cfdi-entrega select#monedaOC {
-    flex: 1;
-    min-width: 120px;
-  }
-  .fila-cfdi-entrega input#paridadInicial {
-    flex: 0.8;
-    min-width: 100px;
-    width: 140px;
-  }
-  .fila-cfdi-entrega .paridad-label {
-    flex: 0.3;
-    font-size: 11px;
-    color: var(--gray-500);
-    min-width: 60px;
-  }
-  .grupo-formulario {
-    margin-bottom: 10px;
-  }
-  .grupo-formulario:last-child {
-    margin-bottom: 0;
-  }
-  .campo-obligatorio::after {
-    content: " *";
-    color: var(--danger);
-    font-weight: bold;
-  }
+  .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
+  .productos-tabla input.part { min-width: 60px }
+  .productos-tabla input.precio, .productos-tabla input.importe { min-width: 80px }
+  .productos-tabla input.importe { background: var(--gray-100); font-weight: bold }
+  .productos-tabla select.udm { min-width: 60px }
+  .resumen-totales { background: var(--gray-50); padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 16px 30px; align-items: center; font-size: 14px }
+  .resumen-totales strong { font-size: 15px }
+  .donut-container { width: 160px; height: 160px; margin: 0 auto; position: relative }
+  .donut-container svg { width: 100%; height: 100%; transform: rotate(-90deg) }
+  .donut-container .center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: bold; text-align: center; line-height: 1.2 }
+  .donut-container .center-text small { display: block; font-size: 12px; font-weight: normal; color: var(--gray-500) }
+  #dashboardOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--gray-100); z-index: 1000; overflow-y: auto; padding: 16px; display: none }
+  #dashboardOverlay.active { display: block }
+  #dashboardOverlay .btn-volver { background: var(--danger); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; margin-bottom: 16px; font-size: 16px }
+  #login { max-width: 460px; margin: 40px auto; text-align: center; padding: 24px }
+  #login .flex { justify-content: center }
+  #pdfPreviewModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.6); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 16px }
+  #pdfPreviewModal.active { display: flex }
+  #pdfPreviewModal .modal-content { background: white; border-radius: 16px; padding: 16px; width: 100%; max-width: 1000px; max-height: 95vh; display: flex; flex-direction: column }
+  #pdfPreviewModal .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px }
+  #pdfPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #pdfPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
+  #pdfPreviewModal .modal-body iframe { width: 100%; height: 400px; border: 1px solid var(--gray-300); border-radius: 8px }
+  #pdfPreviewModal .modal-footer { padding-top: 12px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap }
+  .progress-bar { height: 10px; background: var(--gray-200); border-radius: 6px; overflow: hidden; margin-top: 4px }
+  .progress-bar .fill { height: 100%; border-radius: 6px; transition: width .4s }
+  .depto-color { display: inline-block; padding: 2px 10px; border-radius: 12px; font-weight: 500; color: white; font-size: 12px }
+  .fila-cfdi-entrega { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; width: 100% }
+  .fila-cfdi-entrega>* { flex: 1 1 auto; min-width: 120px }
+  .fila-cfdi-entrega select#usoCFDI { flex: 2; min-width: 150px }
+  .fila-cfdi-entrega input#direccionEntrega { flex: 3; min-width: 180px }
+  .fila-cfdi-entrega select#monedaOC { flex: 1; min-width: 120px }
+  .fila-cfdi-entrega input#paridadInicial { flex: 0.8; min-width: 100px; width: 140px }
+  .fila-cfdi-entrega .paridad-label { flex: 0.3; font-size: 11px; color: var(--gray-500); min-width: 60px }
+  .grupo-formulario { margin-bottom: 10px }
+  .grupo-formulario:last-child { margin-bottom: 0 }
+  .campo-obligatorio::after { content: " *"; color: var(--danger); font-weight: bold }
 
-  /* Menú principal Odoo-style */
-  #menuPrincipal {
-    background: var(--gray-100);
-    padding: 30px 20px;
-    text-align: center;
-    min-height: 60vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  #menuPrincipal h2 {
-    color: var(--gray-800);
-    margin-bottom: 30px;
-    font-weight: 300;
-    font-size: 1.5rem;
-  }
-  .modulos-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
-    justify-items: center;
-  }
-  .modulo-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    width: 80px;
-  }
-  .modulo-item .modulo-cuadro {
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
-    background: white;
-    border: 2px solid var(--gray-200);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-  .modulo-item .modulo-cuadro:hover {
-    transform: scale(1.05);
-    border-color: var(--secondary);
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
-  }
-  .modulo-item .modulo-cuadro.funcional:hover {
-    background: var(--gray-50);
-  }
-  .modulo-item .modulo-cuadro.en-construccion {
-    opacity: 0.7;
-    border-style: dashed;
-    cursor: not-allowed;
-  }
-  .modulo-item .modulo-cuadro.en-construccion:hover {
-    transform: none;
-    border-color: var(--gray-300);
-    box-shadow: none;
-  }
-  .modulo-item .modulo-leyenda {
-    margin-top: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--gray-700);
-    text-align: center;
-  }
-  .modulo-item .modulo-leyenda.construccion {
-    color: var(--gray-400);
-    font-weight: 400;
-    font-size: 11px;
-  }
+  /* Menú principal */
+  #menuPrincipal { background: var(--gray-100); padding: 30px 20px; text-align: center; min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center }
+  #menuPrincipal h2 { color: var(--gray-800); margin-bottom: 30px; font-weight: 300; font-size: 1.5rem }
+  .modulos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 600px; width: 100%; margin: 0 auto; justify-items: center }
+  .modulo-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s ease; width: 80px }
+  .modulo-item .modulo-cuadro { width: 80px; height: 80px; border-radius: 12px; background: white; border: 2px solid var(--gray-200); display: flex; align-items: center; justify-content: center; font-size: 32px; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.06) }
+  .modulo-item .modulo-cuadro:hover { transform: scale(1.05); border-color: var(--secondary); box-shadow: 0 4px 16px rgba(37,99,235,0.15) }
+  .modulo-item .modulo-cuadro.funcional:hover { background: var(--gray-50) }
+  .modulo-item .modulo-cuadro.en-construccion { opacity: 0.7; border-style: dashed; cursor: not-allowed }
+  .modulo-item .modulo-cuadro.en-construccion:hover { transform: none; border-color: var(--gray-300); box-shadow: none }
+  .modulo-item .modulo-leyenda { margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--gray-700); text-align: center }
+  .modulo-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
+  @media (max-width: 600px) { .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 100% } .modulo-item { width: 60px } .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px } .modulo-item .modulo-leyenda { font-size: 11px } }
+  #contenidoApp { display: none !important }
+  #contenidoApp.visible { display: block !important }
+  .btn-volver-menu { background: var(--gray-600); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px; transition: background 0.2s }
+  .btn-volver-menu:hover { background: var(--gray-700) }
+  .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+  .btn-pendientes-pagar { background: var(--warning); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: background 0.2s }
+  .btn-pendientes-pagar:hover { background: var(--warning-hover) }
+  .filtros-container { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px }
+  .filtros-container .filtro-item { display: flex; align-items: center; gap: 6px }
+  .filtros-container .filtro-item label { font-weight: 500; font-size: 13px; color: var(--gray-700); white-space: nowrap }
+  .filtros-container .filtro-item select { min-width: 150px; padding: 6px 10px; min-height: 36px; font-size: 13px }
+  .mensaje-sin-datos { padding: 20px; text-align: center; color: var(--gray-500); font-size: 14px }
 
-  @media (max-width: 600px) {
-    .modulos-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      max-width: 100%;
-    }
-    .modulo-item {
-      width: 60px;
-    }
-    .modulo-item .modulo-cuadro {
-      width: 60px;
-      height: 60px;
-      font-size: 24px;
-    }
-    .modulo-item .modulo-leyenda {
-      font-size: 11px;
-    }
-  }
-
-  #contenidoApp {
-    display: none !important;
-  }
-  #contenidoApp.visible {
-    display: block !important;
-  }
-
-  .btn-volver-menu {
-    background: var(--gray-600);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 13px;
-    transition: background 0.2s;
-  }
-  .btn-volver-menu:hover {
-    background: var(--gray-700);
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .btn-pendientes-pagar {
-    background: var(--warning);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 13px;
-    transition: background 0.2s;
-  }
-  .btn-pendientes-pagar:hover {
-    background: var(--warning-hover);
-  }
-
-  .filtros-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .filtros-container .filtro-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .filtros-container .filtro-item label {
-    font-weight: 500;
-    font-size: 13px;
-    color: var(--gray-700);
-    white-space: nowrap;
-  }
-  .filtros-container .filtro-item select {
-    min-width: 150px;
-    padding: 6px 10px;
-    min-height: 36px;
-    font-size: 13px;
-  }
-  .mensaje-sin-datos {
-    padding: 20px;
-    text-align: center;
-    color: var(--gray-500);
-    font-size: 14px;
-  }
-
-  /* ===== ESTILOS RESPONSIVOS PARA TABLAS EN MÓVIL ===== */
   @media (max-width: 768px) {
-    .table-wrapper {
-      overflow-x: visible;
-    }
-    table,
-    thead,
-    tbody,
-    th,
-    td,
-    tr {
-      display: block;
-    }
-    thead tr {
-      position: absolute;
-      top: -9999px;
-      left: -9999px;
-    }
-    tr {
-      border: 1px solid var(--gray-200);
-      border-radius: var(--radius);
-      margin-bottom: 16px;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      padding: 12px 16px;
-    }
-    tr:hover {
-      background: white;
-    }
-    td {
-      border: none;
-      border-bottom: 1px solid var(--gray-100);
-      padding: 8px 4px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px 8px;
-    }
-    td:last-child {
-      border-bottom: none;
-    }
-    td::before {
-      content: attr(data-label);
-      font-weight: 600;
-      color: var(--gray-600);
-      font-size: 12px;
-      min-width: 80px;
-      flex: 0 0 auto;
-    }
-    td .actions {
-      flex: 1;
-      justify-content: flex-start;
-      gap: 4px;
-    }
-    td .actions button {
-      font-size: 11px;
-      padding: 4px 10px;
-      min-height: 28px;
-      min-width: 28px;
-    }
-    td .badge {
-      font-size: 11px;
-      padding: 2px 10px;
-    }
-    .resumen-totales {
-      font-size: 12px;
-      gap: 8px 16px;
-      padding: 10px 14px;
-    }
-    .resumen-totales strong {
-      font-size: 13px;
-    }
-    .productos-tabla td::before {
-      min-width: 60px;
-      font-size: 10px;
-    }
-    .productos-tabla td {
-      padding: 6px 4px;
-    }
-    .productos-tabla input,
-    .productos-tabla textarea,
-    .productos-tabla select {
-      font-size: 12px;
-      padding: 4px 6px;
-      min-height: 32px;
-    }
-    .productos-tabla textarea.desc {
-      min-width: 80px;
-      height: 28px;
-    }
-    .flex {
-      gap: 8px;
-    }
-    .flex>* {
-      min-width: 100%;
-    }
-    .fila-cfdi-entrega {
-      flex-direction: column;
-      gap: 6px;
-    }
-    .fila-cfdi-entrega>* {
-      min-width: 100%;
-    }
-    .modulos-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-    .modulo-item {
-      width: 60px;
-    }
-    .modulo-item .modulo-cuadro {
-      width: 60px;
-      height: 60px;
-      font-size: 24px;
-    }
-    .modulo-item .modulo-leyenda {
-      font-size: 10px;
-    }
-    header .logo .company .name {
-      font-size: 14px;
-    }
-    header .logo .company .sub {
-      font-size: 8px;
-    }
-    header small {
-      font-size: 9px;
-    }
-    .btn-volver-menu {
-      font-size: 11px;
-      padding: 4px 10px;
-      min-height: 28px;
-    }
-    .card {
-      padding: 12px 14px;
-    }
-    .card h2 {
-      font-size: 1.1rem;
-    }
-    .card h3,
-    .card h4 {
-      font-size: 1rem;
-    }
-    .filtros-container {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 8px;
-    }
-    .filtros-container .filtro-item {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .filtros-container .filtro-item label {
-      font-size: 12px;
-    }
-    .filtros-container .filtro-item select {
-      min-width: 100%;
-      font-size: 13px;
-      padding: 6px 10px;
-      min-height: 36px;
-    }
-    .btn-pendientes-pagar {
-      font-size: 12px;
-      padding: 6px 12px;
-      min-height: 36px;
-    }
+    .table-wrapper { overflow-x: visible }
+    table, thead, tbody, th, td, tr { display: block }
+    thead tr { position: absolute; top: -9999px; left: -9999px }
+    tr { border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 16px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 12px 16px }
+    tr:hover { background: white }
+    td { border: none; border-bottom: 1px solid var(--gray-100); padding: 8px 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px }
+    td:last-child { border-bottom: none }
+    td::before { content: attr(data-label); font-weight: 600; color: var(--gray-600); font-size: 12px; min-width: 80px; flex: 0 0 auto }
+    td .actions { flex: 1; justify-content: flex-start; gap: 4px }
+    td .actions button { font-size: 11px; padding: 4px 10px; min-height: 28px; min-width: 28px }
+    td .badge { font-size: 11px; padding: 2px 10px }
+    .resumen-totales { font-size: 12px; gap: 8px 16px; padding: 10px 14px }
+    .resumen-totales strong { font-size: 13px }
+    .productos-tabla td::before { min-width: 60px; font-size: 10px }
+    .productos-tabla td { padding: 6px 4px }
+    .productos-tabla input, .productos-tabla textarea, .productos-tabla select { font-size: 12px; padding: 4px 6px; min-height: 32px }
+    .productos-tabla textarea.desc { min-width: 80px; height: 28px }
+    .flex { gap: 8px }
+    .flex>* { min-width: 100% }
+    .fila-cfdi-entrega { flex-direction: column; gap: 6px }
+    .fila-cfdi-entrega>* { min-width: 100% }
+    .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 10px }
+    .modulo-item { width: 60px }
+    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
+    .modulo-item .modulo-leyenda { font-size: 10px }
+    header .logo .company .name { font-size: 14px }
+    header .logo .company .sub { font-size: 8px }
+    header small { font-size: 9px }
+    .btn-volver-menu { font-size: 11px; padding: 4px 10px; min-height: 28px }
+    .card { padding: 12px 14px }
+    .card h2 { font-size: 1.1rem }
+    .card h3, .card h4 { font-size: 1rem }
+    .filtros-container { flex-direction: column; align-items: stretch; gap: 8px }
+    .filtros-container .filtro-item { flex-direction: column; align-items: stretch }
+    .filtros-container .filtro-item label { font-size: 12px }
+    .filtros-container .filtro-item select { min-width: 100%; font-size: 13px; padding: 6px 10px; min-height: 36px }
+    .btn-pendientes-pagar { font-size: 12px; padding: 6px 12px; min-height: 36px }
   }
 </style>
 </head>
@@ -927,7 +218,6 @@
   </header>
 
   <div class="container">
-    <!-- Login -->
     <div id="login" class="card">
       <h2>🔐 Iniciar sesión</h2>
       <div class="flex">
@@ -938,7 +228,6 @@
       <div id="error" class="alert hidden"></div>
     </div>
 
-    <!-- Menú Principal Odoo-style -->
     <div id="menuPrincipal" class="hidden">
       <div style="display:flex; justify-content:flex-end; width:100%; max-width:600px; margin:0 auto 20px auto;">
         <button onclick="window.salir()" class="danger" style="padding:8px 20px; font-size:14px;">🚪 Cerrar sesión</button>
@@ -956,14 +245,12 @@
       </div>
     </div>
 
-    <!-- App (contenido funcional) -->
     <div id="contenidoApp" class="hidden">
       <div class="card flex" style="justify-content:space-between">
         <span id="sesion" style="font-weight:600"></span>
         <button onclick="window.salir()" class="danger">Cerrar sesión</button>
       </div>
 
-      <!-- Panel Crear Proyecto -->
       <div id="panelProyecto" class="card hidden">
         <h2>📁 Crear Proyecto</h2>
         <div class="flex">
@@ -974,10 +261,7 @@
           <input id="nombreProyecto" placeholder="Proyecto">
           <input id="cliente" placeholder="Cliente">
           <input id="presupuesto" type="number" placeholder="Presupuesto">
-          <select id="monedaProyecto">
-            <option value="MXN">MXN</option>
-            <option value="USD">USD</option>
-          </select>
+          <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
           <input id="fechaInicio" type="date">
           <input id="fechaTermino" type="date">
           <button onclick="window.crearProyecto()" class="success full-width">➕ Crear</button>
@@ -985,7 +269,6 @@
         <div id="msgProyecto"></div>
       </div>
 
-      <!-- Tabla Proyectos -->
       <div class="card" id="tablaProyectosCard">
         <h2>📊 Control por Proyecto</h2>
         <div id="adminActions" class="hidden" style="margin-bottom:10px;">
@@ -993,127 +276,57 @@
         </div>
         <div class="table-wrapper">
           <table>
-            <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>Departamento</th>
-                <th>Proyecto</th>
-                <th>Cliente</th>
-                <th>Presupuesto</th>
-                <th>Límite 60%</th>
-                <th>Pagado</th>
-                <th>Disponible</th>
-                <th>%</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>%</th><th>Acciones</th></tr></thead>
             <tbody id="tablaProyectos"></tbody>
           </table>
         </div>
       </div>
 
-      <!-- Panel Crear OC -->
       <div id="panelOC" class="card hidden">
         <h2>📄 Crear Orden de Compra</h2>
-
-        <div class="grupo-formulario">
-          <div class="flex">
-            <select id="selectProyecto" onchange="window.actualizarResponsables()" style="flex:1.5;"></select>
-          </div>
-        </div>
-
-        <div class="grupo-formulario">
-          <div class="flex">
-            <input id="proveedor" placeholder="Proveedor" style="flex:1.5;">
-            <input id="rfc" placeholder="RFC (opcional)" style="flex:1;">
-            <input id="direccion" placeholder="Dirección" style="flex:1.5;">
-          </div>
-        </div>
-
+        <div class="grupo-formulario"><div class="flex"><select id="selectProyecto" onchange="window.actualizarResponsables()" style="flex:1.5;"></select></div></div>
+        <div class="grupo-formulario"><div class="flex"><input id="proveedor" placeholder="Proveedor" style="flex:1.5;"><input id="rfc" placeholder="RFC (opcional)" style="flex:1;"><input id="direccion" placeholder="Dirección" style="flex:1.5;"></div></div>
         <div class="grupo-formulario">
           <div class="fila-cfdi-entrega">
-            <select id="usoCFDI">
-              <option value="G01">G01 - ADQUISICION DE MERCANCIAS</option>
-              <option value="G03">G03 - GASTOS EN GENERAL</option>
-              <option value="I03">I03 - EQUIPO DE TRANSPORTE</option>
-              <option value="I04">I04 - EQUIPO DE COMPUTO Y ACCESORIOS</option>
-              <option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option>
-              <option value="P01">P01 - POR DEFINIR</option>
-            </select>
+            <select id="usoCFDI"><option value="G01">G01 - ADQUISICION DE MERCANCIAS</option><option value="G03">G03 - GASTOS EN GENERAL</option><option value="I03">I03 - EQUIPO DE TRANSPORTE</option><option value="I04">I04 - EQUIPO DE COMPUTO Y ACCESORIOS</option><option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option><option value="P01">P01 - POR DEFINIR</option></select>
             <input id="direccionEntrega" placeholder="Dirección de entrega">
-            <select id="monedaOC" onchange="window.mostrarParidadInicial()">
-              <option value="MXN">Pesos (MXN)</option>
-              <option value="USD">Dólares (USD)</option>
-            </select>
+            <select id="monedaOC" onchange="window.mostrarParidadInicial()"><option value="MXN">Pesos (MXN)</option><option value="USD">Dólares (USD)</option></select>
             <input id="paridadInicial" type="number" placeholder="Tipo Cambio" style="display:none;">
             <span id="paridadInicialLabel" class="paridad-label" style="display:none;">(MXN/USD)</span>
           </div>
         </div>
-
         <div class="grupo-formulario">
           <div class="flex">
-            <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha pago:</label>
-            <input id="fechaPago" type="date" style="flex:1;">
-            <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha entrega:</label>
-            <input id="fechaEntrega" type="date" style="flex:1;">
-            <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable:</label>
-            <select id="responsableOC" style="flex:1.5;"></select>
+            <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha pago:</label><input id="fechaPago" type="date" style="flex:1;">
+            <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha entrega:</label><input id="fechaEntrega" type="date" style="flex:1;">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable:</label><select id="responsableOC" style="flex:1.5;"></select>
           </div>
         </div>
-
         <div class="grupo-formulario">
           <div class="flex">
-            <label style="font-weight:500;flex:0.15;min-width:60px;" class="campo-obligatorio">Banco:</label>
-            <input id="banco" placeholder="Nombre del banco" style="flex:1.5;">
-            <label style="font-weight:500;flex:0.15;min-width:60px;">Cuenta:</label>
-            <input id="cuenta" placeholder="Número de cuenta" style="flex:1.2;">
-            <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label>
-            <input id="clabe" placeholder="CLABE interbancaria" style="flex:1.5;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;" class="campo-obligatorio">Banco:</label><input id="banco" placeholder="Nombre del banco" style="flex:1.5;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;">Cuenta:</label><input id="cuenta" placeholder="Número de cuenta" style="flex:1.2;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label><input id="clabe" placeholder="CLABE interbancaria" style="flex:1.5;">
           </div>
         </div>
-
         <div class="grupo-formulario">
           <div class="flex">
-            <label style="font-weight:500;flex:0.15;min-width:60px;">SWIFT:</label>
-            <input id="swift" placeholder="Código SWIFT" style="flex:1;">
-            <label style="font-weight:500;flex:0.15;min-width:60px;">CIE:</label>
-            <input id="cie" placeholder="CIE (opcional)" style="flex:1;">
-            <label style="font-weight:500;flex:0.2;min-width:70px;">Referencia:</label>
-            <input id="referencia" placeholder="Referencia (opcional)" style="flex:1.5;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;">SWIFT:</label><input id="swift" placeholder="Código SWIFT" style="flex:1;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;">CIE:</label><input id="cie" placeholder="CIE (opcional)" style="flex:1;">
+            <label style="font-weight:500;flex:0.2;min-width:70px;">Referencia:</label><input id="referencia" placeholder="Referencia (opcional)" style="flex:1.5;">
           </div>
         </div>
-
         <div style="margin-top:16px">
           <h4>Productos</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaProductos">
-              <thead>
-                <tr>
-                  <th style="width:40px;">#</th>
-                  <th style="width:100px;">Núm. Parte</th>
-                  <th style="min-width:150px;">Descripción</th>
-                  <th style="width:80px;">Cantidad</th>
-                  <th style="width:70px;">UDM</th>
-                  <th style="width:100px;">Precio Unit.</th>
-                  <th style="width:60px;">Dto.%</th>
-                  <th style="width:60px;">Imp.%</th>
-                  <th style="width:100px;">Importe</th>
-                  <th style="width:60px;">Acción</th>
-                </tr>
-              </thead>
+              <thead><tr><th style="width:40px;">#</th><th style="width:100px;">Núm. Parte</th><th style="min-width:150px;">Descripción</th><th style="width:80px;">Cantidad</th><th style="width:70px;">UDM</th><th style="width:100px;">Precio Unit.</th><th style="width:60px;">Dto.%</th><th style="width:60px;">Imp.%</th><th style="width:100px;">Importe</th><th style="width:60px;">Acción</th></tr></thead>
               <tbody id="cuerpoProductos"></tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px">$0.00</td>
-                  <td></td>
-                </tr>
-              </tfoot>
+              <tfoot><tr><td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td><td id="totalProductos" style="font-weight:bold;font-size:16px">$0.00</td><td></td></tr></tfoot>
             </table>
           </div>
           <button onclick="window.agregarFilaProducto()" class="success" style="margin-top:8px;">➕ Agregar Producto</button>
         </div>
-
         <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
           <button onclick="window.previsualizarOC()" class="success">👁️ Previsualizar</button>
           <button onclick="window.confirmarOC()" class="warning">✅ Confirmar</button>
@@ -1121,7 +334,6 @@
         <div id="mensajeOC"></div>
       </div>
 
-      <!-- Bandeja OC -->
       <div class="card">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
         <div class="filtros-container">
@@ -1133,25 +345,7 @@
         <div id="resumenTotales" class="resumen-totales"></div>
         <div class="table-wrapper">
           <table>
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Proyecto</th>
-                <th>Depto</th>
-                <th>Cliente</th>
-                <th>Proveedor</th>
-                <th>RFC</th>
-                <th>Dirección entrega</th>
-                <th>Moneda</th>
-                <th>Total</th>
-                <th>Equiv. MXN</th>
-                <th>F.Pago</th>
-                <th>F.Entrega</th>
-                <th>UUID</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th><th>RFC</th><th>Dirección entrega</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="tablaOC"></tbody>
           </table>
         </div>
@@ -1159,22 +353,15 @@
     </div>
   </div>
 
-  <!-- Dashboard Overlay -->
   <div id="dashboardOverlay">
     <button class="btn-volver" onclick="window.cerrarDashboard()">⬅ Volver</button>
     <div id="dashboardContent"></div>
   </div>
 
-  <!-- Modal Previsualización PDF -->
   <div id="pdfPreviewModal">
     <div class="modal-content">
-      <div class="modal-header">
-        <h3>📄 Previsualización de la Orden de Compra</h3>
-        <button class="danger" onclick="window.cerrarPreview()">✕ Cerrar</button>
-      </div>
-      <div class="modal-body">
-        <iframe id="pdfPreviewFrame"></iframe>
-      </div>
+      <div class="modal-header"><h3>📄 Previsualización de la Orden de Compra</h3><button class="danger" onclick="window.cerrarPreview()">✕ Cerrar</button></div>
+      <div class="modal-body"><iframe id="pdfPreviewFrame"></iframe></div>
       <div class="modal-footer">
         <button class="danger" onclick="window.cerrarPreview()">Cancelar</button>
         <button class="success" onclick="window.confirmarDesdePreview()">✅ Confirmar y Guardar</button>
@@ -1187,24 +374,19 @@
       'use strict';
 
       // ============================================================
-      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM (CORREGIDA)
+      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
       // ============================================================
-      const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFr1Rb6KcKPSyF5RJBuRAxBXu51m_U';
+      const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBfRibR6kCkPSyF5RJBuRABuXslm_U';
       const TELEGRAM_CHAT_ID = '5425017187';
       // ============================================================
 
       const SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
-      const SB_KEY =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
+      const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
       const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-      // ============================================================
-      // 📨 FUNCIÓN MEJORADA PARA ENVIAR NOTIFICACIÓN POR TELEGRAM
-      // ============================================================
       async function enviarNotificacionTelegram(mensaje) {
         try {
           console.log('📤 Intentando enviar notificación a Telegram...');
-          
           if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'TU_TOKEN_BOT_AQUI') {
             console.error('❌ Token de Telegram no configurado.');
             return false;
@@ -1213,51 +395,21 @@
             console.error('❌ Chat ID de Telegram no configurado.');
             return false;
           }
-
           if (!mensaje || mensaje.trim() === '') {
             console.error('❌ Mensaje vacío, no se enviará.');
             return false;
           }
 
           const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-          console.log('📡 URL de la petición:', url.replace(TELEGRAM_BOT_TOKEN, '***'));
-
-          const payload = {
-            chat_id: TELEGRAM_CHAT_ID,
-            text: mensaje,
-            parse_mode: 'HTML',
-          };
-          console.log('📨 Payload:', payload);
-
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          });
-
+          const payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML' };
+          const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const data = await response.json();
           console.log('📨 Respuesta de Telegram:', data);
-
-          if (data.ok) {
-            console.log('✅ Notificación enviada a Telegram');
-            return true;
-          } else {
-            console.error('❌ Error al enviar notificación:', data.description);
-            console.error('Código de error:', data.error_code);
-            return false;
-          }
-        } catch (error) {
-          console.error('❌ Error al enviar notificación:', error);
-          console.error('Stack:', error.stack);
-          return false;
-        }
+          if (data.ok) { console.log('✅ Notificación enviada a Telegram'); return true; } 
+          else { console.error('❌ Error al enviar notificación:', data.description); return false; }
+        } catch (error) { console.error('❌ Error al enviar notificación:', error); return false; }
       }
 
-      // ============================================================
-      // FUNCIÓN PARA FORMATEAR MENSAJE DE OC (SOLO PARA >60%)
-      // ============================================================
       function formatearMensajeOC(datos, proyecto) {
         const gastado = gastoProyectoMoneda(proyecto.nombre);
         const porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
@@ -1265,7 +417,7 @@
 
         let mensaje = `<b>⚠️ OC QUE SUPERA EL 60% - REQUIERE AUTORIZACIÓN</b>\n\n`;
         mensaje += `<b>Código:</b> ${datos.codigo || 'Generando...'}\n`;
-        mensaje += `<b>Proyecto:</b> ${datos.proyectonombre}\n`;
+        mensaje += `<b>Proyecto:</b> ${datos.proyectonombre || datos.proyecto}\n`;
         mensaje += `<b>Empresa:</b> ${datos.empresa}\n`;
         mensaje += `<b>Departamento:</b> ${datos.departamento}\n`;
         mensaje += `<b>Cliente:</b> ${datos.cliente}\n`;
@@ -1283,11 +435,12 @@
         mensaje += `<b>Pagado:</b> ${formatoMoneda(gastado, proyecto.moneda)}\n`;
         mensaje += `<b>Excedente:</b> ${formatoMoneda(excedente, proyecto.moneda)} (${porcentaje.toFixed(2)}%)\n\n`;
         mensaje += `<b>Productos:</b>\n`;
-        datos.productos.forEach((p, i) => {
-          mensaje += `  ${i + 1}. ${p.descripcion} - ${p.cantidad} ${p.udm} x ${formatoMoneda(p.precioUnitario, datos.moneda)} = ${formatoMoneda(p.importe, datos.moneda)}\n`;
-        });
+        if (datos.productos) {
+          datos.productos.forEach((p, i) => {
+            mensaje += `  ${i + 1}. ${p.descripcion} - ${p.cantidad} ${p.udm} x ${formatoMoneda(p.precioUnitario, datos.moneda)} = ${formatoMoneda(p.importe, datos.moneda)}\n`;
+          });
+        }
         mensaje += `\n🔗 <i>Revisa en el sistema para autorizar o cancelar</i>`;
-
         return mensaje;
       }
 
@@ -1296,7 +449,6 @@
       let proyectos = [];
       let ordenes = [];
       let consecutivoOC = 1;
-
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA'];
       let ocPreviewData = null;
       let ocPreviewPDF = null;
@@ -1334,10 +486,7 @@
           usuariosDB = data || [];
           console.log('✅ Usuarios cargados desde Supabase:', usuariosDB.length);
           return true;
-        } catch (e) {
-          console.error('❌ Error cargando usuarios:', e);
-          return false;
-        }
+        } catch (e) { console.error('❌ Error cargando usuarios:', e); return false; }
       }
 
       document.addEventListener('input', function(e) {
@@ -1353,35 +502,18 @@
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
         if (!empresa) empresa = 'GIE';
         if (!departamento) departamento = 'GENERAL';
-
         const prefijos = {
-          'GRUPO INDUSTRIAL EXTINGUE': {
-            'VENTAS CORPORATIVAS EXTINGUE': 'GIE',
-            'INGENIERIA EN SISTEMAS CONTRA INCENDIO': 'ISCI',
-            'SUMINISERVICES': 'SUM',
-            'FINANZAS': 'FIN',
-            'SERVICIOS': 'SERV',
-            'INMOBIENES': 'ICE'
-          },
-          'VEXPAR OPERACIONES': {
-            'VENTAS CORPORATIVAS VEXPAR': 'VOP'
-          }
+          'GRUPO INDUSTRIAL EXTINGUE': { 'VENTAS CORPORATIVAS EXTINGUE': 'GIE', 'INGENIERIA EN SISTEMAS CONTRA INCENDIO': 'ISCI', 'SUMINISERVICES': 'SUM', 'FINANZAS': 'FIN', 'SERVICIOS': 'SERV', 'INMOBIENES': 'ICE' },
+          'VEXPAR OPERACIONES': { 'VENTAS CORPORATIVAS VEXPAR': 'VOP' }
         };
         const prefijo = (prefijos[empresa] && prefijos[empresa][departamento]) || 'OC';
         const fecha = new Date();
-        const fechaStr = fecha.getFullYear() +
-          String(fecha.getMonth() + 1).padStart(2, '0') +
-          String(fecha.getDate()).padStart(2, '0');
+        const fechaStr = fecha.getFullYear() + String(fecha.getMonth() + 1).padStart(2, '0') + String(fecha.getDate()).padStart(2, '0');
         const proveedorClean = proveedor.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
         const proyectoClean = proyecto.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
         const clienteClean = cliente.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
         const elaboradorClean = elaborador.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
-        let numero;
-        if (seq !== undefined) {
-          numero = String(seq).padStart(4, '0');
-        } else {
-          numero = String(consecutivoOC++).padStart(4, '0');
-        }
+        let numero = seq !== undefined ? String(seq).padStart(4, '0') : String(consecutivoOC++).padStart(4, '0');
         return `${prefijo}-OC-${fechaStr}-${proveedorClean}-${proyectoClean}-${clienteClean}-${elaboradorClean}-${numero}`;
       }
 
@@ -1402,9 +534,7 @@
         if (!usuario.permisos) return false;
         const empNorm = normalizar(empresa);
         const deptoNorm = normalizar(depto);
-        return usuario.permisos.some(p =>
-          normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm
-        );
+        return usuario.permisos.some(p => normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm);
       }
 
       function filtrarProyectosSegunUsuario(usuario) {
@@ -1441,9 +571,7 @@
       }
 
       function getJefeDepto(empresa, depto) {
-        const jefe = usuariosDB.find(u =>
-          u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto)
-        );
+        const jefe = usuariosDB.find(u => u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto));
         return jefe ? jefe.usuario : 'No definido';
       }
 
@@ -1474,15 +602,12 @@
       async function cargarDatos() {
         try {
           await cargarUsuarios();
-
           const { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
           if (e1) throw e1;
           proyectos = pData || [];
-
           const { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
           if (e2) throw e2;
           ordenes = oData || [];
-
           const maxCodigo = ordenes.reduce((max, o) => {
             if (!o.codigo) return max;
             const parts = o.codigo.split('-');
@@ -1490,13 +615,9 @@
             return isNaN(num) ? max : (num > max ? num : max);
           }, 0);
           consecutivoOC = maxCodigo + 1;
-
           console.log('📊 Datos cargados - Proyectos:', proyectos.length, 'OC:', ordenes.length);
           return true;
-        } catch (e) {
-          console.error('Error cargando datos', e);
-          return false;
-        }
+        } catch (e) { console.error('Error cargando datos', e); return false; }
       }
 
       window.mostrarMenu = function() {
@@ -1518,28 +639,18 @@
         const panelOC = document.getElementById('panelOC');
         const panelProyecto = document.getElementById('panelProyecto');
         const tablaProyectosCard = document.getElementById('tablaProyectosCard');
-
-        const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol ===
-          'Administrador' || actual.rol === 'Director General');
+        const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
 
         if (modulo === 'oc') {
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
-          if (puedeCrear) {
-            panelOC.classList.remove('hidden');
-          } else {
-            panelOC.classList.add('hidden');
-          }
+          if (puedeCrear) panelOC.classList.remove('hidden');
+          else panelOC.classList.add('hidden');
           document.querySelector('#contenidoApp .card:last-child')?.classList.remove('hidden');
         } else if (modulo === 'proyectos') {
           panelOC.classList.add('hidden');
-          if (puedeCrear) {
-            panelProyecto.classList.remove('hidden');
-            tablaProyectosCard.classList.remove('hidden');
-          } else {
-            panelProyecto.classList.add('hidden');
-            tablaProyectosCard.classList.add('hidden');
-          }
+          if (puedeCrear) { panelProyecto.classList.remove('hidden'); tablaProyectosCard.classList.remove('hidden'); }
+          else { panelProyecto.classList.add('hidden'); tablaProyectosCard.classList.add('hidden'); }
         }
 
         setTimeout(function() {
@@ -1554,25 +665,17 @@
         }, 100);
       };
 
-      window.volverAlMenu = function() {
-        window.mostrarMenu();
-      };
+      window.volverAlMenu = function() { window.mostrarMenu(); };
 
-      function mostrarConstruccion() {
-        alert('🚧 Módulo en construcción');
-      }
+      function mostrarConstruccion() { alert('🚧 Módulo en construcción'); }
 
       function configurarModulos() {
         document.querySelectorAll('.modulo-item').forEach(item => {
           item.addEventListener('click', function() {
             const modulo = this.dataset.modulo;
-            if (modulo === 'oc') {
-              window.mostrarModulo('oc');
-            } else if (modulo === 'proyectos') {
-              window.mostrarModulo('proyectos');
-            } else {
-              mostrarConstruccion();
-            }
+            if (modulo === 'oc') window.mostrarModulo('oc');
+            else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
+            else mostrarConstruccion();
           });
         });
       }
@@ -1584,9 +687,7 @@
           btn.style.background = 'var(--danger)';
           btn.textContent = '💰 Mostrar Todas';
           const pendientes = contarPendientesPagar();
-          if (pendientes > 0) {
-            btn.textContent = `💰 Mostrar Todas (${pendientes} pendientes)`;
-          }
+          if (pendientes > 0) btn.textContent = `💰 Mostrar Todas (${pendientes} pendientes)`;
         } else {
           btn.style.background = 'var(--warning)';
           const pendientes = contarPendientesPagar();
@@ -1609,9 +710,7 @@
       function contarPendientesPagar() {
         let ocVisibles = filtrarOCSegunUsuario(actual);
         const filtroProyecto = document.getElementById('filtroProyecto');
-        if (filtroProyecto && filtroProyecto.value) {
-          ocVisibles = ocVisibles.filter(o => o.proyecto === filtroProyecto.value);
-        }
+        if (filtroProyecto && filtroProyecto.value) ocVisibles = ocVisibles.filter(o => o.proyecto === filtroProyecto.value);
         const filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
           ocVisibles = ocVisibles.filter(o => {
@@ -1619,11 +718,7 @@
             return p && p.departamento === filtroDepto.value;
           });
         }
-        return ocVisibles.filter(o =>
-          o.estado === 'AUTORIZADA' &&
-          o.estadopago !== 'PAGADA' &&
-          !o.pausada
-        ).length;
+        return ocVisibles.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada).length;
       }
 
       window.actualizarResponsables = function() {
@@ -1678,9 +773,7 @@
           consecutivoOC = 1;
           render();
           alert('✅ Todos los proyectos y OC eliminados.');
-        } catch (error) {
-          alert('❌ Error: ' + error.message);
-        }
+        } catch (error) { alert('❌ Error: ' + error.message); }
       };
 
       window.login = async function() {
@@ -1689,10 +782,7 @@
         const errorDiv = document.getElementById('error');
         const btnLogin = document.getElementById('btnLogin');
 
-        if (!userInput || !passInput) {
-          alert('❌ Campos no encontrados');
-          return;
-        }
+        if (!userInput || !passInput) { alert('❌ Campos no encontrados'); return; }
 
         const user = userInput.value.trim().toUpperCase();
         const pass = passInput.value.trim();
@@ -1718,8 +808,7 @@
           if (authError) {
             console.error('Error de conexión:', authError);
             errorDiv.classList.remove('hidden');
-            errorDiv.innerHTML =
-              `❌ Error de conexión con la base de datos: ${authError.message || authError.code || 'Verifica la API key en Supabase Dashboard → Settings → API'}`;
+            errorDiv.innerHTML = `❌ Error de conexión con la base de datos: ${authError.message || authError.code || 'Verifica la API key en Supabase Dashboard → Settings → API'}`;
             btnLogin.disabled = false;
             btnLogin.textContent = 'Ingresar';
             return;
@@ -1742,13 +831,7 @@
             return;
           }
 
-          actual = {
-            usuario: userData.usuario,
-            u: userData.usuario,
-            password: userData.password,
-            rol: userData.rol,
-            permisos: userData.permisos || []
-          };
+          actual = { usuario: userData.usuario, u: userData.usuario, password: userData.password, rol: userData.rol, permisos: userData.permisos || [] };
 
         } catch (e) {
           console.error('Error inesperado en login:', e);
@@ -1833,7 +916,6 @@
         }
 
         const esElaborador = actual.rol === 'Elaborador';
-        const esJefe = actual.rol === 'Jefe Departamento';
         const esDirector = actual.rol === 'Director General';
         const esAdmin = actual.rol === 'Administrador';
         const esFinanzas = actual.rol === 'Finanzas';
@@ -1854,8 +936,7 @@
           btnPendientes.classList.remove('hidden');
           btnLimpiar.classList.remove('hidden');
           const pendientes = contarPendientesPagar();
-          btnPendientes.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` :
-          '💰 Pendientes por Pagar (0)';
+          btnPendientes.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
         } else {
           btnPendientes.classList.add('hidden');
           btnLimpiar.classList.add('hidden');
@@ -1876,11 +957,8 @@
           if (actual.rol === 'Finanzas') {
             const pendientes = contarPendientesPagar();
             const btn = document.getElementById('btnPendientesPagar');
-            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` :
-            '💰 Pendientes por Pagar (0)';
-            if (!filtroPendientesActivo) {
-              btn.style.background = 'var(--warning)';
-            }
+            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
           }
           render();
         };
@@ -1898,11 +976,8 @@
           if (actual.rol === 'Finanzas') {
             const pendientes = contarPendientesPagar();
             const btn = document.getElementById('btnPendientesPagar');
-            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` :
-            '💰 Pendientes por Pagar (0)';
-            if (!filtroPendientesActivo) {
-              btn.style.background = 'var(--warning)';
-            }
+            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
           }
           render();
         };
@@ -1949,17 +1024,7 @@
           return;
         }
 
-        const nuevoProyecto = {
-          empresa,
-          departamento,
-          nombre,
-          cliente,
-          presupuesto,
-          moneda,
-          limite: presupuesto * 0.60,
-          fecha_inicio: fechaInicio,
-          fecha_termino: fechaTermino
-        };
+        const nuevoProyecto = { empresa, departamento, nombre, cliente, presupuesto, moneda, limite: presupuesto * 0.60, fecha_inicio: fechaInicio, fecha_termino: fechaTermino };
 
         try {
           const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
@@ -1967,17 +1032,12 @@
             msgDiv.innerHTML = `<div class="alert">⚠️ ERROR: ${error.message}</div>`;
             return;
           }
-
           msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO.</div>';
           document.getElementById('nombreProyecto').value = '';
           document.getElementById('cliente').value = '';
           document.getElementById('presupuesto').value = '';
-
-          if (data && data.length > 0) {
-            proyectos.push(data[0]);
-          } else {
-            await cargarDatos();
-          }
+          if (data && data.length > 0) proyectos.push(data[0]);
+          else await cargarDatos();
           render();
         } catch (error) {
           console.error('❌ Error inesperado en crearProyecto:', error.stack || error);
@@ -1996,8 +1056,7 @@
       };
 
       // ===== PRODUCTOS =====
-      window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0,
-        descuento = 0, impuesto = 0) {
+      window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0, descuento = 0, impuesto = 0) {
         const tbody = document.getElementById('cuerpoProductos');
         const fila = document.createElement('tr');
         const idx = tbody.children.length + 1;
@@ -2048,13 +1107,11 @@
         const precio = parseFloat(fila.querySelector('.precio').value) || 0;
         const descuento = parseFloat(fila.querySelector('.descuento').value) || 0;
         const impuesto = parseFloat(fila.querySelector('.impuesto').value) || 0;
-
         const subtotal = cantidad * precio;
         const descuentoValor = subtotal * (descuento / 100);
         const subtotalConDescuento = subtotal - descuentoValor;
         const impuestoValor = subtotalConDescuento * (impuesto / 100);
         const importe = subtotalConDescuento + impuestoValor;
-
         const importeInput = fila.querySelector('.importe');
         if (importeInput) importeInput.value = importe.toFixed(2);
         window.recalcularTotal();
@@ -2084,10 +1141,8 @@
           document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ PROYECTO NO ENCONTRADO.</div>';
           return null;
         }
-
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
-          document.getElementById('mensajeOC').innerHTML =
-            '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR OC EN ESTE PROYECTO.</div>';
+          document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR OC EN ESTE PROYECTO.</div>';
           return null;
         }
 
@@ -2108,15 +1163,8 @@
         const referencia = document.getElementById('referencia').value.trim().toUpperCase();
         const msgDiv = document.getElementById('mensajeOC');
 
-        if (!banco) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>';
-          return null;
-        }
-
-        if (!cuenta && !clabe) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>';
-          return null;
-        }
+        if (!banco) { msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>'; return null; }
+        if (!cuenta && !clabe) { msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>'; return null; }
 
         let tipocambio = null;
         let montomxn = 0;
@@ -2130,8 +1178,7 @@
         }
 
         if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable || !fechaentrega) {
-          msgDiv.innerHTML =
-            '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
+          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
           return null;
         }
 
@@ -2140,11 +1187,6 @@
           msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
           return null;
         }
-
-        const fechaPagoObj = new Date(fechapago);
-        const fechaInicioObj = new Date(proyecto.fecha_inicio);
-        const fechaTerminoObj = new Date(proyecto.fecha_termino);
-        const dentroRango = fechaPagoObj >= fechaInicioObj && fechaPagoObj <= fechaTerminoObj;
 
         const tbody = document.getElementById('cuerpoProductos');
         const filas = tbody.querySelectorAll('tr');
@@ -2161,65 +1203,42 @@
           const descuento = parseFloat(fila.querySelector('.descuento')?.value) || 0;
           const impuesto = parseFloat(fila.querySelector('.impuesto')?.value) || 0;
           const importe = parseFloat(fila.querySelector('.importe')?.value) || 0;
-
-          if (!descripcion || cantidad <= 0 || precio <= 0) {
-            valido = false;
-            return;
-          }
+          if (!descripcion || cantidad <= 0 || precio <= 0) { valido = false; return; }
           productos.push({ parte, descripcion, udm, cantidad, precioUnitario: precio, descuento, impuesto, importe });
           montototal += importe;
         });
 
         if (!valido || productos.length === 0) {
-          msgDiv.innerHTML =
-            '<div class="alert">⚠️ COMPLETE AL MENOS UN PRODUCTO CON DESCRIPCIÓN, CANTIDAD Y PRECIO VÁLIDOS.</div>';
+          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE AL MENOS UN PRODUCTO CON DESCRIPCIÓN, CANTIDAD Y PRECIO VÁLIDOS.</div>';
           return null;
         }
 
-        if (moneda === 'USD') {
-          montomxn = montototal * tipocambio;
-        } else {
-          montomxn = montototal;
-        }
+        if (moneda === 'USD') montomxn = montototal * tipocambio;
+        else montomxn = montototal;
 
         let estado = 'CREADA';
         let motivo = '';
-        if (!dentroRango) {
+        const fechaPagoObj = new Date(fechapago);
+        const fechaInicioObj = new Date(proyecto.fecha_inicio);
+        const fechaTerminoObj = new Date(proyecto.fecha_termino);
+        if (!(fechaPagoObj >= fechaInicioObj && fechaPagoObj <= fechaTerminoObj)) {
           estado = 'PENDIENTE_DIRECTOR';
           motivo = 'FUERA DE RANGO DE FECHAS DEL PROYECTO';
         }
 
         return {
-          empresa: proyecto.empresa,
-          departamento: proyecto.departamento,
-          proyectonombre: proyecto.nombre,
-          proveedor: proveedor,
-          rfc: rfc || 'NA',
-          direccion: direccion,
-          usocfdi: usocfdi,
-          direccionentrega: direccionentrega,
-          moneda: moneda,
-          tipocambio: tipocambio,
-          montototal: montototal,
-          montomxn: montomxn,
-          estado: estado,
-          fechapago: fechapago,
-          fechaentrega: fechaentrega,
-          responsable: responsable,
-          productos: productos,
-          motivo: motivo,
-          cliente: proyecto.cliente,
-          elaborador: actual.u,
-          banco: banco,
-          cuenta: cuenta || null,
-          clabe: clabe || null,
-          swift: swift || null,
-          cie: cie || null,
-          referencia: referencia || null
+          empresa: proyecto.empresa, departamento: proyecto.departamento,
+          proyectonombre: proyecto.nombre, proveedor, rfc: rfc || 'NA',
+          direccion, usocfdi, direccionentrega, moneda, tipocambio,
+          montototal, montomxn, estado, fechapago, fechaentrega,
+          responsable, productos, motivo, cliente: proyecto.cliente,
+          elaborador: actual.u, banco, cuenta: cuenta || null,
+          clabe: clabe || null, swift: swift || null,
+          cie: cie || null, referencia: referencia || null
         };
       }
 
-      // ===== GENERAR PDF =====
+      // ===== GENERAR PDF ===== (versión simplificada)
       async function generarPDFParaPreview(datos) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -2232,63 +1251,51 @@
         const esExtingue = datos.empresa && datos.empresa.toUpperCase().includes('GRUPO INDUSTRIAL EXTINGUE');
         const esVexpar = datos.empresa && datos.empresa.toUpperCase().includes('VEXPAR OPERACIONES');
 
-        if (esExtingue) {
-          try {
-            const imgUrl =
-              'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+        try {
+          if (esExtingue) {
+            const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
             const response = await fetch(imgUrl);
-            if (!response.ok) throw new Error('No se pudo cargar la imagen');
-            const blob = await response.blob();
-            const imgData = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target.result);
-              reader.readAsDataURL(blob);
-            });
-
-            const img = new Image();
-            img.src = imgData;
-            await new Promise((resolve) => { img.onload = resolve; });
-            const imgWidth = 140;
-            const imgHeight = (img.height / img.width) * imgWidth;
-            doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-            y += imgHeight + 25;
-          } catch (e) {
-            console.warn('No se pudo cargar el logo de Extingue, usando texto:', e);
+            if (response.ok) {
+              const blob = await response.blob();
+              const imgData = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(blob);
+              });
+              const img = new Image();
+              img.src = imgData;
+              await new Promise(resolve => { img.onload = resolve; });
+              const imgWidth = 140;
+              const imgHeight = (img.height / img.width) * imgWidth;
+              doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+              y += imgHeight + 25;
+            } else throw new Error('No se pudo cargar la imagen');
+          } else if (esVexpar) {
+            const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
+            const response = await fetch(imgUrl);
+            if (response.ok) {
+              const blob = await response.blob();
+              const imgData = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(blob);
+              });
+              const img = new Image();
+              img.src = imgData;
+              await new Promise(resolve => { img.onload = resolve; });
+              const imgWidth = 140;
+              const imgHeight = (img.height / img.width) * imgWidth;
+              doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+              y += imgHeight + 25;
+            } else throw new Error('No se pudo cargar la imagen');
+          } else {
             doc.setFontSize(18);
             doc.setTextColor(11, 26, 51);
             doc.setFont('helvetica', 'bold');
-            doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth - margin - 10, y, { align: 'right' });
+            doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
             y += 60;
           }
-        } else if (esVexpar) {
-          try {
-            const imgUrl =
-              'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
-            const response = await fetch(imgUrl);
-            if (!response.ok) throw new Error('No se pudo cargar la imagen');
-            const blob = await response.blob();
-            const imgData = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target.result);
-              reader.readAsDataURL(blob);
-            });
-
-            const img = new Image();
-            img.src = imgData;
-            await new Promise((resolve) => { img.onload = resolve; });
-            const imgWidth = 140;
-            const imgHeight = (img.height / img.width) * imgWidth;
-            doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-            y += imgHeight + 25;
-          } catch (e) {
-            console.warn('No se pudo cargar el logo de Vexpar, usando texto:', e);
-            doc.setFontSize(18);
-            doc.setTextColor(11, 26, 51);
-            doc.setFont('helvetica', 'bold');
-            doc.text('VEXPAR OPERACIONES', pageWidth - margin - 10, y, { align: 'right' });
-            y += 60;
-          }
-        } else {
+        } catch (e) {
           doc.setFontSize(18);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
@@ -2301,7 +1308,6 @@
         doc.setFont('helvetica', 'bold');
         doc.text('ORDEN DE COMPRA', margin, y);
         y += 12;
-
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
@@ -2333,16 +1339,11 @@
           doc.text(textLines, margin + labelWidth, y);
           y += textLines.length * 9 + 2;
         });
-
         y += 5;
 
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         const rows = datos.productos.map((p, i) => [
-          i + 1,
-          p.parte || '',
-          p.descripcion,
-          p.cantidad,
-          p.udm || 'PZA',
+          i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
           formatoMoneda(p.precioUnitario, datos.moneda),
           p.descuento.toFixed(2) + '%',
           p.impuesto.toFixed(2) + '%',
@@ -2350,34 +1351,20 @@
         ]);
 
         doc.autoTable({
-          head: [headers],
-          body: rows,
-          startY: y,
+          head: [headers], body: rows, startY: y,
           margin: { left: margin, right: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica',
-            fontStyle: 'bold' },
+          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
           columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 'auto' },
-            3: { cellWidth: 30 },
-            4: { cellWidth: 25 },
-            5: { cellWidth: 45 },
-            6: { cellWidth: 40 },
-            7: { cellWidth: 40 },
-            8: { cellWidth: 45 }
+            0: { cellWidth: 20 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' },
+            3: { cellWidth: 30 }, 4: { cellWidth: 25 }, 5: { cellWidth: 45 },
+            6: { cellWidth: 40 }, 7: { cellWidth: 40 }, 8: { cellWidth: 45 }
           },
-          didDrawPage: function(data) {
-            window._tableFinalY = data.cursor.y;
-          }
+          didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
-
-        let subtotal = 0;
-        let iva = 0;
-        let impuestoPorcentaje = 0;
+        let subtotal = 0, iva = 0, impuestoPorcentaje = 0;
         if (datos.productos && datos.productos.length > 0) {
           datos.productos.forEach(p => {
             const precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
@@ -2389,26 +1376,21 @@
 
         const totalX = pageWidth * 0.72;
         const lineSpacing = 13;
-
         y += 15;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
-
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
-
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
-
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
         doc.line(totalX, y, pageWidth - margin, y);
         y += lineSpacing;
-
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
@@ -2428,57 +1410,40 @@
 
         function dibujarAutorizacion(doc, x, y, nombre, titulo) {
           const lineWidth = colWidth - 20;
-
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
-
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
-
           const lineY = y + 14 + 20 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
-
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
-        const x1 = margin;
-        const x2 = margin + colWidth;
-        const x3 = margin + colWidth * 2;
-
+        const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
         dibujarAutorizacion(doc, x1, y, solicitante, 'Solicitante');
         dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
         dibujarAutorizacion(doc, x3, y, director, 'Director General');
-
         y += 70;
 
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
-
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
-        const codigoFinal = generarCodigoOC(
-          datos.empresa,
-          datos.departamento,
-          datos.proveedor,
-          datos.proyectonombre,
-          datos.cliente,
-          datos.elaborador,
-          consecutivoOC
-        );
+        const codigoFinal = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
@@ -2511,106 +1476,50 @@
       };
 
       window.confirmarDesdePreview = async function() {
-        if (!ocPreviewData) {
-          alert('No hay datos para confirmar.');
-          return;
-        }
+        if (!ocPreviewData) { alert('No hay datos para confirmar.'); return; }
         const datos = ocPreviewData;
-        const codigo = generarCodigoOC(
-          datos.empresa,
-          datos.departamento,
-          datos.proveedor,
-          datos.proyectonombre,
-          datos.cliente,
-          datos.elaborador
-        );
+        const codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
 
         const nuevaOC = {
-          codigo: codigo,
-          proyecto: datos.proyectonombre,
-          proveedor: datos.proveedor,
-          rfc: datos.rfc,
-          direccion: datos.direccion,
-          usocfdi: datos.usocfdi,
-          direccionentrega: datos.direccionentrega,
-          moneda: datos.moneda,
-          tipocambio: datos.tipocambio,
-          montototal: datos.montototal,
-          montomxn: datos.montomxn,
-          estado: datos.estado,
-          fechacreacion: new Date().toISOString(),
-          fechapago: datos.fechapago,
-          fechaentrega: datos.fechaentrega,
-          responsable: datos.responsable,
-          pausada: false,
-          motivo: datos.motivo || null,
-          fechaaprobacionsolicitante: null,
-          fechaaprobacionjefe: null,
-          fechaaprobaciondirector: null,
-          nombresolicitante: null,
-          nombrejefe: null,
-          nombredirector: null,
-          estadopago: null,
-          uuidfactura: null,
-          montofactura: null,
-          paridadinicial: datos.tipocambio,
-          productos: datos.productos,
-          cliente: datos.cliente,
-          elaborador: datos.elaborador,
-          banco: datos.banco,
-          cuenta: datos.cuenta,
-          clabe: datos.clabe,
-          swift: datos.swift,
-          cie: datos.cie,
-          referencia: datos.referencia
+          codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
+          rfc: datos.rfc, direccion: datos.direccion, usocfdi: datos.usocfdi,
+          direccionentrega: datos.direccionentrega, moneda: datos.moneda,
+          tipocambio: datos.tipocambio, montototal: datos.montototal,
+          montomxn: datos.montomxn, estado: datos.estado,
+          fechacreacion: new Date().toISOString(), fechapago: datos.fechapago,
+          fechaentrega: datos.fechaentrega, responsable: datos.responsable,
+          pausada: false, motivo: datos.motivo || null,
+          fechaaprobacionsolicitante: null, fechaaprobacionjefe: null,
+          fechaaprobaciondirector: null, nombresolicitante: null,
+          nombrejefe: null, nombredirector: null, estadopago: null,
+          uuidfactura: null, montofactura: null, paridadinicial: datos.tipocambio,
+          productos: datos.productos, cliente: datos.cliente,
+          elaborador: datos.elaborador, banco: datos.banco,
+          cuenta: datos.cuenta, clabe: datos.clabe, swift: datos.swift,
+          cie: datos.cie, referencia: datos.referencia
         };
 
         const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
-        if (error) {
-          console.error('❌ Error de Supabase:', error);
-          alert('Error al guardar OC: ' + error.message);
-          return;
-        }
+        if (error) { console.error('❌ Error de Supabase:', error); alert('Error al guardar OC: ' + error.message); return; }
 
         window.cerrarPreview();
         document.getElementById('mensajeOC').innerHTML = `<div class="success-msg">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
-
-        // 📨 NOTIFICACIÓN SOLO SI SUPERA EL 60%
-        if (datos.estado === 'PENDIENTE_DIRECTOR') {
-          const proyecto = proyectos.find(p => p.nombre === datos.proyectonombre);
-          if (proyecto) {
-            const mensaje = formatearMensajeOC({ ...datos, codigo }, proyecto);
-            console.log('📨 Enviando notificación por superar el 60%...');
-            const enviado = await enviarNotificacionTelegram(mensaje);
-            if (enviado) {
-              console.log('✅ Notificación enviada exitosamente');
-            } else {
-              console.warn('⚠️ La notificación no pudo ser enviada');
-            }
-          }
-        }
 
         try {
           document.getElementById('cuerpoProductos').innerHTML = '';
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
-          if (data && data.length > 0) {
-            ordenes.push(data[0]);
-          } else {
-            await cargarDatos();
-          }
+          if (data && data.length > 0) ordenes.push(data[0]);
+          else await cargarDatos();
           render();
-        } catch (err) {
-          console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err);
-        }
+        } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
         try {
           const docFinal = ocPreviewPDF || await generarPDFParaPreview(datos);
           docFinal.save(`OC_${codigo}.pdf`);
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
-          document.getElementById('mensajeOC').innerHTML +=
-            `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
+          document.getElementById('mensajeOC').innerHTML += `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
         }
 
         ocPreviewData = null;
@@ -2619,64 +1528,32 @@
 
       window.confirmarOC = async function() {
         const datos = recopilarDatosOC();
-        if (!datos) {
-          console.log('❌ Datos inválidos, no se creará OC');
-          return;
-        }
+        if (!datos) { console.log('❌ Datos inválidos, no se creará OC'); return; }
 
         if (!datos.empresa || !datos.departamento) {
-          document.getElementById('mensajeOC').innerHTML =
-            '<div class="alert">⚠️ ERROR: No se encontró empresa o departamento del proyecto.</div>';
+          document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ ERROR: No se encontró empresa o departamento del proyecto.</div>';
           return;
         }
 
-        const codigo = generarCodigoOC(
-          datos.empresa,
-          datos.departamento,
-          datos.proveedor,
-          datos.proyectonombre,
-          datos.cliente,
-          datos.elaborador
-        );
+        const codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
 
         const nuevaOC = {
-          codigo: codigo,
-          proyecto: datos.proyectonombre,
-          proveedor: datos.proveedor,
-          rfc: datos.rfc,
-          direccion: datos.direccion,
-          usocfdi: datos.usocfdi,
-          direccionentrega: datos.direccionentrega,
-          moneda: datos.moneda,
-          tipocambio: datos.tipocambio,
-          montototal: datos.montototal,
-          montomxn: datos.montomxn,
-          estado: datos.estado,
-          fechacreacion: new Date().toISOString(),
-          fechapago: datos.fechapago,
-          fechaentrega: datos.fechaentrega,
-          responsable: datos.responsable,
-          pausada: false,
-          motivo: datos.motivo || null,
-          fechaaprobacionsolicitante: null,
-          fechaaprobacionjefe: null,
-          fechaaprobaciondirector: null,
-          nombresolicitante: null,
-          nombrejefe: null,
-          nombredirector: null,
-          estadopago: null,
-          uuidfactura: null,
-          montofactura: null,
-          paridadinicial: datos.tipocambio,
-          productos: datos.productos,
-          cliente: datos.cliente,
-          elaborador: datos.elaborador,
-          banco: datos.banco,
-          cuenta: datos.cuenta,
-          clabe: datos.clabe,
-          swift: datos.swift,
-          cie: datos.cie,
-          referencia: datos.referencia
+          codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
+          rfc: datos.rfc, direccion: datos.direccion, usocfdi: datos.usocfdi,
+          direccionentrega: datos.direccionentrega, moneda: datos.moneda,
+          tipocambio: datos.tipocambio, montototal: datos.montototal,
+          montomxn: datos.montomxn, estado: datos.estado,
+          fechacreacion: new Date().toISOString(), fechapago: datos.fechapago,
+          fechaentrega: datos.fechaentrega, responsable: datos.responsable,
+          pausada: false, motivo: datos.motivo || null,
+          fechaaprobacionsolicitante: null, fechaaprobacionjefe: null,
+          fechaaprobaciondirector: null, nombresolicitante: null,
+          nombrejefe: null, nombredirector: null, estadopago: null,
+          uuidfactura: null, montofactura: null, paridadinicial: datos.tipocambio,
+          productos: datos.productos, cliente: datos.cliente,
+          elaborador: datos.elaborador, banco: datos.banco,
+          cuenta: datos.cuenta, clabe: datos.clabe, swift: datos.swift,
+          cie: datos.cie, referencia: datos.referencia
         };
 
         const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -2688,47 +1565,270 @@
 
         document.getElementById('mensajeOC').innerHTML = `<div class="success-msg">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
 
-        // 📨 NOTIFICACIÓN SOLO SI SUPERA EL 60%
-        if (datos.estado === 'PENDIENTE_DIRECTOR') {
-          const proyecto = proyectos.find(p => p.nombre === datos.proyectonombre);
-          if (proyecto) {
-            const mensaje = formatearMensajeOC({ ...datos, codigo }, proyecto);
-            console.log('📨 Enviando notificación por superar el 60%...');
-            const enviado = await enviarNotificacionTelegram(mensaje);
-            if (enviado) {
-              console.log('✅ Notificación enviada exitosamente');
-            } else {
-              console.warn('⚠️ La notificación no pudo ser enviada');
-            }
-          }
-        }
-
         try {
           document.getElementById('cuerpoProductos').innerHTML = '';
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
-
-          if (data && data.length > 0) {
-            ordenes.push(data[0]);
-          } else {
-            await cargarDatos();
-          }
+          if (data && data.length > 0) ordenes.push(data[0]);
+          else await cargarDatos();
           render();
-        } catch (err) {
-          console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err);
-        }
+        } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
         try {
           const doc = await generarPDFParaPreview(datos);
           doc.save(`OC_${codigo}.pdf`);
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
-          document.getElementById('mensajeOC').innerHTML +=
-            `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
+          document.getElementById('mensajeOC').innerHTML += `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
         }
       };
 
-      // ===== FUNCIONES DE APROBACIÓN Y GESTIÓN =====
+      // ===== APROBACIONES =====
+      window.aprobarSolicitante = async function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.pausada) return alert('⚠️ OC pausada');
+        if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
+        if (actual.u !== oc.responsable) return alert('Solo el responsable puede aprobar');
+        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+        if (!proyecto) return alert('Proyecto no encontrado');
+        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        const updates = { estado: 'APROBADA_SOLICITANTE', fechaaprobacionsolicitante: new Date().toISOString(), nombresolicitante: actual.u };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        render();
+      };
+
+      // ===== APROBACIÓN JEFE - AQUÍ SE EVALÚA EL 60% Y SE ENVÍA NOTIFICACIÓN =====
+      window.aprobarJefe = async function(index) {
+        if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.pausada) return alert('⚠️ OC pausada');
+        if (oc.estado !== 'APROBADA_SOLICITANTE') return alert('La OC debe estar aprobada por el Solicitante');
+        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+        if (!proyecto) return alert('Proyecto no encontrado');
+        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+
+        const gastado = gastoProyectoMoneda(proyecto.nombre);
+        let montoEnMonedaProyecto = oc.montomxn || 0;
+        if (proyecto.moneda === 'USD') {
+          if (oc.paridadinicial) montoEnMonedaProyecto = oc.montomxn / oc.paridadinicial;
+          else montoEnMonedaProyecto = oc.montomxn / 20;
+        }
+
+        let nuevoEstado = 'APROBADA_JEFE';
+        let mensaje = '';
+
+        if (oc.moneda === 'USD' && !oc.tipocambio) {
+          nuevoEstado = 'PENDIENTE_PARIDAD';
+          mensaje = '⏳ OC en USD. Requiere paridad final.';
+        } else if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
+          nuevoEstado = 'AUTORIZADA';
+          oc.estadopago = null;
+          mensaje = '✅ OC autorizada automáticamente (dentro del 60%).';
+          const updates = {
+            estado: nuevoEstado,
+            fechaaprobacionjefe: new Date().toISOString(),
+            nombrejefe: actual.u,
+            fechaaprobaciondirector: new Date().toISOString(),
+            nombredirector: actual.u,
+            estadopago: null
+          };
+          const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          if (error) return alert('Error al actualizar OC');
+          Object.assign(oc, updates);
+          render();
+          generarPDFFirmado(oc);
+          alert(mensaje);
+          return;
+        } else {
+          // ⚠️ SUPERA EL 60% - Enviar notificación a Telegram
+          nuevoEstado = 'PENDIENTE_DIRECTOR';
+          mensaje = '⏳ OC supera el 60%. Enviada a Director.';
+          
+          // 📨 ENVIAR NOTIFICACIÓN POR TELEGRAM
+          try {
+            // Crear un objeto con los datos necesarios para el mensaje
+            const datosOC = {
+              codigo: oc.codigo,
+              proyectonombre: oc.proyecto,
+              empresa: proyecto.empresa,
+              departamento: proyecto.departamento,
+              cliente: oc.cliente || proyecto.cliente,
+              proveedor: oc.proveedor,
+              rfc: oc.rfc,
+              responsable: oc.responsable,
+              elaborador: oc.elaborador || 'Desconocido',
+              moneda: oc.moneda,
+              montototal: oc.montototal,
+              montomxn: oc.montomxn,
+              fechapago: oc.fechapago,
+              fechaentrega: oc.fechaentrega,
+              productos: oc.productos || []
+            };
+            const mensajeTelegram = formatearMensajeOC(datosOC, proyecto);
+            console.log('📨 Enviando notificación por superar el 60%...');
+            const enviado = await enviarNotificacionTelegram(mensajeTelegram);
+            if (enviado) {
+              console.log('✅ Notificación enviada exitosamente');
+            } else {
+              console.warn('⚠️ La notificación no pudo ser enviada');
+            }
+          } catch (error) {
+            console.error('❌ Error al enviar notificación:', error);
+          }
+        }
+
+        const updates = {
+          estado: nuevoEstado,
+          fechaaprobacionjefe: new Date().toISOString(),
+          nombrejefe: actual.u
+        };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        render();
+        alert(mensaje);
+      };
+
+      window.autorizarDirector = async function(index) {
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.pausada) return alert('⚠️ OC pausada');
+        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+
+        if (oc.moneda === 'USD' && !oc.tipocambio) {
+          const updates = { estado: 'PENDIENTE_PARIDAD', fechaaprobaciondirector: new Date().toISOString(), nombredirector: actual.u };
+          const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          if (error) return alert('Error al actualizar OC');
+          Object.assign(oc, updates);
+          render();
+          alert('⏳ OC en USD. Requiere paridad final.');
+          return;
+        }
+
+        const updates = { estado: 'AUTORIZADA', fechaaprobaciondirector: new Date().toISOString(), nombredirector: actual.u, estadopago: null };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        render();
+        generarPDFFirmado(oc);
+        alert('✅ OC autorizada por Director.');
+      };
+
+      window.ingresarParidad = async function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede ingresar la paridad final.');
+        const oc = ordenes[index];
+        if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
+        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+        if (!proyecto) return alert('Proyecto no encontrado');
+        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        const tc = prompt(`Ingrese el tipo de cambio (MXN/USD) para la OC ${oc.codigo}:`);
+        if (tc === null) return;
+        const tipoCambio = parseFloat(tc);
+        if (!tipoCambio || tipoCambio <= 0) { alert('Tipo de cambio inválido.'); return; }
+        const nuevoMontoMXN = oc.montototal * tipoCambio;
+        const updates = { tipocambio: tipoCambio, montomxn: nuevoMontoMXN, estado: 'AUTORIZADA', estadopago: null };
+        if (!oc.fechaaprobacionsolicitante) { updates.fechaaprobacionsolicitante = new Date().toISOString(); updates.nombresolicitante = 'No definido'; }
+        if (!oc.fechaaprobacionjefe) { updates.fechaaprobacionjefe = new Date().toISOString(); updates.nombrejefe = 'No definido'; }
+        if (!oc.fechaaprobaciondirector) { updates.fechaaprobaciondirector = new Date().toISOString(); updates.nombredirector = 'No definido'; }
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        render();
+        generarPDFFirmado(oc);
+        alert('✅ Paridad ingresada. OC autorizada.');
+      };
+
+      window.marcarPagada = async function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
+        const updates = { estadopago: 'PAGADA' };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        oc.estadopago = 'PAGADA';
+        render();
+        alert('✅ OC marcada como PAGADA.');
+      };
+
+      window.registrarFactura = async function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        const oc = ordenes[index];
+        if (actual.u !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
+          return alert('Solo el responsable de la OC puede registrar la factura.');
+        }
+        if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
+        if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
+        const uuid = prompt('Ingrese el folio UUID de la factura:');
+        if (uuid === null) return;
+        if (!uuid.trim()) { alert('El UUID es obligatorio.'); return; }
+        const montoFactura = prompt('Ingrese el monto de la factura (en la misma moneda de la OC):');
+        if (montoFactura === null) return;
+        const monto = parseFloat(montoFactura);
+        if (!monto || monto <= 0) { alert('Monto inválido.'); return; }
+        if (Math.abs(monto - oc.montototal) > 0.01) {
+          alert(`El monto de la factura (${monto.toFixed(2)}) no coincide con el total de la OC (${oc.montototal.toFixed(2)}).`);
+          return;
+        }
+        const updates = { uuidfactura: uuid.trim().toUpperCase(), montofactura: monto, estado: 'CONCLUIDA' };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        render();
+        alert('✅ Factura registrada y OC concluida.');
+      };
+
+      window.marcarPendiente = async function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
+        const updates = { estadopago: 'PENDIENTE' };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        oc.estadopago = 'PENDIENTE';
+        render();
+      };
+
+      window.cancelarDirector = async function(index) {
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (oc.pausada) return alert('⚠️ OC pausada');
+        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+        const updates = { estado: 'CANCELADA' };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        oc.estado = 'CANCELADA';
+        render();
+        alert('❌ OC cancelada por Director.');
+      };
+
+      window.eliminarOC = async function(index) {
+        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        if (!confirm(`¿Eliminar OC ${oc.codigo}?`)) return;
+        const { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
+        if (error) return alert('Error al eliminar OC');
+        ordenes.splice(index, 1);
+        render();
+      };
+
+      window.togglePausarOC = async function(index) {
+        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        const oc = ordenes[index];
+        const nuevoEstado = !oc.pausada;
+        const updates = { pausada: nuevoEstado };
+        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        oc.pausada = nuevoEstado;
+        render();
+      };
+
       function generarPDFFirmado(oc) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
@@ -2783,16 +1883,11 @@
           doc.text(textLines, margin + labelWidth, y);
           y += textLines.length * 9 + 2;
         });
-
         y += 5;
 
         const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         const rows = oc.productos.map((p, i) => [
-          i + 1,
-          p.parte || '',
-          p.descripcion,
-          p.cantidad,
-          p.udm || 'PZA',
+          i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
           formatoMoneda(p.precioUnitario, oc.moneda),
           p.descuento.toFixed(2) + '%',
           p.impuesto.toFixed(2) + '%',
@@ -2800,34 +1895,20 @@
         ]);
 
         doc.autoTable({
-          head: [headers],
-          body: rows,
-          startY: y,
+          head: [headers], body: rows, startY: y,
           margin: { left: margin, right: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica',
-            fontStyle: 'bold' },
+          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
           columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 'auto' },
-            3: { cellWidth: 30 },
-            4: { cellWidth: 25 },
-            5: { cellWidth: 45 },
-            6: { cellWidth: 40 },
-            7: { cellWidth: 40 },
-            8: { cellWidth: 45 }
+            0: { cellWidth: 20 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' },
+            3: { cellWidth: 30 }, 4: { cellWidth: 25 }, 5: { cellWidth: 45 },
+            6: { cellWidth: 40 }, 7: { cellWidth: 40 }, 8: { cellWidth: 45 }
           },
-          didDrawPage: function(data) {
-            window._tableFinalY = data.cursor.y;
-          }
+          didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
-
-        let subtotal = 0;
-        let iva = 0;
-        let impuestoPorcentaje = 0;
+        let subtotal = 0, iva = 0, impuestoPorcentaje = 0;
         if (oc.productos && oc.productos.length > 0) {
           oc.productos.forEach(p => {
             const precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
@@ -2839,26 +1920,21 @@
 
         const totalX = pageWidth * 0.72;
         const lineSpacing = 13;
-
         y += 15;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
-
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, oc.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
-
         doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
         doc.text(formatoMoneda(iva, oc.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
-
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
         doc.line(totalX, y, pageWidth - margin, y);
         y += lineSpacing;
-
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text('TOTAL:', totalX, y);
@@ -2878,60 +1954,47 @@
 
         function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
           const lineWidth = colWidth - 20;
-
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
-
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
           doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
-
           const lineY = y + 14 + 10 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
-
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
-        const x1 = margin;
-        const x2 = margin + colWidth;
-        const x3 = margin + colWidth * 2;
-
-        const fechaSolicitante = oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() :
-          'Pendiente';
+        const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
+        const fechaSolicitante = oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
         const fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
-        const fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() :
-          'Pendiente';
+        const fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
 
         dibujarAutorizacionFirmada(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
         dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
-
         y += 70;
 
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
-
         doc.setFontSize(9);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
         doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
-
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
         doc.text(oc.codigo, pageWidth / 2, pieY + 20, { align: 'center' });
-
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
@@ -2940,251 +2003,6 @@
         doc.save(`OC_${oc.codigo}.pdf`);
       }
 
-      window.aprobarSolicitante = async function(index) {
-        if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
-        if (actual.u !== oc.responsable) return alert('Solo el responsable puede aprobar');
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
-        if (!proyecto) return alert('Proyecto no encontrado');
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-        const updates = {
-          estado: 'APROBADA_SOLICITANTE',
-          fechaaprobacionsolicitante: new Date().toISOString(),
-          nombresolicitante: actual.u
-        };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        Object.assign(oc, updates);
-        render();
-      };
-
-      window.aprobarJefe = async function(index) {
-        if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'APROBADA_SOLICITANTE') return alert('La OC debe estar aprobada por el Solicitante');
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
-        if (!proyecto) return alert('Proyecto no encontrado');
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-
-        const gastado = gastoProyectoMoneda(proyecto.nombre);
-        let montoEnMonedaProyecto = oc.montomxn || 0;
-        if (proyecto.moneda === 'USD') {
-          if (oc.paridadinicial) montoEnMonedaProyecto = oc.montomxn / oc.paridadinicial;
-          else montoEnMonedaProyecto = oc.montomxn / 20;
-        }
-
-        let nuevoEstado = 'APROBADA_JEFE';
-        let mensaje = '';
-
-        if (oc.moneda === 'USD' && !oc.tipocambio) {
-          nuevoEstado = 'PENDIENTE_PARIDAD';
-          mensaje = '⏳ OC en USD. Requiere paridad final.';
-        } else if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
-          nuevoEstado = 'AUTORIZADA';
-          oc.estadopago = null;
-          mensaje = '✅ OC autorizada automáticamente (dentro del 60%).';
-          const updates = {
-            estado: nuevoEstado,
-            fechaaprobacionjefe: new Date().toISOString(),
-            nombrejefe: actual.u,
-            fechaaprobaciondirector: new Date().toISOString(),
-            nombredirector: actual.u,
-            estadopago: null
-          };
-          const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-          if (error) return alert('Error al actualizar OC');
-          Object.assign(oc, updates);
-          render();
-          generarPDFFirmado(oc);
-          alert(mensaje);
-          return;
-        } else {
-          nuevoEstado = 'PENDIENTE_DIRECTOR';
-          mensaje = '⏳ OC supera el 60%. Enviada a Director.';
-        }
-
-        const updates = {
-          estado: nuevoEstado,
-          fechaaprobacionjefe: new Date().toISOString(),
-          nombrejefe: actual.u
-        };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        Object.assign(oc, updates);
-        render();
-        alert(mensaje);
-      };
-
-      window.autorizarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
-
-        if (oc.moneda === 'USD' && !oc.tipocambio) {
-          const updates = {
-            estado: 'PENDIENTE_PARIDAD',
-            fechaaprobaciondirector: new Date().toISOString(),
-            nombredirector: actual.u
-          };
-          const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-          if (error) return alert('Error al actualizar OC');
-          Object.assign(oc, updates);
-          render();
-          alert('⏳ OC en USD. Requiere paridad final.');
-          return;
-        }
-
-        const updates = {
-          estado: 'AUTORIZADA',
-          fechaaprobaciondirector: new Date().toISOString(),
-          nombredirector: actual.u,
-          estadopago: null
-        };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        Object.assign(oc, updates);
-        render();
-        generarPDFFirmado(oc);
-        alert('✅ OC autorizada por Director.');
-      };
-
-      window.ingresarParidad = async function(index) {
-        if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede ingresar la paridad final.');
-        const oc = ordenes[index];
-        if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
-        if (!proyecto) return alert('Proyecto no encontrado');
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-        const tc = prompt(`Ingrese el tipo de cambio (MXN/USD) para la OC ${oc.codigo}:`);
-        if (tc === null) return;
-        const tipoCambio = parseFloat(tc);
-        if (!tipoCambio || tipoCambio <= 0) { alert('Tipo de cambio inválido.'); return; }
-        const nuevoMontoMXN = oc.montototal * tipoCambio;
-        const updates = {
-          tipocambio: tipoCambio,
-          montomxn: nuevoMontoMXN,
-          estado: 'AUTORIZADA',
-          estadopago: null
-        };
-        if (!oc.fechaaprobacionsolicitante) {
-          updates.fechaaprobacionsolicitante = new Date().toISOString();
-          updates.nombresolicitante = 'No definido';
-        }
-        if (!oc.fechaaprobacionjefe) {
-          updates.fechaaprobacionjefe = new Date().toISOString();
-          updates.nombrejefe = 'No definido';
-        }
-        if (!oc.fechaaprobaciondirector) {
-          updates.fechaaprobaciondirector = new Date().toISOString();
-          updates.nombredirector = 'No definido';
-        }
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        Object.assign(oc, updates);
-        render();
-        generarPDFFirmado(oc);
-        alert('✅ Paridad ingresada. OC autorizada.');
-      };
-
-      window.marcarPagada = async function(index) {
-        if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
-        const updates = { estadopago: 'PAGADA' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        oc.estadopago = 'PAGADA';
-        render();
-        alert('✅ OC marcada como PAGADA.');
-      };
-
-      window.registrarFactura = async function(index) {
-        if (!actual) return alert('No has iniciado sesión');
-        const oc = ordenes[index];
-        if (actual.u !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
-          return alert('Solo el responsable de la OC puede registrar la factura.');
-        }
-        if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
-        if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
-        const uuid = prompt('Ingrese el folio UUID de la factura:');
-        if (uuid === null) return;
-        if (!uuid.trim()) { alert('El UUID es obligatorio.'); return; }
-        const montoFactura = prompt('Ingrese el monto de la factura (en la misma moneda de la OC):');
-        if (montoFactura === null) return;
-        const monto = parseFloat(montoFactura);
-        if (!monto || monto <= 0) { alert('Monto inválido.'); return; }
-        if (Math.abs(monto - oc.montototal) > 0.01) {
-          alert(
-            `El monto de la factura (${monto.toFixed(2)}) no coincide con el total de la OC (${oc.montototal.toFixed(2)}).`
-            );
-          return;
-        }
-        const updates = {
-          uuidfactura: uuid.trim().toUpperCase(),
-          montofactura: monto,
-          estado: 'CONCLUIDA'
-        };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        Object.assign(oc, updates);
-        render();
-        alert('✅ Factura registrada y OC concluida.');
-      };
-
-      window.marcarPendiente = async function(index) {
-        if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
-        const updates = { estadopago: 'PENDIENTE' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        oc.estadopago = 'PENDIENTE';
-        render();
-      };
-
-      window.cancelarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
-        const updates = { estado: 'CANCELADA' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        oc.estado = 'CANCELADA';
-        render();
-        alert('❌ OC cancelada por Director.');
-      };
-
-      window.eliminarOC = async function(index) {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (!confirm(`¿Eliminar OC ${oc.codigo}?`)) return;
-        const { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
-        if (error) return alert('Error al eliminar OC');
-        ordenes.splice(index, 1);
-        render();
-      };
-
-      window.togglePausarOC = async function(index) {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        const nuevoEstado = !oc.pausada;
-        const updates = { pausada: nuevoEstado };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
-        oc.pausada = nuevoEstado;
-        render();
-      };
-
-      // ===== DASHBOARD =====
       window.mostrarDashboard = function(index) {
         const proyecto = proyectos[index];
         if (!proyecto) return;
@@ -3275,12 +2093,9 @@
                     estadoMostrado = 'CONCLUIDA';
                   } else {
                     const classes = {
-                      'CREADA': 'badge-creada',
-                      'APROBADA_SOLICITANTE': 'badge-solicitante',
-                      'APROBADA_JEFE': 'badge-jefe',
-                      'PENDIENTE_DIRECTOR': 'badge-pendiente',
-                      'PENDIENTE_PARIDAD': 'badge-paridad',
-                      'CANCELADA': 'badge-cancelada'
+                      'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
+                      'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
+                      'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
                     };
                     badgeClass = classes[o.estado] || '';
                   }
@@ -3343,20 +2158,14 @@
         }
 
         if (filtroPendientesActivo && actual && actual.rol === 'Finanzas') {
-          ocVisibles = ocVisibles.filter(o =>
-            o.estado === 'AUTORIZADA' &&
-            o.estadopago !== 'PAGADA' &&
-            !o.pausada
-          );
+          ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada);
         }
 
-        // Renderizar proyectos
         tablaProyectos.innerHTML = '';
         selectProyecto.innerHTML = '';
 
         if (proyectosVisibles.length === 0) {
-          tablaProyectos.innerHTML =
-            `<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>`;
+          tablaProyectos.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>`;
           selectProyecto.innerHTML = '<option value="">No hay proyectos disponibles</option>';
         } else {
           proyectosVisibles.forEach((p, idx) => {
@@ -3368,14 +2177,8 @@
             const deptoColor = getColorByEmpresa(p.empresa);
 
             let botones = '';
-            if (!esFinanzas) {
-              botones +=
-                `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
-            }
-            if (esAdmin) {
-              botones +=
-                `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
-            }
+            if (!esFinanzas) botones += `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
+            if (esAdmin) botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
 
             tablaProyectos.innerHTML += `
               <tr>
@@ -3405,17 +2208,14 @@
           window.actualizarResponsables();
         }
 
-        // Renderizar OC
         tablaOC.innerHTML = '';
 
         if (ocVisibles.length === 0) {
           tablaOC.innerHTML = `<tr><td colspan="15" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>`;
           resumenTotales.innerHTML = '';
         } else {
-          const totalMXN = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o
-            .montototal, 0);
-          const totalUSD = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o
-            .montototal, 0);
+          const totalMXN = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o.montototal, 0);
+          const totalUSD = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o.montototal, 0);
           const totalMXNEquiv = ocVisibles.filter(o => o.estadopago === 'PAGADA').reduce((s, o) => s + (o.montomxn || 0), 0);
           resumenTotales.innerHTML = `
             <strong>Totales pagados (visibles):</strong>
@@ -3456,12 +2256,9 @@
               estadoMostrado = '✅ CONCLUIDA';
             } else {
               const classes = {
-                'CREADA': 'badge-creada',
-                'APROBADA_SOLICITANTE': 'badge-solicitante',
-                'APROBADA_JEFE': 'badge-jefe',
-                'PENDIENTE_DIRECTOR': 'badge-pendiente',
-                'PENDIENTE_PARIDAD': 'badge-paridad',
-                'CANCELADA': 'badge-cancelada'
+                'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
+                'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
+                'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
               };
               badgeClass = classes[o.estado] || '';
               estadoMostrado = o.estado;
@@ -3473,11 +2270,9 @@
             if (rol === 'Finanzas') {
               if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                 if (o.estadopago === 'PAGADA') {
-                  acciones +=
-                    `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+                  acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
                 } else {
-                  acciones +=
-                    `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+                  acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
                 }
               } else {
                 acciones = '—';
@@ -3485,32 +2280,25 @@
             } else {
               if (rol === 'Administrador') {
                 const textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
-                acciones +=
-                  `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
-                acciones +=
-                  `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
+                acciones += `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
+                acciones += `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
                 if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                   if (o.estadopago === 'PAGADA') {
-                    acciones +=
-                      `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+                    acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
                   } else {
-                    acciones +=
-                      `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+                    acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
                   }
                 }
                 if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                  acciones +=
-                    `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+                  acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
                 }
               } else {
                 if (!o.pausada) {
                   if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
-                    acciones +=
-                      `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
+                    acciones += `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
                   }
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
-                    acciones +=
-                      `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe)</button>`;
+                    acciones += `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe)</button>`;
                   }
                   if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
                     acciones += `
@@ -3519,13 +2307,10 @@
                     `;
                   }
                   if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
-                    acciones +=
-                      `<button class="warning" onclick="window.ingresarParidad(${idxOriginal})">💰 Ingresar Paridad Final</button>`;
+                    acciones += `<button class="warning" onclick="window.ingresarParidad(${idxOriginal})">💰 Ingresar Paridad Final</button>`;
                   }
-                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !==
-                    'CONCLUIDA') {
-                    acciones +=
-                      `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                    acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
                   }
                 } else {
                   acciones = '⏸️ Pausada';
@@ -3593,11 +2378,9 @@
         }
       }
 
-      // ===== INIT =====
       async function init() {
         const hoy = new Date();
         const fechaHoy = hoy.toISOString().split('T')[0];
-
         document.getElementById('fechaInicio').value = fechaHoy;
         const fechaFin = new Date(hoy);
         fechaFin.setMonth(fechaFin.getMonth() + 6);
@@ -3609,25 +2392,11 @@
       document.addEventListener('DOMContentLoaded', function() {
         init();
         const btnLogin = document.getElementById('btnLogin');
-        if (btnLogin) {
-          btnLogin.addEventListener('click', window.login);
-        }
+        if (btnLogin) btnLogin.addEventListener('click', window.login);
         const passInput = document.getElementById('password');
-        if (passInput) {
-          passInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-              window.login();
-            }
-          });
-        }
+        if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
         const userInput = document.getElementById('usuario');
-        if (userInput) {
-          userInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-              window.login();
-            }
-          });
-        }
+        if (userInput) userInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
       });
 
       window.recalcularFila = recalcularFila;
