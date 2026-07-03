@@ -1187,9 +1187,9 @@
       'use strict';
 
       // ============================================================
-      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
+      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM (CORREGIDA)
       // ============================================================
-      const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBfRibR6kCkPSyF5RJBuRABuXslm_U';
+      const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
       const TELEGRAM_CHAT_ID = '5425017187';
       // ============================================================
 
@@ -1198,50 +1198,51 @@
       const supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
       // ============================================================
-      // 📨 FUNCIÓN PARA ENVIAR NOTIFICACIÓN POR TELEGRAM
+      // 📨 FUNCIÓN MEJORADA PARA ENVIAR NOTIFICACIÓN POR TELEGRAM
       // ============================================================
       async function enviarNotificacionTelegram(mensaje) {
         try {
           console.log('📤 Intentando enviar notificación a Telegram...');
-          if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'TU_TOKEN_BOT_AQUI') {
-            console.error('❌ Token de Telegram no configurado.');
-            return false;
-          }
-          if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'CHAT_ID_DIRECTOR_AQUI') {
-            console.error('❌ Chat ID de Telegram no configurado.');
-            return false;
-          }
+          
           if (!mensaje || mensaje.trim() === '') {
             console.error('❌ Mensaje vacío, no se enviará.');
             return false;
           }
 
           const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-          const payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML' };
-          const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON
-              .stringify(payload) });
+          
+          const payload = {
+            chat_id: TELEGRAM_CHAT_ID,
+            text: mensaje,
+            parse_mode: 'HTML'
+          };
+          
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
           const data = await response.json();
           console.log('📨 Respuesta de Telegram:', data);
-          if (data.ok) { console.log('✅ Notificación enviada a Telegram'); return true; } else { console.error(
-              '❌ Error al enviar notificación:', data.description); return false; }
-        } catch (error) { console.error('❌ Error al enviar notificación:', error); return false; }
+          
+          if (data.ok) {
+            console.log('✅ Notificación enviada a Telegram');
+            return true;
+          } else {
+            console.error('❌ Error al enviar notificación:', data.description);
+            return false;
+          }
+        } catch (error) {
+          console.error('❌ Error al enviar notificación:', error);
+          return false;
+        }
       }
 
       // ============================================================
-      // 🔒 ESCAPAR CARACTERES HTML PARA TELEGRAM (parse_mode: 'HTML')
-      // Telegram rechaza el mensaje completo (ok:false) si el texto
-      // contiene &, < o > sueltos que no forman una entidad válida.
-      // ============================================================
-      function escapeHTML(texto) {
-        if (texto === null || texto === undefined) return '';
-        return String(texto)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-      }
-
-      // ============================================================
-      // FUNCIÓN PARA FORMATEAR MENSAJE DE OC (SOLO PARA >60%)
+      // 📝 FUNCIÓN PARA FORMATEAR MENSAJE DE OC (SUPERA EL 60%)
       // ============================================================
       function formatearMensajeOC(datos, proyecto) {
         const gastado = gastoProyectoMoneda(proyecto.nombre);
@@ -1249,16 +1250,16 @@
         const excedente = gastado - proyecto.limite;
 
         let mensaje = `<b>⚠️ OC QUE SUPERA EL 60% - REQUIERE AUTORIZACIÓN</b>\n\n`;
-        mensaje += `<b>Código:</b> ${escapeHTML(datos.codigo || 'Generando...')}\n`;
-        mensaje += `<b>Proyecto:</b> ${escapeHTML(datos.proyectonombre || datos.proyecto)}\n`;
-        mensaje += `<b>Empresa:</b> ${escapeHTML(datos.empresa)}\n`;
-        mensaje += `<b>Departamento:</b> ${escapeHTML(datos.departamento)}\n`;
-        mensaje += `<b>Cliente:</b> ${escapeHTML(datos.cliente)}\n`;
-        mensaje += `<b>Proveedor:</b> ${escapeHTML(datos.proveedor)}\n`;
-        mensaje += `<b>RFC:</b> ${escapeHTML(datos.rfc)}\n`;
-        mensaje += `<b>Responsable:</b> ${escapeHTML(datos.responsable)}\n`;
-        mensaje += `<b>Elaborador:</b> ${escapeHTML(datos.elaborador)}\n`;
-        mensaje += `<b>Moneda:</b> ${escapeHTML(datos.moneda)}\n`;
+        mensaje += `<b>Código:</b> ${datos.codigo || 'Generando...'}\n`;
+        mensaje += `<b>Proyecto:</b> ${datos.proyectonombre || datos.proyecto}\n`;
+        mensaje += `<b>Empresa:</b> ${datos.empresa}\n`;
+        mensaje += `<b>Departamento:</b> ${datos.departamento}\n`;
+        mensaje += `<b>Cliente:</b> ${datos.cliente}\n`;
+        mensaje += `<b>Proveedor:</b> ${datos.proveedor}\n`;
+        mensaje += `<b>RFC:</b> ${datos.rfc}\n`;
+        mensaje += `<b>Responsable:</b> ${datos.responsable}\n`;
+        mensaje += `<b>Elaborador:</b> ${datos.elaborador}\n`;
+        mensaje += `<b>Moneda:</b> ${datos.moneda}\n`;
         mensaje += `<b>Monto Total:</b> ${formatoMoneda(datos.montototal, datos.moneda)}\n`;
         mensaje += `<b>Equivalente MXN:</b> ${formatoMoneda(datos.montomxn, 'MXN')}\n`;
         mensaje += `<b>Fecha Pago:</b> ${new Date(datos.fechapago).toLocaleDateString('es-MX')}\n`;
@@ -1268,19 +1269,16 @@
         mensaje += `<b>Pagado:</b> ${formatoMoneda(gastado, proyecto.moneda)}\n`;
         mensaje += `<b>Excedente:</b> ${formatoMoneda(excedente, proyecto.moneda)} (${porcentaje.toFixed(2)}%)\n\n`;
         mensaje += `<b>Productos:</b>\n`;
+        
         if (datos.productos && datos.productos.length > 0) {
           datos.productos.forEach((p, i) => {
-            mensaje += `  ${i + 1}. ${escapeHTML(p.descripcion)} - ${escapeHTML(p.cantidad)} ${escapeHTML(p.udm || 'PZA')} x ${formatoMoneda(p.precioUnitario, datos.moneda)} = ${formatoMoneda(p.importe, datos.moneda)}\n`;
+            mensaje += `  ${i + 1}. ${p.descripcion} - ${p.cantidad} ${p.udm || 'PZA'} x ${formatoMoneda(p.precioUnitario, datos.moneda)} = ${formatoMoneda(p.importe, datos.moneda)}\n`;
           });
         } else {
           mensaje += `  No hay productos registrados\n`;
         }
+        
         mensaje += `\n🔗 <i>Revisa en el sistema para autorizar o cancelar</i>`;
-
-        // Telegram rechaza mensajes de más de 4096 caracteres
-        if (mensaje.length > 4090) {
-          mensaje = mensaje.substring(0, 4000) + '\n\n... <i>(mensaje truncado, revisa el sistema)</i>';
-        }
 
         return mensaje;
       }
@@ -2638,14 +2636,12 @@
 
             const enviado = await enviarNotificacionTelegram(mensajeTelegram);
             if (enviado) {
-              console.log('✅ Notificación enviada exitosamente');
+              console.log('✅ Notificación enviada exitosamente a Telegram');
             } else {
               console.warn('⚠️ La notificación no pudo ser enviada');
-              mensaje += '\n⚠️ No se pudo enviar la notificación a Telegram (revisa la consola).';
             }
           } catch (error) {
             console.error('❌ Error al enviar notificación:', error);
-            mensaje += '\n⚠️ No se pudo enviar la notificación a Telegram (revisa la consola).';
           }
         }
 
