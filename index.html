@@ -301,15 +301,6 @@
     }
   }
   
-  /* ===== ESTILO PARA DESTACAR LA OC NOTIFICADA EN EL SCROLL ===== */
-  .highlight-row {
-    animation: highlight-pulse 2s ease-in-out 3;
-  }
-  @keyframes highlight-pulse {
-    0%, 100% { background-color: #fffbeb; }
-    50% { background-color: #fbbf24; }
-  }
-  
   .badge {
     display: inline-block;
     padding: 3px 12px;
@@ -1420,10 +1411,69 @@
         errorDiv.classList.add('hidden');
 
         document.getElementById('login').classList.add('hidden');
-        document.getElementById('menuPrincipal').classList.remove('hidden');
-        document.getElementById('contenidoApp').classList.add('hidden');
 
-        configurarModulos();
+        // Verificar si hay un ID de OC en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const ocParam = urlParams.get('oc');
+        
+        if (ocParam) {
+          // Si hay un parámetro "oc", cargar directamente el módulo OC y resaltar la OC
+          ocNotificadaId = parseInt(ocParam);
+          console.log('🔍 OC notificada ID:', ocNotificadaId);
+          
+          // Mostrar directamente el módulo OC
+          document.getElementById('menuPrincipal').classList.add('hidden');
+          document.getElementById('contenidoApp').classList.remove('hidden');
+          document.getElementById('contenidoApp').classList.add('visible');
+          document.getElementById('btnVolverMenu').classList.remove('hidden');
+          
+          // Configurar el módulo OC
+          const panelOC = document.getElementById('panelOC');
+          const panelProyecto = document.getElementById('panelProyecto');
+          const tablaProyectosCard = document.getElementById('tablaProyectosCard');
+          const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+          
+          panelProyecto.classList.add('hidden');
+          tablaProyectosCard.classList.add('hidden');
+          if (puedeCrear) panelOC.classList.remove('hidden');
+          else panelOC.classList.add('hidden');
+          document.querySelector('#contenidoApp .card:last-child')?.classList.remove('hidden');
+          
+          moduloActual = 'oc';
+          
+          setTimeout(function() {
+            render();
+            if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
+              window.actualizarResponsables();
+            }
+            const cuerpo = document.getElementById('cuerpoProductos');
+            if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
+              window.agregarFilaProducto();
+            }
+            
+            // Hacer scroll a la OC notificada
+            setTimeout(function() {
+              const row = document.querySelector(`tr[data-oc-id="${ocNotificadaId}"]`);
+              if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Enfocar el botón de autorizar
+                setTimeout(function() {
+                  const btn = row.querySelector('.btn-aura-amarilla');
+                  if (btn) {
+                    btn.focus();
+                    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 500);
+              }
+            }, 800);
+          }, 200);
+          
+        } else {
+          // Si no hay parámetro, mostrar el menú principal
+          document.getElementById('menuPrincipal').classList.remove('hidden');
+          document.getElementById('contenidoApp').classList.add('hidden');
+          configurarModulos();
+        }
 
         let infoSesion = `👤 ${actual.u} (${actual.rol})`;
         const opciones = obtenerOpcionesPermisos(actual);
@@ -1555,37 +1605,11 @@
           render();
         };
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const ocParam = urlParams.get('oc');
-        if (ocParam) {
-          ocNotificadaId = parseInt(ocParam);
-          console.log('🔍 OC notificada ID:', ocNotificadaId);
-        }
-
         setTimeout(function() {
           render();
           const cuerpo = document.getElementById('cuerpoProductos');
           if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
             window.agregarFilaProducto();
-          }
-          
-          // Si hay una OC notificada, hacer scroll a ella y resaltarla
-          if (ocNotificadaId) {
-            setTimeout(function() {
-              const row = document.querySelector(`tr[data-oc-id="${ocNotificadaId}"]`);
-              if (row) {
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                row.classList.add('highlight-row');
-                // Enfocar el botón de autorizar
-                setTimeout(function() {
-                  const btn = row.querySelector('.btn-aura-amarilla');
-                  if (btn) {
-                    btn.focus();
-                    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }, 500);
-              }
-            }, 800);
           }
         }, 200);
       };
