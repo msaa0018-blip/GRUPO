@@ -362,7 +362,7 @@
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
   .productos-tabla input.precio { min-width: 80px }
-  .productos-tabla input.importe { min-width: 130px; background: var(--gray-100); font-weight: bold }
+  .productos-tabla input.importe { min-width: 130px; background: var(--gray-100); font-weight: bold; font-size: 23px }
   .productos-tabla select.udm { min-width: 80px }
   .resumen-totales {
     background: var(--gray-50);
@@ -2721,9 +2721,9 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
-        const solicitanteNombre = oc.responsable || 'No definido';
-        const jefeNombre = proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido';
-        const directorNombre = getDirector();
+        const solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
+        const jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
+        const directorNombre = oc.nombredirector || getDirector();
         const colWidth = (pageWidth - 2 * margin) / 3;
 
         function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
