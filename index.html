@@ -40,7 +40,7 @@
     --radius: 12px;
     --shadow: 0 4px 20px rgba(0, 0, 0, .06);
     --font: Segoe UI, system-ui, -apple-system, sans-serif;
-    --orange-gold: #FFC700; /* Amarillo seguridad */
+    --orange-gold: #FFC700;
   }
   body {
     font-family: var(--font);
@@ -231,6 +231,12 @@
   button.btn-visualizar:hover {
     background: #0e7490;
   }
+  button.btn-cxp {
+    background: #7c3aed;
+  }
+  button.btn-cxp:hover {
+    background: #6d28d9;
+  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -258,14 +264,11 @@
   tr:hover {
     background: var(--gray-50)
   }
-  
-  /* ===== AURA AMARILLO SEGURIDAD ===== */
   tr.pendiente-director-notificada {
     animation: pulse-aura-orange-gold 2.5s ease-in-out infinite;
-    border-left: 6px solid #E8B400; /* Amarillo seguridad oscuro */
-    background: #FFE066 !important; /* Amarillo seguridad vivo, sin atenuar */
+    border-left: 6px solid #E8B400;
+    background: #FFE066 !important;
   }
-  
   @keyframes pulse-aura-orange-gold {
     0%, 100% {
       box-shadow: 0 0 15px rgba(232, 180, 0, 0.45), 0 0 30px rgba(255, 199, 0, 0.25);
@@ -276,8 +279,6 @@
       background: #FFD100;
     }
   }
-  
-  /* Botón con aura amarillo seguridad */
   .btn-aura-orange-gold {
     animation: pulse-aura-orange-gold-boton 2.5s ease-in-out infinite !important;
     border: 2px solid #E8B400 !important;
@@ -287,7 +288,6 @@
   .btn-aura-orange-gold:hover {
     background: #E8B400 !important;
   }
-  
   @keyframes pulse-aura-orange-gold-boton {
     0%, 100% {
       box-shadow: 0 0 10px rgba(232, 180, 0, 0.4);
@@ -298,7 +298,6 @@
       border-color: #FFD100;
     }
   }
-  
   .badge {
     display: inline-block;
     padding: 3px 12px;
@@ -537,7 +536,6 @@
   .grupo-formulario:last-child { margin-bottom: 0 }
   .campo-obligatorio::after { content: " *"; color: var(--danger); font-weight: bold }
 
-  /* Menú principal Odoo-style */
   #menuPrincipal {
     background: var(--gray-100);
     padding: 30px 20px;
@@ -648,6 +646,52 @@
   .filtros-container .filtro-item select { min-width: 150px; padding: 6px 10px; min-height: 36px; font-size: 13px }
   .mensaje-sin-datos { padding: 20px; text-align: center; color: var(--gray-500); font-size: 14px }
 
+  /* Estilos para CXP */
+  .cxp-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .cxp-resumen .cxp-tarjeta {
+    background: var(--gray-50);
+    padding: 16px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+  }
+  .cxp-resumen .cxp-tarjeta .numero {
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .cxp-resumen .cxp-tarjeta .etiqueta {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .cxp-resumen .cxp-tarjeta.pagado .numero { color: var(--success); }
+  .cxp-resumen .cxp-tarjeta.pendiente .numero { color: var(--warning); }
+  .cxp-resumen .cxp-tarjeta.vencido .numero { color: var(--danger); }
+
+  .cxp-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .cxp-filtros select, .cxp-filtros input {
+    min-height: 36px;
+    padding: 6px 12px;
+    width: auto;
+    min-width: 150px;
+  }
+  .cxp-filtros button {
+    min-height: 36px;
+    padding: 6px 16px;
+  }
+
+  .cxp-tabla-resumen td:first-child { font-weight: 600; }
+
   @media (max-width: 768px) {
     .table-wrapper { overflow-x: visible }
     table, thead, tbody, th, td, tr { display: block }
@@ -686,6 +730,46 @@
     .filtros-container .filtro-item label { font-size: 12px }
     .filtros-container .filtro-item select { min-width: 100%; font-size: 13px; padding: 6px 10px; min-height: 36px }
     .btn-pendientes-pagar { font-size: 12px; padding: 6px 12px; min-height: 36px }
+    .cxp-resumen { grid-template-columns: 1fr 1fr; }
+    .cxp-filtros { flex-direction: column; align-items: stretch; }
+    .cxp-filtros select, .cxp-filtros input { min-width: 100%; }
+  }
+
+  /* CXP - Estilos para el dashboard de proyectos */
+  .cxp-proyecto-card {
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: white;
+  }
+  .cxp-proyecto-card .cxp-proyecto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .cxp-proyecto-card .cxp-proyecto-header h4 { margin: 0; }
+  .cxp-proyecto-card .cxp-progreso {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .cxp-proyecto-card .cxp-progreso .barra {
+    flex: 1;
+    min-width: 120px;
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .cxp-proyecto-card .cxp-progreso .barra .fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .4s;
   }
 </style>
 </head>
@@ -695,7 +779,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v47</span>
+        <span class="sub">Workflow OC ERP v48</span>
       </div>
     </div>
     <div class="header-actions">
@@ -725,10 +809,10 @@
       <div class="modulos-grid" id="modulosGrid">
         <div class="modulo-item" data-modulo="oc"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OC</span></div>
         <div class="modulo-item" data-modulo="proyectos"><div class="modulo-cuadro funcional">📊</div><span class="modulo-leyenda">Proyectos</span></div>
+        <div class="modulo-item" data-modulo="cxp"><div class="modulo-cuadro funcional">💰</div><span class="modulo-leyenda">CXP</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">👥</div><span class="modulo-leyenda construccion">Contactos</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">💰</div><span class="modulo-leyenda construccion">Finanzas</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">🗂️</div><span class="modulo-leyenda construccion">Repositorio</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
       </div>
@@ -847,8 +931,84 @@
         <div id="mensajeOC"></div>
       </div>
 
+      <!-- Panel CXP (Cuentas por Pagar) -->
+      <div id="panelCXP" class="card hidden">
+        <h2>💰 Cuentas por Pagar (CXP)</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Análisis de órdenes de compra autorizadas y su estado de pago por empresa, departamento y proyecto.</p>
+        
+        <!-- Filtros CXP -->
+        <div class="cxp-filtros">
+          <select id="cxpFiltroEmpresa">
+            <option value="">Todas las empresas</option>
+          </select>
+          <select id="cxpFiltroDepto">
+            <option value="">Todos los departamentos</option>
+          </select>
+          <select id="cxpFiltroProyecto">
+            <option value="">Todos los proyectos</option>
+          </select>
+          <select id="cxpFiltroEstado">
+            <option value="">Todos los estados</option>
+            <option value="AUTORIZADA">Autorizadas</option>
+            <option value="PAGADA">Pagadas</option>
+            <option value="PENDIENTE">Pendientes de pago</option>
+            <option value="VENCIDA">Vencidas</option>
+            <option value="CONCLUIDA">Concluidas</option>
+          </select>
+          <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
+          <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
+        </div>
+
+        <!-- Resumen CXP -->
+        <div id="cxpResumen" class="cxp-resumen"></div>
+
+        <!-- Tabla de detalle por proyecto -->
+        <h3>📋 Detalle por Proyecto</h3>
+        <div class="table-wrapper">
+          <table id="cxpTablaProyectos">
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Departamento</th>
+                <th>Proyecto</th>
+                <th>Cliente</th>
+                <th>Presupuesto</th>
+                <th>Pagado</th>
+                <th>Pendiente</th>
+                <th>Vencido</th>
+                <th>% Uso</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cxpCuerpoProyectos"></tbody>
+          </table>
+        </div>
+
+        <!-- Tabla de OC detallada -->
+        <h3>📄 Órdenes de Compra</h3>
+        <div class="table-wrapper">
+          <table id="cxpTablaOC">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Proyecto</th>
+                <th>Proveedor</th>
+                <th>Moneda</th>
+                <th>Total</th>
+                <th>Equiv. MXN</th>
+                <th>F.Pago</th>
+                <th>F.Aprobación</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cxpCuerpoOC"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Bandeja OC -->
-      <div class="card">
+      <div class="card" id="bandejaOCCard">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
         <div class="filtros-container">
           <div id="filtroProyectoContainer" class="filtro-item hidden"><label>Proyecto:</label><select id="filtroProyecto"><option value="">Todos</option></select></div>
@@ -943,6 +1103,7 @@
       let filtroPendientesActivo = false;
       let visualizarOCData = null;
       let visualizarOCPDF = null;
+      let cxpFiltros = { empresa: '', depto: '', proyecto: '', estado: '' };
 
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -1198,18 +1359,28 @@
         const panelOC = document.getElementById('panelOC');
         const panelProyecto = document.getElementById('panelProyecto');
         const tablaProyectosCard = document.getElementById('tablaProyectosCard');
+        const panelCXP = document.getElementById('panelCXP');
+        const bandejaOCCard = document.getElementById('bandejaOCCard');
         const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
 
+        // Ocultar todos los paneles primero
+        panelOC.classList.add('hidden');
+        panelProyecto.classList.add('hidden');
+        tablaProyectosCard.classList.add('hidden');
+        panelCXP.classList.add('hidden');
+
         if (modulo === 'oc') {
-          panelProyecto.classList.add('hidden');
-          tablaProyectosCard.classList.add('hidden');
           if (puedeCrear) panelOC.classList.remove('hidden');
-          else panelOC.classList.add('hidden');
-          document.querySelector('#contenidoApp .card:last-child')?.classList.remove('hidden');
+          bandejaOCCard.classList.remove('hidden');
         } else if (modulo === 'proyectos') {
-          panelOC.classList.add('hidden');
           if (puedeCrear) { panelProyecto.classList.remove('hidden'); tablaProyectosCard.classList.remove('hidden'); }
-          else { panelProyecto.classList.add('hidden'); tablaProyectosCard.classList.add('hidden'); }
+          bandejaOCCard.classList.remove('hidden');
+        } else if (modulo === 'cxp') {
+          panelCXP.classList.remove('hidden');
+          // Cargar filtros de CXP
+          cargarFiltrosCXP();
+          window.renderCXP();
+          bandejaOCCard.classList.add('hidden');
         }
 
         setTimeout(function() {
@@ -1230,7 +1401,7 @@
 
       let modulosConfigurados = false;
       function configurarModulos() {
-        if (modulosConfigurados) return; // evita doble binding si se llama más de una vez
+        if (modulosConfigurados) return;
         const grid = document.getElementById('modulosGrid');
         if (!grid) return;
         grid.addEventListener('click', function(e) {
@@ -1239,6 +1410,7 @@
           const modulo = item.dataset.modulo;
           if (modulo === 'oc') window.mostrarModulo('oc');
           else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
+          else if (modulo === 'cxp') window.mostrarModulo('cxp');
           else mostrarConstruccion();
         });
         modulosConfigurados = true;
@@ -1415,36 +1587,33 @@
 
         document.getElementById('login').classList.add('hidden');
 
-        // Verificar si hay un ID de OC en la URL
         const urlParams = new URLSearchParams(window.location.search);
         const ocParam = urlParams.get('oc');
         
         if (ocParam) {
-          // Si hay un parámetro "oc", cargar directamente el módulo OC y resaltar la OC
           ocNotificadaId = parseInt(ocParam);
           console.log('🔍 OC notificada ID:', ocNotificadaId);
           
-          // Enganchar los módulos aunque no se muestre el menú de entrada,
-          // para que "Volver" sí permita seleccionar módulos y no solo salir
           configurarModulos();
           
-          // Mostrar directamente el módulo OC
           document.getElementById('menuPrincipal').classList.add('hidden');
           document.getElementById('contenidoApp').classList.remove('hidden');
           document.getElementById('contenidoApp').classList.add('visible');
           document.getElementById('btnVolverMenu').classList.remove('hidden');
           
-          // Configurar el módulo OC
           const panelOC = document.getElementById('panelOC');
           const panelProyecto = document.getElementById('panelProyecto');
           const tablaProyectosCard = document.getElementById('tablaProyectosCard');
+          const panelCXP = document.getElementById('panelCXP');
+          const bandejaOCCard = document.getElementById('bandejaOCCard');
           const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
           
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
+          panelCXP.classList.add('hidden');
           if (puedeCrear) panelOC.classList.remove('hidden');
           else panelOC.classList.add('hidden');
-          document.querySelector('#contenidoApp .card:last-child')?.classList.remove('hidden');
+          bandejaOCCard.classList.remove('hidden');
           
           moduloActual = 'oc';
           
@@ -1458,12 +1627,10 @@
               window.agregarFilaProducto();
             }
             
-            // Hacer scroll a la OC notificada
             setTimeout(function() {
               const row = document.querySelector(`tr[data-oc-id="${ocNotificadaId}"]`);
               if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Enfocar el botón de autorizar
                 setTimeout(function() {
                   const btn = row.querySelector('.btn-aura-orange-gold');
                   if (btn) {
@@ -1476,7 +1643,6 @@
           }, 200);
           
         } else {
-          // Si no hay parámetro, mostrar el menú principal
           document.getElementById('menuPrincipal').classList.remove('hidden');
           document.getElementById('contenidoApp').classList.add('hidden');
           configurarModulos();
@@ -2425,7 +2591,6 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
-        // 📨 ENVIAR NOTIFICACIÓN AL DIRECTOR
         try {
           let productos = oc.productos || [];
           if (typeof productos === 'string') {
@@ -2917,6 +3082,376 @@
       };
 
       // ============================================================
+      // FUNCIONES CXP (Cuentas por Pagar)
+      // ============================================================
+      
+      function cargarFiltrosCXP() {
+        const empresas = [...new Set(proyectos.map(p => p.empresa))];
+        const deptos = [...new Set(proyectos.map(p => p.departamento))];
+        const proyNombres = proyectos.map(p => p.nombre);
+
+        const selectEmpresa = document.getElementById('cxpFiltroEmpresa');
+        const selectDepto = document.getElementById('cxpFiltroDepto');
+        const selectProyecto = document.getElementById('cxpFiltroProyecto');
+
+        // Guardar valores seleccionados actuales
+        const currentEmpresa = selectEmpresa.value;
+        const currentDepto = selectDepto.value;
+        const currentProyecto = selectProyecto.value;
+
+        selectEmpresa.innerHTML = '<option value="">Todas las empresas</option>';
+        empresas.forEach(e => {
+          const opt = document.createElement('option');
+          opt.value = e;
+          opt.textContent = e;
+          if (e === currentEmpresa) opt.selected = true;
+          selectEmpresa.appendChild(opt);
+        });
+
+        selectDepto.innerHTML = '<option value="">Todos los departamentos</option>';
+        deptos.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          if (d === currentDepto) opt.selected = true;
+          selectDepto.appendChild(opt);
+        });
+
+        selectProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
+        proyNombres.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          if (p === currentProyecto) opt.selected = true;
+          selectProyecto.appendChild(opt);
+        });
+
+        // Event listeners para actualizar los filtros
+        selectEmpresa.onchange = function() { window.renderCXP(); };
+        selectDepto.onchange = function() { window.renderCXP(); };
+        selectProyecto.onchange = function() { window.renderCXP(); };
+        document.getElementById('cxpFiltroEstado').onchange = function() { window.renderCXP(); };
+      }
+
+      function obtenerDatosCXP() {
+        const filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
+        const filtroDepto = document.getElementById('cxpFiltroDepto').value;
+        const filtroProyecto = document.getElementById('cxpFiltroProyecto').value;
+        const filtroEstado = document.getElementById('cxpFiltroEstado').value;
+
+        // Filtrar proyectos
+        let proyectosFiltrados = proyectos;
+        if (filtroEmpresa) proyectosFiltrados = proyectosFiltrados.filter(p => p.empresa === filtroEmpresa);
+        if (filtroDepto) proyectosFiltrados = proyectosFiltrados.filter(p => p.departamento === filtroDepto);
+        if (filtroProyecto) proyectosFiltrados = proyectosFiltrados.filter(p => p.nombre === filtroProyecto);
+
+        // Filtrar OC
+        let ocFiltradas = ordenes.filter(o => o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estadopago === 'PAGADA');
+        if (filtroEmpresa) {
+          const proys = proyectos.filter(p => p.empresa === filtroEmpresa).map(p => p.nombre);
+          ocFiltradas = ocFiltradas.filter(o => proys.includes(o.proyecto));
+        }
+        if (filtroDepto) {
+          const proys = proyectos.filter(p => p.departamento === filtroDepto).map(p => p.nombre);
+          ocFiltradas = ocFiltradas.filter(o => proys.includes(o.proyecto));
+        }
+        if (filtroProyecto) ocFiltradas = ocFiltradas.filter(o => o.proyecto === filtroProyecto);
+
+        // Filtrar por estado de pago
+        if (filtroEstado === 'PAGADA') ocFiltradas = ocFiltradas.filter(o => o.estadopago === 'PAGADA');
+        else if (filtroEstado === 'PENDIENTE') ocFiltradas = ocFiltradas.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'));
+        else if (filtroEstado === 'VENCIDA') {
+          ocFiltradas = ocFiltradas.filter(o => {
+            if (o.estadopago === 'PAGADA') return false;
+            const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            const ahora = new Date();
+            const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+            return diffDias > 1;
+          });
+        } else if (filtroEstado === 'AUTORIZADA') ocFiltradas = ocFiltradas.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA');
+        else if (filtroEstado === 'CONCLUIDA') ocFiltradas = ocFiltradas.filter(o => o.estado === 'CONCLUIDA');
+
+        return { proyectos: proyectosFiltrados, oc: ocFiltradas };
+      }
+
+      window.renderCXP = function() {
+        const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+
+        // Calcular resumen
+        let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        let totalPagadoUSD = 0, totalPendienteUSD = 0, totalVencidoUSD = 0;
+        let totalPagadoMXN = 0, totalPendienteMXN = 0, totalVencidoMXN = 0;
+
+        ocFiltradas.forEach(o => {
+          const monto = o.montomxn || 0;
+          const esPagada = o.estadopago === 'PAGADA';
+          const esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
+          let esVencida = false;
+          if (!esPagada && o.estado === 'AUTORIZADA') {
+            const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            const ahora = new Date();
+            const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+            esVencida = diffDias > 1;
+          }
+
+          if (esPagada) {
+            totalPagado += monto;
+            if (o.moneda === 'USD') totalPagadoUSD += o.montototal;
+            else totalPagadoMXN += o.montototal;
+          } else if (esVencida) {
+            totalVencido += monto;
+            if (o.moneda === 'USD') totalVencidoUSD += o.montototal;
+            else totalVencidoMXN += o.montototal;
+          } else if (esPendiente) {
+            totalPendiente += monto;
+            if (o.moneda === 'USD') totalPendienteUSD += o.montototal;
+            else totalPendienteMXN += o.montototal;
+          }
+        });
+
+        // Mostrar resumen
+        const resumenDiv = document.getElementById('cxpResumen');
+        resumenDiv.innerHTML = `
+          <div class="cxp-tarjeta pagado">
+            <div class="numero">${formatoMoneda(totalPagado, 'MXN')}</div>
+            <div class="etiqueta">✅ Pagado</div>
+            ${totalPagadoUSD > 0 ? `<div class="etiqueta">USD ${totalPagadoUSD.toFixed(2)}</div>` : ''}
+          </div>
+          <div class="cxp-tarjeta pendiente">
+            <div class="numero">${formatoMoneda(totalPendiente, 'MXN')}</div>
+            <div class="etiqueta">⏳ Pendiente de pago</div>
+            ${totalPendienteUSD > 0 ? `<div class="etiqueta">USD ${totalPendienteUSD.toFixed(2)}</div>` : ''}
+          </div>
+          <div class="cxp-tarjeta vencido">
+            <div class="numero">${formatoMoneda(totalVencido, 'MXN')}</div>
+            <div class="etiqueta">🔴 Vencido (>1 día)</div>
+            ${totalVencidoUSD > 0 ? `<div class="etiqueta">USD ${totalVencidoUSD.toFixed(2)}</div>` : ''}
+          </div>
+          <div class="cxp-tarjeta">
+            <div class="numero">${ocFiltradas.length}</div>
+            <div class="etiqueta">📄 Total OC</div>
+          </div>
+        `;
+
+        // Tabla de proyectos
+        const tbodyProyectos = document.getElementById('cxpCuerpoProyectos');
+        tbodyProyectos.innerHTML = '';
+
+        if (proys.length === 0) {
+          tbodyProyectos.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos que coincidan con los filtros</td></tr>`;
+        } else {
+          proys.forEach(p => {
+            const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
+            const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
+            const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
+            let vencido = 0;
+            ocProyecto.forEach(o => {
+              if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
+                const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                const ahora = new Date();
+                const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                if (diffDias > 1) vencido += (o.montomxn || 0);
+              }
+            });
+            const porcentaje = p.limite > 0 ? (pagado / p.limite) * 100 : 0;
+            const deptoColor = getColorByEmpresa(p.empresa);
+
+            tbodyProyectos.innerHTML += `
+              <tr>
+                <td data-label="Empresa">${p.empresa}</td>
+                <td data-label="Departamento"><span class="depto-color" style="background-color:${deptoColor}">${p.departamento}</span></td>
+                <td data-label="Proyecto"><strong>${p.nombre}</strong></td>
+                <td data-label="Cliente">${p.cliente}</td>
+                <td data-label="Presupuesto">${formatoMoneda(p.presupuesto, p.moneda)}</td>
+                <td data-label="Pagado" style="color:${pagado > 0 ? '#16a34a' : 'inherit'}">${formatoMoneda(pagado, 'MXN')}</td>
+                <td data-label="Pendiente" style="color:${pendiente > 0 ? '#f59e0b' : 'inherit'}">${formatoMoneda(pendiente, 'MXN')}</td>
+                <td data-label="Vencido" style="color:${vencido > 0 ? '#dc2626' : 'inherit'}">${formatoMoneda(vencido, 'MXN')}</td>
+                <td data-label="% Uso">
+                  <span>${porcentaje.toFixed(1)}%</span>
+                  <div class="progress-bar"><div class="fill" style="width:${Math.min(porcentaje, 100)}%; background:${porcentaje > 60 ? '#dc2626' : '#22c55e'}"></div></div>
+                </td>
+                <td data-label="Acciones">
+                  <button class="btn-visualizar" onclick="window.verDetalleProyectoCXP('${p.nombre}')">📊 Detalle</button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+
+        // Tabla de OC detallada
+        const tbodyOC = document.getElementById('cxpCuerpoOC');
+        tbodyOC.innerHTML = '';
+
+        if (ocFiltradas.length === 0) {
+          tbodyOC.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>`;
+        } else {
+          ocFiltradas.slice().reverse().forEach((o, i) => {
+            const idxOriginal = ordenes.indexOf(o);
+            let estadoLabel = o.estado;
+            let badgeClass = '';
+
+            if (o.estadopago === 'PAGADA') {
+              estadoLabel = 'PAGADA';
+              badgeClass = 'badge-autorizada-pagada';
+            } else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
+              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              const ahora = new Date();
+              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              if (diffDias > 1) {
+                estadoLabel = 'VENCIDA';
+                badgeClass = 'badge-vencida';
+              } else {
+                estadoLabel = 'PENDIENTE PAGO';
+                badgeClass = 'badge-pendiente-pago';
+              }
+            } else if (o.estado === 'CONCLUIDA') {
+              estadoLabel = 'CONCLUIDA';
+              badgeClass = 'badge-concluida';
+            }
+
+            tbodyOC.innerHTML += `
+              <tr>
+                <td data-label="Código"><code>${o.codigo}</code></td>
+                <td data-label="Proyecto">${o.proyecto}</td>
+                <td data-label="Proveedor">${o.proveedor}</td>
+                <td data-label="Moneda">${o.moneda}</td>
+                <td data-label="Total">${formatoMoneda(o.montototal, o.moneda)}</td>
+                <td data-label="Equiv. MXN">${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
+                <td data-label="F.Pago">${new Date(o.fechapago).toLocaleDateString()}</td>
+                <td data-label="F.Aprobación">${o.fechaaprobaciondirector ? new Date(o.fechaaprobaciondirector).toLocaleDateString() : (o.fechaaprobacionjefe ? new Date(o.fechaaprobacionjefe).toLocaleDateString() : '—')}</td>
+                <td data-label="Estado"><span class="badge ${badgeClass}">${estadoLabel}</span></td>
+                <td data-label="Acciones">
+                  <button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Ver</button>
+                  <button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️</button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+      };
+
+      window.verDetalleProyectoCXP = function(nombreProyecto) {
+        // Aplicar filtro de proyecto en CXP
+        document.getElementById('cxpFiltroProyecto').value = nombreProyecto;
+        window.renderCXP();
+        // Scroll al detalle
+        document.getElementById('cxpTablaProyectos').scrollIntoView({ behavior: 'smooth' });
+      };
+
+      window.imprimirReporteCXP = function() {
+        const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 40;
+        let y = margin;
+
+        doc.setFontSize(18);
+        doc.setTextColor(11, 26, 51);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE DE CUENTAS POR PAGAR (CXP)', pageWidth / 2, y, { align: 'center' });
+        y += 20;
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generado: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
+        y += 20;
+
+        // Resumen
+        let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        ocFiltradas.forEach(o => {
+          const monto = o.montomxn || 0;
+          const esPagada = o.estadopago === 'PAGADA';
+          const esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
+          let esVencida = false;
+          if (!esPagada && o.estado === 'AUTORIZADA') {
+            const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            const ahora = new Date();
+            const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+            esVencida = diffDias > 1;
+          }
+          if (esPagada) totalPagado += monto;
+          else if (esVencida) totalVencido += monto;
+          else if (esPendiente) totalPendiente += monto;
+        });
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RESUMEN', margin, y);
+        y += 14;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Pagado: ${formatoMoneda(totalPagado, 'MXN')}`, margin + 20, y);
+        doc.text(`Pendiente: ${formatoMoneda(totalPendiente, 'MXN')}`, margin + 200, y);
+        doc.text(`Vencido: ${formatoMoneda(totalVencido, 'MXN')}`, margin + 400, y);
+        y += 20;
+
+        // Tabla de proyectos
+        if (proys.length > 0) {
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text('PROYECTOS', margin, y);
+          y += 12;
+
+          const headers = ['Empresa', 'Departamento', 'Proyecto', 'Pagado', 'Pendiente', 'Vencido', '% Uso'];
+          const rows = proys.map(p => {
+            const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
+            const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
+            const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
+            let vencido = 0;
+            ocProyecto.forEach(o => {
+              if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
+                const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                const ahora = new Date();
+                const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                if (diffDias > 1) vencido += (o.montomxn || 0);
+              }
+            });
+            const porcentaje = p.limite > 0 ? (pagado / p.limite) * 100 : 0;
+            return [p.empresa, p.departamento, p.nombre, formatoMoneda(pagado, 'MXN'), formatoMoneda(pendiente, 'MXN'), formatoMoneda(vencido, 'MXN'), porcentaje.toFixed(1) + '%'];
+          });
+
+          doc.autoTable({
+            head: [headers], body: rows, startY: y,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+          });
+          y = doc.lastAutoTable.finalY + 20;
+        }
+
+        // Tabla de OC
+        if (ocFiltradas.length > 0) {
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text('ÓRDENES DE COMPRA', margin, y);
+          y += 12;
+
+          const headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Equiv. MXN', 'F.Pago', 'Estado'];
+          const rows = ocFiltradas.slice().reverse().map(o => {
+            let estadoLabel = o.estado;
+            if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
+            else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
+              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              const ahora = new Date();
+              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              estadoLabel = diffDias > 1 ? 'VENCIDA' : 'PENDIENTE PAGO';
+            } else if (o.estado === 'CONCLUIDA') estadoLabel = 'CONCLUIDA';
+            return [o.codigo, o.proyecto, o.proveedor, o.moneda, formatoMoneda(o.montototal, o.moneda), formatoMoneda(o.montomxn || 0, 'MXN'), new Date(o.fechapago).toLocaleDateString(), estadoLabel];
+          });
+
+          doc.autoTable({
+            head: [headers], body: rows, startY: y,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+          });
+        }
+
+        doc.save('Reporte_CXP.pdf');
+      };
+
+      // ============================================================
       // RENDER
       // ============================================================
       function render() {
@@ -3018,7 +3553,6 @@
             let rowClass = '';
             let botonAura = '';
 
-            // 🟡 AURA AMARILLO SEGURIDAD - SOLO para la OC notificada
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
@@ -3065,10 +3599,8 @@
             let acciones = '';
             const rol = actual ? actual.rol : '';
 
-            // Botón VISUALIZAR para todas las OC
             acciones += `<button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Visualizar OC</button>`;
             
-            // Botón IMPRIMIR para OC autorizadas o concluidas
             const puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
             if (puedeImprimir) {
               acciones += `<button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️ Imprimir</button>`;
@@ -3099,15 +3631,12 @@
                 }
               } else {
                 if (!o.pausada) {
-                  // 1. SOLICITANTE (Responsable) aprueba
                   if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
                     acciones += `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
                   }
-                  // 2. JEFE DE DEPARTAMENTO aprueba
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
                     acciones += `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe Depto)</button>`;
                   }
-                  // 3. DIRECTOR autoriza o cancela
                   if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
                     acciones += `
                       <button class="success ${botonAura}" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
@@ -3184,6 +3713,12 @@
             if (d === currentVal) opt.selected = true;
             filtroDeptoSelect.appendChild(opt);
           });
+        }
+
+        // Si el módulo CXP está visible, actualizar también su vista
+        const panelCXP = document.getElementById('panelCXP');
+        if (!panelCXP.classList.contains('hidden')) {
+          window.renderCXP();
         }
       }
 
