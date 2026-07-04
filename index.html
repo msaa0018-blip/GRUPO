@@ -1228,15 +1228,20 @@
 
       function mostrarConstruccion() { alert('🚧 Módulo en construcción'); }
 
+      let modulosConfigurados = false;
       function configurarModulos() {
-        document.querySelectorAll('.modulo-item').forEach(item => {
-          item.addEventListener('click', function() {
-            const modulo = this.dataset.modulo;
-            if (modulo === 'oc') window.mostrarModulo('oc');
-            else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
-            else mostrarConstruccion();
-          });
+        if (modulosConfigurados) return; // evita doble binding si se llama más de una vez
+        const grid = document.getElementById('modulosGrid');
+        if (!grid) return;
+        grid.addEventListener('click', function(e) {
+          const item = e.target.closest('.modulo-item');
+          if (!item) return;
+          const modulo = item.dataset.modulo;
+          if (modulo === 'oc') window.mostrarModulo('oc');
+          else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
+          else mostrarConstruccion();
         });
+        modulosConfigurados = true;
       }
 
       window.filtrarPendientesPagar = function() {
@@ -3195,6 +3200,7 @@
 
       document.addEventListener('DOMContentLoaded', function() {
         init();
+        configurarModulos();
         const btnLogin = document.getElementById('btnLogin');
         if (btnLogin) btnLogin.addEventListener('click', window.login);
         const passInput = document.getElementById('password');
