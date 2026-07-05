@@ -362,7 +362,8 @@
   .productos-tabla input.part { min-width: 60px }
   .productos-tabla input.precio { min-width: 80px }
   .productos-tabla input.importe { min-width: 130px; background: var(--gray-100); font-weight: bold; font-size: 23px }
-  .productos-tabla select.udm { min-width: 80px }
+  .productos-tabla select.udm { min-width: 100px; width: 100px; }
+  .productos-tabla td:nth-child(9) input.importe { min-width: 150px; width: 150px; }
   .resumen-totales {
     background: var(--gray-50);
     padding: 12px 16px;
@@ -689,8 +690,41 @@
     min-height: 36px;
     padding: 6px 16px;
   }
+  .cxp-filtros .filtro-fecha {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cxp-filtros .filtro-fecha input[type="date"] {
+    min-width: 130px;
+    width: 140px;
+    padding: 6px 8px;
+    min-height: 36px;
+  }
 
   .cxp-tabla-resumen td:first-child { font-weight: 600; }
+
+  .cxp-periodo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .cxp-periodo button {
+    min-height: 32px;
+    padding: 4px 14px;
+    font-size: 12px;
+    background: var(--gray-200);
+    color: var(--gray-700);
+  }
+  .cxp-periodo button.active {
+    background: var(--secondary);
+    color: white;
+  }
+  .cxp-periodo button:hover {
+    background: var(--secondary-hover);
+    color: white;
+  }
 
   @media (max-width: 768px) {
     .table-wrapper { overflow-x: visible }
@@ -733,9 +767,11 @@
     .cxp-resumen { grid-template-columns: 1fr 1fr; }
     .cxp-filtros { flex-direction: column; align-items: stretch; }
     .cxp-filtros select, .cxp-filtros input { min-width: 100%; }
+    .cxp-filtros .filtro-fecha { flex-wrap: wrap; }
+    .cxp-filtros .filtro-fecha input[type="date"] { min-width: 100%; width: 100%; }
+    .cxp-periodo { justify-content: center; }
   }
 
-  /* CXP - Estilos para el dashboard de proyectos */
   .cxp-proyecto-card {
     border: 1px solid var(--gray-200);
     border-radius: 12px;
@@ -771,6 +807,9 @@
     border-radius: 4px;
     transition: width .4s;
   }
+
+  .productos-tabla td:nth-child(5) select.udm { min-width: 100px; width: 100px; }
+  .productos-tabla td:nth-child(9) input.importe { min-width: 150px; width: 150px; }
 </style>
 </head>
 <body>
@@ -779,7 +818,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v48</span>
+        <span class="sub">Workflow OC ERP v49</span>
       </div>
     </div>
     <div class="header-actions">
@@ -904,11 +943,11 @@
                   <th style="width:100px;">Núm. Parte</th>
                   <th style="min-width:150px;">Descripción</th>
                   <th style="width:80px;">Cantidad</th>
-                  <th style="min-width:80px;">UDM</th>
+                  <th style="min-width:100px;width:100px;">UDM</th>
                   <th style="width:100px;">Precio Unit.</th>
                   <th style="width:60px;">Dto.%</th>
                   <th style="width:60px;">Imp.%</th>
-                  <th style="min-width:130px;">Importe</th>
+                  <th style="min-width:150px;width:150px;">Importe</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -916,7 +955,7 @@
               <tfoot>
                 <tr>
                   <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:130px;">$0.00</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:150px;width:150px;">$0.00</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -955,6 +994,25 @@
             <option value="VENCIDA">Vencidas</option>
             <option value="CONCLUIDA">Concluidas</option>
           </select>
+          
+          <!-- Periodo -->
+          <div class="cxp-periodo">
+            <button onclick="window.setPeriodoCXP('global')" id="cxpPeriodoGlobal" class="active">Global</button>
+            <button onclick="window.setPeriodoCXP('mensual')" id="cxpPeriodoMensual">Mensual</button>
+            <button onclick="window.setPeriodoCXP('trimestral')" id="cxpPeriodoTrimestral">Trimestral</button>
+            <button onclick="window.setPeriodoCXP('anual')" id="cxpPeriodoAnual">Anual</button>
+          </div>
+          
+          <!-- Fechas -->
+          <div class="filtro-fecha">
+            <label style="font-size:12px;font-weight:500;white-space:nowrap;">Desde:</label>
+            <input type="date" id="cxpFechaInicio">
+          </div>
+          <div class="filtro-fecha">
+            <label style="font-size:12px;font-weight:500;white-space:nowrap;">Hasta:</label>
+            <input type="date" id="cxpFechaFin">
+          </div>
+          
           <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
         </div>
@@ -1103,7 +1161,7 @@
       let filtroPendientesActivo = false;
       let visualizarOCData = null;
       let visualizarOCPDF = null;
-      let cxpFiltros = { empresa: '', depto: '', proyecto: '', estado: '' };
+      let cxpFiltros = { empresa: '', depto: '', proyecto: '', estado: '', periodo: 'global', fechaInicio: null, fechaFin: null };
 
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -1205,7 +1263,7 @@
 
       function usuarioPuedeAcceder(usuario, empresa, depto) {
         if (!usuario) return false;
-        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) return true;
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(usuario.rol)) return true;
         if (!usuario.permisos) return false;
         const empNorm = normalizar(empresa);
         const deptoNorm = normalizar(depto);
@@ -1214,14 +1272,14 @@
 
       function filtrarProyectosSegunUsuario(usuario) {
         if (!usuario) return [];
-        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) return proyectos;
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(usuario.rol)) return proyectos;
         return proyectos.filter(p => usuarioPuedeAcceder(usuario, p.empresa, p.departamento));
       }
 
       function filtrarOCSegunUsuario(usuario) {
         if (!usuario) return [];
         let ocFiltradas = [];
-        if (['Director General', 'Administrador', 'Finanzas'].includes(usuario.rol)) {
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(usuario.rol)) {
           ocFiltradas = ordenes.slice();
         } else {
           ocFiltradas = ordenes.filter(o => {
@@ -1363,7 +1421,6 @@
         const bandejaOCCard = document.getElementById('bandejaOCCard');
         const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
 
-        // Ocultar todos los paneles primero
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
         tablaProyectosCard.classList.add('hidden');
@@ -1377,9 +1434,8 @@
           bandejaOCCard.classList.remove('hidden');
         } else if (modulo === 'cxp') {
           panelCXP.classList.remove('hidden');
-          // Cargar filtros de CXP
           cargarFiltrosCXP();
-          window.renderCXP();
+          setTimeout(function() { window.renderCXP(); }, 100);
           bandejaOCCard.classList.add('hidden');
         }
 
@@ -1650,7 +1706,7 @@
 
         let infoSesion = `👤 ${actual.u} (${actual.rol})`;
         const opciones = obtenerOpcionesPermisos(actual);
-        if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
           infoSesion += ' - Acceso total';
         } else if (opciones.length === 1) {
           infoSesion += ` - ${opciones[0].empresa} / ${opciones[0].depto}`;
@@ -1670,7 +1726,7 @@
         const deptoSelect = document.getElementById('departamentoSelect');
         const deptoInput = document.getElementById('departamentoInput');
 
-        if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
           empresaSelect.style.display = 'none';
           empresaInput.style.display = 'inline-block';
           deptoSelect.style.display = 'none';
@@ -1794,7 +1850,7 @@
       // ============================================================
       window.crearProyecto = async function() {
         let empresa, departamento;
-        if (['Director General', 'Administrador', 'Finanzas'].includes(actual.rol)) {
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
           empresa = document.getElementById('empresaInput').value.trim().toUpperCase();
           departamento = document.getElementById('departamentoInput').value.trim().toUpperCase();
         } else {
@@ -1866,11 +1922,11 @@
           <td><input class="part" type="text" value="${parte.toUpperCase()}" placeholder="Núm. Parte"></td>
           <td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">${descripcion.toUpperCase()}</textarea></td>
           <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:80px;">${udmOptions}</select></td>
+          <td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">${udmOptions}</select></td>
           <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
           <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:130px;"></td>
+          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:150px;width:150px;"></td>
           <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
         `;
         tbody.appendChild(fila);
@@ -2062,9 +2118,9 @@
       }
 
       // ============================================================
-      // GENERAR PDF
+      // GENERAR PDF - MODIFICADO PARA QUITAR (Pendiente) EN AUTORIZACIONES
       // ============================================================
-      async function generarPDFParaPreview(datos) {
+      async function generarPDFParaPreview(datos, ocExistente = null) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'pt', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -2181,7 +2237,17 @@
           margin: { left: margin, right: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-          columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' }, 3: { cellWidth: 30 }, 4: { cellWidth: 25 }, 5: { cellWidth: 45 }, 6: { cellWidth: 40 }, 7: { cellWidth: 40 }, 8: { cellWidth: 45 } },
+          columnStyles: { 
+            0: { cellWidth: 20 }, 
+            1: { cellWidth: 40 }, 
+            2: { cellWidth: 'auto' }, 
+            3: { cellWidth: 30 }, 
+            4: { cellWidth: 35 }, 
+            5: { cellWidth: 45 }, 
+            6: { cellWidth: 35 }, 
+            7: { cellWidth: 35 }, 
+            8: { cellWidth: 55 } 
+          },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
 
@@ -2225,12 +2291,49 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
+        // Obtener nombres y fechas de aprobación
         const solicitante = datos.responsable || 'No definido';
         const jefe = getJefeDepto(datos.empresa, datos.departamento);
         const director = getDirector();
+        
+        // Si es una OC existente, usar los nombres y fechas guardados
+        let solicitanteNombre = solicitante;
+        let jefeNombre = jefe;
+        let directorNombre = director;
+        let fechaSolicitante = 'Pendiente';
+        let fechaJefe = 'Pendiente';
+        let fechaDirector = 'Pendiente';
+
+        if (ocExistente) {
+          if (ocExistente.nombresolicitante) {
+            solicitanteNombre = ocExistente.nombresolicitante;
+            fechaSolicitante = ocExistente.fechaaprobacionsolicitante ? new Date(ocExistente.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
+          }
+          if (ocExistente.nombrejefe) {
+            jefeNombre = ocExistente.nombrejefe;
+            fechaJefe = ocExistente.fechaaprobacionjefe ? new Date(ocExistente.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
+          }
+          if (ocExistente.nombredirector) {
+            directorNombre = ocExistente.nombredirector;
+            fechaDirector = ocExistente.fechaaprobaciondirector ? new Date(ocExistente.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
+          }
+          // Si está autorizada, mostrar las fechas correspondientes
+          if (ocExistente.estado === 'AUTORIZADA' || ocExistente.estado === 'CONCLUIDA') {
+            if (ocExistente.fechaaprobacionsolicitante) {
+              fechaSolicitante = new Date(ocExistente.fechaaprobacionsolicitante).toLocaleString();
+            }
+            if (ocExistente.fechaaprobacionjefe) {
+              fechaJefe = new Date(ocExistente.fechaaprobacionjefe).toLocaleString();
+            }
+            if (ocExistente.fechaaprobaciondirector) {
+              fechaDirector = new Date(ocExistente.fechaaprobaciondirector).toLocaleString();
+            }
+          }
+        }
+
         const colWidth = (pageWidth - 2 * margin) / 3;
 
-        function dibujarAutorizacion(doc, x, y, nombre, titulo) {
+        function dibujarAutorizacionPDF(doc, x, y, nombre, titulo, fecha) {
           const lineWidth = colWidth - 20;
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
@@ -2239,7 +2342,9 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombre + ' (Pendiente)', x + (lineWidth / 2), y + 14, { align: 'center' });
+          // Si la fecha es 'Pendiente', mostrar el nombre y opcionalmente (Pendiente)
+          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
           const lineY = y + 14 + 20 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
@@ -2247,13 +2352,14 @@
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: Pendiente', x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
+          const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
+          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
         const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
-        dibujarAutorizacion(doc, x1, y, solicitante, 'Solicitante');
-        dibujarAutorizacion(doc, x2, y, jefe, 'Jefe de Departamento');
-        dibujarAutorizacion(doc, x3, y, director, 'Director General');
+        dibujarAutorizacionPDF(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
+        dibujarAutorizacionPDF(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
+        dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
         y += 70;
 
         const pieY = doc.internal.pageSize.height - 55;
@@ -2265,7 +2371,7 @@
         doc.setFont('helvetica', 'bold');
         doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
-        const codigoFinal = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
+        const codigoFinal = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
@@ -2309,7 +2415,8 @@
             cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
             swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A'
           };
-          const doc = await generarPDFParaPreview(datosOC);
+          // Pasar la OC existente para mostrar las fechas de aprobación
+          const doc = await generarPDFParaPreview(datosOC, oc);
           visualizarOCPDF = doc;
           visualizarOCData = datosOC;
           const pdfData = doc.output('datauristring');
@@ -2494,7 +2601,7 @@
             cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
             swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A'
           };
-          const doc = await generarPDFParaPreview(datosOC);
+          const doc = await generarPDFParaPreview(datosOC, oc);
           doc.save(`OC_${oc.codigo}.pdf`);
         } catch (error) {
           console.error('❌ Error al imprimir OC:', error);
@@ -2851,7 +2958,17 @@
           margin: { left: margin, right: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-          columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 40 }, 2: { cellWidth: 'auto' }, 3: { cellWidth: 30 }, 4: { cellWidth: 25 }, 5: { cellWidth: 45 }, 6: { cellWidth: 40 }, 7: { cellWidth: 40 }, 8: { cellWidth: 45 } },
+          columnStyles: { 
+            0: { cellWidth: 20 }, 
+            1: { cellWidth: 40 }, 
+            2: { cellWidth: 'auto' }, 
+            3: { cellWidth: 30 }, 
+            4: { cellWidth: 35 }, 
+            5: { cellWidth: 45 }, 
+            6: { cellWidth: 35 }, 
+            7: { cellWidth: 35 }, 
+            8: { cellWidth: 55 } 
+          },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
 
@@ -2909,8 +3026,8 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          const estado = fecha && fecha !== 'Pendiente' ? '' : ' (Pendiente)';
-          doc.text(nombre + estado, x + (lineWidth / 2), y + 14, { align: 'center' });
+          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
           const lineY = y + 14 + 10 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
@@ -2918,7 +3035,8 @@
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          doc.text('Fecha: ' + (fecha || 'Pendiente'), x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
+          const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
+          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
         const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
@@ -3086,15 +3204,27 @@
       // ============================================================
       
       function cargarFiltrosCXP() {
-        const empresas = [...new Set(proyectos.map(p => p.empresa))];
-        const deptos = [...new Set(proyectos.map(p => p.departamento))];
-        const proyNombres = proyectos.map(p => p.nombre);
+        // Obtener empresas y departamentos visibles según el usuario
+        let empresas = [];
+        let deptos = [];
+        let proyNombres = [];
+        
+        if (actual && ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
+          empresas = [...new Set(proyectos.map(p => p.empresa))];
+          deptos = [...new Set(proyectos.map(p => p.departamento))];
+          proyNombres = proyectos.map(p => p.nombre);
+        } else if (actual && actual.permisos) {
+          const permisos = actual.permisos;
+          empresas = [...new Set(permisos.map(p => p.empresa))];
+          deptos = [...new Set(permisos.map(p => p.depto))];
+          const proysPermitidos = proyectos.filter(p => usuarioPuedeAcceder(actual, p.empresa, p.departamento));
+          proyNombres = proysPermitidos.map(p => p.nombre);
+        }
 
         const selectEmpresa = document.getElementById('cxpFiltroEmpresa');
         const selectDepto = document.getElementById('cxpFiltroDepto');
         const selectProyecto = document.getElementById('cxpFiltroProyecto');
 
-        // Guardar valores seleccionados actuales
         const currentEmpresa = selectEmpresa.value;
         const currentDepto = selectDepto.value;
         const currentProyecto = selectProyecto.value;
@@ -3126,52 +3256,119 @@
           selectProyecto.appendChild(opt);
         });
 
-        // Event listeners para actualizar los filtros
+        // Event listeners
         selectEmpresa.onchange = function() { window.renderCXP(); };
         selectDepto.onchange = function() { window.renderCXP(); };
         selectProyecto.onchange = function() { window.renderCXP(); };
         document.getElementById('cxpFiltroEstado').onchange = function() { window.renderCXP(); };
+        
+        // Fechas por defecto: último mes
+        const hoy = new Date();
+        const haceUnMes = new Date(hoy);
+        haceUnMes.setMonth(haceUnMes.getMonth() - 1);
+        document.getElementById('cxpFechaInicio').value = haceUnMes.toISOString().split('T')[0];
+        document.getElementById('cxpFechaFin').value = hoy.toISOString().split('T')[0];
+        
+        document.getElementById('cxpFechaInicio').onchange = function() { window.renderCXP(); };
+        document.getElementById('cxpFechaFin').onchange = function() { window.renderCXP(); };
       }
+
+      window.setPeriodoCXP = function(periodo) {
+        // Resetear botones
+        document.querySelectorAll('.cxp-periodo button').forEach(b => b.classList.remove('active'));
+        const btnMap = {
+          'global': 'cxpPeriodoGlobal',
+          'mensual': 'cxpPeriodoMensual',
+          'trimestral': 'cxpPeriodoTrimestral',
+          'anual': 'cxpPeriodoAnual'
+        };
+        const btn = document.getElementById(btnMap[periodo]);
+        if (btn) btn.classList.add('active');
+        
+        cxpFiltros.periodo = periodo;
+        
+        const hoy = new Date();
+        let fechaInicio = new Date(hoy);
+        let fechaFin = new Date(hoy);
+        
+        switch(periodo) {
+          case 'global':
+            fechaInicio = new Date(2000, 0, 1);
+            break;
+          case 'mensual':
+            fechaInicio.setMonth(hoy.getMonth() - 1);
+            break;
+          case 'trimestral':
+            fechaInicio.setMonth(hoy.getMonth() - 3);
+            break;
+          case 'anual':
+            fechaInicio.setFullYear(hoy.getFullYear() - 1);
+            break;
+        }
+        
+        document.getElementById('cxpFechaInicio').value = fechaInicio.toISOString().split('T')[0];
+        document.getElementById('cxpFechaFin').value = fechaFin.toISOString().split('T')[0];
+        window.renderCXP();
+      };
 
       function obtenerDatosCXP() {
         const filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
         const filtroDepto = document.getElementById('cxpFiltroDepto').value;
         const filtroProyecto = document.getElementById('cxpFiltroProyecto').value;
         const filtroEstado = document.getElementById('cxpFiltroEstado').value;
+        const fechaInicio = document.getElementById('cxpFechaInicio').value;
+        const fechaFin = document.getElementById('cxpFechaFin').value;
 
-        // Filtrar proyectos
-        let proyectosFiltrados = proyectos;
-        if (filtroEmpresa) proyectosFiltrados = proyectosFiltrados.filter(p => p.empresa === filtroEmpresa);
-        if (filtroDepto) proyectosFiltrados = proyectosFiltrados.filter(p => p.departamento === filtroDepto);
-        if (filtroProyecto) proyectosFiltrados = proyectosFiltrados.filter(p => p.nombre === filtroProyecto);
+        // Obtener proyectos visibles según el usuario
+        let proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+        
+        // Aplicar filtros de empresa/departamento/proyecto
+        if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(p => p.empresa === filtroEmpresa);
+        if (filtroDepto) proyectosVisibles = proyectosVisibles.filter(p => p.departamento === filtroDepto);
+        if (filtroProyecto) proyectosVisibles = proyectosVisibles.filter(p => p.nombre === filtroProyecto);
 
-        // Filtrar OC
-        let ocFiltradas = ordenes.filter(o => o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estadopago === 'PAGADA');
-        if (filtroEmpresa) {
-          const proys = proyectos.filter(p => p.empresa === filtroEmpresa).map(p => p.nombre);
-          ocFiltradas = ocFiltradas.filter(o => proys.includes(o.proyecto));
+        // Obtener OC visibles según el usuario
+        let ocVisibles = filtrarOCSegunUsuario(actual);
+        
+        // Filtrar por empresa/departamento/proyecto
+        const nombresProyectos = proyectosVisibles.map(p => p.nombre);
+        ocVisibles = ocVisibles.filter(o => nombresProyectos.includes(o.proyecto));
+        
+        // Filtrar por fechas
+        if (fechaInicio) {
+          const fechaInicioObj = new Date(fechaInicio);
+          ocVisibles = ocVisibles.filter(o => {
+            const fechaOC = new Date(o.fechapago);
+            return fechaOC >= fechaInicioObj;
+          });
         }
-        if (filtroDepto) {
-          const proys = proyectos.filter(p => p.departamento === filtroDepto).map(p => p.nombre);
-          ocFiltradas = ocFiltradas.filter(o => proys.includes(o.proyecto));
+        if (fechaFin) {
+          const fechaFinObj = new Date(fechaFin);
+          fechaFinObj.setHours(23, 59, 59, 999);
+          ocVisibles = ocVisibles.filter(o => {
+            const fechaOC = new Date(o.fechapago);
+            return fechaOC <= fechaFinObj;
+          });
         }
-        if (filtroProyecto) ocFiltradas = ocFiltradas.filter(o => o.proyecto === filtroProyecto);
+
+        // Filtrar solo OC autorizadas o concluidas para CXP
+        ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estadopago === 'PAGADA');
 
         // Filtrar por estado de pago
-        if (filtroEstado === 'PAGADA') ocFiltradas = ocFiltradas.filter(o => o.estadopago === 'PAGADA');
-        else if (filtroEstado === 'PENDIENTE') ocFiltradas = ocFiltradas.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'));
+        if (filtroEstado === 'PAGADA') ocVisibles = ocVisibles.filter(o => o.estadopago === 'PAGADA');
+        else if (filtroEstado === 'PENDIENTE') ocVisibles = ocVisibles.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'));
         else if (filtroEstado === 'VENCIDA') {
-          ocFiltradas = ocFiltradas.filter(o => {
+          ocVisibles = ocVisibles.filter(o => {
             if (o.estadopago === 'PAGADA') return false;
             const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
             const ahora = new Date();
             const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
             return diffDias > 1;
           });
-        } else if (filtroEstado === 'AUTORIZADA') ocFiltradas = ocFiltradas.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA');
-        else if (filtroEstado === 'CONCLUIDA') ocFiltradas = ocFiltradas.filter(o => o.estado === 'CONCLUIDA');
+        } else if (filtroEstado === 'AUTORIZADA') ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA');
+        else if (filtroEstado === 'CONCLUIDA') ocVisibles = ocVisibles.filter(o => o.estado === 'CONCLUIDA');
 
-        return { proyectos: proyectosFiltrados, oc: ocFiltradas };
+        return { proyectos: proyectosVisibles, oc: ocVisibles };
       }
 
       window.renderCXP = function() {
@@ -3331,10 +3528,8 @@
       };
 
       window.verDetalleProyectoCXP = function(nombreProyecto) {
-        // Aplicar filtro de proyecto en CXP
         document.getElementById('cxpFiltroProyecto').value = nombreProyecto;
         window.renderCXP();
-        // Scroll al detalle
         document.getElementById('cxpTablaProyectos').scrollIntoView({ behavior: 'smooth' });
       };
 
@@ -3354,10 +3549,12 @@
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Generado: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
+        const periodo = document.querySelector('.cxp-periodo button.active')?.textContent || 'Global';
+        const fechaInicio = document.getElementById('cxpFechaInicio').value;
+        const fechaFin = document.getElementById('cxpFechaFin').value;
+        doc.text(`Periodo: ${periodo} | Desde: ${fechaInicio || 'N/A'} Hasta: ${fechaFin || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
         y += 20;
 
-        // Resumen
         let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
         ocFiltradas.forEach(o => {
           const monto = o.montomxn || 0;
@@ -3386,7 +3583,6 @@
         doc.text(`Vencido: ${formatoMoneda(totalVencido, 'MXN')}`, margin + 400, y);
         y += 20;
 
-        // Tabla de proyectos
         if (proys.length > 0) {
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
@@ -3420,7 +3616,6 @@
           y = doc.lastAutoTable.finalY + 20;
         }
 
-        // Tabla de OC
         if (ocFiltradas.length > 0) {
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
@@ -3715,7 +3910,6 @@
           });
         }
 
-        // Si el módulo CXP está visible, actualizar también su vista
         const panelCXP = document.getElementById('panelCXP');
         if (!panelCXP.classList.contains('hidden')) {
           window.renderCXP();
