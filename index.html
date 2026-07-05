@@ -927,7 +927,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v53</span>
+        <span class="sub">Workflow OC ERP v54</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1243,7 +1243,7 @@
       'use strict';
 
       // ============================================================
-      // 🔔 CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
+      // CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
       // ============================================================
       const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
       const TELEGRAM_CHAT_ID = '5425017187';
@@ -1278,7 +1278,7 @@
             console.error('❌ Mensaje vacío, no se enviará.');
             return false;
           }
-          const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+          const url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
           const payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML', disable_web_page_preview: true };
           const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const data = await response.json();
@@ -1289,40 +1289,40 @@
       }
 
       function formatearMensajeOC(datos, proyecto, ocId) {
-        const gastado = gastoProyectoMoneda(proyecto.nombre);
-        const porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
-        const excedente = gastado - proyecto.limite;
-        const urlBase = window.location.origin + window.location.pathname;
-        const linkOC = `${urlBase}?oc=${ocId}`;
+        var gastado = gastoProyectoMoneda(proyecto.nombre);
+        var porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
+        var excedente = gastado - proyecto.limite;
+        var urlBase = window.location.origin + window.location.pathname;
+        var linkOC = urlBase + '?oc=' + ocId;
 
-        let mensaje = `<b>⚠️ OC QUE SUPERA EL 60% - REQUIERE AUTORIZACIÓN</b>\n\n`;
-        mensaje += `<b>Código:</b> ${datos.codigo || 'Generando...'}\n`;
-        mensaje += `<b>Proyecto:</b> ${datos.proyectonombre || datos.proyecto}\n`;
-        mensaje += `<b>Empresa:</b> ${datos.empresa}\n`;
-        mensaje += `<b>Departamento:</b> ${datos.departamento}\n`;
-        mensaje += `<b>Cliente:</b> ${datos.cliente}\n`;
-        mensaje += `<b>Proveedor:</b> ${datos.proveedor}\n`;
-        mensaje += `<b>RFC:</b> ${datos.rfc}\n`;
-        mensaje += `<b>Responsable:</b> ${datos.responsable}\n`;
-        mensaje += `<b>Elaborador:</b> ${datos.elaborador}\n`;
-        mensaje += `<b>Moneda:</b> ${datos.moneda}\n`;
-        mensaje += `<b>Monto Total:</b> ${formatoMoneda(datos.montototal, datos.moneda)}\n`;
-        mensaje += `<b>Equivalente MXN:</b> ${formatoMoneda(datos.montomxn, 'MXN')}\n`;
-        mensaje += `<b>Fecha Pago:</b> ${new Date(datos.fechapago).toLocaleDateString('es-MX')}\n`;
-        mensaje += `<b>Fecha Entrega:</b> ${new Date(datos.fechaentrega).toLocaleDateString('es-MX')}\n\n`;
-        mensaje += `<b>Presupuesto:</b> ${formatoMoneda(proyecto.presupuesto, proyecto.moneda)}\n`;
-        mensaje += `<b>Límite 60%:</b> ${formatoMoneda(proyecto.limite, proyecto.moneda)}\n`;
-        mensaje += `<b>Pagado:</b> ${formatoMoneda(gastado, proyecto.moneda)}\n`;
-        mensaje += `<b>Excedente:</b> ${formatoMoneda(excedente, proyecto.moneda)} (${porcentaje.toFixed(2)}%)\n\n`;
-        mensaje += `<b>Productos:</b>\n`;
+        var mensaje = '<b>⚠️ OC QUE SUPERA EL 60% - REQUIERE AUTORIZACIÓN</b>\n\n';
+        mensaje += '<b>Código:</b> ' + (datos.codigo || 'Generando...') + '\n';
+        mensaje += '<b>Proyecto:</b> ' + (datos.proyectonombre || datos.proyecto) + '\n';
+        mensaje += '<b>Empresa:</b> ' + datos.empresa + '\n';
+        mensaje += '<b>Departamento:</b> ' + datos.departamento + '\n';
+        mensaje += '<b>Cliente:</b> ' + datos.cliente + '\n';
+        mensaje += '<b>Proveedor:</b> ' + datos.proveedor + '\n';
+        mensaje += '<b>RFC:</b> ' + datos.rfc + '\n';
+        mensaje += '<b>Responsable:</b> ' + datos.responsable + '\n';
+        mensaje += '<b>Elaborador:</b> ' + datos.elaborador + '\n';
+        mensaje += '<b>Moneda:</b> ' + datos.moneda + '\n';
+        mensaje += '<b>Monto Total:</b> ' + formatoMoneda(datos.montototal, datos.moneda) + '\n';
+        mensaje += '<b>Equivalente MXN:</b> ' + formatoMoneda(datos.montomxn, 'MXN') + '\n';
+        mensaje += '<b>Fecha Pago:</b> ' + new Date(datos.fechapago).toLocaleDateString('es-MX') + '\n';
+        mensaje += '<b>Fecha Entrega:</b> ' + new Date(datos.fechaentrega).toLocaleDateString('es-MX') + '\n\n';
+        mensaje += '<b>Presupuesto:</b> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
+        mensaje += '<b>Límite 60%:</b> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n';
+        mensaje += '<b>Pagado:</b> ' + formatoMoneda(gastado, proyecto.moneda) + '\n';
+        mensaje += '<b>Excedente:</b> ' + formatoMoneda(excedente, proyecto.moneda) + ' (' + porcentaje.toFixed(2) + '%)\n\n';
+        mensaje += '<b>Productos:</b>\n';
         if (datos.productos && datos.productos.length > 0) {
-          datos.productos.forEach((p, i) => {
-            mensaje += `  ${i + 1}. ${p.descripcion} - ${p.cantidad} ${p.udm || 'PZA'} x ${formatoMoneda(p.precioUnitario, datos.moneda)} = ${formatoMoneda(p.importe, datos.moneda)}\n`;
+          datos.productos.forEach(function(p, i) {
+            mensaje += '  ' + (i + 1) + '. ' + p.descripcion + ' - ' + p.cantidad + ' ' + (p.udm || 'PZA') + ' x ' + formatoMoneda(p.precioUnitario, datos.moneda) + ' = ' + formatoMoneda(p.importe, datos.moneda) + '\n';
           });
         } else {
-          mensaje += `  No hay productos registrados\n`;
+          mensaje += '  No hay productos registrados\n';
         }
-        mensaje += `\n🔗 <a href="${linkOC}">👉 Haz clic aquí para autorizar o cancelar la OC</a>`;
+        mensaje += '\n🔗 <a href="' + linkOC + '">👉 Haz clic aquí para autorizar o cancelar la OC</a>';
         return mensaje;
       }
 
@@ -1331,68 +1331,69 @@
       // ============================================================
       function getColorByEmpresa(empresa) {
         if (!empresa) return '#6b7280';
-        const emp = empresa.trim().toUpperCase();
-        if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return '#FF0000';
-        if (emp.includes('VEXPAR OPERACIONES')) return '#0000FF';
+        var emp = empresa.trim().toUpperCase();
+        if (emp.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) return '#FF0000';
+        if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return '#0000FF';
         return '#6b7280';
       }
 
       function getNombreMembrete(empresa) {
         if (!empresa) return 'GRUPO INDUSTRIAL EXTINGUE';
-        const emp = empresa.trim().toUpperCase();
-        if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return 'GRUPO INDUSTRIAL EXTINGUE';
-        if (emp.includes('VEXPAR OPERACIONES')) return 'VEXPAR OPERACIONES';
+        var emp = empresa.trim().toUpperCase();
+        if (emp.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) return 'GRUPO INDUSTRIAL EXTINGUE';
+        if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return 'VEXPAR OPERACIONES';
         return 'GRUPO INDUSTRIAL EXTINGUE';
       }
 
       function getLeyendaPie(empresa) {
         if (!empresa) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
-        const emp = empresa.trim().toUpperCase();
-        if (emp.includes('GRUPO INDUSTRIAL EXTINGUE')) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
-        if (emp.includes('VEXPAR OPERACIONES')) return 'SUMINISTROS ESPECIALES INDUSTRIALES';
+        var emp = empresa.trim().toUpperCase();
+        if (emp.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
+        if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return 'SUMINISTROS ESPECIALES INDUSTRIALES';
         return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
       }
 
-      function formatoMoneda(monto, moneda = 'MXN') {
-        const simbolo = moneda === 'USD' ? 'USD ' : '$';
+      function formatoMoneda(monto, moneda) {
+        moneda = moneda || 'MXN';
+        var simbolo = moneda === 'USD' ? 'USD ' : '$';
         return simbolo + monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
 
       function normalizar(str) { return str.trim().toUpperCase(); }
 
       function buscarUsuarioDB(usuario) {
-        return usuariosDB.find(u => u.usuario && u.usuario.toUpperCase() === usuario.toUpperCase());
+        return usuariosDB.find(function(u) { return u.usuario && u.usuario.toUpperCase() === usuario.toUpperCase(); });
       }
 
       function usuarioPuedeAcceder(usuario, empresa, depto) {
         if (!usuario) return false;
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(usuario.rol)) return true;
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
         if (!usuario.permisos) return false;
-        const empNorm = normalizar(empresa);
-        const deptoNorm = normalizar(depto);
-        return usuario.permisos.some(p => normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm);
+        var empNorm = normalizar(empresa);
+        var deptoNorm = normalizar(depto);
+        return usuario.permisos.some(function(p) { return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm; });
       }
 
       function filtrarProyectosSegunUsuario(usuario) {
         if (!usuario) return [];
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(usuario.rol)) return proyectos;
-        return proyectos.filter(p => usuarioPuedeAcceder(usuario, p.empresa, p.departamento));
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return proyectos;
+        return proyectos.filter(function(p) { return usuarioPuedeAcceder(usuario, p.empresa, p.departamento); });
       }
 
       function filtrarOCSegunUsuario(usuario) {
         if (!usuario) return [];
-        let ocFiltradas = [];
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(usuario.rol)) {
+        var ocFiltradas = [];
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
           ocFiltradas = ordenes.slice();
         } else {
-          ocFiltradas = ordenes.filter(o => {
-            const p = proyectos.find(proj => proj.nombre === o.proyecto);
+          ocFiltradas = ordenes.filter(function(o) {
+            var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
             if (!p) return false;
             return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
           });
         }
         if (usuario.rol === 'Solicitante') {
-          ocFiltradas = ocFiltradas.filter(o => o.responsable === usuario.usuario);
+          ocFiltradas = ocFiltradas.filter(function(o) { return o.responsable === usuario.usuario; });
         }
         return ocFiltradas;
       }
@@ -1403,27 +1404,27 @@
       }
 
       function getPosiblesResponsables() {
-        return usuariosDB.filter(u => u.rol === 'Solicitante' || u.rol === 'Elaborador');
+        return usuariosDB.filter(function(u) { return u.rol === 'Solicitante' || u.rol === 'Elaborador'; });
       }
 
       function getJefeDepto(empresa, depto) {
-        const jefe = usuariosDB.find(u => u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto));
+        var jefe = usuariosDB.find(function(u) { return u.rol === 'Jefe Departamento' && usuarioPuedeAcceder(u, empresa, depto); });
         return jefe ? jefe.usuario : 'No definido';
       }
 
       function getDirector() {
-        const director = usuariosDB.find(u => u.rol === 'Director General');
+        var director = usuariosDB.find(function(u) { return u.rol === 'Director General'; });
         return director ? director.usuario : 'LJGR';
       }
 
       function gastoProyectoMoneda(nombreProyecto) {
-        const proyecto = proyectos.find(p => p.nombre === nombreProyecto);
+        var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
         if (!proyecto) return 0;
-        const monedaProyecto = proyecto.moneda || 'MXN';
+        var monedaProyecto = proyecto.moneda || 'MXN';
         return ordenes
-          .filter(o => o.proyecto === nombreProyecto && o.estadopago === 'PAGADA')
-          .reduce((sum, oc) => {
-            let montoEnMonedaProyecto = oc.montomxn || 0;
+          .filter(function(o) { return o.proyecto === nombreProyecto && o.estadopago === 'PAGADA'; })
+          .reduce(function(sum, oc) {
+            var montoEnMonedaProyecto = oc.montomxn || 0;
             if (monedaProyecto === 'USD') {
               if (oc.tipocambio && oc.tipocambio > 0) {
                 montoEnMonedaProyecto = oc.montomxn / oc.tipocambio;
@@ -1438,19 +1439,19 @@
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
         if (!empresa) empresa = 'GIE';
         if (!departamento) departamento = 'GENERAL';
-        const prefijos = {
+        var prefijos = {
           'GRUPO INDUSTRIAL EXTINGUE': { 'VENTAS CORPORATIVAS EXTINGUE': 'GIE', 'INGENIERIA EN SISTEMAS CONTRA INCENDIO': 'ISCI', 'SUMINISERVICES': 'SUM', 'FINANZAS': 'FIN', 'SERVICIOS': 'SERV', 'INMOBIENES': 'ICE' },
           'VEXPAR OPERACIONES': { 'VENTAS CORPORATIVAS VEXPAR': 'VOP' }
         };
-        const prefijo = (prefijos[empresa] && prefijos[empresa][departamento]) || 'OC';
-        const fecha = new Date();
-        const fechaStr = fecha.getFullYear() + String(fecha.getMonth() + 1).padStart(2, '0') + String(fecha.getDate()).padStart(2, '0');
-        const proveedorClean = proveedor.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
-        const proyectoClean = proyecto.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
-        const clienteClean = cliente.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-        const elaboradorClean = elaborador.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
-        let numero = seq !== undefined ? String(seq).padStart(4, '0') : String(consecutivoOC++).padStart(4, '0');
-        return `${prefijo}-OC-${fechaStr}-${proveedorClean}-${proyectoClean}-${clienteClean}-${elaboradorClean}-${numero}`;
+        var prefijo = (prefijos[empresa] && prefijos[empresa][departamento]) || 'OC';
+        var fecha = new Date();
+        var fechaStr = fecha.getFullYear() + String(fecha.getMonth() + 1).padStart(2, '0') + String(fecha.getDate()).padStart(2, '0');
+        var proveedorClean = proveedor.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
+        var proyectoClean = proyecto.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
+        var clienteClean = cliente.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        var elaboradorClean = elaborador.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+        var numero = seq !== undefined ? String(seq).padStart(4, '0') : String(consecutivoOC++).padStart(4, '0');
+        return prefijo + '-OC-' + fechaStr + '-' + proveedorClean + '-' + proyectoClean + '-' + clienteClean + '-' + elaboradorClean + '-' + numero;
       }
 
       // ============================================================
@@ -1458,7 +1459,7 @@
       // ============================================================
       async function cargarUsuarios() {
         try {
-          const { data, error } = await supabase.from('usuarios').select('*');
+          var { data, error } = await supabase.from('usuarios').select('*');
           if (error) throw error;
           usuariosDB = data || [];
           console.log('✅ Usuarios cargados desde Supabase:', usuariosDB.length);
@@ -1469,16 +1470,16 @@
       async function cargarDatos() {
         try {
           await cargarUsuarios();
-          const { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
+          var { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
           if (e1) throw e1;
           proyectos = pData || [];
-          const { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
+          var { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
           if (e2) throw e2;
           ordenes = oData || [];
-          const maxCodigo = ordenes.reduce((max, o) => {
+          var maxCodigo = ordenes.reduce(function(max, o) {
             if (!o.codigo) return max;
-            const parts = o.codigo.split('-');
-            const num = parseInt(parts[parts.length - 1], 10);
+            var parts = o.codigo.split('-');
+            var num = parseInt(parts[parts.length - 1], 10);
             return isNaN(num) ? max : (num > max ? num : max);
           }, 0);
           consecutivoOC = maxCodigo + 1;
@@ -1488,10 +1489,10 @@
       }
 
       document.addEventListener('input', function(e) {
-        const target = e.target;
+        var target = e.target;
         if ((target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA') {
-          const start = target.selectionStart;
-          const end = target.selectionEnd;
+          var start = target.selectionStart;
+          var end = target.selectionEnd;
           target.value = target.value.toUpperCase();
           target.setSelectionRange(start, end);
         }
@@ -1517,14 +1518,14 @@
         document.getElementById('contenidoApp').classList.add('visible');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
 
-        const panelOC = document.getElementById('panelOC');
-        const panelProyecto = document.getElementById('panelProyecto');
-        const tablaProyectosCard = document.getElementById('tablaProyectosCard');
-        const panelCXP = document.getElementById('panelCXP');
-        const bandejaOCCard = document.getElementById('bandejaOCCard');
-        const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
-        const puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Director General');
-        const puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].includes(actual.rol));
+        var panelOC = document.getElementById('panelOC');
+        var panelProyecto = document.getElementById('panelProyecto');
+        var tablaProyectosCard = document.getElementById('tablaProyectosCard');
+        var panelCXP = document.getElementById('panelCXP');
+        var bandejaOCCard = document.getElementById('bandejaOCCard');
+        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
 
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
@@ -1559,7 +1560,7 @@
           if (modulo === 'oc' && actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
             window.actualizarResponsables();
           }
-          const cuerpo = document.getElementById('cuerpoProductos');
+          var cuerpo = document.getElementById('cuerpoProductos');
           if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
             window.agregarFilaProducto();
           }
@@ -1567,31 +1568,31 @@
       };
 
       function cargarEmpresasDeptosParaProyecto() {
-        const empresaSelect = document.getElementById('empresaSelect');
-        const deptoSelect = document.getElementById('departamentoSelect');
-        const empresaInput = document.getElementById('empresaInput');
-        const deptoInput = document.getElementById('departamentoInput');
+        var empresaSelect = document.getElementById('empresaSelect');
+        var deptoSelect = document.getElementById('departamentoSelect');
+        var empresaInput = document.getElementById('empresaInput');
+        var deptoInput = document.getElementById('departamentoInput');
         
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           empresaSelect.style.display = 'inline-block';
           empresaInput.style.display = 'none';
           deptoSelect.style.display = 'inline-block';
           deptoInput.style.display = 'none';
           
-          const empresas = [...new Set(proyectos.map(p => p.empresa))];
-          const deptos = [...new Set(proyectos.map(p => p.departamento))];
+          var empresas = [...new Set(proyectos.map(function(p) { return p.empresa; }))];
+          var deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
           
           empresaSelect.innerHTML = '<option value="">Seleccionar empresa</option>';
-          empresas.forEach(e => {
-            const opt = document.createElement('option');
+          empresas.forEach(function(e) {
+            var opt = document.createElement('option');
             opt.value = e;
             opt.textContent = e;
             empresaSelect.appendChild(opt);
           });
           
           deptoSelect.innerHTML = '<option value="">Seleccionar departamento</option>';
-          deptos.forEach(d => {
-            const opt = document.createElement('option');
+          deptos.forEach(function(d) {
+            var opt = document.createElement('option');
             opt.value = d;
             opt.textContent = d;
             deptoSelect.appendChild(opt);
@@ -1605,21 +1606,21 @@
           deptoSelect.style.display = 'inline-block';
           deptoInput.style.display = 'none';
           
-          const opcionesPerm = obtenerOpcionesPermisos(actual);
+          var opcionesPerm = obtenerOpcionesPermisos(actual);
           empresaSelect.innerHTML = '';
           deptoSelect.innerHTML = '';
-          opcionesPerm.forEach((p, idx) => {
-            const optEmp = document.createElement('option');
+          opcionesPerm.forEach(function(p, idx) {
+            var optEmp = document.createElement('option');
             optEmp.value = p.empresa;
             optEmp.textContent = p.empresa;
             empresaSelect.appendChild(optEmp);
-            const optDepto = document.createElement('option');
+            var optDepto = document.createElement('option');
             optDepto.value = p.depto;
             optDepto.textContent = p.depto;
             deptoSelect.appendChild(optDepto);
           });
           empresaSelect.onchange = function() {
-            const idx = empresaSelect.selectedIndex;
+            var idx = empresaSelect.selectedIndex;
             if (deptoSelect.options[idx]) deptoSelect.selectedIndex = idx;
           };
           if (opcionesPerm.length > 0) {
@@ -1635,15 +1636,15 @@
 
       function mostrarConstruccion() { alert('🚧 Módulo en construcción'); }
 
-      let modulosConfigurados = false;
+      var modulosConfigurados = false;
       function configurarModulos() {
         if (modulosConfigurados) return;
-        const grid = document.getElementById('modulosGrid');
+        var grid = document.getElementById('modulosGrid');
         if (!grid) return;
         grid.addEventListener('click', function(e) {
-          const item = e.target.closest('.modulo-item');
+          var item = e.target.closest('.modulo-item');
           if (!item) return;
-          const modulo = item.dataset.modulo;
+          var modulo = item.dataset.modulo;
           if (modulo === 'oc') window.mostrarModulo('oc');
           else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
           else if (modulo === 'cxp') window.mostrarModulo('cxp');
@@ -1654,16 +1655,16 @@
 
       window.filtrarPendientesPagar = function() {
         filtroPendientesActivo = !filtroPendientesActivo;
-        const btn = document.getElementById('btnPendientesPagar');
+        var btn = document.getElementById('btnPendientesPagar');
         if (filtroPendientesActivo) {
           btn.style.background = 'var(--danger)';
           btn.textContent = '💰 Mostrar Todas';
-          const pendientes = contarPendientesPagar();
-          if (pendientes > 0) btn.textContent = `💰 Mostrar Todas (${pendientes} pendientes)`;
+          var pendientes = contarPendientesPagar();
+          if (pendientes > 0) btn.textContent = '💰 Mostrar Todas (' + pendientes + ' pendientes)';
         } else {
           btn.style.background = 'var(--warning)';
-          const pendientes = contarPendientesPagar();
-          btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+          var pendientes = contarPendientesPagar();
+          btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
         }
         render();
       };
@@ -1672,59 +1673,59 @@
         document.getElementById('filtroProyecto').value = '';
         document.getElementById('filtroDepto').value = '';
         filtroPendientesActivo = false;
-        const btn = document.getElementById('btnPendientesPagar');
+        var btn = document.getElementById('btnPendientesPagar');
         btn.style.background = 'var(--warning)';
-        const pendientes = contarPendientesPagar();
-        btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+        var pendientes = contarPendientesPagar();
+        btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
         render();
       };
 
       function contarPendientesPagar() {
-        let ocVisibles = filtrarOCSegunUsuario(actual);
-        const filtroProyecto = document.getElementById('filtroProyecto');
-        if (filtroProyecto && filtroProyecto.value) ocVisibles = ocVisibles.filter(o => o.proyecto === filtroProyecto.value);
-        const filtroDepto = document.getElementById('filtroDepto');
+        var ocVisibles = filtrarOCSegunUsuario(actual);
+        var filtroProyecto = document.getElementById('filtroProyecto');
+        if (filtroProyecto && filtroProyecto.value) ocVisibles = ocVisibles.filter(function(o) { return o.proyecto === filtroProyecto.value; });
+        var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
-          ocVisibles = ocVisibles.filter(o => {
-            const p = proyectos.find(proj => proj.nombre === o.proyecto);
+          ocVisibles = ocVisibles.filter(function(o) {
+            var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
             return p && p.departamento === filtroDepto.value;
           });
         }
-        return ocVisibles.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada).length;
+        return ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; }).length;
       }
 
       window.actualizarResponsables = function() {
-        const selectProyecto = document.getElementById('selectProyecto');
-        const selectResp = document.getElementById('responsableOC');
-        const selectedId = parseInt(selectProyecto.value);
+        var selectProyecto = document.getElementById('selectProyecto');
+        var selectResp = document.getElementById('responsableOC');
+        var selectedId = parseInt(selectProyecto.value);
         if (!selectedId || isNaN(selectedId)) {
           selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
           return;
         }
-        const proyecto = proyectos.find(p => p.id === selectedId);
+        var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
         if (!proyecto) {
           selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
           return;
         }
-        const posibles = getPosiblesResponsables();
-        const filtrados = posibles.filter(u => usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento));
+        var posibles = getPosiblesResponsables();
+        var filtrados = posibles.filter(function(u) { return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento); });
         selectResp.innerHTML = '';
         if (filtrados.length === 0) {
           selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
         } else {
-          filtrados.forEach(u => {
-            const opt = document.createElement('option');
+          filtrados.forEach(function(u) {
+            var opt = document.createElement('option');
             opt.value = u.usuario;
-            opt.textContent = `${u.usuario} (${u.rol})`;
+            opt.textContent = u.usuario + ' (' + u.rol + ')';
             selectResp.appendChild(opt);
           });
         }
       };
 
       window.mostrarParidadInicial = function() {
-        const moneda = document.getElementById('monedaOC').value;
-        const paridadInput = document.getElementById('paridadInicial');
-        const paridadLabel = document.getElementById('paridadInicialLabel');
+        var moneda = document.getElementById('monedaOC').value;
+        var paridadInput = document.getElementById('paridadInicial');
+        var paridadLabel = document.getElementById('paridadInicialLabel');
         if (moneda === 'USD') {
           paridadInput.style.display = 'inline-block';
           paridadLabel.style.display = 'inline-block';
@@ -1752,18 +1753,18 @@
       // LOGIN
       // ============================================================
       window.login = async function() {
-        const userInput = document.getElementById('usuario');
-        const passInput = document.getElementById('password');
-        const errorDiv = document.getElementById('error');
-        const btnLogin = document.getElementById('btnLogin');
+        var userInput = document.getElementById('usuario');
+        var passInput = document.getElementById('password');
+        var errorDiv = document.getElementById('error');
+        var btnLogin = document.getElementById('btnLogin');
 
         if (!userInput || !passInput) { 
           alert('❌ Campos no encontrados'); 
           return; 
         }
 
-        const user = userInput.value.trim().toUpperCase();
-        const pass = passInput.value.trim();
+        var user = userInput.value.trim().toUpperCase();
+        var pass = passInput.value.trim();
 
         if (!user || !pass) {
           errorDiv.classList.remove('hidden');
@@ -1779,7 +1780,7 @@
           // Cargar usuarios primero
           await cargarUsuarios();
 
-          const { data: userData, error: authError } = await supabase
+          var { data: userData, error: authError } = await supabase
             .from('usuarios')
             .select('*')
             .ilike('usuario', user)
@@ -1789,7 +1790,7 @@
           if (authError) {
             console.error('Error de conexión:', authError);
             errorDiv.classList.remove('hidden');
-            errorDiv.innerHTML = `❌ Error de conexión con la base de datos: ${authError.message || authError.code || 'Verifica la API key en Supabase Dashboard → Settings → API'}`;
+            errorDiv.innerHTML = '❌ Error de conexión con la base de datos: ' + (authError.message || authError.code || 'Verifica la API key en Supabase Dashboard → Settings → API');
             btnLogin.disabled = false;
             btnLogin.textContent = 'Ingresar';
             return;
@@ -1804,7 +1805,7 @@
           }
 
           // Cargar proyectos y órdenes
-          const cargaOk = await cargarDatos();
+          var cargaOk = await cargarDatos();
           if (!cargaOk) {
             errorDiv.classList.remove('hidden');
             errorDiv.innerHTML = '❌ No se pudieron cargar los datos. Verifica conexión con Supabase.';
@@ -1824,7 +1825,7 @@
         } catch (e) {
           console.error('Error inesperado en login:', e);
           errorDiv.classList.remove('hidden');
-          errorDiv.innerHTML = `❌ Error inesperado: ${e.message}`;
+          errorDiv.innerHTML = '❌ Error inesperado: ' + e.message;
           btnLogin.disabled = false;
           btnLogin.textContent = 'Ingresar';
           return;
@@ -1836,8 +1837,8 @@
 
         document.getElementById('login').classList.add('hidden');
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const ocParam = urlParams.get('oc');
+        var urlParams = new URLSearchParams(window.location.search);
+        var ocParam = urlParams.get('oc');
         
         if (ocParam) {
           ocNotificadaId = parseInt(ocParam);
@@ -1850,12 +1851,12 @@
           document.getElementById('contenidoApp').classList.add('visible');
           document.getElementById('btnVolverMenu').classList.remove('hidden');
           
-          const panelOC = document.getElementById('panelOC');
-          const panelProyecto = document.getElementById('panelProyecto');
-          const tablaProyectosCard = document.getElementById('tablaProyectosCard');
-          const panelCXP = document.getElementById('panelCXP');
-          const bandejaOCCard = document.getElementById('bandejaOCCard');
-          const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+          var panelOC = document.getElementById('panelOC');
+          var panelProyecto = document.getElementById('panelProyecto');
+          var tablaProyectosCard = document.getElementById('tablaProyectosCard');
+          var panelCXP = document.getElementById('panelCXP');
+          var bandejaOCCard = document.getElementById('bandejaOCCard');
+          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
           
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
@@ -1871,17 +1872,17 @@
             if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
               window.actualizarResponsables();
             }
-            const cuerpo = document.getElementById('cuerpoProductos');
+            var cuerpo = document.getElementById('cuerpoProductos');
             if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
               window.agregarFilaProducto();
             }
             
             setTimeout(function() {
-              const row = document.querySelector(`tr[data-oc-id="${ocNotificadaId}"]`);
+              var row = document.querySelector('tr[data-oc-id="' + ocNotificadaId + '"]');
               if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 setTimeout(function() {
-                  const btn = row.querySelector('.btn-aura-orange-gold');
+                  var btn = row.querySelector('.btn-aura-orange-gold');
                   if (btn) {
                     btn.focus();
                     btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1897,14 +1898,14 @@
           configurarModulos();
         }
 
-        let infoSesion = `👤 ${actual.u} (${actual.rol})`;
-        const opciones = obtenerOpcionesPermisos(actual);
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
+        var infoSesion = '👤 ' + actual.u + ' (' + actual.rol + ')';
+        var opciones = obtenerOpcionesPermisos(actual);
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           infoSesion += ' - Acceso total';
         } else if (opciones.length === 1) {
-          infoSesion += ` - ${opciones[0].empresa} / ${opciones[0].depto}`;
+          infoSesion += ' - ' + opciones[0].empresa + ' / ' + opciones[0].depto;
         } else if (opciones.length > 1) {
-          infoSesion += ` - ${opciones.length} empresas/departamentos`;
+          infoSesion += ' - ' + opciones.length + ' empresas/departamentos';
         }
         document.getElementById('sesion').textContent = infoSesion;
 
@@ -1914,68 +1915,68 @@
           document.getElementById('adminActions').classList.add('hidden');
         }
 
-        const esElaborador = actual.rol === 'Elaborador';
-        const esDirector = actual.rol === 'Director General';
-        const esAdmin = actual.rol === 'Administrador';
-        const esFinanzas = actual.rol === 'Finanzas';
+        var esElaborador = actual.rol === 'Elaborador';
+        var esDirector = actual.rol === 'Director General';
+        var esAdmin = actual.rol === 'Administrador';
+        var esFinanzas = actual.rol === 'Finanzas';
 
         document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
         document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
 
-        const filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
-        const filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
-        const btnPendientes = document.getElementById('btnPendientesPagar');
-        const btnLimpiar = document.getElementById('btnLimpiarFiltros');
+        var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
+        var filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
+        var btnPendientes = document.getElementById('btnPendientesPagar');
+        var btnLimpiar = document.getElementById('btnLimpiarFiltros');
 
-        const puedeFiltrar = esDirector || esAdmin || esFinanzas;
+        var puedeFiltrar = esDirector || esAdmin || esFinanzas;
         filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
         filtroDeptoContainer.classList.toggle('hidden', !puedeFiltrar);
 
         if (esFinanzas) {
           btnPendientes.classList.remove('hidden');
           btnLimpiar.classList.remove('hidden');
-          const pendientes = contarPendientesPagar();
-          btnPendientes.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+          var pendientes = contarPendientesPagar();
+          btnPendientes.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
         } else {
           btnPendientes.classList.add('hidden');
           btnLimpiar.classList.add('hidden');
         }
 
-        const selectProyecto = document.getElementById('selectProyecto');
+        var selectProyecto = document.getElementById('selectProyecto');
         selectProyecto.onchange = window.actualizarResponsables;
 
-        const filtroProyecto = document.getElementById('filtroProyecto');
+        var filtroProyecto = document.getElementById('filtroProyecto');
         filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
-        proyectos.forEach(p => {
-          const opt = document.createElement('option');
+        proyectos.forEach(function(p) {
+          var opt = document.createElement('option');
           opt.value = p.nombre;
           opt.textContent = p.nombre;
           filtroProyecto.appendChild(opt);
         });
         filtroProyecto.onchange = function() {
           if (actual.rol === 'Finanzas') {
-            const pendientes = contarPendientesPagar();
-            const btn = document.getElementById('btnPendientesPagar');
-            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+            var pendientes = contarPendientesPagar();
+            var btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
             if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
           }
           render();
         };
 
-        const filtroDepto = document.getElementById('filtroDepto');
+        var filtroDepto = document.getElementById('filtroDepto');
         filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
-        const deptos = [...new Set(proyectos.map(p => p.departamento))];
-        deptos.forEach(d => {
-          const opt = document.createElement('option');
+        var deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
+        deptos.forEach(function(d) {
+          var opt = document.createElement('option');
           opt.value = d;
           opt.textContent = d;
           filtroDepto.appendChild(opt);
         });
         filtroDepto.onchange = function() {
           if (actual.rol === 'Finanzas') {
-            const pendientes = contarPendientesPagar();
-            const btn = document.getElementById('btnPendientesPagar');
-            btn.textContent = pendientes > 0 ? `💰 Pendientes por Pagar (${pendientes})` : '💰 Pendientes por Pagar (0)';
+            var pendientes = contarPendientesPagar();
+            var btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
             if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
           }
           render();
@@ -1983,7 +1984,7 @@
 
         setTimeout(function() {
           render();
-          const cuerpo = document.getElementById('cuerpoProductos');
+          var cuerpo = document.getElementById('cuerpoProductos');
           if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
             window.agregarFilaProducto();
           }
@@ -1996,8 +1997,8 @@
       // FUNCIONES DE CREACIÓN Y GESTIÓN
       // ============================================================
       window.crearProyecto = async function() {
-        let empresa, departamento;
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
+        var empresa, departamento;
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           empresa = document.getElementById('empresaSelect').value.toUpperCase();
           departamento = document.getElementById('departamentoSelect').value.toUpperCase();
           if (!empresa || !departamento) {
@@ -2008,13 +2009,13 @@
           empresa = document.getElementById('empresaSelect').value.toUpperCase();
           departamento = document.getElementById('departamentoSelect').value.toUpperCase();
         }
-        const nombre = document.getElementById('nombreProyecto').value.trim().toUpperCase();
-        const cliente = document.getElementById('cliente').value.trim().toUpperCase();
-        const presupuesto = Number(document.getElementById('presupuesto').value);
-        const moneda = document.getElementById('monedaProyecto').value;
-        const fechaInicio = document.getElementById('fechaInicio').value;
-        const fechaTermino = document.getElementById('fechaTermino').value;
-        const msgDiv = document.getElementById('msgProyecto');
+        var nombre = document.getElementById('nombreProyecto').value.trim().toUpperCase();
+        var cliente = document.getElementById('cliente').value.trim().toUpperCase();
+        var presupuesto = Number(document.getElementById('presupuesto').value);
+        var moneda = document.getElementById('monedaProyecto').value;
+        var fechaInicio = document.getElementById('fechaInicio').value;
+        var fechaTermino = document.getElementById('fechaTermino').value;
+        var msgDiv = document.getElementById('msgProyecto');
 
         if (!empresa || !departamento || !nombre || !cliente || presupuesto <= 0 || !fechaInicio || !fechaTermino) {
           msgDiv.innerHTML = '<div class="alert">⚠️ TODOS LOS CAMPOS SON OBLIGATORIOS Y PRESUPUESTO > 0.</div>';
@@ -2029,12 +2030,12 @@
           return;
         }
 
-        const nuevoProyecto = { empresa, departamento, nombre, cliente, presupuesto, moneda, limite: presupuesto * 0.60, fecha_inicio: fechaInicio, fecha_termino: fechaTermino };
+        var nuevoProyecto = { empresa: empresa, departamento: departamento, nombre: nombre, cliente: cliente, presupuesto: presupuesto, moneda: moneda, limite: presupuesto * 0.60, fecha_inicio: fechaInicio, fecha_termino: fechaTermino };
 
         try {
-          const { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
+          var { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
           if (error) {
-            msgDiv.innerHTML = `<div class="alert">⚠️ ERROR: ${error.message}</div>`;
+            msgDiv.innerHTML = '<div class="alert">⚠️ ERROR: ' + error.message + '</div>';
             return;
           }
           msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO.</div>';
@@ -2046,14 +2047,14 @@
           render();
         } catch (error) {
           console.error('❌ Error inesperado en crearProyecto:', error.stack || error);
-          msgDiv.innerHTML = `<div class="alert">⚠️ ERROR INESPERADO: ${error.message}</div>`;
+          msgDiv.innerHTML = '<div class="alert">⚠️ ERROR INESPERADO: ' + error.message + '</div>';
         }
       };
 
       window.eliminarProyecto = async function(index) {
         if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const proyecto = proyectos[index];
-        if (!confirm(`¿Eliminar proyecto "${proyecto.nombre}" y todas sus OC asociadas?`)) return;
+        var proyecto = proyectos[index];
+        if (!confirm('¿Eliminar proyecto "' + proyecto.nombre + '" y todas sus OC asociadas?')) return;
         await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
         await supabase.from('proyectos').delete().eq('id', proyecto.id);
         proyectos.splice(index, 1);
@@ -2063,23 +2064,19 @@
       // ============================================================
       // PRODUCTOS
       // ============================================================
-      window.agregarFilaProducto = function(parte = '', descripcion = '', udm = 'PZA', cantidad = 1, precio = 0, descuento = 0, impuesto = 0) {
-        const tbody = document.getElementById('cuerpoProductos');
-        const fila = document.createElement('tr');
-        const idx = tbody.children.length + 1;
-        const udmOptions = UDM_LIST.map(u => `<option value="${u}" ${u === udm ? 'selected' : ''}>${u}</option>`).join('');
-        fila.innerHTML = `
-          <td class="indice">${idx}</td>
-          <td><input class="part" type="text" value="${parte.toUpperCase()}" placeholder="Núm. Parte"></td>
-          <td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">${descripcion.toUpperCase()}</textarea></td>
-          <td><input class="cantidad" type="number" value="${cantidad}" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">${udmOptions}</select></td>
-          <td><input class="precio" type="number" value="${precio}" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="descuento" type="number" value="${descuento}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="impuesto" type="number" value="${impuesto}" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td>
-          <td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:150px;width:150px;"></td>
-          <td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>
-        `;
+      window.agregarFilaProducto = function(parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
+        parte = parte || '';
+        descripcion = descripcion || '';
+        udm = udm || 'PZA';
+        cantidad = cantidad || 1;
+        precio = precio || 0;
+        descuento = descuento || 0;
+        impuesto = impuesto || 0;
+        var tbody = document.getElementById('cuerpoProductos');
+        var fila = document.createElement('tr');
+        var idx = tbody.children.length + 1;
+        var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:150px;width:150px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -2087,65 +2084,65 @@
       };
 
       window.eliminarFilaProducto = function(boton) {
-        const fila = boton.closest('tr');
+        var fila = boton.closest('tr');
         fila.remove();
         window.recalcularTotal();
         window.reindexar();
       };
 
       function reindexar() {
-        const tbody = document.getElementById('cuerpoProductos');
-        const filas = tbody.querySelectorAll('tr');
-        filas.forEach((fila, i) => {
-          const tdIndice = fila.querySelector('.indice');
+        var tbody = document.getElementById('cuerpoProductos');
+        var filas = tbody.querySelectorAll('tr');
+        filas.forEach(function(fila, i) {
+          var tdIndice = fila.querySelector('.indice');
           if (tdIndice) tdIndice.textContent = i + 1;
         });
       }
 
-      function autoAjustar(textarea) {
+      window.autoAjustar = function(textarea) {
         textarea.style.height = '38px';
         textarea.style.height = (textarea.scrollHeight) + 'px';
-      }
+      };
 
-      function recalcularFila(elemento) {
-        const fila = elemento.closest ? elemento.closest('tr') : elemento;
+      window.recalcularFila = function(elemento) {
+        var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
-        const cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
-        const precio = parseFloat(fila.querySelector('.precio').value) || 0;
-        const descuento = parseFloat(fila.querySelector('.descuento').value) || 0;
-        const impuesto = parseFloat(fila.querySelector('.impuesto').value) || 0;
-        const subtotal = cantidad * precio;
-        const descuentoValor = subtotal * (descuento / 100);
-        const subtotalConDescuento = subtotal - descuentoValor;
-        const impuestoValor = subtotalConDescuento * (impuesto / 100);
-        const importe = subtotalConDescuento + impuestoValor;
-        const importeInput = fila.querySelector('.importe');
+        var cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
+        var precio = parseFloat(fila.querySelector('.precio').value) || 0;
+        var descuento = parseFloat(fila.querySelector('.descuento').value) || 0;
+        var impuesto = parseFloat(fila.querySelector('.impuesto').value) || 0;
+        var subtotal = cantidad * precio;
+        var descuentoValor = subtotal * (descuento / 100);
+        var subtotalConDescuento = subtotal - descuentoValor;
+        var impuestoValor = subtotalConDescuento * (impuesto / 100);
+        var importe = subtotalConDescuento + impuestoValor;
+        var importeInput = fila.querySelector('.importe');
         if (importeInput) importeInput.value = importe.toFixed(2);
         window.recalcularTotal();
-      }
+      };
 
-      function recalcularTotal() {
-        const tbody = document.getElementById('cuerpoProductos');
-        const filas = tbody.querySelectorAll('tr');
-        let total = 0;
-        filas.forEach(fila => {
-          const importeInput = fila.querySelector('.importe');
+      window.recalcularTotal = function() {
+        var tbody = document.getElementById('cuerpoProductos');
+        var filas = tbody.querySelectorAll('tr');
+        var total = 0;
+        filas.forEach(function(fila) {
+          var importeInput = fila.querySelector('.importe');
           if (importeInput) total += parseFloat(importeInput.value) || 0;
         });
         document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
-      }
+      };
 
       // ============================================================
       // RECOPILAR DATOS OC
       // ============================================================
       function recopilarDatosOC() {
-        const selectProyecto = document.getElementById('selectProyecto');
-        const selectedId = parseInt(selectProyecto.value);
+        var selectProyecto = document.getElementById('selectProyecto');
+        var selectedId = parseInt(selectProyecto.value);
         if (!selectedId) {
           document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ SELECCIONE UN PROYECTO VÁLIDO.</div>';
           return null;
         }
-        const proyecto = proyectos.find(p => p.id === selectedId);
+        var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
         if (!proyecto) {
           document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ PROYECTO NO ENCONTRADO.</div>';
           return null;
@@ -2155,31 +2152,31 @@
           return null;
         }
 
-        const proveedor = document.getElementById('proveedor').value.trim().toUpperCase();
-        const rfc = document.getElementById('rfc').value.trim().toUpperCase();
-        const direccion = document.getElementById('direccion').value.trim().toUpperCase();
-        const usocfdi = document.getElementById('usoCFDI').value;
-        const direccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
-        const cp = document.getElementById('cp').value.trim();
-        const moneda = document.getElementById('monedaOC').value;
-        const fechapago = document.getElementById('fechaPago').value;
-        const fechaentrega = document.getElementById('fechaEntrega').value;
-        const responsable = document.getElementById('responsableOC').value;
-        const banco = document.getElementById('banco').value.trim().toUpperCase();
-        const cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
-        const clabe = document.getElementById('clabe').value.trim().toUpperCase();
-        const swift = document.getElementById('swift').value.trim().toUpperCase();
-        const cie = document.getElementById('cie').value.trim().toUpperCase();
-        const referencia = document.getElementById('referencia').value.trim().toUpperCase();
-        const msgDiv = document.getElementById('mensajeOC');
+        var proveedor = document.getElementById('proveedor').value.trim().toUpperCase();
+        var rfc = document.getElementById('rfc').value.trim().toUpperCase();
+        var direccion = document.getElementById('direccion').value.trim().toUpperCase();
+        var usocfdi = document.getElementById('usoCFDI').value;
+        var direccionentrega = document.getElementById('direccionEntrega').value.trim().toUpperCase();
+        var cp = document.getElementById('cp').value.trim();
+        var moneda = document.getElementById('monedaOC').value;
+        var fechapago = document.getElementById('fechaPago').value;
+        var fechaentrega = document.getElementById('fechaEntrega').value;
+        var responsable = document.getElementById('responsableOC').value;
+        var banco = document.getElementById('banco').value.trim().toUpperCase();
+        var cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
+        var clabe = document.getElementById('clabe').value.trim().toUpperCase();
+        var swift = document.getElementById('swift').value.trim().toUpperCase();
+        var cie = document.getElementById('cie').value.trim().toUpperCase();
+        var referencia = document.getElementById('referencia').value.trim().toUpperCase();
+        var msgDiv = document.getElementById('mensajeOC');
 
         if (!banco) { msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>'; return null; }
         if (!cuenta && !clabe) { msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>'; return null; }
 
-        let tipocambio = null;
-        let montomxn = 0;
+        var tipocambio = null;
+        var montomxn = 0;
         if (moneda === 'USD') {
-          const tcInput = document.getElementById('paridadInicial').value;
+          var tcInput = document.getElementById('paridadInicial').value;
           if (!tcInput || parseFloat(tcInput) <= 0) {
             msgDiv.innerHTML = '<div class="alert">⚠️ INGRESE UN TIPO DE CAMBIO INICIAL VÁLIDO (MXN/USD).</div>';
             return null;
@@ -2192,29 +2189,29 @@
           return null;
         }
 
-        const responsableUser = buscarUsuarioDB(responsable);
+        var responsableUser = buscarUsuarioDB(responsable);
         if (!responsableUser || !usuarioPuedeAcceder(responsableUser, proyecto.empresa, proyecto.departamento)) {
           msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
           return null;
         }
 
-        const tbody = document.getElementById('cuerpoProductos');
-        const filas = tbody.querySelectorAll('tr');
-        const productos = [];
-        let montototal = 0;
-        let valido = true;
+        var tbody = document.getElementById('cuerpoProductos');
+        var filas = tbody.querySelectorAll('tr');
+        var productos = [];
+        var montototal = 0;
+        var valido = true;
 
-        filas.forEach(fila => {
-          const parte = fila.querySelector('.part')?.value?.trim().toUpperCase() || '';
-          const descripcion = fila.querySelector('.desc')?.value?.trim().toUpperCase() || '';
-          const udm = fila.querySelector('.udm')?.value || 'PZA';
-          const cantidad = parseFloat(fila.querySelector('.cantidad')?.value) || 0;
-          const precio = parseFloat(fila.querySelector('.precio')?.value) || 0;
-          const descuento = parseFloat(fila.querySelector('.descuento')?.value) || 0;
-          const impuesto = parseFloat(fila.querySelector('.impuesto')?.value) || 0;
-          const importe = parseFloat(fila.querySelector('.importe')?.value) || 0;
+        filas.forEach(function(fila) {
+          var parte = fila.querySelector('.part')?.value?.trim().toUpperCase() || '';
+          var descripcion = fila.querySelector('.desc')?.value?.trim().toUpperCase() || '';
+          var udm = fila.querySelector('.udm')?.value || 'PZA';
+          var cantidad = parseFloat(fila.querySelector('.cantidad')?.value) || 0;
+          var precio = parseFloat(fila.querySelector('.precio')?.value) || 0;
+          var descuento = parseFloat(fila.querySelector('.descuento')?.value) || 0;
+          var impuesto = parseFloat(fila.querySelector('.impuesto')?.value) || 0;
+          var importe = parseFloat(fila.querySelector('.importe')?.value) || 0;
           if (!descripcion || cantidad <= 0 || precio <= 0) { valido = false; return; }
-          productos.push({ parte, descripcion, udm, cantidad, precioUnitario: precio, descuento, impuesto, importe });
+          productos.push({ parte: parte, descripcion: descripcion, udm: udm, cantidad: cantidad, precioUnitario: precio, descuento: descuento, impuesto: impuesto, importe: importe });
           montototal += importe;
         });
 
@@ -2226,12 +2223,12 @@
         if (moneda === 'USD') montomxn = montototal * tipocambio;
         else montomxn = montototal;
 
-        let estado = 'CREADA';
-        let motivo = '';
+        var estado = 'CREADA';
+        var motivo = '';
 
-        const fechaPagoObj = new Date(fechapago);
-        const fechaInicioObj = new Date(proyecto.fecha_inicio);
-        const fechaTerminoObj = new Date(proyecto.fecha_termino);
+        var fechaPagoObj = new Date(fechapago);
+        var fechaInicioObj = new Date(proyecto.fecha_inicio);
+        var fechaTerminoObj = new Date(proyecto.fecha_termino);
         if (!(fechaPagoObj >= fechaInicioObj && fechaPagoObj <= fechaTerminoObj)) {
           motivo = '⚠️ Fecha de pago fuera del rango del proyecto';
           console.warn('⚠️ Fecha de pago fuera del rango del proyecto:', fechapago, 'Rango:', proyecto.fecha_inicio, 'a', proyecto.fecha_termino);
@@ -2241,25 +2238,25 @@
           empresa: proyecto.empresa,
           departamento: proyecto.departamento,
           proyectonombre: proyecto.nombre,
-          proveedor,
+          proveedor: proveedor,
           rfc: rfc || 'NA',
-          direccion,
-          usocfdi,
-          direccionentrega,
+          direccion: direccion,
+          usocfdi: usocfdi,
+          direccionentrega: direccionentrega,
           cp: cp || '',
-          moneda,
-          tipocambio,
-          montototal,
-          montomxn,
-          estado,
-          fechapago,
-          fechaentrega,
-          responsable,
-          productos,
-          motivo,
+          moneda: moneda,
+          tipocambio: tipocambio,
+          montototal: montototal,
+          montomxn: montomxn,
+          estado: estado,
+          fechapago: fechapago,
+          fechaentrega: fechaentrega,
+          responsable: responsable,
+          productos: productos,
+          motivo: motivo,
           cliente: proyecto.cliente,
           elaborador: actual.u,
-          banco,
+          banco: banco,
           cuenta: cuenta || null,
           clabe: clabe || null,
           swift: swift || null,
@@ -2271,52 +2268,53 @@
       // ============================================================
       // GENERAR PDF
       // ============================================================
-      async function generarPDFParaPreview(datos, ocExistente = null) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'pt', 'a4');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 40;
-        let y = margin;
+      async function generarPDFParaPreview(datos, ocExistente) {
+        ocExistente = ocExistente || null;
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 40;
+        var y = margin;
 
-        const nombreEmpresa = getNombreMembrete(datos.empresa);
-        const leyendaPie = getLeyendaPie(datos.empresa);
-        const esExtingue = datos.empresa && datos.empresa.toUpperCase().includes('GRUPO INDUSTRIAL EXTINGUE');
-        const esVexpar = datos.empresa && datos.empresa.toUpperCase().includes('VEXPAR OPERACIONES');
+        var nombreEmpresa = getNombreMembrete(datos.empresa);
+        var leyendaPie = getLeyendaPie(datos.empresa);
+        var esExtingue = datos.empresa && datos.empresa.toUpperCase().indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1;
+        var esVexpar = datos.empresa && datos.empresa.toUpperCase().indexOf('VEXPAR OPERACIONES') !== -1;
 
         try {
           if (esExtingue) {
-            const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
-            const response = await fetch(imgUrl);
+            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+            var response = await fetch(imgUrl);
             if (response.ok) {
-              const blob = await response.blob();
-              const imgData = await new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
+              var blob = await response.blob();
+              var imgData = await new Promise(function(resolve) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result); };
                 reader.readAsDataURL(blob);
               });
-              const img = new Image();
+              var img = new Image();
               img.src = imgData;
-              await new Promise(resolve => { img.onload = resolve; });
-              const imgWidth = 140;
-              const imgHeight = (img.height / img.width) * imgWidth;
+              await new Promise(function(resolve) { img.onload = resolve; });
+              var imgWidth = 140;
+              var imgHeight = (img.height / img.width) * imgWidth;
               doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
               y += imgHeight + 25;
             } else throw new Error('No se pudo cargar la imagen');
           } else if (esVexpar) {
-            const imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
-            const response = await fetch(imgUrl);
+            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
+            var response = await fetch(imgUrl);
             if (response.ok) {
-              const blob = await response.blob();
-              const imgData = await new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
+              var blob = await response.blob();
+              var imgData = await new Promise(function(resolve) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result); };
                 reader.readAsDataURL(blob);
               });
-              const img = new Image();
+              var img = new Image();
               img.src = imgData;
-              await new Promise(resolve => { img.onload = resolve; });
-              const imgWidth = 140;
-              const imgHeight = (img.height / img.width) * imgWidth;
+              await new Promise(function(resolve) { img.onload = resolve; });
+              var imgWidth = 140;
+              var imgHeight = (img.height / img.width) * imgWidth;
               doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
               y += imgHeight + 25;
             } else throw new Error('No se pudo cargar la imagen');
@@ -2349,7 +2347,7 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
-        const datosLista = [
+        var datosLista = [
           { label: 'Proveedor:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
           { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
@@ -2362,26 +2360,28 @@
           { label: 'Moneda:', value: datos.moneda }
         ];
 
-        datosLista.forEach((item) => {
+        datosLista.forEach(function(item) {
           doc.setFont('helvetica', 'bold');
           doc.text(item.label, margin, y);
           doc.setFont('helvetica', 'normal');
-          const labelWidth = doc.getTextWidth(item.label) + 8;
-          const maxWidth = pageWidth - margin - labelWidth - 20;
-          const textLines = doc.splitTextToSize(item.value, maxWidth);
+          var labelWidth = doc.getTextWidth(item.label) + 8;
+          var maxWidth = pageWidth - margin - labelWidth - 20;
+          var textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
           y += textLines.length * 9 + 2;
         });
         y += 5;
 
-        const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
-        const rows = datos.productos.map((p, i) => [
-          i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
-          formatoMoneda(p.precioUnitario, datos.moneda),
-          p.descuento.toFixed(2) + '%',
-          p.impuesto.toFixed(2) + '%',
-          formatoMoneda(p.importe, datos.moneda)
-        ]);
+        var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
+        var rows = datos.productos.map(function(p, i) {
+          return [
+            i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
+            formatoMoneda(p.precioUnitario, datos.moneda),
+            p.descuento.toFixed(2) + '%',
+            p.impuesto.toFixed(2) + '%',
+            formatoMoneda(p.importe, datos.moneda)
+          ];
+        });
 
         doc.autoTable({
           head: [headers], body: rows, startY: y,
@@ -2403,18 +2403,18 @@
         });
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
-        let subtotal = 0, iva = 0, impuestoPorcentaje = 0;
+        var subtotal = 0, iva = 0, impuestoPorcentaje = 0;
         if (datos.productos && datos.productos.length > 0) {
-          datos.productos.forEach(p => {
-            const precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
+          datos.productos.forEach(function(p) {
+            var precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
             subtotal += precioConDescuento * p.cantidad;
           });
           impuestoPorcentaje = datos.productos[0]?.impuesto || 0;
           iva = subtotal * (impuestoPorcentaje / 100);
         }
 
-        const totalX = pageWidth * 0.72;
-        const lineSpacing = 13;
+        var totalX = pageWidth * 0.72;
+        var lineSpacing = 13;
         y += 15;
 
         doc.setFontSize(10);
@@ -2442,16 +2442,16 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
-        const solicitante = datos.responsable || 'No definido';
-        const jefe = getJefeDepto(datos.empresa, datos.departamento);
-        const director = getDirector();
+        var solicitante = datos.responsable || 'No definido';
+        var jefe = getJefeDepto(datos.empresa, datos.departamento);
+        var director = getDirector();
         
-        let solicitanteNombre = solicitante;
-        let jefeNombre = jefe;
-        let directorNombre = director;
-        let fechaSolicitante = 'Pendiente';
-        let fechaJefe = 'Pendiente';
-        let fechaDirector = 'Pendiente';
+        var solicitanteNombre = solicitante;
+        var jefeNombre = jefe;
+        var directorNombre = director;
+        var fechaSolicitante = 'Pendiente';
+        var fechaJefe = 'Pendiente';
+        var fechaDirector = 'Pendiente';
 
         if (ocExistente) {
           if (ocExistente.nombresolicitante) {
@@ -2479,10 +2479,10 @@
           }
         }
 
-        const colWidth = (pageWidth - 2 * margin) / 3;
+        var colWidth = (pageWidth - 2 * margin) / 3;
 
         function dibujarAutorizacionPDF(doc, x, y, nombre, titulo, fecha) {
-          const lineWidth = colWidth - 20;
+          var lineWidth = colWidth - 20;
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
@@ -2490,26 +2490,26 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+          var fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
           doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
-          const lineY = y + 14 + 20 + 10;
+          var lineY = y + 14 + 20 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
+          var fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
           doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
-        const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
+        var x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
         dibujarAutorizacionPDF(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
         dibujarAutorizacionPDF(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
         y += 70;
 
-        const pieY = doc.internal.pageSize.height - 55;
+        var pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
@@ -2518,7 +2518,7 @@
         doc.setFont('helvetica', 'bold');
         doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
 
-        const codigoFinal = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
+        var codigoFinal = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
@@ -2536,17 +2536,17 @@
       // FUNCIONES DE VISUALIZACIÓN
       // ============================================================
       window.visualizarOC = async function(index) {
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
         try {
-          const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+          var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
           if (!proyecto) return alert('Proyecto no encontrado');
-          let productos = oc.productos || [];
+          var productos = oc.productos || [];
           if (typeof productos === 'string') {
             try { productos = JSON.parse(productos); } catch(e) { productos = []; }
           }
           if (!Array.isArray(productos)) productos = [];
-          const datosOC = {
+          var datosOC = {
             empresa: proyecto.empresa, departamento: proyecto.departamento,
             proyectonombre: oc.proyecto, proveedor: oc.proveedor,
             rfc: oc.rfc || 'NA', direccion: oc.direccion,
@@ -2563,14 +2563,14 @@
             swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A',
             codigo: oc.codigo
           };
-          const doc = await generarPDFParaPreview(datosOC, oc);
+          var doc = await generarPDFParaPreview(datosOC, oc);
           visualizarOCPDF = doc;
           visualizarOCData = datosOC;
           
-          const pdfBlob = doc.output('blob');
-          const pdfUrl = URL.createObjectURL(pdfBlob);
+          var pdfBlob = doc.output('blob');
+          var pdfUrl = URL.createObjectURL(pdfBlob);
           
-          const frame = document.getElementById('visualizarFrame');
+          var frame = document.getElementById('visualizarFrame');
           if (frame) {
             frame.src = pdfUrl;
             frame.style.display = 'block';
@@ -2585,7 +2585,7 @@
 
       window.cerrarVisualizar = function() {
         document.getElementById('visualizarModal').classList.remove('active');
-        const frame = document.getElementById('visualizarFrame');
+        var frame = document.getElementById('visualizarFrame');
         if (frame && frame.src) {
           try {
             URL.revokeObjectURL(frame.src);
@@ -2599,8 +2599,8 @@
 
       window.imprimirDesdeVisualizar = function() {
         if (visualizarOCPDF) {
-          const codigo = visualizarOCData?.codigo || 'OC';
-          visualizarOCPDF.save(`OC_${codigo}.pdf`);
+          var codigo = visualizarOCData?.codigo || 'OC';
+          visualizarOCPDF.save('OC_' + codigo + '.pdf');
         } else {
           alert('No hay PDF para imprimir');
         }
@@ -2610,12 +2610,12 @@
       // PREVISUALIZAR Y CONFIRMAR OC
       // ============================================================
       window.previsualizarOC = async function() {
-        const datos = recopilarDatosOC();
+        var datos = recopilarDatosOC();
         if (!datos) return;
         ocPreviewData = datos;
-        const doc = await generarPDFParaPreview(datos);
+        var doc = await generarPDFParaPreview(datos);
         ocPreviewPDF = doc;
-        const pdfData = doc.output('datauristring');
+        var pdfData = doc.output('datauristring');
         document.getElementById('pdfPreviewFrame').src = pdfData;
         document.getElementById('pdfPreviewModal').classList.add('active');
       };
@@ -2628,11 +2628,11 @@
 
       window.confirmarDesdePreview = async function() {
         if (!ocPreviewData) { alert('No hay datos para confirmar.'); return; }
-        const datos = ocPreviewData;
-        const codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
+        var datos = ocPreviewData;
+        var codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
 
-        const nuevaOC = {
-          codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
+        var nuevaOC = {
+          codigo: codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
           rfc: datos.rfc, direccion: datos.direccion, usocfdi: datos.usocfdi,
           direccionentrega: datos.direccionentrega, cp: datos.cp || '',
           moneda: datos.moneda, tipocambio: datos.tipocambio,
@@ -2651,11 +2651,11 @@
           notificacion_enviada: false
         };
 
-        const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
+        var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
         if (error) { console.error('❌ Error de Supabase:', error); alert('Error al guardar OC: ' + error.message); return; }
 
         window.cerrarPreview();
-        document.getElementById('mensajeOC').innerHTML = `<div class="success-msg">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+        document.getElementById('mensajeOC').innerHTML = '<div class="success-msg">✅ OC CREADA. CÓDIGO: ' + codigo + '</div>';
 
         try {
           document.getElementById('cuerpoProductos').innerHTML = '';
@@ -2666,11 +2666,11 @@
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
         try {
-          const docFinal = ocPreviewPDF || await generarPDFParaPreview(datos);
-          docFinal.save(`OC_${codigo}.pdf`);
+          var docFinal = ocPreviewPDF || await generarPDFParaPreview(datos);
+          docFinal.save('OC_' + codigo + '.pdf');
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
-          document.getElementById('mensajeOC').innerHTML += `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
+          document.getElementById('mensajeOC').innerHTML += '<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>';
         }
 
         ocPreviewData = null;
@@ -2678,7 +2678,7 @@
       };
 
       window.confirmarOC = async function() {
-        const datos = recopilarDatosOC();
+        var datos = recopilarDatosOC();
         if (!datos) { console.log('❌ Datos inválidos, no se creará OC'); return; }
 
         if (!datos.empresa || !datos.departamento) {
@@ -2686,10 +2686,10 @@
           return;
         }
 
-        const codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
+        var codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
 
-        const nuevaOC = {
-          codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
+        var nuevaOC = {
+          codigo: codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
           rfc: datos.rfc, direccion: datos.direccion, usocfdi: datos.usocfdi,
           direccionentrega: datos.direccionentrega, cp: datos.cp || '',
           moneda: datos.moneda, tipocambio: datos.tipocambio,
@@ -2708,14 +2708,14 @@
           notificacion_enviada: false
         };
 
-        const { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
+        var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
         if (error) {
           console.error('❌ Error de Supabase:', error);
-          document.getElementById('mensajeOC').innerHTML = `<div class="alert">⚠️ ERROR AL GUARDAR OC: ${error.message}</div>`;
+          document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ ERROR AL GUARDAR OC: ' + error.message + '</div>';
           return;
         }
 
-        document.getElementById('mensajeOC').innerHTML = `<div class="success-msg">✅ OC CREADA. CÓDIGO: ${codigo}</div>`;
+        document.getElementById('mensajeOC').innerHTML = '<div class="success-msg">✅ OC CREADA. CÓDIGO: ' + codigo + '</div>';
 
         try {
           document.getElementById('cuerpoProductos').innerHTML = '';
@@ -2726,11 +2726,11 @@
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
         try {
-          const doc = await generarPDFParaPreview(datos);
-          doc.save(`OC_${codigo}.pdf`);
+          var doc = await generarPDFParaPreview(datos);
+          doc.save('OC_' + codigo + '.pdf');
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
-          document.getElementById('mensajeOC').innerHTML += `<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>`;
+          document.getElementById('mensajeOC').innerHTML += '<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>';
         }
       };
 
@@ -2738,17 +2738,17 @@
       // IMPRIMIR OC
       // ============================================================
       window.imprimirOC = async function(index) {
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
         try {
-          const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+          var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
           if (!proyecto) return alert('Proyecto no encontrado');
-          let productos = oc.productos || [];
+          var productos = oc.productos || [];
           if (typeof productos === 'string') {
             try { productos = JSON.parse(productos); } catch(e) { productos = []; }
           }
           if (!Array.isArray(productos)) productos = [];
-          const datosOC = {
+          var datosOC = {
             empresa: proyecto.empresa, departamento: proyecto.departamento,
             proyectonombre: oc.proyecto, proveedor: oc.proveedor,
             rfc: oc.rfc || 'NA', direccion: oc.direccion,
@@ -2764,8 +2764,8 @@
             cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
             swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A'
           };
-          const doc = await generarPDFParaPreview(datosOC, oc);
-          doc.save(`OC_${oc.codigo}.pdf`);
+          var doc = await generarPDFParaPreview(datosOC, oc);
+          doc.save('OC_' + oc.codigo + '.pdf');
         } catch (error) {
           console.error('❌ Error al imprimir OC:', error);
           alert('Error al generar el PDF: ' + error.message);
@@ -2779,20 +2779,20 @@
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
         if (actual.u !== oc.responsable) return alert('Solo el responsable puede aprobar');
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
         
-        const updates = { 
+        var updates = { 
           estado: 'APROBADA_SOLICITANTE', 
           fechaaprobacionsolicitante: new Date().toISOString(), 
           nombresolicitante: actual.u 
         };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         render();
@@ -2801,27 +2801,27 @@
 
       window.aprobarJefe = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'APROBADA_SOLICITANTE') return alert('La OC debe estar aprobada por el Solicitante');
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
-        const gastado = gastoProyectoMoneda(proyecto.nombre);
-        let montoEnMonedaProyecto = oc.montomxn || 0;
+        var gastado = gastoProyectoMoneda(proyecto.nombre);
+        var montoEnMonedaProyecto = oc.montomxn || 0;
         if (proyecto.moneda === 'USD') {
           if (oc.paridadinicial) montoEnMonedaProyecto = oc.montomxn / oc.paridadinicial;
           else montoEnMonedaProyecto = oc.montomxn / 20;
         }
 
         if (oc.moneda === 'USD' && !oc.tipocambio) {
-          const updates = {
+          var updates = {
             estado: 'PENDIENTE_PARIDAD',
             fechaaprobacionjefe: new Date().toISOString(),
             nombrejefe: actual.u
           };
-          const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) return alert('Error al actualizar OC');
           Object.assign(oc, updates);
           render();
@@ -2830,7 +2830,7 @@
         }
 
         if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
-          const updates = {
+          var updates = {
             estado: 'AUTORIZADA',
             fechaaprobacionjefe: new Date().toISOString(),
             nombrejefe: actual.u,
@@ -2839,7 +2839,7 @@
             estadopago: null,
             notificacion_enviada: false
           };
-          const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) return alert('Error al actualizar OC');
           Object.assign(oc, updates);
           render();
@@ -2848,23 +2848,23 @@
           return;
         }
 
-        const updates = {
+        var updates = {
           estado: 'PENDIENTE_DIRECTOR',
           fechaaprobacionjefe: new Date().toISOString(),
           nombrejefe: actual.u
         };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
         try {
-          let productos = oc.productos || [];
+          var productos = oc.productos || [];
           if (typeof productos === 'string') {
             try { productos = JSON.parse(productos); } catch (e) { productos = []; }
           }
           if (!Array.isArray(productos)) productos = [];
 
-          const datosOC = {
+          var datosOC = {
             codigo: oc.codigo,
             proyectonombre: oc.proyecto,
             empresa: proyecto.empresa,
@@ -2882,8 +2882,8 @@
             productos: productos
           };
 
-          const mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id);
-          const enviado = await enviarNotificacionTelegram(mensajeTelegram);
+          var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id);
+          var enviado = await enviarNotificacionTelegram(mensajeTelegram);
           if (enviado) {
             await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
             oc.notificacion_enviada = true;
@@ -2900,17 +2900,17 @@
 
       window.autorizarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
 
-        const updates = { 
+        var updates = { 
           estado: 'AUTORIZADA', 
           fechaaprobaciondirector: new Date().toISOString(),
           nombredirector: actual.u,
           estadopago: null
         };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         
@@ -2926,14 +2926,14 @@
 
       window.cancelarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
         
-        if (!confirm(`¿Estás seguro de CANCELAR la OC ${oc.codigo}?`)) return;
+        if (!confirm('¿Estás seguro de CANCELAR la OC ' + oc.codigo + '?')) return;
         
-        const updates = { estado: 'CANCELADA' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var updates = { estado: 'CANCELADA' };
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         
@@ -2949,21 +2949,21 @@
       window.ingresarParidad = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede ingresar la paridad final.');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-        const tc = prompt(`Ingrese el tipo de cambio (MXN/USD) para la OC ${oc.codigo}:`);
+        var tc = prompt('Ingrese el tipo de cambio (MXN/USD) para la OC ' + oc.codigo + ':');
         if (tc === null) return;
-        const tipoCambio = parseFloat(tc);
+        var tipoCambio = parseFloat(tc);
         if (!tipoCambio || tipoCambio <= 0) { alert('Tipo de cambio inválido.'); return; }
-        const nuevoMontoMXN = oc.montototal * tipoCambio;
-        const updates = { tipocambio: tipoCambio, montomxn: nuevoMontoMXN, estado: 'AUTORIZADA', estadopago: null };
+        var nuevoMontoMXN = oc.montototal * tipoCambio;
+        var updates = { tipocambio: tipoCambio, montomxn: nuevoMontoMXN, estado: 'AUTORIZADA', estadopago: null };
         if (!oc.fechaaprobacionsolicitante) { updates.fechaaprobacionsolicitante = new Date().toISOString(); updates.nombresolicitante = 'No definido'; }
         if (!oc.fechaaprobacionjefe) { updates.fechaaprobacionjefe = new Date().toISOString(); updates.nombrejefe = 'No definido'; }
         if (!oc.fechaaprobaciondirector) { updates.fechaaprobaciondirector = new Date().toISOString(); updates.nombredirector = 'No definido'; }
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         render();
@@ -2974,10 +2974,10 @@
       window.marcarPagada = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
-        const updates = { estadopago: 'PAGADA' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var updates = { estadopago: 'PAGADA' };
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PAGADA';
         render();
@@ -2986,25 +2986,25 @@
 
       window.registrarFactura = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (actual.u !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
           return alert('Solo el responsable de la OC puede registrar la factura.');
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
-        const uuid = prompt('Ingrese el folio UUID de la factura:');
+        var uuid = prompt('Ingrese el folio UUID de la factura:');
         if (uuid === null) return;
         if (!uuid.trim()) { alert('El UUID es obligatorio.'); return; }
-        const montoFactura = prompt('Ingrese el monto de la factura (en la misma moneda de la OC):');
+        var montoFactura = prompt('Ingrese el monto de la factura (en la misma moneda de la OC):');
         if (montoFactura === null) return;
-        const monto = parseFloat(montoFactura);
+        var monto = parseFloat(montoFactura);
         if (!monto || monto <= 0) { alert('Monto inválido.'); return; }
         if (Math.abs(monto - oc.montototal) > 0.01) {
-          alert(`El monto de la factura (${monto.toFixed(2)}) no coincide con el total de la OC (${oc.montototal.toFixed(2)}).`);
+          alert('El monto de la factura (' + monto.toFixed(2) + ') no coincide con el total de la OC (' + oc.montototal.toFixed(2) + ').');
           return;
         }
-        const updates = { uuidfactura: uuid.trim().toUpperCase(), montofactura: monto, estado: 'CONCLUIDA' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var updates = { uuidfactura: uuid.trim().toUpperCase(), montofactura: monto, estado: 'CONCLUIDA' };
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         render();
@@ -3014,10 +3014,10 @@
       window.marcarPendiente = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
+        var oc = ordenes[index];
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
-        const updates = { estadopago: 'PENDIENTE' };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var updates = { estadopago: 'PENDIENTE' };
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PENDIENTE';
         render();
@@ -3025,9 +3025,9 @@
 
       window.eliminarOC = async function(index) {
         if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        if (!confirm(`¿Eliminar OC ${oc.codigo}?`)) return;
-        const { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
+        var oc = ordenes[index];
+        if (!confirm('¿Eliminar OC ' + oc.codigo + '?')) return;
+        var { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
         if (error) return alert('Error al eliminar OC');
         ordenes.splice(index, 1);
         render();
@@ -3035,25 +3035,25 @@
 
       window.togglePausarOC = async function(index) {
         if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        const oc = ordenes[index];
-        const nuevoEstado = !oc.pausada;
-        const updates = { pausada: nuevoEstado };
-        const { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        var oc = ordenes[index];
+        var nuevoEstado = !oc.pausada;
+        var updates = { pausada: nuevoEstado };
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.pausada = nuevoEstado;
         render();
       };
 
       function generarPDFFirmado(oc) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'pt', 'a4');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 40;
-        let y = margin;
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 40;
+        var y = margin;
 
-        const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
-        const nombreEmpresa = proyecto ? getNombreMembrete(proyecto.empresa) : 'GRUPO INDUSTRIAL EXTINGUE';
-        const leyendaPie = proyecto ? getLeyendaPie(proyecto.empresa) : 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        var nombreEmpresa = proyecto ? getNombreMembrete(proyecto.empresa) : 'GRUPO INDUSTRIAL EXTINGUE';
+        var leyendaPie = proyecto ? getLeyendaPie(proyecto.empresa) : 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
 
         doc.setFontSize(18);
         doc.setTextColor(11, 26, 51);
@@ -3076,7 +3076,7 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
 
-        const datosLista = [
+        var datosLista = [
           { label: 'Proveedor:', value: oc.proveedor },
           { label: 'RFC:', value: oc.rfc },
           { label: 'Fecha de Entrega:', value: new Date(oc.fechaentrega).toLocaleDateString() },
@@ -3089,26 +3089,28 @@
           { label: 'Moneda:', value: oc.moneda }
         ];
 
-        datosLista.forEach((item) => {
+        datosLista.forEach(function(item) {
           doc.setFont('helvetica', 'bold');
           doc.text(item.label, margin, y);
           doc.setFont('helvetica', 'normal');
-          const labelWidth = doc.getTextWidth(item.label) + 8;
-          const maxWidth = pageWidth - margin - labelWidth - 20;
-          const textLines = doc.splitTextToSize(item.value, maxWidth);
+          var labelWidth = doc.getTextWidth(item.label) + 8;
+          var maxWidth = pageWidth - margin - labelWidth - 20;
+          var textLines = doc.splitTextToSize(item.value, maxWidth);
           doc.text(textLines, margin + labelWidth, y);
           y += textLines.length * 9 + 2;
         });
         y += 5;
 
-        const headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
-        const rows = oc.productos.map((p, i) => [
-          i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
-          formatoMoneda(p.precioUnitario, oc.moneda),
-          p.descuento.toFixed(2) + '%',
-          p.impuesto.toFixed(2) + '%',
-          formatoMoneda(p.importe, oc.moneda)
-        ]);
+        var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
+        var rows = oc.productos.map(function(p, i) {
+          return [
+            i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
+            formatoMoneda(p.precioUnitario, oc.moneda),
+            p.descuento.toFixed(2) + '%',
+            p.impuesto.toFixed(2) + '%',
+            formatoMoneda(p.importe, oc.moneda)
+          ];
+        });
 
         doc.autoTable({
           head: [headers], body: rows, startY: y,
@@ -3130,18 +3132,18 @@
         });
 
         y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
-        let subtotal = 0, iva = 0, impuestoPorcentaje = 0;
+        var subtotal = 0, iva = 0, impuestoPorcentaje = 0;
         if (oc.productos && oc.productos.length > 0) {
-          oc.productos.forEach(p => {
-            const precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
+          oc.productos.forEach(function(p) {
+            var precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
             subtotal += precioConDescuento * p.cantidad;
           });
           impuestoPorcentaje = oc.productos[0]?.impuesto || 0;
           iva = subtotal * (impuestoPorcentaje / 100);
         }
 
-        const totalX = pageWidth * 0.72;
-        const lineSpacing = 13;
+        var totalX = pageWidth * 0.72;
+        var lineSpacing = 13;
         y += 15;
 
         doc.setFontSize(10);
@@ -3169,14 +3171,14 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
-        const solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
-        const jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
-        const directorNombre = oc.nombredirector || getDirector();
+        var solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
+        var jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
+        var directorNombre = oc.nombredirector || getDirector();
 
-        const colWidth = (pageWidth - 2 * margin) / 3;
+        var colWidth = (pageWidth - 2 * margin) / 3;
 
         function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
-          const lineWidth = colWidth - 20;
+          var lineWidth = colWidth - 20;
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
@@ -3184,30 +3186,30 @@
           doc.setFontSize(10);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+          var fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
           doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
-          const lineY = y + 14 + 10 + 10;
+          var lineY = y + 14 + 10 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
-          const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
+          var fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
           doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
-        const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
-        const fechaSolicitante = oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
-        const fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
-        const fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
+        var x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
+        var fechaSolicitante = oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
+        var fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
+        var fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
 
         dibujarAutorizacionFirmada(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
         dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
         y += 70;
 
-        const pieY = doc.internal.pageSize.height - 55;
+        var pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
@@ -3224,11 +3226,11 @@
         doc.setFont('helvetica', 'normal');
         doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
-        doc.save(`OC_${oc.codigo}.pdf`);
+        doc.save('OC_' + oc.codigo + '.pdf');
       }
 
       window.mostrarDashboard = function(index) {
-        const proyecto = proyectos[index];
+        var proyecto = proyectos[index];
         if (!proyecto) return;
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
           alert('No tienes permiso para ver este proyecto.');
@@ -3236,117 +3238,70 @@
         }
         if (actual.rol === 'Finanzas') { alert('Finanzas no puede ver dashboards.'); return; }
 
-        const ocProyecto = ordenes.filter(o => o.proyecto === proyecto.nombre);
-        const gastado = gastoProyectoMoneda(proyecto.nombre);
-        const disponible = proyecto.limite - gastado;
-        const porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
-        const saludable = porcentaje <= 60;
-        const color = saludable ? '#22c55e' : '#dc2626';
-        const deptoColor = getColorByEmpresa(proyecto.empresa);
+        var ocProyecto = ordenes.filter(function(o) { return o.proyecto === proyecto.nombre; });
+        var gastado = gastoProyectoMoneda(proyecto.nombre);
+        var disponible = proyecto.limite - gastado;
+        var porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
+        var saludable = porcentaje <= 60;
+        var color = saludable ? '#22c55e' : '#dc2626';
+        var deptoColor = getColorByEmpresa(proyecto.empresa);
 
-        const totales = { MXN: 0, USD: 0 };
-        ocProyecto.forEach(o => {
+        var totales = { MXN: 0, USD: 0 };
+        ocProyecto.forEach(function(o) {
           if (o.estadopago === 'PAGADA') {
             if (o.moneda === 'MXN') totales.MXN += o.montototal;
             else if (o.moneda === 'USD') totales.USD += o.montototal;
           }
         });
-        const totalMXNEquiv = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((s, o) => s + (o.montomxn || 0), 0);
+        var totalMXNEquiv = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
 
-        const html = `
-          <h1>📊 Dashboard: ${proyecto.nombre}</h1>
-          <div class="card">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px">
-              <div>
-                <p><strong>Empresa:</strong> ${proyecto.empresa}</p>
-                <p><strong>Departamento:</strong> <span class="depto-color" style="background-color:${deptoColor}">${proyecto.departamento}</span></p>
-                <p><strong>Cliente:</strong> ${proyecto.cliente}</p>
-                <p><strong>Presupuesto (${proyecto.moneda}):</strong> ${formatoMoneda(proyecto.presupuesto, proyecto.moneda)}</p>
-                <p><strong>Límite 60% (${proyecto.moneda}):</strong> ${formatoMoneda(proyecto.limite, proyecto.moneda)}</p>
-                <p><strong>Pagado (${proyecto.moneda}):</strong> ${formatoMoneda(gastado, proyecto.moneda)}</p>
-                <p><strong>Disponible (${proyecto.moneda}):</strong> ${formatoMoneda(disponible, proyecto.moneda)}</p>
-                <p><strong>Fecha Inicio:</strong> ${new Date(proyecto.fecha_inicio).toLocaleDateString()}</p>
-                <p><strong>Fecha Término:</strong> ${new Date(proyecto.fecha_termino).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <div class="donut-container">
-                  <svg viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/>
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="${color}" stroke-width="12"
-                            stroke-dasharray="${porcentaje * 2.513} ${100 * 2.513 - porcentaje * 2.513}"
-                            stroke-linecap="round"/>
-                  </svg>
-                  <div class="center-text">
-                    ${porcentaje.toFixed(1)}%
-                    <small>${saludable ? '✅ Saludable' : '⚠️ Excedido'}</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>📋 Órdenes de Compra</h3>
-          ${ocProyecto.length === 0 ? '<p class="text-muted">No hay OC para este proyecto.</p>' : `
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead>
-              <tbody>
-                ${ocProyecto.map(o => {
-                  let badgeClass = '';
-                  let estadoMostrado = o.estado;
-                  if (o.estado === 'AUTORIZADA') {
-                    if (o.estadopago === 'PAGADA') {
-                      badgeClass = 'badge-autorizada-pagada';
-                      estadoMostrado = 'AUTORIZADA - PAGADA';
-                    } else if (o.estadopago === 'PENDIENTE') {
-                      const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                      const ahora = new Date();
-                      const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-                      if (diffDias > 1) {
-                        badgeClass = 'badge-autorizada-vencida';
-                        estadoMostrado = 'AUTORIZADA - PENDIENTE (⚠️ Vencida)';
-                      } else {
-                        badgeClass = 'badge-autorizada-pendiente';
-                        estadoMostrado = 'AUTORIZADA - PENDIENTE';
-                      }
-                    } else {
-                      badgeClass = 'badge-autorizada-pendiente';
-                      estadoMostrado = 'AUTORIZADA - PENDIENTE (Pago pendiente)';
-                    }
-                  } else if (o.estado === 'CONCLUIDA') {
-                    badgeClass = 'badge-concluida';
-                    estadoMostrado = 'CONCLUIDA';
-                  } else {
-                    const classes = {
-                      'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
-                      'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
-                      'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
-                    };
-                    badgeClass = classes[o.estado] || '';
-                  }
-                  return `<tr>
-                    <td><code>${o.codigo}</code></td>
-                    <td>${o.proveedor}</td>
-                    <td>${o.rfc}</td>
-                    <td>${o.responsable}</td>
-                    <td>${o.moneda}</td>
-                    <td>${formatoMoneda(o.montototal, o.moneda)}</td>
-                    <td>${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
-                    <td>${new Date(o.fechapago).toLocaleDateString()}</td>
-                    <td>${new Date(o.fechaentrega).toLocaleDateString()}</td>
-                    <td>${o.uuidfactura || '—'}</td>
-                    <td><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
-                  </tr>`;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-          `}
-          <div class="resumen-totales">
-            <strong>Totales pagados:</strong>
-            <span>MXN: ${formatoMoneda(totales.MXN, 'MXN')}</span>
-            ${totales.USD > 0 ? `<span>USD: ${formatoMoneda(totales.USD, 'USD')} (equiv. MXN: ${formatoMoneda(totalMXNEquiv, 'MXN')})</span>` : ''}
-          </div>
-        `;
+        var html = '<h1>📊 Dashboard: ' + proyecto.nombre + '</h1><div class="card"><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px"><div><p><strong>Empresa:</strong> ' + proyecto.empresa + '</p><p><strong>Departamento:</strong> <span class="depto-color" style="background-color:' + deptoColor + '">' + proyecto.departamento + '</span></p><p><strong>Cliente:</strong> ' + proyecto.cliente + '</p><p><strong>Presupuesto (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '</p><p><strong>Límite 60% (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '</p><p><strong>Pagado (' + proyecto.moneda + '):</strong> ' + formatoMoneda(gastado, proyecto.moneda) + '</p><p><strong>Disponible (' + proyecto.moneda + '):</strong> ' + formatoMoneda(disponible, proyecto.moneda) + '</p><p><strong>Fecha Inicio:</strong> ' + new Date(proyecto.fecha_inicio).toLocaleDateString() + '</p><p><strong>Fecha Término:</strong> ' + new Date(proyecto.fecha_termino).toLocaleDateString() + '</p></div><div><div class="donut-container"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/><circle cx="50" cy="50" r="40" fill="none" stroke="' + color + '" stroke-width="12" stroke-dasharray="' + (porcentaje * 2.513) + ' ' + (100 * 2.513 - porcentaje * 2.513) + '" stroke-linecap="round"/></svg><div class="center-text">' + porcentaje.toFixed(1) + '%<small>' + (saludable ? '✅ Saludable' : '⚠️ Excedido') + '</small></div></div></div></div></div><h3>📋 Órdenes de Compra</h3>';
+        if (ocProyecto.length === 0) {
+          html += '<p class="text-muted">No hay OC para este proyecto.</p>';
+        } else {
+          html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
+          ocProyecto.forEach(function(o) {
+            var badgeClass = '';
+            var estadoMostrado = o.estado;
+            if (o.estado === 'AUTORIZADA') {
+              if (o.estadopago === 'PAGADA') {
+                badgeClass = 'badge-autorizada-pagada';
+                estadoMostrado = 'AUTORIZADA - PAGADA';
+              } else if (o.estadopago === 'PENDIENTE') {
+                var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                var ahora = new Date();
+                var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                if (diffDias > 1) {
+                  badgeClass = 'badge-autorizada-vencida';
+                  estadoMostrado = 'AUTORIZADA - PENDIENTE (⚠️ Vencida)';
+                } else {
+                  badgeClass = 'badge-autorizada-pendiente';
+                  estadoMostrado = 'AUTORIZADA - PENDIENTE';
+                }
+              } else {
+                badgeClass = 'badge-autorizada-pendiente';
+                estadoMostrado = 'AUTORIZADA - PENDIENTE (Pago pendiente)';
+              }
+            } else if (o.estado === 'CONCLUIDA') {
+              badgeClass = 'badge-concluida';
+              estadoMostrado = 'CONCLUIDA';
+            } else {
+              var classes = {
+                'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
+                'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
+                'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
+              };
+              badgeClass = classes[o.estado] || '';
+            }
+            html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
+          });
+          html += '</tbody></table></div>';
+        }
+        html += '<div class="resumen-totales"><strong>Totales pagados:</strong><span>MXN: ' + formatoMoneda(totales.MXN, 'MXN') + '</span>';
+        if (totales.USD > 0) {
+          html += '<span>USD: ' + formatoMoneda(totales.USD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>';
+        }
+        html += '</div>';
         document.getElementById('dashboardContent').innerHTML = html;
         document.getElementById('dashboardOverlay').classList.add('active');
         document.getElementById('contenidoApp').style.display = 'none';
@@ -3362,33 +3317,33 @@
       // ============================================================
       
       function cargarFiltrosCXP() {
-        let empresas = [];
-        let deptos = [];
-        let proyNombres = [];
+        var empresas = [];
+        var deptos = [];
+        var proyNombres = [];
         
-        if (actual && ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
-          empresas = [...new Set(proyectos.map(p => p.empresa))];
-          deptos = [...new Set(proyectos.map(p => p.departamento))];
-          proyNombres = proyectos.map(p => p.nombre);
+        if (actual && ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          empresas = [...new Set(proyectos.map(function(p) { return p.empresa; }))];
+          deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
+          proyNombres = proyectos.map(function(p) { return p.nombre; });
         } else if (actual && actual.permisos) {
-          const permisos = actual.permisos;
-          empresas = [...new Set(permisos.map(p => p.empresa))];
-          deptos = [...new Set(permisos.map(p => p.depto))];
-          const proysPermitidos = proyectos.filter(p => usuarioPuedeAcceder(actual, p.empresa, p.departamento));
-          proyNombres = proysPermitidos.map(p => p.nombre);
+          var permisos = actual.permisos;
+          empresas = [...new Set(permisos.map(function(p) { return p.empresa; }))];
+          deptos = [...new Set(permisos.map(function(p) { return p.depto; }))];
+          var proysPermitidos = proyectos.filter(function(p) { return usuarioPuedeAcceder(actual, p.empresa, p.departamento); });
+          proyNombres = proysPermitidos.map(function(p) { return p.nombre; });
         }
 
-        const selectEmpresa = document.getElementById('cxpFiltroEmpresa');
-        const selectDepto = document.getElementById('cxpFiltroDepto');
-        const selectProyecto = document.getElementById('cxpFiltroProyecto');
+        var selectEmpresa = document.getElementById('cxpFiltroEmpresa');
+        var selectDepto = document.getElementById('cxpFiltroDepto');
+        var selectProyecto = document.getElementById('cxpFiltroProyecto');
 
-        const currentEmpresa = selectEmpresa.value;
-        const currentDepto = selectDepto.value;
-        const currentProyecto = selectProyecto.value;
+        var currentEmpresa = selectEmpresa.value;
+        var currentDepto = selectDepto.value;
+        var currentProyecto = selectProyecto.value;
 
         selectEmpresa.innerHTML = '<option value="">Todas las empresas</option>';
-        empresas.forEach(e => {
-          const opt = document.createElement('option');
+        empresas.forEach(function(e) {
+          var opt = document.createElement('option');
           opt.value = e;
           opt.textContent = e;
           if (e === currentEmpresa) opt.selected = true;
@@ -3396,8 +3351,8 @@
         });
 
         selectDepto.innerHTML = '<option value="">Todos los departamentos</option>';
-        deptos.forEach(d => {
-          const opt = document.createElement('option');
+        deptos.forEach(function(d) {
+          var opt = document.createElement('option');
           opt.value = d;
           opt.textContent = d;
           if (d === currentDepto) opt.selected = true;
@@ -3405,8 +3360,8 @@
         });
 
         selectProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
-        proyNombres.forEach(p => {
-          const opt = document.createElement('option');
+        proyNombres.forEach(function(p) {
+          var opt = document.createElement('option');
           opt.value = p;
           opt.textContent = p;
           if (p === currentProyecto) opt.selected = true;
@@ -3430,8 +3385,8 @@
           document.getElementById('cxpRankingContainer').classList.add('hidden');
         };
         
-        const hoy = new Date();
-        const haceUnMes = new Date(hoy);
+        var hoy = new Date();
+        var haceUnMes = new Date(hoy);
         haceUnMes.setMonth(haceUnMes.getMonth() - 1);
         document.getElementById('cxpFechaInicio').value = haceUnMes.toISOString().split('T')[0];
         document.getElementById('cxpFechaFin').value = hoy.toISOString().split('T')[0];
@@ -3447,60 +3402,60 @@
       }
 
       function obtenerDatosCXP() {
-        const filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
-        const filtroDepto = document.getElementById('cxpFiltroDepto').value;
-        const filtroProyecto = document.getElementById('cxpFiltroProyecto').value;
-        const filtroEstado = document.getElementById('cxpFiltroEstado').value;
-        const fechaInicio = document.getElementById('cxpFechaInicio').value;
-        const fechaFin = document.getElementById('cxpFechaFin').value;
+        var filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
+        var filtroDepto = document.getElementById('cxpFiltroDepto').value;
+        var filtroProyecto = document.getElementById('cxpFiltroProyecto').value;
+        var filtroEstado = document.getElementById('cxpFiltroEstado').value;
+        var fechaInicio = document.getElementById('cxpFechaInicio').value;
+        var fechaFin = document.getElementById('cxpFechaFin').value;
 
-        let proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
         
-        if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(p => p.empresa === filtroEmpresa);
-        if (filtroDepto) proyectosVisibles = proyectosVisibles.filter(p => p.departamento === filtroDepto);
-        if (filtroProyecto) proyectosVisibles = proyectosVisibles.filter(p => p.nombre === filtroProyecto);
+        if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.empresa === filtroEmpresa; });
+        if (filtroDepto) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.departamento === filtroDepto; });
+        if (filtroProyecto) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.nombre === filtroProyecto; });
 
-        let ocVisibles = filtrarOCSegunUsuario(actual);
+        var ocVisibles = filtrarOCSegunUsuario(actual);
         
-        const nombresProyectos = proyectosVisibles.map(p => p.nombre);
-        ocVisibles = ocVisibles.filter(o => nombresProyectos.includes(o.proyecto));
+        var nombresProyectos = proyectosVisibles.map(function(p) { return p.nombre; });
+        ocVisibles = ocVisibles.filter(function(o) { return nombresProyectos.indexOf(o.proyecto) !== -1; });
         
         if (fechaInicio) {
-          const fechaInicioObj = new Date(fechaInicio);
-          ocVisibles = ocVisibles.filter(o => {
-            const fechaOC = new Date(o.fechapago);
+          var fechaInicioObj = new Date(fechaInicio);
+          ocVisibles = ocVisibles.filter(function(o) {
+            var fechaOC = new Date(o.fechapago);
             return fechaOC >= fechaInicioObj;
           });
         }
         if (fechaFin) {
-          const fechaFinObj = new Date(fechaFin);
+          var fechaFinObj = new Date(fechaFin);
           fechaFinObj.setHours(23, 59, 59, 999);
-          ocVisibles = ocVisibles.filter(o => {
-            const fechaOC = new Date(o.fechapago);
+          ocVisibles = ocVisibles.filter(function(o) {
+            var fechaOC = new Date(o.fechapago);
             return fechaOC <= fechaFinObj;
           });
         }
 
-        ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estadopago === 'PAGADA');
+        ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estadopago === 'PAGADA'; });
 
-        if (filtroEstado === 'PAGADA') ocVisibles = ocVisibles.filter(o => o.estadopago === 'PAGADA');
-        else if (filtroEstado === 'PENDIENTE') ocVisibles = ocVisibles.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'));
+        if (filtroEstado === 'PAGADA') ocVisibles = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; });
+        else if (filtroEstado === 'PENDIENTE') ocVisibles = ocVisibles.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); });
         else if (filtroEstado === 'VENCIDA') {
-          ocVisibles = ocVisibles.filter(o => {
+          ocVisibles = ocVisibles.filter(function(o) {
             if (o.estadopago === 'PAGADA') return false;
-            const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-            const ahora = new Date();
-            const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+            var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            var ahora = new Date();
+            var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
             return diffDias > 1;
           });
-        } else if (filtroEstado === 'AUTORIZADA') ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA');
-        else if (filtroEstado === 'CONCLUIDA') ocVisibles = ocVisibles.filter(o => o.estado === 'CONCLUIDA');
+        } else if (filtroEstado === 'AUTORIZADA') ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA'; });
+        else if (filtroEstado === 'CONCLUIDA') ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'CONCLUIDA'; });
 
         return { proyectos: proyectosVisibles, oc: ocVisibles };
       }
 
       function renderDashboardCircular(proys, ocFiltradas) {
-        const dashboardDiv = document.getElementById('cxpDashboardCircular');
+        var dashboardDiv = document.getElementById('cxpDashboardCircular');
         dashboardDiv.innerHTML = '';
 
         if (proys.length === 0) {
@@ -3508,8 +3463,8 @@
           return;
         }
 
-        const proyectosConDatos = proys.filter(p => {
-          const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
+        var proyectosConDatos = proys.filter(function(p) {
+          var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
           return ocProyecto.length > 0 || p.presupuesto > 0;
         });
 
@@ -3518,89 +3473,66 @@
           return;
         }
 
-        proyectosConDatos.forEach(p => {
-          const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
-          const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
-          const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
-          let vencido = 0;
-          ocProyecto.forEach(o => {
+        proyectosConDatos.forEach(function(p) {
+          var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
+          var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+          var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+          var vencido = 0;
+          ocProyecto.forEach(function(o) {
             if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
-              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              const ahora = new Date();
-              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              var ahora = new Date();
+              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
               if (diffDias > 1) vencido += (o.montomxn || 0);
             }
           });
 
-          const totalGastado = pagado + pendiente + vencido;
-          const porcentajeUsado = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
-          const color = porcentajeUsado <= 60 ? '#22c55e' : (porcentajeUsado <= 80 ? '#f59e0b' : '#dc2626');
-          const deptoColor = getColorByEmpresa(p.empresa);
+          var totalGastado = pagado + pendiente + vencido;
+          var porcentajeUsado = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
+          var color = porcentajeUsado <= 60 ? '#22c55e' : (porcentajeUsado <= 80 ? '#f59e0b' : '#dc2626');
+          var deptoColor = getColorByEmpresa(p.empresa);
 
-          dashboardDiv.innerHTML += `
-            <div class="cxp-donut-card">
-              <h4>${p.nombre}</h4>
-              <div style="display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;">
-                <div class="donut-mini">
-                  <svg viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="#e9edf2" stroke-width="10"/>
-                    <circle cx="50" cy="50" r="38" fill="none" stroke="${color}" stroke-width="10"
-                            stroke-dasharray="${Math.min(porcentajeUsado, 100) * 2.388} ${100 * 2.388 - Math.min(porcentajeUsado, 100) * 2.388}"
-                            stroke-linecap="round"/>
-                  </svg>
-                  <div class="center-text">
-                    ${porcentajeUsado.toFixed(1)}%
-                    <small>${porcentajeUsado <= 60 ? '✅ OK' : (porcentajeUsado <= 80 ? '⚠️ Alerta' : '🔴 Excedido')}</small>
-                  </div>
-                </div>
-                <div style="text-align:left; font-size:12px; color:var(--gray-600);">
-                  <div><span style="font-weight:600;">Presupuesto:</span> ${formatoMoneda(p.presupuesto, p.moneda)}</div>
-                  <div><span style="font-weight:600;">Límite 60%:</span> ${formatoMoneda(p.limite, p.moneda)}</div>
-                  <div><span style="font-weight:600;color:var(--success);">Pagado:</span> ${formatoMoneda(pagado, 'MXN')}</div>
-                  <div><span style="font-weight:600;color:var(--warning);">Pendiente:</span> ${formatoMoneda(pendiente, 'MXN')}</div>
-                  ${vencido > 0 ? `<div><span style="font-weight:600;color:var(--danger);">Vencido:</span> ${formatoMoneda(vencido, 'MXN')}</div>` : ''}
-                  <div><span style="font-weight:600;">Total gastado:</span> ${formatoMoneda(totalGastado, 'MXN')}</div>
-                  <div><span class="depto-color" style="background-color:${deptoColor};display:inline-block;margin-top:4px;">${p.departamento}</span></div>
-                </div>
-              </div>
-            </div>
-          `;
+          dashboardDiv.innerHTML += '<div class="cxp-donut-card"><h4>' + p.nombre + '</h4><div style="display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;"><div class="donut-mini"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#e9edf2" stroke-width="10"/><circle cx="50" cy="50" r="38" fill="none" stroke="' + color + '" stroke-width="10" stroke-dasharray="' + (Math.min(porcentajeUsado, 100) * 2.388) + ' ' + (100 * 2.388 - Math.min(porcentajeUsado, 100) * 2.388) + '" stroke-linecap="round"/></svg><div class="center-text">' + porcentajeUsado.toFixed(1) + '%<small>' + (porcentajeUsado <= 60 ? '✅ OK' : (porcentajeUsado <= 80 ? '⚠️ Alerta' : '🔴 Excedido')) + '</small></div></div><div style="text-align:left; font-size:12px; color:var(--gray-600);"><div><span style="font-weight:600;">Presupuesto:</span> ' + formatoMoneda(p.presupuesto, p.moneda) + '</div><div><span style="font-weight:600;">Límite 60%:</span> ' + formatoMoneda(p.limite, p.moneda) + '</div><div><span style="font-weight:600;color:var(--success);">Pagado:</span> ' + formatoMoneda(pagado, 'MXN') + '</div><div><span style="font-weight:600;color:var(--warning);">Pendiente:</span> ' + formatoMoneda(pendiente, 'MXN') + '</div>';
+          if (vencido > 0) {
+            dashboardDiv.innerHTML += '<div><span style="font-weight:600;color:var(--danger);">Vencido:</span> ' + formatoMoneda(vencido, 'MXN') + '</div>';
+          }
+          dashboardDiv.innerHTML += '<div><span style="font-weight:600;">Total gastado:</span> ' + formatoMoneda(totalGastado, 'MXN') + '</div><div><span class="depto-color" style="background-color:' + deptoColor + ';display:inline-block;margin-top:4px;">' + p.departamento + '</span></div></div></div></div>';
         });
       }
 
       window.mostrarRanking = function() {
-        const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
-        const rankingContainer = document.getElementById('cxpRankingContainer');
-        const rankingContent = document.getElementById('cxpRankingContent');
+        var { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        var rankingContainer = document.getElementById('cxpRankingContainer');
+        var rankingContent = document.getElementById('cxpRankingContent');
         
-        const rankingData = proys.map(p => {
-          const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
-          const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
-          const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
-          let vencido = 0;
-          ocProyecto.forEach(o => {
+        var rankingData = proys.map(function(p) {
+          var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
+          var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+          var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+          var vencido = 0;
+          ocProyecto.forEach(function(o) {
             if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
-              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              const ahora = new Date();
-              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              var ahora = new Date();
+              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
               if (diffDias > 1) vencido += (o.montomxn || 0);
             }
           });
-          const totalGastado = pagado + pendiente + vencido;
-          const utilidad = p.presupuesto - totalGastado;
-          const porcentajeUtilidad = p.presupuesto > 0 ? (utilidad / p.presupuesto) * 100 : 0;
+          var totalGastado = pagado + pendiente + vencido;
+          var utilidad = p.presupuesto - totalGastado;
+          var porcentajeUtilidad = p.presupuesto > 0 ? (utilidad / p.presupuesto) * 100 : 0;
           return {
             ...p,
-            totalGastado,
-            utilidad,
-            porcentajeUtilidad,
-            pagado,
-            pendiente,
-            vencido
+            totalGastado: totalGastado,
+            utilidad: utilidad,
+            porcentajeUtilidad: porcentajeUtilidad,
+            pagado: pagado,
+            pendiente: pendiente,
+            vencido: vencido
           };
         });
 
-        rankingData.sort((a, b) => b.utilidad - a.utilidad);
+        rankingData.sort(function(a, b) { return b.utilidad - a.utilidad; });
 
         rankingContainer.classList.remove('hidden');
         rankingContent.innerHTML = '';
@@ -3610,50 +3542,39 @@
           return;
         }
 
-        rankingData.forEach((item, index) => {
-          const pos = index + 1;
-          let utilidadClass = 'utilidad-media';
-          let emoji = '⭐';
+        rankingData.forEach(function(item, index) {
+          var pos = index + 1;
+          var utilidadClass = 'utilidad-media';
+          var emoji = '⭐';
           if (item.porcentajeUtilidad > 30) { utilidadClass = 'utilidad-alta'; emoji = '🏆'; }
           else if (item.porcentajeUtilidad < 0) { utilidadClass = 'utilidad-baja'; emoji = '⚠️'; }
           else if (item.porcentajeUtilidad > 15) { utilidadClass = 'utilidad-alta'; emoji = '🌟'; }
           
-          const deptoColor = getColorByEmpresa(item.empresa);
+          var deptoColor = getColorByEmpresa(item.empresa);
           
-          rankingContent.innerHTML += `
-            <div class="ranking-item">
-              <span class="posicion">${pos}</span>
-              <span class="nombre">${emoji} ${item.nombre}</span>
-              <span class="depto-color" style="background-color:${deptoColor};font-size:10px;">${item.departamento}</span>
-              <span class="monto">${formatoMoneda(item.utilidad, 'MXN')}</span>
-              <span class="utilidad ${utilidadClass}">${item.porcentajeUtilidad.toFixed(1)}%</span>
-              <span style="font-size:11px;color:var(--gray-500);">
-                G: ${formatoMoneda(item.totalGastado, 'MXN')} | P: ${formatoMoneda(item.pagado, 'MXN')}
-              </span>
-            </div>
-          `;
+          rankingContent.innerHTML += '<div class="ranking-item"><span class="posicion">' + pos + '</span><span class="nombre">' + emoji + ' ' + item.nombre + '</span><span class="depto-color" style="background-color:' + deptoColor + ';font-size:10px;">' + item.departamento + '</span><span class="monto">' + formatoMoneda(item.utilidad, 'MXN') + '</span><span class="utilidad ' + utilidadClass + '">' + item.porcentajeUtilidad.toFixed(1) + '%</span><span style="font-size:11px;color:var(--gray-500);">G: ' + formatoMoneda(item.totalGastado, 'MXN') + ' | P: ' + formatoMoneda(item.pagado, 'MXN') + '</span></div>';
         });
       };
 
       window.renderCXP = function() {
-        const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        var { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
 
         renderDashboardCircular(proys, ocFiltradas);
 
         document.getElementById('cxpRankingContainer').classList.add('hidden');
 
-        let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
-        let totalPagadoUSD = 0, totalPendienteUSD = 0, totalVencidoUSD = 0;
+        var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        var totalPagadoUSD = 0, totalPendienteUSD = 0, totalVencidoUSD = 0;
 
-        ocFiltradas.forEach(o => {
-          const monto = o.montomxn || 0;
-          const esPagada = o.estadopago === 'PAGADA';
-          const esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
-          let esVencida = false;
+        ocFiltradas.forEach(function(o) {
+          var monto = o.montomxn || 0;
+          var esPagada = o.estadopago === 'PAGADA';
+          var esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
+          var esVencida = false;
           if (!esPagada && o.estado === 'AUTORIZADA') {
-            const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-            const ahora = new Date();
-            const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+            var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            var ahora = new Date();
+            var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
             esVencida = diffDias > 1;
           }
 
@@ -3669,91 +3590,53 @@
           }
         });
 
-        const resumenDiv = document.getElementById('cxpResumen');
-        resumenDiv.innerHTML = `
-          <div class="cxp-tarjeta pagado">
-            <div class="numero">${formatoMoneda(totalPagado, 'MXN')}</div>
-            <div class="etiqueta">✅ Pagado</div>
-            ${totalPagadoUSD > 0 ? `<div class="etiqueta">USD ${totalPagadoUSD.toFixed(2)}</div>` : ''}
-          </div>
-          <div class="cxp-tarjeta pendiente">
-            <div class="numero">${formatoMoneda(totalPendiente, 'MXN')}</div>
-            <div class="etiqueta">⏳ Pendiente de pago</div>
-            ${totalPendienteUSD > 0 ? `<div class="etiqueta">USD ${totalPendienteUSD.toFixed(2)}</div>` : ''}
-          </div>
-          <div class="cxp-tarjeta vencido">
-            <div class="numero">${formatoMoneda(totalVencido, 'MXN')}</div>
-            <div class="etiqueta">🔴 Vencido (>1 día)</div>
-            ${totalVencidoUSD > 0 ? `<div class="etiqueta">USD ${totalVencidoUSD.toFixed(2)}</div>` : ''}
-          </div>
-          <div class="cxp-tarjeta">
-            <div class="numero">${ocFiltradas.length}</div>
-            <div class="etiqueta">📄 Total OC</div>
-          </div>
-        `;
+        var resumenDiv = document.getElementById('cxpResumen');
+        resumenDiv.innerHTML = '<div class="cxp-tarjeta pagado"><div class="numero">' + formatoMoneda(totalPagado, 'MXN') + '</div><div class="etiqueta">✅ Pagado</div>' + (totalPagadoUSD > 0 ? '<div class="etiqueta">USD ' + totalPagadoUSD.toFixed(2) + '</div>' : '') + '</div><div class="cxp-tarjeta pendiente"><div class="numero">' + formatoMoneda(totalPendiente, 'MXN') + '</div><div class="etiqueta">⏳ Pendiente de pago</div>' + (totalPendienteUSD > 0 ? '<div class="etiqueta">USD ' + totalPendienteUSD.toFixed(2) + '</div>' : '') + '</div><div class="cxp-tarjeta vencido"><div class="numero">' + formatoMoneda(totalVencido, 'MXN') + '</div><div class="etiqueta">🔴 Vencido (>1 día)</div>' + (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + totalVencidoUSD.toFixed(2) + '</div>' : '') + '</div><div class="cxp-tarjeta"><div class="numero">' + ocFiltradas.length + '</div><div class="etiqueta">📄 Total OC</div></div>';
 
-        const tbodyProyectos = document.getElementById('cxpCuerpoProyectos');
+        var tbodyProyectos = document.getElementById('cxpCuerpoProyectos');
         tbodyProyectos.innerHTML = '';
 
         if (proys.length === 0) {
-          tbodyProyectos.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos que coincidan con los filtros</td></tr>`;
+          tbodyProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos que coincidan con los filtros</td></tr>';
         } else {
-          proys.forEach(p => {
-            const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
-            const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
-            const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
-            let vencido = 0;
-            ocProyecto.forEach(o => {
+          proys.forEach(function(p) {
+            var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
+            var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+            var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+            var vencido = 0;
+            ocProyecto.forEach(function(o) {
               if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
-                const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                const ahora = new Date();
-                const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                var ahora = new Date();
+                var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
                 if (diffDias > 1) vencido += (o.montomxn || 0);
               }
             });
-            const porcentaje = p.limite > 0 ? ((pagado + pendiente + vencido) / p.limite) * 100 : 0;
-            const deptoColor = getColorByEmpresa(p.empresa);
+            var porcentaje = p.limite > 0 ? ((pagado + pendiente + vencido) / p.limite) * 100 : 0;
+            var deptoColor = getColorByEmpresa(p.empresa);
 
-            tbodyProyectos.innerHTML += `
-              <tr>
-                <td data-label="Empresa">${p.empresa}</td>
-                <td data-label="Departamento"><span class="depto-color" style="background-color:${deptoColor}">${p.departamento}</span></td>
-                <td data-label="Proyecto"><strong>${p.nombre}</strong></td>
-                <td data-label="Cliente">${p.cliente}</td>
-                <td data-label="Presupuesto">${formatoMoneda(p.presupuesto, p.moneda)}</td>
-                <td data-label="Pagado" style="color:${pagado > 0 ? '#16a34a' : 'inherit'}">${formatoMoneda(pagado, 'MXN')}</td>
-                <td data-label="Pendiente" style="color:${pendiente > 0 ? '#f59e0b' : 'inherit'}">${formatoMoneda(pendiente, 'MXN')}</td>
-                <td data-label="Vencido" style="color:${vencido > 0 ? '#dc2626' : 'inherit'}">${formatoMoneda(vencido, 'MXN')}</td>
-                <td data-label="% Uso">
-                  <span>${porcentaje.toFixed(1)}%</span>
-                  <div class="progress-bar"><div class="fill" style="width:${Math.min(porcentaje, 100)}%; background:${porcentaje > 60 ? '#dc2626' : '#22c55e'}"></div></div>
-                </td>
-                <td data-label="Acciones">
-                  <button class="btn-visualizar" onclick="window.verDetalleProyectoCXP('${p.nombre}')">📊 Detalle</button>
-                </td>
-              </tr>
-            `;
+            tbodyProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Departamento"><span class="depto-color" style="background-color:' + deptoColor + '">' + p.departamento + '</span></td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Pagado" style="color:' + (pagado > 0 ? '#16a34a' : 'inherit') + '">' + formatoMoneda(pagado, 'MXN') + '</td><td data-label="Pendiente" style="color:' + (pendiente > 0 ? '#f59e0b' : 'inherit') + '">' + formatoMoneda(pendiente, 'MXN') + '</td><td data-label="Vencido" style="color:' + (vencido > 0 ? '#dc2626' : 'inherit') + '">' + formatoMoneda(vencido, 'MXN') + '</td><td data-label="% Uso"><span>' + porcentaje.toFixed(1) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? '#dc2626' : '#22c55e') + '"></div></div></td><td data-label="Acciones"><button class="btn-visualizar" onclick="window.verDetalleProyectoCXP(\'' + p.nombre + '\')">📊 Detalle</button></td></tr>';
           });
         }
 
-        const tbodyOC = document.getElementById('cxpCuerpoOC');
+        var tbodyOC = document.getElementById('cxpCuerpoOC');
         tbodyOC.innerHTML = '';
 
         if (ocFiltradas.length === 0) {
-          tbodyOC.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>`;
+          tbodyOC.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>';
         } else {
-          ocFiltradas.slice().reverse().forEach((o, i) => {
-            const idxOriginal = ordenes.indexOf(o);
-            let estadoLabel = o.estado;
-            let badgeClass = '';
+          ocFiltradas.slice().reverse().forEach(function(o, i) {
+            var idxOriginal = ordenes.indexOf(o);
+            var estadoLabel = o.estado;
+            var badgeClass = '';
 
             if (o.estadopago === 'PAGADA') {
               estadoLabel = 'PAGADA';
               badgeClass = 'badge-autorizada-pagada';
             } else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
-              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              const ahora = new Date();
-              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              var ahora = new Date();
+              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
               if (diffDias > 1) {
                 estadoLabel = 'VENCIDA';
                 badgeClass = 'badge-vencida';
@@ -3766,23 +3649,7 @@
               badgeClass = 'badge-concluida';
             }
 
-            tbodyOC.innerHTML += `
-              <tr>
-                <td data-label="Código"><code>${o.codigo}</code></td>
-                <td data-label="Proyecto">${o.proyecto}</td>
-                <td data-label="Proveedor">${o.proveedor}</td>
-                <td data-label="Moneda">${o.moneda}</td>
-                <td data-label="Total">${formatoMoneda(o.montototal, o.moneda)}</td>
-                <td data-label="Equiv. MXN">${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
-                <td data-label="F.Pago">${new Date(o.fechapago).toLocaleDateString()}</td>
-                <td data-label="F.Aprobación">${o.fechaaprobaciondirector ? new Date(o.fechaaprobaciondirector).toLocaleDateString() : (o.fechaaprobacionjefe ? new Date(o.fechaaprobacionjefe).toLocaleDateString() : '—')}</td>
-                <td data-label="Estado"><span class="badge ${badgeClass}">${estadoLabel}</span></td>
-                <td data-label="Acciones">
-                  <button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Ver</button>
-                  <button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️</button>
-                </td>
-              </tr>
-            `;
+            tbodyOC.innerHTML += '<tr><td data-label="Código"><code>' + o.codigo + '</code></td><td data-label="Proyecto">' + o.proyecto + '</td><td data-label="Proveedor">' + o.proveedor + '</td><td data-label="Moneda">' + o.moneda + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td><td data-label="F.Aprobación">' + (o.fechaaprobaciondirector ? new Date(o.fechaaprobaciondirector).toLocaleDateString() : (o.fechaaprobacionjefe ? new Date(o.fechaaprobacionjefe).toLocaleDateString() : '—')) + '</td><td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoLabel + '</span></td><td data-label="Acciones"><button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Ver</button><button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️</button></td></tr>';
           });
         }
       };
@@ -3797,12 +3664,12 @@
       // REPORTE DE CXP
       // ============================================================
       window.imprimirReporteCXP = function() {
-        const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'pt', 'a4');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 40;
-        let y = margin;
+        var { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 40;
+        var y = margin;
 
         doc.setFontSize(18);
         doc.setTextColor(11, 26, 51);
@@ -3812,21 +3679,21 @@
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        const fechaInicio = document.getElementById('cxpFechaInicio').value;
-        const fechaFin = document.getElementById('cxpFechaFin').value;
-        doc.text(`Periodo: Desde: ${fechaInicio || 'N/A'} Hasta: ${fechaFin || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+        var fechaInicio = document.getElementById('cxpFechaInicio').value;
+        var fechaFin = document.getElementById('cxpFechaFin').value;
+        doc.text('Periodo: Desde: ' + (fechaInicio || 'N/A') + ' Hasta: ' + (fechaFin || 'N/A'), pageWidth / 2, y, { align: 'center' });
         y += 20;
 
-        let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
-        ocFiltradas.forEach(o => {
-          const monto = o.montomxn || 0;
-          const esPagada = o.estadopago === 'PAGADA';
-          const esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
-          let esVencida = false;
+        var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        ocFiltradas.forEach(function(o) {
+          var monto = o.montomxn || 0;
+          var esPagada = o.estadopago === 'PAGADA';
+          var esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
+          var esVencida = false;
           if (!esPagada && o.estado === 'AUTORIZADA') {
-            const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-            const ahora = new Date();
-            const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+            var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            var ahora = new Date();
+            var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
             esVencida = diffDias > 1;
           }
           if (esPagada) totalPagado += monto;
@@ -3840,9 +3707,9 @@
         y += 14;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`Pagado: ${formatoMoneda(totalPagado, 'MXN')}`, margin + 20, y);
-        doc.text(`Pendiente: ${formatoMoneda(totalPendiente, 'MXN')}`, margin + 200, y);
-        doc.text(`Vencido: ${formatoMoneda(totalVencido, 'MXN')}`, margin + 400, y);
+        doc.text('Pagado: ' + formatoMoneda(totalPagado, 'MXN'), margin + 20, y);
+        doc.text('Pendiente: ' + formatoMoneda(totalPendiente, 'MXN'), margin + 200, y);
+        doc.text('Vencido: ' + formatoMoneda(totalVencido, 'MXN'), margin + 400, y);
         y += 20;
 
         if (proys.length > 0) {
@@ -3851,21 +3718,21 @@
           doc.text('PROYECTOS', margin, y);
           y += 12;
 
-          const headers = ['Empresa', 'Departamento', 'Proyecto', 'Pagado', 'Pendiente', 'Vencido', '% Uso'];
-          const rows = proys.map(p => {
-            const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
-            const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
-            const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
-            let vencido = 0;
-            ocProyecto.forEach(o => {
+          var headers = ['Empresa', 'Departamento', 'Proyecto', 'Pagado', 'Pendiente', 'Vencido', '% Uso'];
+          var rows = proys.map(function(p) {
+            var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
+            var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+            var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
+            var vencido = 0;
+            ocProyecto.forEach(function(o) {
               if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
-                const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                const ahora = new Date();
-                const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                var ahora = new Date();
+                var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
                 if (diffDias > 1) vencido += (o.montomxn || 0);
               }
             });
-            const porcentaje = p.limite > 0 ? ((pagado + pendiente + vencido) / p.limite) * 100 : 0;
+            var porcentaje = p.limite > 0 ? ((pagado + pendiente + vencido) / p.limite) * 100 : 0;
             return [p.empresa, p.departamento, p.nombre, formatoMoneda(pagado, 'MXN'), formatoMoneda(pendiente, 'MXN'), formatoMoneda(vencido, 'MXN'), porcentaje.toFixed(1) + '%'];
           });
 
@@ -3884,14 +3751,14 @@
           doc.text('ÓRDENES DE COMPRA', margin, y);
           y += 12;
 
-          const headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Equiv. MXN', 'F.Pago', 'Estado'];
-          const rows = ocFiltradas.slice().reverse().map(o => {
-            let estadoLabel = o.estado;
+          var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Equiv. MXN', 'F.Pago', 'Estado'];
+          var rows = ocFiltradas.slice().reverse().map(function(o) {
+            var estadoLabel = o.estado;
             if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
             else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
-              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              const ahora = new Date();
-              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              var ahora = new Date();
+              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
               estadoLabel = diffDias > 1 ? 'VENCIDA' : 'PENDIENTE PAGO';
             } else if (o.estado === 'CONCLUIDA') estadoLabel = 'CONCLUIDA';
             return [o.codigo, o.proyecto, o.proveedor, o.moneda, formatoMoneda(o.montototal, o.moneda), formatoMoneda(o.montomxn || 0, 'MXN'), new Date(o.fechapago).toLocaleDateString(), estadoLabel];
@@ -3914,67 +3781,51 @@
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
 
-        const tablaProyectos = document.getElementById('tablaProyectos');
-        const selectProyecto = document.getElementById('selectProyecto');
-        const tablaOC = document.getElementById('tablaOC');
-        const resumenTotales = document.getElementById('resumenTotales');
+        var tablaProyectos = document.getElementById('tablaProyectos');
+        var selectProyecto = document.getElementById('selectProyecto');
+        var tablaOC = document.getElementById('tablaOC');
+        var resumenTotales = document.getElementById('resumenTotales');
 
-        const proyectosVisibles = filtrarProyectosSegunUsuario(actual);
-        let ocVisibles = filtrarOCSegunUsuario(actual);
+        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+        var ocVisibles = filtrarOCSegunUsuario(actual);
 
-        const filtroProyecto = document.getElementById('filtroProyecto');
+        var filtroProyecto = document.getElementById('filtroProyecto');
         if (filtroProyecto && filtroProyecto.value) {
-          ocVisibles = ocVisibles.filter(o => o.proyecto === filtroProyecto.value);
+          ocVisibles = ocVisibles.filter(function(o) { return o.proyecto === filtroProyecto.value; });
         }
-        const filtroDepto = document.getElementById('filtroDepto');
+        var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
-          ocVisibles = ocVisibles.filter(o => {
-            const p = proyectos.find(proj => proj.nombre === o.proyecto);
+          ocVisibles = ocVisibles.filter(function(o) {
+            var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
             return p && p.departamento === filtroDepto.value;
           });
         }
 
         if (filtroPendientesActivo && actual && actual.rol === 'Finanzas') {
-          ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada);
+          ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; });
         }
 
         tablaProyectos.innerHTML = '';
         selectProyecto.innerHTML = '';
 
         if (proyectosVisibles.length === 0) {
-          tablaProyectos.innerHTML = `<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>`;
+          tablaProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>';
           selectProyecto.innerHTML = '<option value="">No hay proyectos disponibles</option>';
         } else {
-          proyectosVisibles.forEach((p, idx) => {
-            const gastado = gastoProyectoMoneda(p.nombre);
-            const disponible = p.limite - gastado;
-            const porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
-            const esAdmin = actual && actual.rol === 'Administrador';
-            const esFinanzas = actual && actual.rol === 'Finanzas';
-            const deptoColor = getColorByEmpresa(p.empresa);
+          proyectosVisibles.forEach(function(p, idx) {
+            var gastado = gastoProyectoMoneda(p.nombre);
+            var disponible = p.limite - gastado;
+            var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
+            var esAdmin = actual && actual.rol === 'Administrador';
+            var esFinanzas = actual && actual.rol === 'Finanzas';
+            var deptoColor = getColorByEmpresa(p.empresa);
 
-            let botones = '';
-            if (!esFinanzas) botones += `<button class="success" onclick="window.mostrarDashboard(${proyectos.indexOf(p)})">📊 Dashboard</button>`;
-            if (esAdmin) botones += `<button class="danger" onclick="window.eliminarProyecto(${proyectos.indexOf(p)})">🗑️ Eliminar</button>`;
+            var botones = '';
+            if (!esFinanzas) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
+            if (esAdmin) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
-            tablaProyectos.innerHTML += `
-              <tr>
-                <td data-label="Empresa">${p.empresa}</td>
-                <td data-label="Depto"><span class="depto-color" style="background-color:${deptoColor}">${p.departamento}</span></td>
-                <td data-label="Proyecto"><strong>${p.nombre}</strong></td>
-                <td data-label="Cliente">${p.cliente}</td>
-                <td data-label="Presupuesto">${formatoMoneda(p.presupuesto, p.moneda)}</td>
-                <td data-label="Límite 60%">${formatoMoneda(p.limite, p.moneda)}</td>
-                <td data-label="Pagado">${formatoMoneda(gastado, p.moneda)}</td>
-                <td data-label="Disponible" style="color:${disponible < 0 ? '#b91c1c' : '#166534'}">${formatoMoneda(disponible, p.moneda)}</td>
-                <td data-label="%">
-                  <span>${porcentaje.toFixed(2)}%</span>
-                  <div class="progress-bar"><div class="fill" style="width:${Math.min(porcentaje, 100)}%; background:${porcentaje > 60 ? '#dc2626' : '#22c55e'}"></div></div>
-                </td>
-                <td data-label="Acciones"><div class="actions">${botones}</div></td>
-              </tr>
-            `;
-            selectProyecto.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + p.departamento + '</span></td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? '#b91c1c' : '#166534') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? '#dc2626' : '#22c55e') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
 
@@ -3990,25 +3841,20 @@
         tablaOC.innerHTML = '';
 
         if (ocVisibles.length === 0) {
-          tablaOC.innerHTML = `<tr><td colspan="16" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>`;
+          tablaOC.innerHTML = '<tr><td colspan="16" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
           resumenTotales.innerHTML = '';
         } else {
-          const totalMXN = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'MXN').reduce((s, o) => s + o.montototal, 0);
-          const totalUSD = ocVisibles.filter(o => o.estadopago === 'PAGADA' && o.moneda === 'USD').reduce((s, o) => s + o.montototal, 0);
-          const totalMXNEquiv = ocVisibles.filter(o => o.estadopago === 'PAGADA').reduce((s, o) => s + (o.montomxn || 0), 0);
-          resumenTotales.innerHTML = `
-            <strong>Totales pagados (visibles):</strong>
-            <span>MXN: ${formatoMoneda(totalMXN, 'MXN')}</span>
-            ${totalUSD > 0 ? `<span>USD: ${formatoMoneda(totalUSD, 'USD')} (equiv. MXN: ${formatoMoneda(totalMXNEquiv, 'MXN')})</span>` : ''}
-            <span><strong>Total MXN equivalente:</strong> ${formatoMoneda(totalMXNEquiv, 'MXN')}</span>
-          `;
+          var totalMXN = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
+          var totalUSD = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
+          var totalMXNEquiv = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
+          resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>';
 
-          ocVisibles.forEach((o, i) => {
-            const idxOriginal = ordenes.indexOf(o);
-            let badgeClass = '';
-            let estadoMostrado = '';
-            let rowClass = '';
-            let botonAura = '';
+          ocVisibles.forEach(function(o, i) {
+            var idxOriginal = ordenes.indexOf(o);
+            var badgeClass = '';
+            var estadoMostrado = '';
+            var rowClass = '';
+            var botonAura = '';
 
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
@@ -4026,9 +3872,9 @@
                 badgeClass = 'badge-autorizada-pagada';
                 estadoMostrado = '✅ PAGADA';
               } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
-                const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                const ahora = new Date();
-                const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                var ahora = new Date();
+                var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
                 if (diffDias > 1) {
                   badgeClass = 'badge-vencida';
                   estadoMostrado = '🔴 VENCIDA';
@@ -4044,7 +3890,7 @@
               badgeClass = 'badge-concluida';
               estadoMostrado = '✅ CONCLUIDA';
             } else {
-              const classes = {
+              var classes = {
                 'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
                 'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
                 'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
@@ -4053,58 +3899,55 @@
               estadoMostrado = o.estado;
             }
 
-            let acciones = '';
-            const rol = actual ? actual.rol : '';
+            var acciones = '';
+            var rol = actual ? actual.rol : '';
 
-            acciones += `<button class="btn-visualizar" onclick="window.visualizarOC(${idxOriginal})">👁️ Visualizar OC</button>`;
+            acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar OC</button>';
             
-            const puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
+            var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
             if (puedeImprimir) {
-              acciones += `<button class="btn-imprimir" onclick="window.imprimirOC(${idxOriginal})">🖨️ Imprimir</button>`;
+              acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ Imprimir</button>';
             }
 
             if (rol === 'Finanzas') {
               if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                 if (o.estadopago === 'PAGADA') {
-                  acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+                  acciones += '<button class="warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
                 } else {
-                  acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+                  acciones += '<button class="success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagada</button>';
                 }
               }
             } else {
               if (rol === 'Administrador') {
-                const textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
-                acciones += `<button class="warning" onclick="window.togglePausarOC(${idxOriginal})">${textoPausa}</button>`;
-                acciones += `<button class="danger" onclick="window.eliminarOC(${idxOriginal})">🗑️ Eliminar</button>`;
+                var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
+                acciones += '<button class="warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
+                acciones += '<button class="danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
                 if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                   if (o.estadopago === 'PAGADA') {
-                    acciones += `<button class="warning" onclick="window.marcarPendiente(${idxOriginal})">⏳ Pendiente</button>`;
+                    acciones += '<button class="warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
                   } else {
-                    acciones += `<button class="success" onclick="window.marcarPagada(${idxOriginal})">💰 Pagada</button>`;
+                    acciones += '<button class="success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagada</button>';
                   }
                 }
                 if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                  acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+                  acciones += '<button class="success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               } else {
                 if (!o.pausada) {
                   if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
-                    acciones += `<button class="success" onclick="window.aprobarSolicitante(${idxOriginal})">✅ Aprobar (Solicitante)</button>`;
+                    acciones += '<button class="success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar (Solicitante)</button>';
                   }
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
-                    acciones += `<button class="warning" onclick="window.aprobarJefe(${idxOriginal})">✅ Aprobar (Jefe Depto)</button>`;
+                    acciones += '<button class="warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar (Jefe Depto)</button>';
                   }
                   if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
-                    acciones += `
-                      <button class="success ${botonAura}" onclick="window.autorizarDirector(${idxOriginal})">✅ Autorizar</button>
-                      <button class="danger" onclick="window.cancelarDirector(${idxOriginal})">❌ Cancelar OC</button>
-                    `;
+                    acciones += '<button class="success ' + botonAura + '" onclick="window.autorizarDirector(' + idxOriginal + ')">✅ Autorizar</button><button class="danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar OC</button>';
                   }
                   if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
-                    acciones += `<button class="warning" onclick="window.ingresarParidad(${idxOriginal})">💰 Ingresar Paridad Final</button>`;
+                    acciones += '<button class="warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Ingresar Paridad Final</button>';
                   }
                   if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                    acciones += `<button class="success" onclick="window.registrarFactura(${idxOriginal})">📄 Factura</button>`;
+                    acciones += '<button class="success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                   }
                 } else {
                   acciones = '⏸️ Pausada';
@@ -4113,58 +3956,39 @@
             }
             if (!acciones) acciones = '—';
 
-            const proyecto = proyectos.find(p => p.nombre === o.proyecto);
-            const cliente = proyecto ? proyecto.cliente : '—';
-            const deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
+            var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var cliente = proyecto ? proyecto.cliente : '—';
+            var deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
-            tablaOC.innerHTML += `
-              <tr class="${rowClass}" data-oc-id="${o.id}">
-                <td data-label="Código"><code>${o.codigo}</code></td>
-                <td data-label="Proyecto">${o.proyecto}</td>
-                <td data-label="Depto"><span class="depto-color" style="background-color:${deptoColor}">${proyecto ? proyecto.departamento : '—'}</span></td>
-                <td data-label="Cliente">${cliente}</td>
-                <td data-label="Proveedor">${o.proveedor}</td>
-                <td data-label="RFC">${o.rfc}</td>
-                <td data-label="Dirección entrega">${o.direccionentrega || '—'}</td>
-                <td data-label="CP">${o.cp || '—'}</td>
-                <td data-label="Moneda">${o.moneda}</td>
-                <td data-label="Total">${formatoMoneda(o.montototal, o.moneda)}</td>
-                <td data-label="Equiv. MXN">${formatoMoneda(o.montomxn || 0, 'MXN')}</td>
-                <td data-label="F.Pago">${new Date(o.fechapago).toLocaleDateString()}</td>
-                <td data-label="F.Entrega">${new Date(o.fechaentrega).toLocaleDateString()}</td>
-                <td data-label="UUID">${o.uuidfactura || '—'}</td>
-                <td data-label="Estado"><span class="badge ${badgeClass}">${estadoMostrado}</span></td>
-                <td data-label="Acciones"><div class="actions">${acciones}</div></td>
-              </tr>
-            `;
+            tablaOC.innerHTML += '<tr class="' + rowClass + '" data-oc-id="' + o.id + '"><td data-label="Código"><code>' + o.codigo + '</code></td><td data-label="Proyecto">' + o.proyecto + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + (proyecto ? proyecto.departamento : '—') + '</span></td><td data-label="Cliente">' + cliente + '</td><td data-label="Proveedor">' + o.proveedor + '</td><td data-label="RFC">' + o.rfc + '</td><td data-label="Dirección entrega">' + (o.direccionentrega || '—') + '</td><td data-label="CP">' + (o.cp || '—') + '</td><td data-label="Moneda">' + o.moneda + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td><td data-label="F.Entrega">' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td data-label="UUID">' + (o.uuidfactura || '—') + '</td><td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td><td data-label="Acciones"><div class="actions">' + acciones + '</div></td></tr>';
           });
         }
 
-        const panelOC = document.getElementById('panelOC');
-        const cuerpo = document.getElementById('cuerpoProductos');
+        var panelOC = document.getElementById('panelOC');
+        var cuerpo = document.getElementById('cuerpoProductos');
         if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
           window.agregarFilaProducto();
         }
 
-        const filtroProyectoSelect = document.getElementById('filtroProyecto');
+        var filtroProyectoSelect = document.getElementById('filtroProyecto');
         if (filtroProyectoSelect) {
-          const currentVal = filtroProyectoSelect.value;
+          var currentVal = filtroProyectoSelect.value;
           filtroProyectoSelect.innerHTML = '<option value="">Todos los proyectos</option>';
-          proyectosVisibles.forEach(p => {
-            const opt = document.createElement('option');
+          proyectosVisibles.forEach(function(p) {
+            var opt = document.createElement('option');
             opt.value = p.nombre;
             opt.textContent = p.nombre;
             if (p.nombre === currentVal) opt.selected = true;
             filtroProyectoSelect.appendChild(opt);
           });
         }
-        const filtroDeptoSelect = document.getElementById('filtroDepto');
+        var filtroDeptoSelect = document.getElementById('filtroDepto');
         if (filtroDeptoSelect) {
-          const currentVal = filtroDeptoSelect.value;
+          var currentVal = filtroDeptoSelect.value;
           filtroDeptoSelect.innerHTML = '<option value="">Todos los departamentos</option>';
-          const deptos = [...new Set(proyectosVisibles.map(p => p.departamento))];
-          deptos.forEach(d => {
-            const opt = document.createElement('option');
+          var deptos = [...new Set(proyectosVisibles.map(function(p) { return p.departamento; }))];
+          deptos.forEach(function(d) {
+            var opt = document.createElement('option');
             opt.value = d;
             opt.textContent = d;
             if (d === currentVal) opt.selected = true;
@@ -4172,7 +3996,7 @@
           });
         }
 
-        const panelCXP = document.getElementById('panelCXP');
+        var panelCXP = document.getElementById('panelCXP');
         if (!panelCXP.classList.contains('hidden')) {
           window.renderCXP();
         }
@@ -4182,26 +4006,27 @@
       // REPORTES PROGRAMADOS
       // ============================================================
       function verificarReportesProgramados() {
-        const hoy = new Date();
-        const dia = hoy.getDate();
-        const esFinDeMes = (dia === new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate());
-        const es25 = (dia === 25);
+        var hoy = new Date();
+        var dia = hoy.getDate();
+        var esFinDeMes = (dia === new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate());
+        var es25 = (dia === 25);
         
         if (esFinDeMes || es25) {
-          console.log(`📅 Ejecutando reporte programado - ${esFinDeMes ? 'Fin de mes' : 'Día 25'}`);
+          console.log('📅 Ejecutando reporte programado - ' + (esFinDeMes ? 'Fin de mes' : 'Día 25'));
           generarReporteProgramado(esFinDeMes ? 'fin_mes' : 'dia_25');
         }
       }
 
       function generarReporteProgramado(tipo) {
-        console.log(`📊 Generando reporte programado: ${tipo}`);
+        console.log('📊 Generando reporte programado: ' + tipo);
+        // Aquí se implementaría la lógica de envío de reportes a jefes de departamento
       }
 
       async function init() {
-        const hoy = new Date();
-        const fechaHoy = hoy.toISOString().split('T')[0];
+        var hoy = new Date();
+        var fechaHoy = hoy.toISOString().split('T')[0];
         document.getElementById('fechaInicio').value = fechaHoy;
-        const fechaFin = new Date(hoy);
+        var fechaFin = new Date(hoy);
         fechaFin.setMonth(fechaFin.getMonth() + 6);
         document.getElementById('fechaTermino').value = fechaFin.toISOString().split('T')[0];
         document.getElementById('fechaPago').value = fechaHoy;
@@ -4213,18 +4038,13 @@
       document.addEventListener('DOMContentLoaded', function() {
         init();
         configurarModulos();
-        const btnLogin = document.getElementById('btnLogin');
+        var btnLogin = document.getElementById('btnLogin');
         if (btnLogin) btnLogin.addEventListener('click', window.login);
-        const passInput = document.getElementById('password');
+        var passInput = document.getElementById('password');
         if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
-        const userInput = document.getElementById('usuario');
+        var userInput = document.getElementById('usuario');
         if (userInput) userInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
       });
-
-      window.recalcularFila = recalcularFila;
-      window.recalcularTotal = recalcularTotal;
-      window.autoAjustar = autoAjustar;
-      window.reindexar = reindexar;
 
     })();
   </script>
