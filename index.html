@@ -400,6 +400,28 @@
     line-height: 1.2
   }
   .donut-container .center-text small { display: block; font-size: 12px; font-weight: normal; color: var(--gray-500) }
+  
+  /* Aura para el donut circular */
+  .donut-container .donut-aura {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,116,139,0.1) 0%, rgba(100,116,139,0.05) 50%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    transition: all 0.5s ease;
+  }
+  .donut-container .donut-aura.active {
+    background: radial-gradient(circle, rgba(100,116,139,0.2) 0%, rgba(100,116,139,0.08) 50%, transparent 70%);
+    box-shadow: 0 0 40px rgba(100,116,139,0.15);
+  }
+  .donut-container svg { position: relative; z-index: 1; }
+  .donut-container .center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: bold; text-align: center; line-height: 1.2; z-index: 2; }
+  
   #dashboardOverlay {
     position: fixed;
     top: 0;
@@ -760,10 +782,25 @@
     margin: 0 auto;
     position: relative;
   }
+  .cxp-dashboard-circular .cxp-donut-card .donut-mini .donut-aura-mini {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,116,139,0.1) 0%, rgba(100,116,139,0.05) 50%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    transition: all 0.5s ease;
+  }
   .cxp-dashboard-circular .cxp-donut-card .donut-mini svg {
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
+    position: relative;
+    z-index: 1;
   }
   .cxp-dashboard-circular .cxp-donut-card .donut-mini .center-text {
     position: absolute;
@@ -774,12 +811,65 @@
     font-weight: 700;
     text-align: center;
     line-height: 1.2;
+    z-index: 2;
   }
   .cxp-dashboard-circular .cxp-donut-card .donut-mini .center-text small {
     display: block;
     font-size: 10px;
     font-weight: normal;
     color: var(--gray-500);
+  }
+  
+  .cxp-dashboard-circular .cxp-donut-card .donut-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+  .cxp-dashboard-circular .cxp-donut-card .donut-actions button {
+    font-size: 11px;
+    padding: 4px 12px;
+    min-height: 30px;
+    min-width: 30px;
+  }
+
+  /* Estilos para gráfica de barras */
+  .bar-chart-container {
+    margin: 10px 0;
+    padding: 10px;
+    background: var(--gray-50);
+    border-radius: 8px;
+  }
+  .bar-chart-container .bar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0;
+  }
+  .bar-chart-container .bar-item .bar-label {
+    font-size: 10px;
+    min-width: 60px;
+    text-align: right;
+    color: var(--gray-600);
+  }
+  .bar-chart-container .bar-item .bar-track {
+    flex: 1;
+    height: 16px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-chart-container .bar-item .bar-track .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+  .bar-chart-container .bar-item .bar-value {
+    font-size: 10px;
+    min-width: 50px;
+    font-weight: 600;
+    color: var(--gray-700);
   }
 
   .ranking-container {
@@ -908,6 +998,34 @@
     flex-wrap: wrap;
   }
 
+  .cxp-reporte-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin: 10px 0;
+    padding: 12px 16px;
+    background: var(--gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+  }
+  .cxp-reporte-options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+  }
+  .cxp-reporte-options input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+
   @media (max-width: 768px) {
     .table-wrapper { overflow-x: auto; }
     table, thead, tbody, th, td, tr { display: block; }
@@ -957,6 +1075,7 @@
     .ranking-item { flex-wrap: wrap; gap: 4px; }
     #visualizarModal .modal-body iframe { height: 300px; }
     #cxpPreviewModal .modal-body iframe { height: 300px; }
+    .cxp-reporte-options { flex-direction: column; align-items: stretch; }
   }
 
   @media (max-width: 480px) {
@@ -1038,6 +1157,78 @@
     font-weight: 600;
     color: var(--primary);
   }
+
+  /* Login centrado y corporativo */
+  #login {
+    max-width: 460px;
+    margin: 80px auto;
+    text-align: center;
+    padding: 40px 32px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--gray-200);
+  }
+  #login .login-logo {
+    margin-bottom: 24px;
+  }
+  #login .login-logo img {
+    height: 60px;
+    width: auto;
+  }
+  #login h2 {
+    font-size: 22px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 8px;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  #login .login-subtitle {
+    color: var(--gray-500);
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  #login .flex {
+    gap: 12px;
+  }
+  #login .flex input {
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--gray-300);
+    background: var(--gray-50);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  #login .flex input:focus {
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
+  }
+  #login .flex button {
+    min-height: 48px;
+    padding: 12px 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  #login .flex button:hover {
+    background: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(11, 26, 51, 0.2);
+  }
+  #login .flex button:active {
+    transform: translateY(0);
+  }
+  #login .alert {
+    margin-top: 12px;
+    border-radius: 8px;
+  }
 </style>
 </head>
 <body>
@@ -1056,8 +1247,12 @@
 
   <div class="container">
     <!-- Login -->
-    <div id="login" class="card">
-      <h2>🔐 Iniciar sesión</h2>
+    <div id="login">
+      <div class="login-logo">
+        <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'" style="height:60px; width:auto;">
+      </div>
+      <h2>Bienvenido</h2>
+      <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
       <div class="flex">
         <input id="usuario" placeholder="Usuario">
         <input id="password" type="password" placeholder="Contraseña">
@@ -1232,6 +1427,18 @@
           
           <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXP()">🖨️ Previsualizar Reporte</button>
+        </div>
+
+        <!-- Opciones de Reporte -->
+        <div class="cxp-reporte-options">
+          <label>
+            <input type="checkbox" id="cxpIncluirProyectos" checked>
+            Incluir detalle por proyecto
+          </label>
+          <label>
+            <input type="checkbox" id="cxpIncluirOC" checked>
+            Incluir órdenes de compra
+          </label>
         </div>
 
         <!-- Ranking (oculto por defecto) -->
@@ -1520,22 +1727,42 @@
           }, 0);
       }
 
+      // ============================================================
+      // GENERAR CÓDIGO OC CON FORMATO: DEPARTAMENTO-OC-AAMMDD-C-PROVEEDOR-PROYECTO-CLIENTE-INICIALES
+      // ============================================================
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
-        if (!empresa) empresa = 'GIE';
-        if (!departamento) departamento = 'GENERAL';
-        var prefijos = {
-          'GRUPO INDUSTRIAL EXTINGUE': { 'VENTAS CORPORATIVAS EXTINGUE': 'GIE', 'INGENIERIA EN SISTEMAS CONTRA INCENDIO': 'ISCI', 'SUMINISERVICES': 'SUM', 'FINANZAS': 'FIN', 'SERVICIOS': 'SERV', 'INMOBIENES': 'ICE' },
-          'VEXPAR OPERACIONES': { 'VENTAS CORPORATIVAS VEXPAR': 'VOP' }
-        };
-        var prefijo = (prefijos[empresa] && prefijos[empresa][departamento]) || 'OC';
         var fecha = new Date();
-        var fechaStr = fecha.getFullYear() + String(fecha.getMonth() + 1).padStart(2, '0') + String(fecha.getDate()).padStart(2, '0');
-        var proveedorClean = proveedor.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
-        var proyectoClean = proyecto.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
-        var clienteClean = cliente.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-        var elaboradorClean = elaborador.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
-        var numero = seq !== undefined ? String(seq).padStart(4, '0') : String(consecutivoOC++).padStart(4, '0');
-        return prefijo + '-OC-' + fechaStr + '-' + proveedorClean + '-' + proyectoClean + '-' + clienteClean + '-' + elaboradorClean + '-' + numero;
+        var anio = String(fecha.getFullYear()).slice(2);
+        var mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        var dia = String(fecha.getDate()).padStart(2, '0');
+        var fechaStr = anio + mes + dia;
+        
+        var deptoClean = departamento.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+        var proveedorClean = proveedor.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        var proyectoClean = proyecto.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        var clienteClean = cliente.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+        var elaboradorClean = elaborador.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
+        
+        var letra = seq || 'A';
+        return deptoClean + '-OC-' + fechaStr + '-' + letra + '-' + proveedorClean + '-' + proyectoClean + '-' + clienteClean + '-' + elaboradorClean;
+      }
+
+      function verificarCodigoExistente(codigoBase) {
+        var existentes = ordenes.filter(function(o) {
+          return o.codigo && o.codigo.startsWith(codigoBase.substring(0, codigoBase.lastIndexOf('-') + 1));
+        });
+        var letras = existentes.map(function(o) {
+          var parts = o.codigo.split('-');
+          return parts[3] || '';
+        });
+        var letrasExistentes = letras.filter(function(l) { return l.length === 1 && l >= 'A' && l <= 'Z'; });
+        if (letrasExistentes.length === 0) return 'A';
+        var letrasSet = new Set(letrasExistentes);
+        for (var i = 0; i < 26; i++) {
+          var letra = String.fromCharCode(65 + i);
+          if (!letrasSet.has(letra)) return letra;
+        }
+        return null;
       }
 
       // ============================================================
@@ -1560,13 +1787,6 @@
           var { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
           if (e2) throw e2;
           ordenes = oData || [];
-          var maxCodigo = ordenes.reduce(function(max, o) {
-            if (!o.codigo) return max;
-            var parts = o.codigo.split('-');
-            var num = parseInt(parts[parts.length - 1], 10);
-            return isNaN(num) ? max : (num > max ? num : max);
-          }, 0);
-          consecutivoOC = maxCodigo + 1;
           console.log('📊 Datos cargados - Proyectos:', proyectos.length, 'OC:', ordenes.length);
           return true;
         } catch (e) { console.error('Error cargando datos', e); return false; }
@@ -2076,7 +2296,7 @@
       window.salir = function() { location.reload(); };
 
       // ============================================================
-      // FUNCIONES DE CREACIÓN Y GESTIÓN (RESUMIDAS)
+      // FUNCIONES DE CREACIÓN Y GESTIÓN
       // ============================================================
       window.crearProyecto = async function() {
         var empresa, departamento;
@@ -2682,7 +2902,7 @@
       window.imprimirDesdeVisualizar = function() {
         if (visualizarOCPDF) {
           var codigo = visualizarOCData?.codigo || 'OC';
-          visualizarOCPDF.save('OC_' + codigo + '.pdf');
+          visualizarOCPDF.save(codigo + '.pdf');
         } else {
           alert('No hay PDF para imprimir');
         }
@@ -2711,7 +2931,13 @@
       window.confirmarDesdePreview = async function() {
         if (!ocPreviewData) { alert('No hay datos para confirmar.'); return; }
         var datos = ocPreviewData;
-        var codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
+        var codigoBase = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, '');
+        var letra = verificarCodigoExistente(codigoBase);
+        if (!letra) {
+          alert('❌ Error: No se puede generar un código único para esta OC. Contacta al administrador.');
+          return;
+        }
+        var codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, letra);
 
         var nuevaOC = {
           codigo: codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
@@ -2749,7 +2975,7 @@
 
         try {
           var docFinal = ocPreviewPDF || await generarPDFParaPreview(datos);
-          docFinal.save('OC_' + codigo + '.pdf');
+          docFinal.save(codigo + '.pdf');
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
           document.getElementById('mensajeOC').innerHTML += '<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>';
@@ -2768,7 +2994,13 @@
           return;
         }
 
-        var codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador);
+        var codigoBase = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, '');
+        var letra = verificarCodigoExistente(codigoBase);
+        if (!letra) {
+          alert('❌ Error: No se puede generar un código único para esta OC. Contacta al administrador.');
+          return;
+        }
+        var codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, letra);
 
         var nuevaOC = {
           codigo: codigo, proyecto: datos.proyectonombre, proveedor: datos.proveedor,
@@ -2809,7 +3041,7 @@
 
         try {
           var doc = await generarPDFParaPreview(datos);
-          doc.save('OC_' + codigo + '.pdf');
+          doc.save(codigo + '.pdf');
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
           document.getElementById('mensajeOC').innerHTML += '<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>';
@@ -2844,7 +3076,7 @@
             swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A'
           };
           var doc = await generarPDFParaPreview(datosOC, oc);
-          doc.save('OC_' + oc.codigo + '.pdf');
+          doc.save(oc.codigo + '.pdf');
         } catch (error) {
           console.error('❌ Error al imprimir OC:', error);
           alert('Error al generar el PDF: ' + error.message);
@@ -3304,7 +3536,7 @@
         doc.setFont('helvetica', 'normal');
         doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
 
-        doc.save('OC_' + oc.codigo + '.pdf');
+        doc.save(oc.codigo + '.pdf');
       }
 
       window.mostrarDashboard = function(index) {
@@ -3333,7 +3565,7 @@
         });
         var totalMXNEquiv = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
 
-        var html = '<h1>📊 Dashboard: ' + proyecto.nombre + '</h1><div class="card"><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px"><div><p><strong>Empresa:</strong> ' + proyecto.empresa + '</p><p><strong>Departamento:</strong> <span class="depto-color" style="background-color:' + deptoColor + '">' + proyecto.departamento + '</span></p><p><strong>Cliente:</strong> ' + proyecto.cliente + '</p><p><strong>Presupuesto (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '</p><p><strong>Límite 60% (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '</p><p><strong>Pagado (' + proyecto.moneda + '):</strong> ' + formatoMoneda(gastado, proyecto.moneda) + '</p><p><strong>Disponible (' + proyecto.moneda + '):</strong> ' + formatoMoneda(disponible, proyecto.moneda) + '</p><p><strong>Fecha Inicio:</strong> ' + new Date(proyecto.fecha_inicio).toLocaleDateString() + '</p><p><strong>Fecha Término:</strong> ' + new Date(proyecto.fecha_termino).toLocaleDateString() + '</p></div><div><div class="donut-container"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/><circle cx="50" cy="50" r="40" fill="none" stroke="' + color + '" stroke-width="12" stroke-dasharray="' + (porcentaje * 2.513) + ' ' + (100 * 2.513 - porcentaje * 2.513) + '" stroke-linecap="round"/></svg><div class="center-text">' + porcentaje.toFixed(1) + '%<small>' + (saludable ? '✅ Saludable' : '⚠️ Excedido') + '</small></div></div></div></div></div><h3>📋 Órdenes de Compra</h3>';
+        var html = '<h1>📊 Dashboard: ' + proyecto.nombre + '</h1><div class="card"><div style="display:grid; grid-template-columns:1fr 1fr; gap:20px"><div><p><strong>Empresa:</strong> ' + proyecto.empresa + '</p><p><strong>Departamento:</strong> <span class="depto-color" style="background-color:' + deptoColor + '">' + proyecto.departamento + '</span></p><p><strong>Cliente:</strong> ' + proyecto.cliente + '</p><p><strong>Presupuesto (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '</p><p><strong>Límite 60% (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '</p><p><strong>Pagado (' + proyecto.moneda + '):</strong> ' + formatoMoneda(gastado, proyecto.moneda) + '</p><p><strong>Disponible (' + proyecto.moneda + '):</strong> ' + formatoMoneda(disponible, proyecto.moneda) + '</p><p><strong>Fecha Inicio:</strong> ' + new Date(proyecto.fecha_inicio).toLocaleDateString() + '</p><p><strong>Fecha Término:</strong> ' + new Date(proyecto.fecha_termino).toLocaleDateString() + '</p></div><div><div class="donut-container"><div class="donut-aura"></div><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/><circle cx="50" cy="50" r="40" fill="none" stroke="' + color + '" stroke-width="12" stroke-dasharray="' + (porcentaje * 2.513) + ' ' + (100 * 2.513 - porcentaje * 2.513) + '" stroke-linecap="round"/></svg><div class="center-text">' + porcentaje.toFixed(1) + '%<small>' + (saludable ? '✅ Saludable' : '⚠️ Excedido') + '</small></div></div></div></div></div><h3>📋 Órdenes de Compra</h3>';
         if (ocProyecto.length === 0) {
           html += '<p class="text-muted">No hay OC para este proyecto.</p>';
         } else {
@@ -3685,11 +3917,119 @@
         var saludable = porcentaje <= 60;
         var color = saludable ? '#22c55e' : '#dc2626';
         var deptoColor = getColorByEmpresa(proyecto.empresa);
+        var mostrarGrafica = 'circular';
 
-        var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+        function renderizarDashboard(tipo) {
+          mostrarGrafica = tipo;
+          var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">';
+          html += '<h2 style="margin:0;">📊 Dashboard: ' + proyecto.nombre + '</h2>';
+          html += '<div style="display:flex; gap:8px;">';
+          html += '<button class="btn-visualizar" onclick="window.verDashboardProyectoCXP(\'' + nombreProyecto + '\')" style="background:var(--secondary);">🔄 Circular</button>';
+          html += '<button class="btn-visualizar" onclick="window.verDashboardProyectoCXP_Barras(\'' + nombreProyecto + '\')" style="background:#d97706;">📊 Barras</button>';
+          html += '<button class="danger" onclick="document.getElementById(\'cxpDashboardCircular\').style.display=\'none\'">✕ Cerrar</button>';
+          html += '</div></div>';
+
+          html += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; background:var(--gray-50); padding:20px; border-radius:12px; margin-bottom:16px;">';
+          html += '<div><p><strong>Empresa:</strong> ' + proyecto.empresa + '</p>';
+          html += '<p><strong>Departamento:</strong> <span class="depto-color" style="background-color:' + deptoColor + '">' + proyecto.departamento + '</span></p>';
+          html += '<p><strong>Cliente:</strong> ' + proyecto.cliente + '</p>';
+          html += '<p><strong>Presupuesto (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '</p>';
+          html += '<p><strong>Límite 60% (' + proyecto.moneda + '):</strong> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '</p>';
+          html += '<p><strong>Pagado (' + proyecto.moneda + '):</strong> ' + formatoMoneda(gastado, proyecto.moneda) + '</p>';
+          html += '<p><strong>Disponible (' + proyecto.moneda + '):</strong> ' + formatoMoneda(disponible, proyecto.moneda) + '</p>';
+          html += '<p><strong>Fecha Inicio:</strong> ' + new Date(proyecto.fecha_inicio).toLocaleDateString() + '</p>';
+          html += '<p><strong>Fecha Término:</strong> ' + new Date(proyecto.fecha_termino).toLocaleDateString() + '</p></div>';
+
+          html += '<div>';
+          if (tipo === 'circular') {
+            html += '<div class="donut-container" style="width:160px; height:160px; margin:0 auto; position:relative;">';
+            html += '<div class="donut-aura"></div>';
+            html += '<svg viewBox="0 0 100 100" style="width:100%; height:100%; transform:rotate(-90deg);">';
+            html += '<circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/>';
+            html += '<circle cx="50" cy="50" r="40" fill="none" stroke="' + color + '" stroke-width="12" stroke-dasharray="' + (Math.min(porcentaje, 100) * 2.513) + ' ' + (100 * 2.513 - Math.min(porcentaje, 100) * 2.513) + '" stroke-linecap="round"/>';
+            html += '</svg><div class="center-text" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; font-weight:bold; text-align:center; line-height:1.2; z-index:2;">';
+            html += porcentaje.toFixed(1) + '%<small style="display:block; font-size:12px; font-weight:normal; color:var(--gray-500);">' + (saludable ? '✅ Saludable' : '⚠️ Excedido') + '</small></div></div>';
+          } else {
+            // Gráfica de barras
+            var totalPresupuesto = proyecto.presupuesto;
+            var pagadoPorcentaje = totalPresupuesto > 0 ? (gastado / totalPresupuesto) * 100 : 0;
+            var disponiblePorcentaje = totalPresupuesto > 0 ? (disponible / totalPresupuesto) * 100 : 0;
+            var limitePorcentaje = proyecto.limite > 0 ? (proyecto.limite / totalPresupuesto) * 100 : 0;
+
+            html += '<div class="bar-chart-container" style="padding:10px;">';
+            html += '<div class="bar-item"><span class="bar-label">Pagado</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.min(pagadoPorcentaje, 100) + '%; background:#16a34a;"></div></div><span class="bar-value">' + pagadoPorcentaje.toFixed(1) + '%</span></div>';
+            html += '<div class="bar-item"><span class="bar-label">Disponible</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.max(0, Math.min(disponiblePorcentaje, 100)) + '%; background:#3b82f6;"></div></div><span class="bar-value">' + Math.max(0, disponiblePorcentaje.toFixed(1)) + '%</span></div>';
+            html += '<div class="bar-item"><span class="bar-label">Límite 60%</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.min(limitePorcentaje, 100) + '%; background:#f59e0b;"></div></div><span class="bar-value">' + limitePorcentaje.toFixed(1) + '%</span></div>';
+            html += '<div style="margin-top:8px; font-size:11px; color:var(--gray-500);">';
+            html += 'Presupuesto total: ' + formatoMoneda(totalPresupuesto, proyecto.moneda);
+            html += '</div></div>';
+          }
+          html += '</div></div>';
+
+          html += '<h3 style="margin-top:16px;">📋 Órdenes de Compra</h3>';
+          if (ocProyecto.length === 0) {
+            html += '<p class="text-muted">No hay OC para este proyecto.</p>';
+          } else {
+            html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
+            ocProyecto.forEach(function(o) {
+              var badgeClass = '';
+              var estadoMostrado = o.estado;
+              if (o.estado === 'AUTORIZADA') {
+                if (o.estadopago === 'PAGADA') {
+                  badgeClass = 'badge-autorizada-pagada';
+                  estadoMostrado = 'PAGADA';
+                } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
+                  var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+                  var ahora = new Date();
+                  var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+                  if (diffDias > 1) {
+                    badgeClass = 'badge-autorizada-vencida';
+                    estadoMostrado = 'VENCIDA';
+                  } else {
+                    badgeClass = 'badge-autorizada-pendiente';
+                    estadoMostrado = 'PENDIENTE';
+                  }
+                }
+              } else if (o.estado === 'CONCLUIDA') {
+                badgeClass = 'badge-concluida';
+                estadoMostrado = 'CONCLUIDA';
+              }
+              html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
+            });
+            html += '</tbody></table></div>';
+          }
+
+          var dashboardDiv = document.getElementById('cxpDashboardCircular');
+          dashboardDiv.innerHTML = html;
+          dashboardDiv.style.display = 'block';
+          dashboardDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        renderizarDashboard('circular');
+      };
+
+      window.verDashboardProyectoCXP_Barras = function(nombreProyecto) {
+        var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
+        if (!proyecto) {
+          alert('Proyecto no encontrado');
+          return;
+        }
+
+        var ocProyecto = ordenes.filter(function(o) { return o.proyecto === nombreProyecto && (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA'); });
+        var gastado = gastoProyectoMoneda(nombreProyecto);
+        var disponible = proyecto.limite - gastado;
+        var porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
+        var saludable = porcentaje <= 60;
+        var color = saludable ? '#22c55e' : '#dc2626';
+        var deptoColor = getColorByEmpresa(proyecto.empresa);
+
+        var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">';
         html += '<h2 style="margin:0;">📊 Dashboard: ' + proyecto.nombre + '</h2>';
+        html += '<div style="display:flex; gap:8px;">';
+        html += '<button class="btn-visualizar" onclick="window.verDashboardProyectoCXP(\'' + nombreProyecto + '\')" style="background:var(--secondary);">🔄 Circular</button>';
+        html += '<button class="btn-visualizar" onclick="window.verDashboardProyectoCXP_Barras(\'' + nombreProyecto + '\')" style="background:#d97706;">📊 Barras</button>';
         html += '<button class="danger" onclick="document.getElementById(\'cxpDashboardCircular\').style.display=\'none\'">✕ Cerrar</button>';
-        html += '</div>';
+        html += '</div></div>';
 
         html += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; background:var(--gray-50); padding:20px; border-radius:12px; margin-bottom:16px;">';
         html += '<div><p><strong>Empresa:</strong> ' + proyecto.empresa + '</p>';
@@ -3702,12 +4042,20 @@
         html += '<p><strong>Fecha Inicio:</strong> ' + new Date(proyecto.fecha_inicio).toLocaleDateString() + '</p>';
         html += '<p><strong>Fecha Término:</strong> ' + new Date(proyecto.fecha_termino).toLocaleDateString() + '</p></div>';
 
-        html += '<div><div class="donut-container" style="width:160px; height:160px; margin:0 auto; position:relative;">';
-        html += '<svg viewBox="0 0 100 100" style="width:100%; height:100%; transform:rotate(-90deg);">';
-        html += '<circle cx="50" cy="50" r="40" fill="none" stroke="#e9edf2" stroke-width="12"/>';
-        html += '<circle cx="50" cy="50" r="40" fill="none" stroke="' + color + '" stroke-width="12" stroke-dasharray="' + (Math.min(porcentaje, 100) * 2.513) + ' ' + (100 * 2.513 - Math.min(porcentaje, 100) * 2.513) + '" stroke-linecap="round"/>';
-        html += '</svg><div class="center-text" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; font-weight:bold; text-align:center; line-height:1.2;">';
-        html += porcentaje.toFixed(1) + '%<small style="display:block; font-size:12px; font-weight:normal; color:var(--gray-500);">' + (saludable ? '✅ Saludable' : '⚠️ Excedido') + '</small></div></div></div></div>';
+        html += '<div>';
+        var totalPresupuesto = proyecto.presupuesto;
+        var pagadoPorcentaje = totalPresupuesto > 0 ? (gastado / totalPresupuesto) * 100 : 0;
+        var disponiblePorcentaje = totalPresupuesto > 0 ? (disponible / totalPresupuesto) * 100 : 0;
+        var limitePorcentaje = proyecto.limite > 0 ? (proyecto.limite / totalPresupuesto) * 100 : 0;
+
+        html += '<div class="bar-chart-container" style="padding:10px;">';
+        html += '<div class="bar-item"><span class="bar-label">Pagado</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.min(pagadoPorcentaje, 100) + '%; background:#16a34a;"></div></div><span class="bar-value">' + pagadoPorcentaje.toFixed(1) + '%</span></div>';
+        html += '<div class="bar-item"><span class="bar-label">Disponible</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.max(0, Math.min(disponiblePorcentaje, 100)) + '%; background:#3b82f6;"></div></div><span class="bar-value">' + Math.max(0, disponiblePorcentaje.toFixed(1)) + '%</span></div>';
+        html += '<div class="bar-item"><span class="bar-label">Límite 60%</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.min(limitePorcentaje, 100) + '%; background:#f59e0b;"></div></div><span class="bar-value">' + limitePorcentaje.toFixed(1) + '%</span></div>';
+        html += '<div style="margin-top:8px; font-size:11px; color:var(--gray-500);">';
+        html += 'Presupuesto total: ' + formatoMoneda(totalPresupuesto, proyecto.moneda);
+        html += '</div></div>';
+        html += '</div></div>';
 
         html += '<h3 style="margin-top:16px;">📋 Órdenes de Compra</h3>';
         if (ocProyecto.length === 0) {
@@ -3756,51 +4104,55 @@
         var proys = datos.proyectos;
         var ocFiltradas = datos.oc;
         
+        var incluirProyectos = document.getElementById('cxpIncluirProyectos').checked;
+        var incluirOC = document.getElementById('cxpIncluirOC').checked;
+        
         var { jsPDF } = window.jspdf;
-        // Usar orientación horizontal (landscape)
+        // Orientación horizontal (landscape)
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
-        var margin = 40;
+        var margin = 28; // 1 cm aproximadamente en puntos (1 cm = 28.35 pt)
         var y = margin;
 
         // ===== HEADER CORPORATIVO =====
-        // Logo y título
+        var logoY = 15;
         doc.setFillColor(11, 26, 51);
-        doc.rect(0, 0, pageWidth, 85, 'F');
+        doc.rect(0, 0, pageWidth, 65, 'F');
         
-        doc.setFontSize(22);
+        doc.setFontSize(18);
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.text('REPORTE DE CUENTAS POR PAGAR (CXP)', pageWidth / 2, 40, { align: 'center' });
+        doc.text('REPORTE DE CUENTAS POR PAGAR', pageWidth / 2, 32, { align: 'center' });
         
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setTextColor(200, 200, 200);
         doc.setFont('helvetica', 'normal');
-        doc.text('GRUPO INDUSTRIAL EXTINGUE - WORKFLOW OC ERP', pageWidth / 2, 60, { align: 'center' });
+        doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth / 2, 50, { align: 'center' });
         
         // Fecha del reporte
         var fechaActual = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setTextColor(180, 180, 180);
-        doc.text('Generado: ' + fechaActual, pageWidth - margin - 20, 28, { align: 'right' });
+        doc.text('Generado: ' + fechaActual, pageWidth - margin - 20, 22, { align: 'right' });
 
-        y = 100;
+        y = 82;
 
         // ===== SUBTÍTULO CON PERIODO =====
-        doc.setFontSize(12);
-        doc.setTextColor(60, 60, 60);
+        doc.setFontSize(11);
+        doc.setTextColor(40, 40, 40);
         doc.setFont('helvetica', 'bold');
         var fechaInicio = document.getElementById('cxpFechaInicio').value;
         var fechaFin = document.getElementById('cxpFechaFin').value;
-        doc.text('Periodo: ' + (fechaInicio || 'N/A') + '  —  ' + (fechaFin || 'N/A'), margin, y);
-        y += 20;
+        var empresaFiltro = document.getElementById('cxpFiltroEmpresa').value || 'Todas';
+        doc.text('Empresa: ' + empresaFiltro + '  |  Periodo: ' + (fechaInicio || 'N/A') + '  —  ' + (fechaFin || 'N/A'), margin, y);
+        y += 18;
 
         // Línea separadora
         doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.8);
+        doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 15;
+        y += 14;
 
         // ===== RESUMEN FINANCIERO =====
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
@@ -3823,53 +4175,53 @@
         var totalGeneral = totalPagado + totalPendiente + totalVencido;
         var totalOC = ocFiltradas.length;
 
-        // Tarjetas de resumen
-        var cardWidth = (pageWidth - 2 * margin) / 4 - 10;
+        // Tarjetas de resumen - usando solo negro
+        var cardWidth = (pageWidth - 2 * margin) / 4 - 8;
         var cardX = margin;
         var cardY = y;
 
-        function dibujarTarjetaResumen(x, y, w, titulo, valor, color, subtexto) {
-          var radius = 6;
-          doc.setFillColor(250, 250, 252);
-          doc.roundedRect(x, y, w, 55, radius, radius, 'F');
+        function dibujarTarjetaResumen(x, y, w, titulo, valor, subtexto) {
+          var radius = 4;
+          doc.setFillColor(248, 248, 250);
+          doc.roundedRect(x, y, w, 44, radius, radius, 'F');
           doc.setDrawColor(220, 220, 230);
-          doc.setLineWidth(0.5);
-          doc.roundedRect(x, y, w, 55, radius, radius, 'S');
+          doc.setLineWidth(0.3);
+          doc.roundedRect(x, y, w, 44, radius, radius, 'S');
           
-          doc.setFontSize(8);
+          doc.setFontSize(7);
           doc.setTextColor(100, 100, 110);
           doc.setFont('helvetica', 'normal');
-          doc.text(titulo, x + w/2, y + 14, { align: 'center' });
+          doc.text(titulo, x + w/2, y + 12, { align: 'center' });
           
-          doc.setFontSize(16);
-          doc.setTextColor(color);
+          doc.setFontSize(14);
+          doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(valor, x + w/2, y + 34, { align: 'center' });
+          doc.text(valor, x + w/2, y + 30, { align: 'center' });
           
           if (subtexto) {
-            doc.setFontSize(7);
+            doc.setFontSize(6);
             doc.setTextColor(150, 150, 160);
             doc.setFont('helvetica', 'normal');
-            doc.text(subtexto, x + w/2, y + 48, { align: 'center' });
+            doc.text(subtexto, x + w/2, y + 40, { align: 'center' });
           }
         }
 
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '✅ Pagado', formatoMoneda(totalPagado, 'MXN'), '#16a34a');
-        cardX += cardWidth + 12;
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '⏳ Pendiente', formatoMoneda(totalPendiente, 'MXN'), '#f59e0b');
-        cardX += cardWidth + 12;
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '🔴 Vencido', formatoMoneda(totalVencido, 'MXN'), '#dc2626');
-        cardX += cardWidth + 12;
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '📄 Total OC', String(totalOC), '#1e293b');
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '✅ Pagado', formatoMoneda(totalPagado, 'MXN'), '');
+        cardX += cardWidth + 10;
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '⏳ Pendiente', formatoMoneda(totalPendiente, 'MXN'), '');
+        cardX += cardWidth + 10;
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '🔴 Vencido', formatoMoneda(totalVencido, 'MXN'), '');
+        cardX += cardWidth + 10;
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '📄 Total OC', String(totalOC), '');
         
-        y += 75;
+        y += 62;
 
         // ===== TABLA DE PROYECTOS =====
-        if (proys.length > 0) {
-          doc.setFontSize(13);
+        if (incluirProyectos && proys.length > 0) {
+          doc.setFontSize(12);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
-          doc.text('📋 DETALLE POR PROYECTO', margin, y);
+          doc.text('DETALLE POR PROYECTO', margin, y);
           y += 10;
 
           var headers = ['Empresa', 'Departamento', 'Proyecto', 'Cliente', 'Presupuesto', 'Pagado', 'Pendiente', 'Vencido', 'Total Gastado', '% Uso'];
@@ -3889,8 +4241,6 @@
             var totalGastado = pagado + pendiente + vencido;
             var porcentaje = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
             
-            var colorPorcentaje = porcentaje > 80 ? '#dc2626' : (porcentaje > 60 ? '#f59e0b' : '#16a34a');
-            
             return [
               p.empresa,
               p.departamento,
@@ -3901,88 +4251,7 @@
               formatoMoneda(pendiente, 'MXN'),
               formatoMoneda(vencido, 'MXN'),
               formatoMoneda(totalGastado, 'MXN'),
-              { content: porcentaje.toFixed(1) + '%', styles: { textColor: colorPorcentaje, fontStyle: 'bold' } }
-            ];
-          });
-
-          doc.autoTable({
-            head: [headers],
-            body: rows,
-            startY: y,
-            margin: { left: margin, right: margin },
-            styles: {
-              fontSize: 7,
-              cellPadding: 4,
-              font: 'helvetica',
-              lineColor: [230, 230, 240],
-              lineWidth: 0.2
-            },
-            headStyles: {
-              fillColor: [11, 26, 51],
-              textColor: [255, 255, 255],
-              fontSize: 7,
-              font: 'helvetica',
-              fontStyle: 'bold',
-              halign: 'center'
-            },
-            columnStyles: {
-              0: { cellWidth: 60 },
-              1: { cellWidth: 55 },
-              2: { cellWidth: 80 },
-              3: { cellWidth: 65 },
-              4: { cellWidth: 55, halign: 'right' },
-              5: { cellWidth: 50, halign: 'right' },
-              6: { cellWidth: 50, halign: 'right' },
-              7: { cellWidth: 50, halign: 'right' },
-              8: { cellWidth: 55, halign: 'right' },
-              9: { cellWidth: 45, halign: 'center' }
-            },
-            didDrawPage: function(data) {
-              y = data.cursor.y + 15;
-            }
-          });
-        }
-
-        // ===== TABLA DE ÓRDENES DE COMPRA =====
-        if (ocFiltradas.length > 0) {
-          doc.setFontSize(13);
-          doc.setTextColor(11, 26, 51);
-          doc.setFont('helvetica', 'bold');
-          doc.text('📄 ÓRDENES DE COMPRA', margin, y);
-          y += 10;
-
-          var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Eq. MXN', 'F. Pago', 'Estado'];
-          var rows = ocFiltradas.slice().reverse().map(function(o) {
-            var estadoLabel = o.estado;
-            var colorEstado = '#64748b';
-            if (o.estadopago === 'PAGADA') {
-              estadoLabel = 'PAGADA';
-              colorEstado = '#16a34a';
-            } else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
-              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              var ahora = new Date();
-              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-              if (diffDias > 1) {
-                estadoLabel = 'VENCIDA';
-                colorEstado = '#dc2626';
-              } else {
-                estadoLabel = 'PENDIENTE';
-                colorEstado = '#f59e0b';
-              }
-            } else if (o.estado === 'CONCLUIDA') {
-              estadoLabel = 'CONCLUIDA';
-              colorEstado = '#16a34a';
-            }
-            
-            return [
-              o.codigo,
-              o.proyecto,
-              o.proveedor,
-              o.moneda,
-              formatoMoneda(o.montototal, o.moneda),
-              formatoMoneda(o.montomxn || 0, 'MXN'),
-              new Date(o.fechapago).toLocaleDateString(),
-              { content: estadoLabel, styles: { textColor: colorEstado, fontStyle: 'bold' } }
+              { content: porcentaje.toFixed(1) + '%', styles: { fontStyle: 'bold' } }
             ];
           });
 
@@ -3995,11 +4264,12 @@
               fontSize: 6.5,
               cellPadding: 3,
               font: 'helvetica',
-              lineColor: [230, 230, 240],
-              lineWidth: 0.2
+              lineColor: [220, 220, 230],
+              lineWidth: 0.2,
+              textColor: [0, 0, 0]
             },
             headStyles: {
-              fillColor: [30, 40, 60],
+              fillColor: [11, 26, 51],
               textColor: [255, 255, 255],
               fontSize: 6.5,
               font: 'helvetica',
@@ -4007,40 +4277,109 @@
               halign: 'center'
             },
             columnStyles: {
-              0: { cellWidth: 70 },
-              1: { cellWidth: 70 },
-              2: { cellWidth: 80 },
-              3: { cellWidth: 35, halign: 'center' },
+              0: { cellWidth: 55 },
+              1: { cellWidth: 50 },
+              2: { cellWidth: 75 },
+              3: { cellWidth: 60 },
               4: { cellWidth: 50, halign: 'right' },
-              5: { cellWidth: 50, halign: 'right' },
-              6: { cellWidth: 50, halign: 'center' },
-              7: { cellWidth: 55, halign: 'center' }
+              5: { cellWidth: 48, halign: 'right' },
+              6: { cellWidth: 48, halign: 'right' },
+              7: { cellWidth: 48, halign: 'right' },
+              8: { cellWidth: 50, halign: 'right' },
+              9: { cellWidth: 40, halign: 'center' }
             },
             didDrawPage: function(data) {
-              y = data.cursor.y + 15;
+              y = data.cursor.y + 12;
             }
           });
         }
 
-        // ===== FOOTER CORPORATIVO =====
-        var footerY = pageHeight - 30;
+        // ===== TABLA DE ÓRDENES DE COMPRA =====
+        if (incluirOC && ocFiltradas.length > 0) {
+          doc.setFontSize(12);
+          doc.setTextColor(11, 26, 51);
+          doc.setFont('helvetica', 'bold');
+          doc.text('ÓRDENES DE COMPRA', margin, y);
+          y += 10;
+
+          var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Eq. MXN', 'F. Pago', 'Estado'];
+          var rows = ocFiltradas.slice().reverse().map(function(o) {
+            var estadoLabel = o.estado;
+            if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
+            else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
+              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              var ahora = new Date();
+              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              estadoLabel = diffDias > 1 ? 'VENCIDA' : 'PENDIENTE';
+            } else if (o.estado === 'CONCLUIDA') estadoLabel = 'CONCLUIDA';
+            return [
+              o.codigo,
+              o.proyecto,
+              o.proveedor,
+              o.moneda,
+              formatoMoneda(o.montototal, o.moneda),
+              formatoMoneda(o.montomxn || 0, 'MXN'),
+              new Date(o.fechapago).toLocaleDateString(),
+              { content: estadoLabel, styles: { fontStyle: 'bold' } }
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: y,
+            margin: { left: margin, right: margin },
+            styles: {
+              fontSize: 6,
+              cellPadding: 2.5,
+              font: 'helvetica',
+              lineColor: [220, 220, 230],
+              lineWidth: 0.2,
+              textColor: [0, 0, 0]
+            },
+            headStyles: {
+              fillColor: [30, 40, 60],
+              textColor: [255, 255, 255],
+              fontSize: 6,
+              font: 'helvetica',
+              fontStyle: 'bold',
+              halign: 'center'
+            },
+            columnStyles: {
+              0: { cellWidth: 65 },
+              1: { cellWidth: 65 },
+              2: { cellWidth: 75 },
+              3: { cellWidth: 30, halign: 'center' },
+              4: { cellWidth: 48, halign: 'right' },
+              5: { cellWidth: 48, halign: 'right' },
+              6: { cellWidth: 45, halign: 'center' },
+              7: { cellWidth: 50, halign: 'center' }
+            },
+            didDrawPage: function(data) {
+              y = data.cursor.y + 12;
+            }
+          });
+        }
+
+        // ===== FOOTER =====
+        var footerY = pageHeight - 28;
         doc.setDrawColor(200, 200, 210);
-        doc.setLineWidth(0.5);
-        doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
+        doc.setLineWidth(0.3);
+        doc.line(margin, footerY - 8, pageWidth - margin, footerY - 8);
         
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setTextColor(120, 120, 130);
         doc.setFont('helvetica', 'normal');
-        doc.text('GRUPO INDUSTRIAL EXTINGUE - Workflow OC ERP', pageWidth / 2, footerY + 6, { align: 'center' });
-        doc.text('Este reporte es confidencial y de uso exclusivo interno', pageWidth / 2, footerY + 18, { align: 'center' });
+        doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth / 2, footerY + 4, { align: 'center' });
+        doc.text('Reporte confidencial - Uso interno exclusivo', pageWidth / 2, footerY + 14, { align: 'center' });
         
         // Número de página
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         doc.setTextColor(150, 150, 160);
         var pageNum = doc.internal.getNumberOfPages();
         for (var i = 1; i <= pageNum; i++) {
           doc.setPage(i);
-          doc.text('Página ' + i + ' de ' + pageNum, pageWidth - margin, footerY + 6, { align: 'right' });
+          doc.text('Página ' + i + ' de ' + pageNum, pageWidth - margin, footerY + 4, { align: 'right' });
         }
 
         // Guardar referencia
@@ -4072,15 +4411,31 @@
       // ============================================================
       window.imprimirReporteCXP = function() {
         if (cxpReportePDF) {
-          var fecha = new Date().toISOString().split('T')[0];
-          cxpReportePDF.save('Reporte_CXP_' + fecha + '.pdf');
+          var fecha = new Date();
+          var anio = String(fecha.getFullYear()).slice(2);
+          var mes = String(fecha.getMonth() + 1).padStart(2, '0');
+          var dia = String(fecha.getDate()).padStart(2, '0');
+          var fechaStr = anio + mes + dia;
+          var empresa = document.getElementById('cxpFiltroEmpresa').value || 'TODAS';
+          var depto = document.getElementById('cxpFiltroDepto').value || 'TODOS';
+          var usuario = actual ? actual.u : 'SISTEMA';
+          var nombreArchivo = empresa + '-CXP-' + depto + '-' + fechaStr + '-' + usuario;
+          cxpReportePDF.save(nombreArchivo + '.pdf');
           window.cerrarPreviewCXP();
         } else {
           window.previsualizarReporteCXP();
           setTimeout(function() {
             if (cxpReportePDF) {
-              var fecha = new Date().toISOString().split('T')[0];
-              cxpReportePDF.save('Reporte_CXP_' + fecha + '.pdf');
+              var fecha = new Date();
+              var anio = String(fecha.getFullYear()).slice(2);
+              var mes = String(fecha.getMonth() + 1).padStart(2, '0');
+              var dia = String(fecha.getDate()).padStart(2, '0');
+              var fechaStr = anio + mes + dia;
+              var empresa = document.getElementById('cxpFiltroEmpresa').value || 'TODAS';
+              var depto = document.getElementById('cxpFiltroDepto').value || 'TODOS';
+              var usuario = actual ? actual.u : 'SISTEMA';
+              var nombreArchivo = empresa + '-CXP-' + depto + '-' + fechaStr + '-' + usuario;
+              cxpReportePDF.save(nombreArchivo + '.pdf');
               window.cerrarPreviewCXP();
             }
           }, 1000);
