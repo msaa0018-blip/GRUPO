@@ -823,7 +823,7 @@
   .utilidad-media { background: #fef9c3; color: #854d0e; }
   .utilidad-baja { background: #fee2e2; color: #991b1b; }
 
-  /* Estilos para impresión de CXP - Columnas más compactas */
+  /* Estilos para impresión de CXP - Columnas compactas */
   @media print {
     #cxpTablaOC th,
     #cxpTablaOC td {
@@ -1006,6 +1006,38 @@
 
   .productos-tabla td:nth-child(5) select.udm { min-width: 100px; width: 100px; }
   .productos-tabla td:nth-child(9) input.importe { min-width: 150px; width: 150px; }
+
+  /* Estilos corporativos para el reporte CXP */
+  .cxp-reporte-header {
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 3px solid var(--primary);
+    margin-bottom: 15px;
+  }
+  .cxp-reporte-header h1 {
+    color: var(--primary);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin: 0;
+  }
+  .cxp-reporte-header .subtitle {
+    color: var(--gray-500);
+    font-size: 12px;
+    font-weight: 400;
+  }
+  .cxp-reporte-footer {
+    text-align: center;
+    padding: 10px 0;
+    border-top: 2px solid var(--gray-200);
+    margin-top: 15px;
+    font-size: 9px;
+    color: var(--gray-500);
+  }
+  .cxp-reporte-footer .empresa-nombre {
+    font-weight: 600;
+    color: var(--primary);
+  }
 </style>
 </head>
 <body>
@@ -1211,7 +1243,7 @@
         <!-- Resumen de Totales -->
         <div id="cxpResumen" class="cxp-resumen"></div>
 
-        <!-- 📋 TABLA DE PROYECTOS (AHORA PRIMERO) -->
+        <!-- 📋 TABLA DE PROYECTOS -->
         <h3>📋 Detalle por Proyecto</h3>
         <div class="table-wrapper">
           <table id="cxpTablaProyectos">
@@ -1352,11 +1384,10 @@
       'use strict';
 
       // ============================================================
-      // CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
+      // CONFIGURACIÓN
       // ============================================================
       var TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
       var TELEGRAM_CHAT_ID = '5425017187';
-      // ============================================================
 
       var SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
       var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
@@ -1378,64 +1409,6 @@
       var cxpReporteData = null;
 
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
-
-      // ============================================================
-      // FUNCIONES DE NOTIFICACIÓN TELEGRAM
-      // ============================================================
-      async function enviarNotificacionTelegram(mensaje) {
-        try {
-          console.log('📤 Intentando enviar notificación a Telegram...');
-          if (!mensaje || mensaje.trim() === '') {
-            console.error('❌ Mensaje vacío, no se enviará.');
-            return false;
-          }
-          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
-          var payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML', disable_web_page_preview: true };
-          var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          var data = await response.json();
-          console.log('📨 Respuesta de Telegram:', data);
-          if (data.ok) { console.log('✅ Notificación enviada a Telegram'); return true; }
-          else { console.error('❌ Error al enviar notificación:', data.description); return false; }
-        } catch (error) { console.error('❌ Error al enviar notificación:', error); return false; }
-      }
-
-      function formatearMensajeOC(datos, proyecto, ocId) {
-        var gastado = gastoProyectoMoneda(proyecto.nombre);
-        var porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
-        var excedente = gastado - proyecto.limite;
-        var urlBase = window.location.origin + window.location.pathname;
-        var linkOC = urlBase + '?oc=' + ocId;
-
-        var mensaje = '<b>⚠️ OC QUE SUPERA EL 60% - REQUIERE AUTORIZACIÓN</b>\n\n';
-        mensaje += '<b>Código:</b> ' + (datos.codigo || 'Generando...') + '\n';
-        mensaje += '<b>Proyecto:</b> ' + (datos.proyectonombre || datos.proyecto) + '\n';
-        mensaje += '<b>Empresa:</b> ' + datos.empresa + '\n';
-        mensaje += '<b>Departamento:</b> ' + datos.departamento + '\n';
-        mensaje += '<b>Cliente:</b> ' + datos.cliente + '\n';
-        mensaje += '<b>Proveedor:</b> ' + datos.proveedor + '\n';
-        mensaje += '<b>RFC:</b> ' + datos.rfc + '\n';
-        mensaje += '<b>Responsable:</b> ' + datos.responsable + '\n';
-        mensaje += '<b>Elaborador:</b> ' + datos.elaborador + '\n';
-        mensaje += '<b>Moneda:</b> ' + datos.moneda + '\n';
-        mensaje += '<b>Monto Total:</b> ' + formatoMoneda(datos.montototal, datos.moneda) + '\n';
-        mensaje += '<b>Equivalente MXN:</b> ' + formatoMoneda(datos.montomxn, 'MXN') + '\n';
-        mensaje += '<b>Fecha Pago:</b> ' + new Date(datos.fechapago).toLocaleDateString('es-MX') + '\n';
-        mensaje += '<b>Fecha Entrega:</b> ' + new Date(datos.fechaentrega).toLocaleDateString('es-MX') + '\n\n';
-        mensaje += '<b>Presupuesto:</b> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
-        mensaje += '<b>Límite 60%:</b> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n';
-        mensaje += '<b>Pagado:</b> ' + formatoMoneda(gastado, proyecto.moneda) + '\n';
-        mensaje += '<b>Excedente:</b> ' + formatoMoneda(excedente, proyecto.moneda) + ' (' + porcentaje.toFixed(2) + '%)\n\n';
-        mensaje += '<b>Productos:</b>\n';
-        if (datos.productos && datos.productos.length > 0) {
-          datos.productos.forEach(function(p, i) {
-            mensaje += '  ' + (i + 1) + '. ' + p.descripcion + ' - ' + p.cantidad + ' ' + (p.udm || 'PZA') + ' x ' + formatoMoneda(p.precioUnitario, datos.moneda) + ' = ' + formatoMoneda(p.importe, datos.moneda) + '\n';
-          });
-        } else {
-          mensaje += '  No hay productos registrados\n';
-        }
-        mensaje += '\n🔗 <a href="' + linkOC + '">👉 Haz clic aquí para autorizar o cancelar la OC</a>';
-        return mensaje;
-      }
 
       // ============================================================
       // FUNCIONES DE UTILIDAD
@@ -2103,7 +2076,7 @@
       window.salir = function() { location.reload(); };
 
       // ============================================================
-      // FUNCIONES DE CREACIÓN Y GESTIÓN
+      // FUNCIONES DE CREACIÓN Y GESTIÓN (RESUMIDAS)
       // ============================================================
       window.crearProyecto = async function() {
         var empresa, departamento;
@@ -2375,7 +2348,7 @@
       }
 
       // ============================================================
-      // GENERAR PDF
+      // GENERAR PDF PARA OC
       // ============================================================
       async function generarPDFParaPreview(datos, ocExistente) {
         ocExistente = ocExistente || null;
@@ -2642,7 +2615,7 @@
       }
 
       // ============================================================
-      // FUNCIONES DE VISUALIZACIÓN
+      // FUNCIONES DE VISUALIZACIÓN OC
       // ============================================================
       window.visualizarOC = async function(index) {
         var oc = ordenes[index];
@@ -2843,9 +2816,6 @@
         }
       };
 
-      // ============================================================
-      // IMPRIMIR OC
-      // ============================================================
       window.imprimirOC = async function(index) {
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
@@ -2884,7 +2854,6 @@
       // ============================================================
       // APROBACIONES Y AUTORIZACIONES
       // ============================================================
-
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
@@ -3564,17 +3533,15 @@
       }
 
       // ============================================================
-      // RENDER CXP - Tabla de Proyectos primero
+      // RENDER CXP
       // ============================================================
       window.renderCXP = function() {
         var datos = obtenerDatosCXP();
         var proys = datos.proyectos;
         var ocFiltradas = datos.oc;
 
-        // Ocultar dashboard circular por defecto
         document.getElementById('cxpDashboardCircular').style.display = 'none';
 
-        // Resumen de totales
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
         var totalPagadoUSD = 0, totalPendienteUSD = 0, totalVencidoUSD = 0;
 
@@ -3615,7 +3582,6 @@
           '</div>' +
           '<div class="cxp-tarjeta"><div class="numero">' + ocFiltradas.length + '</div><div class="etiqueta">📄 Total OC</div></div>';
 
-        // TABLA DE PROYECTOS (PRIMERO)
         var tbodyProyectos = document.getElementById('cxpCuerpoProyectos');
         tbodyProyectos.innerHTML = '';
 
@@ -3655,7 +3621,6 @@
           });
         }
 
-        // TABLA DE ÓRDENES DE COMPRA
         var tbodyOC = document.getElementById('cxpCuerpoOC');
         tbodyOC.innerHTML = '';
 
@@ -3784,7 +3749,7 @@
       };
 
       // ============================================================
-      // PREVISUALIZACIÓN DE REPORTE CXP
+      // PREVISUALIZACIÓN DE REPORTE CXP - FORMATO HORIZONTAL CORPORATIVO
       // ============================================================
       window.previsualizarReporteCXP = function() {
         var datos = obtenerDatosCXP();
@@ -3792,24 +3757,52 @@
         var ocFiltradas = datos.oc;
         
         var { jsPDF } = window.jspdf;
-        var doc = new jsPDF('p', 'pt', 'a4');
+        // Usar orientación horizontal (landscape)
+        var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
+        var pageHeight = doc.internal.pageSize.getHeight();
         var margin = 40;
         var y = margin;
 
-        doc.setFontSize(18);
-        doc.setTextColor(11, 26, 51);
+        // ===== HEADER CORPORATIVO =====
+        // Logo y título
+        doc.setFillColor(11, 26, 51);
+        doc.rect(0, 0, pageWidth, 85, 'F');
+        
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.text('REPORTE DE CUENTAS POR PAGAR (CXP)', pageWidth / 2, y, { align: 'center' });
-        y += 20;
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
+        doc.text('REPORTE DE CUENTAS POR PAGAR (CXP)', pageWidth / 2, 40, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(200, 200, 200);
         doc.setFont('helvetica', 'normal');
+        doc.text('GRUPO INDUSTRIAL EXTINGUE - WORKFLOW OC ERP', pageWidth / 2, 60, { align: 'center' });
+        
+        // Fecha del reporte
+        var fechaActual = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+        doc.setFontSize(9);
+        doc.setTextColor(180, 180, 180);
+        doc.text('Generado: ' + fechaActual, pageWidth - margin - 20, 28, { align: 'right' });
+
+        y = 100;
+
+        // ===== SUBTÍTULO CON PERIODO =====
+        doc.setFontSize(12);
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'bold');
         var fechaInicio = document.getElementById('cxpFechaInicio').value;
         var fechaFin = document.getElementById('cxpFechaFin').value;
-        doc.text('Periodo: ' + (fechaInicio || 'N/A') + ' - ' + (fechaFin || 'N/A'), pageWidth / 2, y, { align: 'center' });
-        y += 25;
+        doc.text('Periodo: ' + (fechaInicio || 'N/A') + '  —  ' + (fechaFin || 'N/A'), margin, y);
+        y += 20;
 
+        // Línea separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.8);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 15;
+
+        // ===== RESUMEN FINANCIERO =====
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
         ocFiltradas.forEach(function(o) {
           var monto = o.montomxn || 0;
@@ -3827,24 +3820,59 @@
           else if (esPendiente) totalPendiente += monto;
         });
 
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('RESUMEN FINANCIERO', margin, y);
-        y += 14;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text('✅ Pagado: ' + formatoMoneda(totalPagado, 'MXN'), margin + 20, y);
-        doc.text('⏳ Pendiente: ' + formatoMoneda(totalPendiente, 'MXN'), margin + 200, y);
-        doc.text('🔴 Vencido: ' + formatoMoneda(totalVencido, 'MXN'), margin + 400, y);
-        y += 25;
+        var totalGeneral = totalPagado + totalPendiente + totalVencido;
+        var totalOC = ocFiltradas.length;
 
-        if (proys.length > 0) {
-          doc.setFontSize(11);
+        // Tarjetas de resumen
+        var cardWidth = (pageWidth - 2 * margin) / 4 - 10;
+        var cardX = margin;
+        var cardY = y;
+
+        function dibujarTarjetaResumen(x, y, w, titulo, valor, color, subtexto) {
+          var radius = 6;
+          doc.setFillColor(250, 250, 252);
+          doc.roundedRect(x, y, w, 55, radius, radius, 'F');
+          doc.setDrawColor(220, 220, 230);
+          doc.setLineWidth(0.5);
+          doc.roundedRect(x, y, w, 55, radius, radius, 'S');
+          
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 110);
+          doc.setFont('helvetica', 'normal');
+          doc.text(titulo, x + w/2, y + 14, { align: 'center' });
+          
+          doc.setFontSize(16);
+          doc.setTextColor(color);
           doc.setFont('helvetica', 'bold');
-          doc.text('PROYECTOS', margin, y);
-          y += 12;
+          doc.text(valor, x + w/2, y + 34, { align: 'center' });
+          
+          if (subtexto) {
+            doc.setFontSize(7);
+            doc.setTextColor(150, 150, 160);
+            doc.setFont('helvetica', 'normal');
+            doc.text(subtexto, x + w/2, y + 48, { align: 'center' });
+          }
+        }
 
-          var headers = ['Empresa', 'Depto', 'Proyecto', 'Pagado', 'Pendiente', 'Vencido', '% Uso'];
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '✅ Pagado', formatoMoneda(totalPagado, 'MXN'), '#16a34a');
+        cardX += cardWidth + 12;
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '⏳ Pendiente', formatoMoneda(totalPendiente, 'MXN'), '#f59e0b');
+        cardX += cardWidth + 12;
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '🔴 Vencido', formatoMoneda(totalVencido, 'MXN'), '#dc2626');
+        cardX += cardWidth + 12;
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, '📄 Total OC', String(totalOC), '#1e293b');
+        
+        y += 75;
+
+        // ===== TABLA DE PROYECTOS =====
+        if (proys.length > 0) {
+          doc.setFontSize(13);
+          doc.setTextColor(11, 26, 51);
+          doc.setFont('helvetica', 'bold');
+          doc.text('📋 DETALLE POR PROYECTO', margin, y);
+          y += 10;
+
+          var headers = ['Empresa', 'Departamento', 'Proyecto', 'Cliente', 'Presupuesto', 'Pagado', 'Pendiente', 'Vencido', 'Total Gastado', '% Uso'];
           var rows = proys.map(function(p) {
             var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
             var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
@@ -3860,59 +3888,166 @@
             });
             var totalGastado = pagado + pendiente + vencido;
             var porcentaje = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
-            return [p.empresa, p.departamento, p.nombre, formatoMoneda(pagado, 'MXN'), formatoMoneda(pendiente, 'MXN'), formatoMoneda(vencido, 'MXN'), porcentaje.toFixed(1) + '%'];
+            
+            var colorPorcentaje = porcentaje > 80 ? '#dc2626' : (porcentaje > 60 ? '#f59e0b' : '#16a34a');
+            
+            return [
+              p.empresa,
+              p.departamento,
+              p.nombre,
+              p.cliente,
+              formatoMoneda(p.presupuesto, p.moneda),
+              formatoMoneda(pagado, 'MXN'),
+              formatoMoneda(pendiente, 'MXN'),
+              formatoMoneda(vencido, 'MXN'),
+              formatoMoneda(totalGastado, 'MXN'),
+              { content: porcentaje.toFixed(1) + '%', styles: { textColor: colorPorcentaje, fontStyle: 'bold' } }
+            ];
           });
 
           doc.autoTable({
-            head: [headers], body: rows, startY: y,
+            head: [headers],
+            body: rows,
+            startY: y,
             margin: { left: margin, right: margin },
-            styles: { fontSize: 8, cellPadding: 2, font: 'helvetica' },
-            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-            columnStyles: { 0: { cellWidth: 70 }, 1: { cellWidth: 50 }, 2: { cellWidth: 90 }, 3: { cellWidth: 55 }, 4: { cellWidth: 55 }, 5: { cellWidth: 55 }, 6: { cellWidth: 40 } }
-          });
-          y = doc.lastAutoTable.finalY + 20;
-        }
-
-        if (ocFiltradas.length > 0) {
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
-          doc.text('ÓRDENES DE COMPRA', margin, y);
-          y += 12;
-
-          var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Eq.MXN', 'F.Pago', 'Estado'];
-          var rows = ocFiltradas.slice().reverse().map(function(o) {
-            var estadoLabel = o.estado;
-            if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
-            else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
-              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              var ahora = new Date();
-              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-              estadoLabel = diffDias > 1 ? 'VENCIDA' : 'PENDIENTE';
-            } else if (o.estado === 'CONCLUIDA') estadoLabel = 'CONCLUIDA';
-            return [o.codigo, o.proyecto, o.proveedor, o.moneda, formatoMoneda(o.montototal, o.moneda), formatoMoneda(o.montomxn || 0, 'MXN'), new Date(o.fechapago).toLocaleDateString(), estadoLabel];
-          });
-
-          doc.autoTable({
-            head: [headers], body: rows, startY: y,
-            margin: { left: margin, right: margin },
-            styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
-            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 7, font: 'helvetica', fontStyle: 'bold' },
-            columnStyles: { 
-              0: { cellWidth: 65 }, 
-              1: { cellWidth: 70 }, 
-              2: { cellWidth: 75 }, 
-              3: { cellWidth: 30 }, 
-              4: { cellWidth: 50 }, 
-              5: { cellWidth: 50 }, 
-              6: { cellWidth: 50 }, 
-              7: { cellWidth: 55 } 
+            styles: {
+              fontSize: 7,
+              cellPadding: 4,
+              font: 'helvetica',
+              lineColor: [230, 230, 240],
+              lineWidth: 0.2
+            },
+            headStyles: {
+              fillColor: [11, 26, 51],
+              textColor: [255, 255, 255],
+              fontSize: 7,
+              font: 'helvetica',
+              fontStyle: 'bold',
+              halign: 'center'
+            },
+            columnStyles: {
+              0: { cellWidth: 60 },
+              1: { cellWidth: 55 },
+              2: { cellWidth: 80 },
+              3: { cellWidth: 65 },
+              4: { cellWidth: 55, halign: 'right' },
+              5: { cellWidth: 50, halign: 'right' },
+              6: { cellWidth: 50, halign: 'right' },
+              7: { cellWidth: 50, halign: 'right' },
+              8: { cellWidth: 55, halign: 'right' },
+              9: { cellWidth: 45, halign: 'center' }
+            },
+            didDrawPage: function(data) {
+              y = data.cursor.y + 15;
             }
           });
         }
 
+        // ===== TABLA DE ÓRDENES DE COMPRA =====
+        if (ocFiltradas.length > 0) {
+          doc.setFontSize(13);
+          doc.setTextColor(11, 26, 51);
+          doc.setFont('helvetica', 'bold');
+          doc.text('📄 ÓRDENES DE COMPRA', margin, y);
+          y += 10;
+
+          var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Eq. MXN', 'F. Pago', 'Estado'];
+          var rows = ocFiltradas.slice().reverse().map(function(o) {
+            var estadoLabel = o.estado;
+            var colorEstado = '#64748b';
+            if (o.estadopago === 'PAGADA') {
+              estadoLabel = 'PAGADA';
+              colorEstado = '#16a34a';
+            } else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
+              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              var ahora = new Date();
+              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              if (diffDias > 1) {
+                estadoLabel = 'VENCIDA';
+                colorEstado = '#dc2626';
+              } else {
+                estadoLabel = 'PENDIENTE';
+                colorEstado = '#f59e0b';
+              }
+            } else if (o.estado === 'CONCLUIDA') {
+              estadoLabel = 'CONCLUIDA';
+              colorEstado = '#16a34a';
+            }
+            
+            return [
+              o.codigo,
+              o.proyecto,
+              o.proveedor,
+              o.moneda,
+              formatoMoneda(o.montototal, o.moneda),
+              formatoMoneda(o.montomxn || 0, 'MXN'),
+              new Date(o.fechapago).toLocaleDateString(),
+              { content: estadoLabel, styles: { textColor: colorEstado, fontStyle: 'bold' } }
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: y,
+            margin: { left: margin, right: margin },
+            styles: {
+              fontSize: 6.5,
+              cellPadding: 3,
+              font: 'helvetica',
+              lineColor: [230, 230, 240],
+              lineWidth: 0.2
+            },
+            headStyles: {
+              fillColor: [30, 40, 60],
+              textColor: [255, 255, 255],
+              fontSize: 6.5,
+              font: 'helvetica',
+              fontStyle: 'bold',
+              halign: 'center'
+            },
+            columnStyles: {
+              0: { cellWidth: 70 },
+              1: { cellWidth: 70 },
+              2: { cellWidth: 80 },
+              3: { cellWidth: 35, halign: 'center' },
+              4: { cellWidth: 50, halign: 'right' },
+              5: { cellWidth: 50, halign: 'right' },
+              6: { cellWidth: 50, halign: 'center' },
+              7: { cellWidth: 55, halign: 'center' }
+            },
+            didDrawPage: function(data) {
+              y = data.cursor.y + 15;
+            }
+          });
+        }
+
+        // ===== FOOTER CORPORATIVO =====
+        var footerY = pageHeight - 30;
+        doc.setDrawColor(200, 200, 210);
+        doc.setLineWidth(0.5);
+        doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 130);
+        doc.setFont('helvetica', 'normal');
+        doc.text('GRUPO INDUSTRIAL EXTINGUE - Workflow OC ERP', pageWidth / 2, footerY + 6, { align: 'center' });
+        doc.text('Este reporte es confidencial y de uso exclusivo interno', pageWidth / 2, footerY + 18, { align: 'center' });
+        
+        // Número de página
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 160);
+        var pageNum = doc.internal.getNumberOfPages();
+        for (var i = 1; i <= pageNum; i++) {
+          doc.setPage(i);
+          doc.text('Página ' + i + ' de ' + pageNum, pageWidth - margin, footerY + 6, { align: 'right' });
+        }
+
+        // Guardar referencia
         cxpReportePDF = doc;
         cxpReporteData = { proys: proys, ocFiltradas: ocFiltradas };
 
+        // Mostrar en modal
         var pdfData = doc.output('datauristring');
         document.getElementById('cxpPreviewFrame').src = pdfData;
         document.getElementById('cxpPreviewModal').classList.add('active');
@@ -3941,127 +4076,14 @@
           cxpReportePDF.save('Reporte_CXP_' + fecha + '.pdf');
           window.cerrarPreviewCXP();
         } else {
-          var datos = obtenerDatosCXP();
-          var { jsPDF } = window.jspdf;
-          var doc = new jsPDF('p', 'pt', 'a4');
-          var pageWidth = doc.internal.pageSize.getWidth();
-          var margin = 40;
-          var y = margin;
-
-          doc.setFontSize(18);
-          doc.setTextColor(11, 26, 51);
-          doc.setFont('helvetica', 'bold');
-          doc.text('REPORTE DE CUENTAS POR PAGAR (CXP)', pageWidth / 2, y, { align: 'center' });
-          y += 20;
-          doc.setFontSize(10);
-          doc.setTextColor(100, 100, 100);
-          doc.setFont('helvetica', 'normal');
-          var fechaInicio = document.getElementById('cxpFechaInicio').value;
-          var fechaFin = document.getElementById('cxpFechaFin').value;
-          doc.text('Periodo: ' + (fechaInicio || 'N/A') + ' - ' + (fechaFin || 'N/A'), pageWidth / 2, y, { align: 'center' });
-          y += 25;
-
-          var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
-          datos.oc.forEach(function(o) {
-            var monto = o.montomxn || 0;
-            var esPagada = o.estadopago === 'PAGADA';
-            var esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
-            var esVencida = false;
-            if (!esPagada && o.estado === 'AUTORIZADA') {
-              var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-              var ahora = new Date();
-              var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-              esVencida = diffDias > 1;
+          window.previsualizarReporteCXP();
+          setTimeout(function() {
+            if (cxpReportePDF) {
+              var fecha = new Date().toISOString().split('T')[0];
+              cxpReportePDF.save('Reporte_CXP_' + fecha + '.pdf');
+              window.cerrarPreviewCXP();
             }
-            if (esPagada) totalPagado += monto;
-            else if (esVencida) totalVencido += monto;
-            else if (esPendiente) totalPendiente += monto;
-          });
-
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
-          doc.text('RESUMEN FINANCIERO', margin, y);
-          y += 14;
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          doc.text('✅ Pagado: ' + formatoMoneda(totalPagado, 'MXN'), margin + 20, y);
-          doc.text('⏳ Pendiente: ' + formatoMoneda(totalPendiente, 'MXN'), margin + 200, y);
-          doc.text('🔴 Vencido: ' + formatoMoneda(totalVencido, 'MXN'), margin + 400, y);
-          y += 25;
-
-          if (datos.proyectos.length > 0) {
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.text('PROYECTOS', margin, y);
-            y += 12;
-
-            var headers = ['Empresa', 'Depto', 'Proyecto', 'Pagado', 'Pendiente', 'Vencido', '% Uso'];
-            var rows = datos.proyectos.map(function(p) {
-              var ocProyecto = datos.oc.filter(function(o) { return o.proyecto === p.nombre; });
-              var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
-              var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
-              var vencido = 0;
-              ocProyecto.forEach(function(o) {
-                if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
-                  var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                  var ahora = new Date();
-                  var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-                  if (diffDias > 1) vencido += (o.montomxn || 0);
-                }
-              });
-              var totalGastado = pagado + pendiente + vencido;
-              var porcentaje = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
-              return [p.empresa, p.departamento, p.nombre, formatoMoneda(pagado, 'MXN'), formatoMoneda(pendiente, 'MXN'), formatoMoneda(vencido, 'MXN'), porcentaje.toFixed(1) + '%'];
-            });
-
-            doc.autoTable({
-              head: [headers], body: rows, startY: y,
-              margin: { left: margin, right: margin },
-              styles: { fontSize: 8, cellPadding: 2, font: 'helvetica' },
-              headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-              columnStyles: { 0: { cellWidth: 70 }, 1: { cellWidth: 50 }, 2: { cellWidth: 90 }, 3: { cellWidth: 55 }, 4: { cellWidth: 55 }, 5: { cellWidth: 55 }, 6: { cellWidth: 40 } }
-            });
-            y = doc.lastAutoTable.finalY + 20;
-          }
-
-          if (datos.oc.length > 0) {
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.text('ÓRDENES DE COMPRA', margin, y);
-            y += 12;
-
-            var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Eq.MXN', 'F.Pago', 'Estado'];
-            var rows = datos.oc.slice().reverse().map(function(o) {
-              var estadoLabel = o.estado;
-              if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
-              else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
-                var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                var ahora = new Date();
-                var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-                estadoLabel = diffDias > 1 ? 'VENCIDA' : 'PENDIENTE';
-              } else if (o.estado === 'CONCLUIDA') estadoLabel = 'CONCLUIDA';
-              return [o.codigo, o.proyecto, o.proveedor, o.moneda, formatoMoneda(o.montototal, o.moneda), formatoMoneda(o.montomxn || 0, 'MXN'), new Date(o.fechapago).toLocaleDateString(), estadoLabel];
-            });
-
-            doc.autoTable({
-              head: [headers], body: rows, startY: y,
-              margin: { left: margin, right: margin },
-              styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
-              headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 7, font: 'helvetica', fontStyle: 'bold' },
-              columnStyles: { 
-                0: { cellWidth: 65 }, 
-                1: { cellWidth: 70 }, 
-                2: { cellWidth: 75 }, 
-                3: { cellWidth: 30 }, 
-                4: { cellWidth: 50 }, 
-                5: { cellWidth: 50 }, 
-                6: { cellWidth: 50 }, 
-                7: { cellWidth: 55 } 
-              }
-            });
-          }
-
-          doc.save('Reporte_CXP_' + new Date().toISOString().split('T')[0] + '.pdf');
+          }, 1000);
         }
       };
 
