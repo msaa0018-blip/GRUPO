@@ -927,7 +927,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v54</span>
+        <span class="sub">Workflow OC ERP v55</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1111,16 +1111,16 @@
           </div>
           
           <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
-          <button class="btn-ranking" onclick="window.mostrarRanking()">🏆 Ranking</button>
           <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
         </div>
 
-        <div id="cxpDashboardCircular" class="cxp-dashboard-circular"></div>
-
+        <!-- Ranking - Justo debajo de Imprimir Reporte -->
         <div id="cxpRankingContainer" class="ranking-container hidden">
           <h3>🏆 Ranking de Proyectos por Utilidad</h3>
           <div id="cxpRankingContent"></div>
         </div>
+
+        <div id="cxpDashboardCircular" class="cxp-dashboard-circular"></div>
 
         <div id="cxpResumen" class="cxp-resumen"></div>
 
@@ -1245,28 +1245,28 @@
       // ============================================================
       // CONFIGURACIÓN DE NOTIFICACIONES TELEGRAM
       // ============================================================
-      const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
-      const TELEGRAM_CHAT_ID = '5425017187';
+      var TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
+      var TELEGRAM_CHAT_ID = '5425017187';
       // ============================================================
 
-      const SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
-      const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
-      const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+      var SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
+      var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
+      var supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-      let usuariosDB = [];
-      let actual = null;
-      let proyectos = [];
-      let ordenes = [];
-      let consecutivoOC = 1;
-      let ocNotificadaId = null;
-      let ocPreviewData = null;
-      let ocPreviewPDF = null;
-      let moduloActual = null;
-      let filtroPendientesActivo = false;
-      let visualizarOCData = null;
-      let visualizarOCPDF = null;
+      var usuariosDB = [];
+      var actual = null;
+      var proyectos = [];
+      var ordenes = [];
+      var consecutivoOC = 1;
+      var ocNotificadaId = null;
+      var ocPreviewData = null;
+      var ocPreviewPDF = null;
+      var moduloActual = null;
+      var filtroPendientesActivo = false;
+      var visualizarOCData = null;
+      var visualizarOCPDF = null;
 
-      const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
+      var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
       // ============================================================
       // FUNCIONES DE NOTIFICACIÓN TELEGRAM
@@ -1278,10 +1278,10 @@
             console.error('❌ Mensaje vacío, no se enviará.');
             return false;
           }
-          const url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
-          const payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML', disable_web_page_preview: true };
-          const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          const data = await response.json();
+          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
+          var payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML', disable_web_page_preview: true };
+          var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          var data = await response.json();
           console.log('📨 Respuesta de Telegram:', data);
           if (data.ok) { console.log('✅ Notificación enviada a Telegram'); return true; }
           else { console.error('❌ Error al enviar notificación:', data.description); return false; }
@@ -3501,7 +3501,10 @@
       }
 
       window.mostrarRanking = function() {
-        var { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        var datos = obtenerDatosCXP();
+        var proys = datos.proyectos;
+        var ocFiltradas = datos.oc;
+        
         var rankingContainer = document.getElementById('cxpRankingContainer');
         var rankingContent = document.getElementById('cxpRankingContent');
         
@@ -3557,10 +3560,13 @@
       };
 
       window.renderCXP = function() {
-        var { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        var datos = obtenerDatosCXP();
+        var proys = datos.proyectos;
+        var ocFiltradas = datos.oc;
 
         renderDashboardCircular(proys, ocFiltradas);
 
+        // Ocultar ranking al aplicar filtros
         document.getElementById('cxpRankingContainer').classList.add('hidden');
 
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
@@ -3655,8 +3661,16 @@
       };
 
       window.verDetalleProyectoCXP = function(nombreProyecto) {
+        // Aplicar filtro de proyecto
         document.getElementById('cxpFiltroProyecto').value = nombreProyecto;
+        // Renderizar CXP con el filtro aplicado
         window.renderCXP();
+        // Mostrar ranking si estaba visible
+        var rankingContainer = document.getElementById('cxpRankingContainer');
+        if (!rankingContainer.classList.contains('hidden')) {
+          window.mostrarRanking();
+        }
+        // Hacer scroll a la tabla de proyectos
         document.getElementById('cxpTablaProyectos').scrollIntoView({ behavior: 'smooth' });
       };
 
@@ -3664,7 +3678,10 @@
       // REPORTE DE CXP
       // ============================================================
       window.imprimirReporteCXP = function() {
-        var { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        var datos = obtenerDatosCXP();
+        var proys = datos.proyectos;
+        var ocFiltradas = datos.oc;
+        
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
