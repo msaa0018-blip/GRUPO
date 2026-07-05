@@ -682,7 +682,6 @@
   .filtros-container .filtro-item select { min-width: 150px; padding: 6px 10px; min-height: 36px; font-size: 13px }
   .mensaje-sin-datos { padding: 20px; text-align: center; color: var(--gray-500); font-size: 14px }
 
-  /* Estilos para CXP */
   .cxp-resumen {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -737,9 +736,6 @@
     min-height: 36px;
   }
 
-  .cxp-tabla-resumen td:first-child { font-weight: 600; }
-
-  /* Dashboard circular para CXP */
   .cxp-dashboard-circular {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -785,17 +781,7 @@
     font-weight: normal;
     color: var(--gray-500);
   }
-  .cxp-dashboard-circular .cxp-donut-card .donut-info {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--gray-600);
-  }
-  .cxp-dashboard-circular .cxp-donut-card .donut-info span {
-    display: inline-block;
-    margin: 0 6px;
-  }
 
-  /* Ranking */
   .ranking-container {
     margin: 16px 0;
     padding: 16px;
@@ -941,12 +927,11 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v52</span>
+        <span class="sub">Workflow OC ERP v53</span>
       </div>
     </div>
     <div class="header-actions">
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">⬅ Volver</button>
-      <button class="btn-visualizar" onclick="window.abrirFirma()" style="font-size:12px;padding:6px 12px;min-height:32px;">✍️ Firma</button>
     </div>
   </header>
 
@@ -1097,7 +1082,6 @@
         <h2>💰 Cuentas por Pagar (CXP)</h2>
         <p class="text-muted" style="margin-bottom:12px;">Análisis de órdenes de compra autorizadas y su estado de pago por empresa, departamento y proyecto.</p>
         
-        <!-- Filtros CXP -->
         <div class="cxp-filtros">
           <select id="cxpFiltroEmpresa">
             <option value="">Todas las empresas</option>
@@ -1117,7 +1101,6 @@
             <option value="CONCLUIDA">Concluidas</option>
           </select>
           
-          <!-- Fechas -->
           <div class="filtro-fecha">
             <label style="font-size:12px;font-weight:500;white-space:nowrap;">Desde:</label>
             <input type="date" id="cxpFechaInicio">
@@ -1132,19 +1115,15 @@
           <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
         </div>
 
-        <!-- Dashboard Circular -->
         <div id="cxpDashboardCircular" class="cxp-dashboard-circular"></div>
 
-        <!-- Ranking -->
         <div id="cxpRankingContainer" class="ranking-container hidden">
           <h3>🏆 Ranking de Proyectos por Utilidad</h3>
           <div id="cxpRankingContent"></div>
         </div>
 
-        <!-- Resumen CXP -->
         <div id="cxpResumen" class="cxp-resumen"></div>
 
-        <!-- Tabla de detalle por proyecto -->
         <h3>📋 Detalle por Proyecto</h3>
         <div class="table-wrapper">
           <table id="cxpTablaProyectos">
@@ -1166,7 +1145,6 @@
           </table>
         </div>
 
-        <!-- Tabla de OC detallada -->
         <h3>📄 Órdenes de Compra</h3>
         <div class="table-wrapper">
           <table id="cxpTablaOC">
@@ -1260,24 +1238,6 @@
     </div>
   </div>
 
-  <!-- Modal Firma Digital -->
-  <div id="firmaModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:none;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;">
-      <h3 style="margin-bottom:16px;">✍️ Registrar Firma Digital</h3>
-      <p class="text-muted" style="margin-bottom:16px;">Dibuja tu firma en el área de abajo o selecciona una imagen.</p>
-      <div style="border:2px dashed var(--gray-300);border-radius:12px;padding:8px;margin-bottom:16px;background:white;touch-action:none;">
-        <canvas id="firmaCanvas" width="400" height="150" style="width:100%;height:150px;border-radius:8px;cursor:crosshair;"></canvas>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-        <button onclick="window.limpiarFirma()" class="warning" style="flex:1;">🗑️ Limpiar</button>
-        <button onclick="window.guardarFirma()" class="success" style="flex:1;">💾 Guardar Firma</button>
-        <button onclick="window.subirImagenFirma()" class="btn-visualizar" style="flex:1;">📁 Subir Imagen</button>
-      </div>
-      <input type="file" id="firmaFileInput" accept="image/*" style="display:none;" onchange="window.procesarImagenFirma(event)">
-      <button onclick="window.cerrarFirma()" class="danger full-width">Cerrar</button>
-    </div>
-  </div>
-
   <script>
     (function() {
       'use strict';
@@ -1305,148 +1265,8 @@
       let filtroPendientesActivo = false;
       let visualizarOCData = null;
       let visualizarOCPDF = null;
-      let firmaUsuario = null;
-      let isDrawing = false;
-      let lastX = 0, lastY = 0;
 
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
-
-      // ============================================================
-      // FUNCIONES DE FIRMA DIGITAL
-      // ============================================================
-      function initFirmaCanvas() {
-        const canvas = document.getElementById('firmaCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        canvas.addEventListener('mousedown', (e) => {
-          isDrawing = true;
-          const rect = canvas.getBoundingClientRect();
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          lastX = (e.clientX - rect.left) * scaleX;
-          lastY = (e.clientY - rect.top) * scaleY;
-        });
-        canvas.addEventListener('mousemove', (e) => {
-          if (!isDrawing) return;
-          const rect = canvas.getBoundingClientRect();
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          const x = (e.clientX - rect.left) * scaleX;
-          const y = (e.clientY - rect.top) * scaleY;
-          ctx.beginPath();
-          ctx.moveTo(lastX, lastY);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-          lastX = x;
-          lastY = y;
-        });
-        canvas.addEventListener('mouseup', () => { isDrawing = false; });
-        canvas.addEventListener('mouseleave', () => { isDrawing = false; });
-
-        canvas.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          isDrawing = true;
-          const rect = canvas.getBoundingClientRect();
-          const touch = e.touches[0];
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          lastX = (touch.clientX - rect.left) * scaleX;
-          lastY = (touch.clientY - rect.top) * scaleY;
-        });
-        canvas.addEventListener('touchmove', (e) => {
-          e.preventDefault();
-          if (!isDrawing) return;
-          const rect = canvas.getBoundingClientRect();
-          const touch = e.touches[0];
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          const x = (touch.clientX - rect.left) * scaleX;
-          const y = (touch.clientY - rect.top) * scaleY;
-          ctx.beginPath();
-          ctx.moveTo(lastX, lastY);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-          lastX = x;
-          lastY = y;
-        });
-        canvas.addEventListener('touchend', () => { isDrawing = false; });
-      }
-
-      window.limpiarFirma = function() {
-        const canvas = document.getElementById('firmaCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      };
-
-      window.guardarFirma = function() {
-        const canvas = document.getElementById('firmaCanvas');
-        if (!canvas) return;
-        const dataUrl = canvas.toDataURL('image/png');
-        if (dataUrl === 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAADICAYAAAD...') {
-          alert('⚠️ Dibuja tu firma primero.');
-          return;
-        }
-        firmaUsuario = dataUrl;
-        document.getElementById('firmaModal').style.display = 'none';
-        alert('✅ Firma guardada correctamente.');
-      };
-
-      window.subirImagenFirma = function() {
-        document.getElementById('firmaFileInput').click();
-      };
-
-      window.procesarImagenFirma = function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = new Image();
-          img.onload = function() {
-            const canvas = document.getElementById('firmaCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const aspectRatio = img.width / img.height;
-            let drawWidth = canvas.width;
-            let drawHeight = canvas.height;
-            if (aspectRatio > 1) {
-              drawHeight = canvas.width / aspectRatio;
-            } else {
-              drawWidth = canvas.height * aspectRatio;
-            }
-            const x = (canvas.width - drawWidth) / 2;
-            const y = (canvas.height - drawHeight) / 2;
-            ctx.drawImage(img, x, y, drawWidth, drawHeight);
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-        document.getElementById('firmaFileInput').value = '';
-      };
-
-      window.abrirFirma = function() {
-        document.getElementById('firmaModal').style.display = 'flex';
-        setTimeout(() => {
-          const canvas = document.getElementById('firmaCanvas');
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = '#1a1a1a';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-          }
-        }, 100);
-      };
-
-      window.cerrarFirma = function() {
-        document.getElementById('firmaModal').style.display = 'none';
-      };
 
       // ============================================================
       // FUNCIONES DE NOTIFICACIÓN TELEGRAM
@@ -1937,7 +1757,10 @@
         const errorDiv = document.getElementById('error');
         const btnLogin = document.getElementById('btnLogin');
 
-        if (!userInput || !passInput) { alert('❌ Campos no encontrados'); return; }
+        if (!userInput || !passInput) { 
+          alert('❌ Campos no encontrados'); 
+          return; 
+        }
 
         const user = userInput.value.trim().toUpperCase();
         const pass = passInput.value.trim();
@@ -1953,6 +1776,9 @@
         errorDiv.classList.add('hidden');
 
         try {
+          // Cargar usuarios primero
+          await cargarUsuarios();
+
           const { data: userData, error: authError } = await supabase
             .from('usuarios')
             .select('*')
@@ -1977,6 +1803,7 @@
             return;
           }
 
+          // Cargar proyectos y órdenes
           const cargaOk = await cargarDatos();
           if (!cargaOk) {
             errorDiv.classList.remove('hidden');
@@ -1986,7 +1813,13 @@
             return;
           }
 
-          actual = { usuario: userData.usuario, u: userData.usuario, password: userData.password, rol: userData.rol, permisos: userData.permisos || [], firma: userData.firma || null };
+          actual = { 
+            usuario: userData.usuario, 
+            u: userData.usuario, 
+            password: userData.password, 
+            rol: userData.rol, 
+            permisos: userData.permisos || []
+          };
 
         } catch (e) {
           console.error('Error inesperado en login:', e);
@@ -2085,11 +1918,9 @@
         const esDirector = actual.rol === 'Director General';
         const esAdmin = actual.rol === 'Administrador';
         const esFinanzas = actual.rol === 'Finanzas';
-        const esContabilidad = actual.rol === 'Contabilidad';
-        const esJefe = actual.rol === 'Jefe Departamento';
 
         document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
-        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector && !esJefe);
+        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
 
         const filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
         const filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
@@ -2438,7 +2269,7 @@
       }
 
       // ============================================================
-      // GENERAR PDF CON FIRMAS
+      // GENERAR PDF
       // ============================================================
       async function generarPDFParaPreview(datos, ocExistente = null) {
         const { jsPDF } = window.jspdf;
@@ -2621,28 +2452,19 @@
         let fechaSolicitante = 'Pendiente';
         let fechaJefe = 'Pendiente';
         let fechaDirector = 'Pendiente';
-        let firmaSolicitante = null;
-        let firmaJefe = null;
-        let firmaDirector = null;
 
         if (ocExistente) {
           if (ocExistente.nombresolicitante) {
             solicitanteNombre = ocExistente.nombresolicitante;
             fechaSolicitante = ocExistente.fechaaprobacionsolicitante ? new Date(ocExistente.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
-            const userSolicitante = usuariosDB.find(u => u.usuario === ocExistente.nombresolicitante);
-            if (userSolicitante && userSolicitante.firma) firmaSolicitante = userSolicitante.firma;
           }
           if (ocExistente.nombrejefe) {
             jefeNombre = ocExistente.nombrejefe;
             fechaJefe = ocExistente.fechaaprobacionjefe ? new Date(ocExistente.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
-            const userJefe = usuariosDB.find(u => u.usuario === ocExistente.nombrejefe);
-            if (userJefe && userJefe.firma) firmaJefe = userJefe.firma;
           }
           if (ocExistente.nombredirector) {
             directorNombre = ocExistente.nombredirector;
             fechaDirector = ocExistente.fechaaprobaciondirector ? new Date(ocExistente.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
-            const userDirector = usuariosDB.find(u => u.usuario === ocExistente.nombredirector);
-            if (userDirector && userDirector.firma) firmaDirector = userDirector.firma;
           }
           if (ocExistente.estado === 'AUTORIZADA' || ocExistente.estado === 'CONCLUIDA') {
             if (ocExistente.fechaaprobacionsolicitante) {
@@ -2659,66 +2481,33 @@
 
         const colWidth = (pageWidth - 2 * margin) / 3;
 
-        async function dibujarAutorizacionConFirma(doc, x, y, nombre, titulo, fecha, firmaDataUrl) {
+        function dibujarAutorizacionPDF(doc, x, y, nombre, titulo, fecha) {
           const lineWidth = colWidth - 20;
-          const centerX = x + (lineWidth / 2);
-          
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
-          doc.text(titulo + ':', centerX, y, { align: 'center' });
-          
-          if (firmaDataUrl && fecha !== 'Pendiente') {
-            try {
-              const img = new Image();
-              img.src = firmaDataUrl;
-              await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve;
-              });
-              const imgWidth = 80;
-              const imgHeight = (img.height / img.width) * imgWidth;
-              const imgX = centerX - (imgWidth / 2);
-              const imgY = y + 10;
-              doc.addImage(firmaDataUrl, 'PNG', imgX, imgY, imgWidth, imgHeight);
-              y += imgHeight + 10;
-            } catch(e) {
-              doc.setFontSize(10);
-              doc.setTextColor(0, 0, 0);
-              doc.setFont('helvetica', 'bold');
-              const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-              doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
-              y += 20;
-            }
-          } else {
-            doc.setFontSize(10);
-            doc.setTextColor(0, 0, 0);
-            doc.setFont('helvetica', 'bold');
-            const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-            doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
-            y += 20;
-          }
-          
-          const lineY = y + 10;
+          doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'bold');
+          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
+          const lineY = y + 14 + 20 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
-          
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
-          doc.text('Fecha: ' + fechaDisplay, centerX, lineY + 10 + 10, { align: 'center' });
-          
-          return y + 20;
+          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
         const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
-        
-        y = await dibujarAutorizacionConFirma(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante, firmaSolicitante);
-        y = await dibujarAutorizacionConFirma(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe, firmaJefe);
-        y = await dibujarAutorizacionConFirma(doc, x3, y, directorNombre, 'Director General', fechaDirector, firmaDirector);
-        y += 20;
+        dibujarAutorizacionPDF(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
+        dibujarAutorizacionPDF(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
+        dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
+        y += 70;
 
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
@@ -2744,7 +2533,7 @@
       }
 
       // ============================================================
-      // FUNCIONES DE VISUALIZACIÓN - CORREGIDAS
+      // FUNCIONES DE VISUALIZACIÓN
       // ============================================================
       window.visualizarOC = async function(index) {
         const oc = ordenes[index];
@@ -2778,11 +2567,9 @@
           visualizarOCPDF = doc;
           visualizarOCData = datosOC;
           
-          // Convertir PDF a URL de objeto para evitar el mensaje de abandono
           const pdfBlob = doc.output('blob');
           const pdfUrl = URL.createObjectURL(pdfBlob);
           
-          // Mostrar el PDF en el iframe usando object URL
           const frame = document.getElementById('visualizarFrame');
           if (frame) {
             frame.src = pdfUrl;
@@ -2798,7 +2585,6 @@
 
       window.cerrarVisualizar = function() {
         document.getElementById('visualizarModal').classList.remove('active');
-        // Liberar la URL del objeto
         const frame = document.getElementById('visualizarFrame');
         if (frame && frame.src) {
           try {
@@ -3001,14 +2787,6 @@
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
         
-        if (!actual.firma) {
-          if (!confirm('⚠️ No tienes una firma digital registrada. ¿Deseas registrarla ahora?')) {
-            return alert('Debes registrar tu firma digital para poder aprobar OC.');
-          }
-          window.abrirFirma();
-          return;
-        }
-        
         const updates = { 
           estado: 'APROBADA_SOLICITANTE', 
           fechaaprobacionsolicitante: new Date().toISOString(), 
@@ -3029,14 +2807,6 @@
         const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-
-        if (!actual.firma) {
-          if (!confirm('⚠️ No tienes una firma digital registrada. ¿Deseas registrarla ahora?')) {
-            return alert('Debes registrar tu firma digital para poder aprobar OC.');
-          }
-          window.abrirFirma();
-          return;
-        }
 
         const gastado = gastoProyectoMoneda(proyecto.nombre);
         let montoEnMonedaProyecto = oc.montomxn || 0;
@@ -3133,14 +2903,6 @@
         const oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
-
-        if (!actual.firma) {
-          if (!confirm('⚠️ No tienes una firma digital registrada. ¿Deseas registrarla ahora?')) {
-            return alert('Debes registrar tu firma digital para poder autorizar OC.');
-          }
-          window.abrirFirma();
-          return;
-        }
 
         const updates = { 
           estado: 'AUTORIZADA', 
@@ -3410,74 +3172,29 @@
         const solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
         const jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
         const directorNombre = oc.nombredirector || getDirector();
-        
-        let firmaSolicitante = null;
-        let firmaJefe = null;
-        let firmaDirector = null;
-        
-        const userSolicitante = usuariosDB.find(u => u.usuario === oc.nombresolicitante);
-        if (userSolicitante && userSolicitante.firma) firmaSolicitante = userSolicitante.firma;
-        
-        const userJefe = usuariosDB.find(u => u.usuario === oc.nombrejefe);
-        if (userJefe && userJefe.firma) firmaJefe = userJefe.firma;
-        
-        const userDirector = usuariosDB.find(u => u.usuario === oc.nombredirector);
-        if (userDirector && userDirector.firma) firmaDirector = userDirector.firma;
 
         const colWidth = (pageWidth - 2 * margin) / 3;
 
-        async function dibujarAutorizacionFirmadaFinal(doc, x, y, nombre, titulo, fecha, firmaDataUrl) {
+        function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
           const lineWidth = colWidth - 20;
-          const centerX = x + (lineWidth / 2);
-          
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
-          doc.text(titulo + ':', centerX, y, { align: 'center' });
-          
-          if (firmaDataUrl && fecha !== 'Pendiente') {
-            try {
-              const img = new Image();
-              img.src = firmaDataUrl;
-              await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve;
-              });
-              const imgWidth = 80;
-              const imgHeight = (img.height / img.width) * imgWidth;
-              const imgX = centerX - (imgWidth / 2);
-              const imgY = y + 10;
-              doc.addImage(firmaDataUrl, 'PNG', imgX, imgY, imgWidth, imgHeight);
-              y += imgHeight + 10;
-            } catch(e) {
-              doc.setFontSize(10);
-              doc.setTextColor(0, 0, 0);
-              doc.setFont('helvetica', 'bold');
-              const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-              doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
-              y += 20;
-            }
-          } else {
-            doc.setFontSize(10);
-            doc.setTextColor(0, 0, 0);
-            doc.setFont('helvetica', 'bold');
-            const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-            doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
-            y += 20;
-          }
-          
-          const lineY = y + 10;
+          doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'bold');
+          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
+          const lineY = y + 14 + 10 + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
-          
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
-          doc.text('Fecha: ' + fechaDisplay, centerX, lineY + 10 + 10, { align: 'center' });
-          
-          return y + 20;
+          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
         const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
@@ -3485,10 +3202,10 @@
         const fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
         const fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
 
-        y = await dibujarAutorizacionFirmadaFinal(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante, firmaSolicitante);
-        y = await dibujarAutorizacionFirmadaFinal(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe, firmaJefe);
-        y = await dibujarAutorizacionFirmadaFinal(doc, x3, y, directorNombre, 'Director General', fechaDirector, firmaDirector);
-        y += 20;
+        dibujarAutorizacionFirmada(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
+        dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
+        dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
+        y += 70;
 
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
@@ -3641,7 +3358,7 @@
       };
 
       // ============================================================
-      // FUNCIONES CXP (Cuentas por Pagar)
+      // FUNCIONES CXP
       // ============================================================
       
       function cargarFiltrosCXP() {
@@ -4478,7 +4195,6 @@
 
       function generarReporteProgramado(tipo) {
         console.log(`📊 Generando reporte programado: ${tipo}`);
-        // Aquí se implementaría la lógica de envío de reportes a jefes de departamento
       }
 
       async function init() {
@@ -4491,7 +4207,6 @@
         document.getElementById('fechaPago').value = fechaHoy;
         document.getElementById('fechaEntrega').value = fechaHoy;
         
-        initFirmaCanvas();
         verificarReportesProgramados();
       }
 
