@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-<title>BETA - Workflow OC ERP</title>
+<title>Workflow OC ERP</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js">
@@ -42,7 +42,9 @@
     --font: Segoe UI, system-ui, -apple-system, sans-serif;
     --orange-gold: #FFC700;
   }
-  body {
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
     font-family: var(--font);
     background: var(--gray-100);
     color: var(--gray-900);
@@ -105,7 +107,8 @@
   .container {
     max-width: 1280px;
     margin: 0 auto;
-    padding: 12px 16px
+    padding: 12px 16px;
+    overflow-x: hidden;
   }
   .card {
     background: white;
@@ -113,7 +116,8 @@
     padding: 16px 18px;
     margin: 12px 0;
     box-shadow: var(--shadow);
-    transition: .2s
+    transition: .2s;
+    overflow-x: auto;
   }
   .card:hover {
     box-shadow: 0 6px 24px rgba(0, 0, 0, .08)
@@ -237,10 +241,17 @@
   button.btn-cxp:hover {
     background: #6d28d9;
   }
+  button.btn-ranking {
+    background: #d97706;
+  }
+  button.btn-ranking:hover {
+    background: #b45309;
+  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    margin: 10px 0
+    margin: 10px 0;
+    width: 100%;
   }
   table {
     width: 100%;
@@ -361,7 +372,7 @@
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
   .productos-tabla input.precio { min-width: 80px }
-  .productos-tabla input.importe { min-width: 130px; background: var(--gray-100); font-weight: bold; font-size: 23px }
+  .productos-tabla input.importe { min-width: 150px; background: var(--gray-100); font-weight: bold; font-size: 23px }
   .productos-tabla select.udm { min-width: 100px; width: 100px; }
   .productos-tabla td:nth-child(9) input.importe { min-width: 150px; width: 150px; }
   .resumen-totales {
@@ -413,8 +424,17 @@
     margin-bottom: 16px;
     font-size: 16px
   }
-  #login { max-width: 460px; margin: 40px auto; text-align: center; padding: 24px }
+  #login { 
+    max-width: 460px; 
+    margin: 60px auto; 
+    text-align: center; 
+    padding: 32px 24px;
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
   #login .flex { justify-content: center }
+  #login h2 { margin-bottom: 20px; }
   #pdfPreviewModal {
     position: fixed;
     top: 0;
@@ -495,12 +515,20 @@
     gap: 8px
   }
   #visualizarModal .modal-header h3 { margin: 0; font-size: 1.1rem }
-  #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
+  #visualizarModal .modal-body {
+    flex: 1;
+    overflow: auto;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   #visualizarModal .modal-body iframe {
     width: 100%;
-    height: 400px;
+    height: 500px;
     border: 1px solid var(--gray-300);
-    border-radius: 8px
+    border-radius: 8px;
+    display: block;
   }
   #visualizarModal .modal-footer {
     padding-top: 12px;
@@ -547,7 +575,6 @@
     align-items: center;
     justify-content: center;
   }
-  #menuPrincipal h2 { color: var(--gray-800); margin-bottom: 30px; font-weight: 300; font-size: 1.5rem }
   .modulos-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -602,6 +629,7 @@
     .modulo-item { width: 60px }
     .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
     .modulo-item .modulo-leyenda { font-size: 11px }
+    #login { margin: 30px 16px; padding: 24px 16px; }
   }
 
   #contenidoApp { display: none !important }
@@ -617,10 +645,17 @@
     cursor: pointer;
     font-size: 13px;
     transition: background 0.2s;
+    margin: 0 auto;
   }
   .btn-volver-menu:hover { background: var(--gray-700) }
 
-  .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+  .header-actions { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 
   .btn-pendientes-pagar {
     background: var(--warning);
@@ -704,72 +739,160 @@
 
   .cxp-tabla-resumen td:first-child { font-weight: 600; }
 
-  .cxp-periodo {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+  /* Dashboard circular para CXP */
+  .cxp-dashboard-circular {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin: 16px 0;
   }
-  .cxp-periodo button {
-    min-height: 32px;
-    padding: 4px 14px;
+  .cxp-dashboard-circular .cxp-donut-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+    text-align: center;
+  }
+  .cxp-dashboard-circular .cxp-donut-card h4 {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--gray-600);
+  }
+  .cxp-dashboard-circular .cxp-donut-card .donut-mini {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .cxp-dashboard-circular .cxp-donut-card .donut-mini svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  .cxp-dashboard-circular .cxp-donut-card .donut-mini .center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .cxp-dashboard-circular .cxp-donut-card .donut-mini .center-text small {
+    display: block;
+    font-size: 10px;
+    font-weight: normal;
+    color: var(--gray-500);
+  }
+  .cxp-dashboard-circular .cxp-donut-card .donut-info {
+    margin-top: 8px;
     font-size: 12px;
-    background: var(--gray-200);
-    color: var(--gray-700);
+    color: var(--gray-600);
   }
-  .cxp-periodo button.active {
-    background: var(--secondary);
-    color: white;
-  }
-  .cxp-periodo button:hover {
-    background: var(--secondary-hover);
-    color: white;
+  .cxp-dashboard-circular .cxp-donut-card .donut-info span {
+    display: inline-block;
+    margin: 0 6px;
   }
 
+  /* Ranking */
+  .ranking-container {
+    margin: 16px 0;
+    padding: 16px;
+    background: var(--gray-50);
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+  }
+  .ranking-container h3 {
+    margin-bottom: 12px;
+    color: var(--gray-800);
+  }
+  .ranking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .ranking-item:last-child { border-bottom: none; }
+  .ranking-item .posicion {
+    font-weight: 700;
+    color: var(--gray-500);
+    min-width: 30px;
+  }
+  .ranking-item .nombre {
+    flex: 1;
+    font-weight: 500;
+  }
+  .ranking-item .monto {
+    font-weight: 600;
+  }
+  .ranking-item .utilidad {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  .utilidad-alta { background: #dcfce7; color: #166534; }
+  .utilidad-media { background: #fef9c3; color: #854d0e; }
+  .utilidad-baja { background: #fee2e2; color: #991b1b; }
+
   @media (max-width: 768px) {
-    .table-wrapper { overflow-x: visible }
-    table, thead, tbody, th, td, tr { display: block }
-    thead tr { position: absolute; top: -9999px; left: -9999px }
-    tr { border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 16px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 12px 16px }
-    tr:hover { background: white }
-    td { border: none; border-bottom: 1px solid var(--gray-100); padding: 8px 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px }
-    td:last-child { border-bottom: none }
-    td::before { content: attr(data-label); font-weight: 600; color: var(--gray-600); font-size: 12px; min-width: 80px; flex: 0 0 auto }
-    td .actions { flex: 1; justify-content: flex-start; gap: 4px }
-    td .actions button { font-size: 11px; padding: 4px 10px; min-height: 28px; min-width: 28px }
-    td .badge { font-size: 11px; padding: 2px 10px }
-    .resumen-totales { font-size: 12px; gap: 8px 16px; padding: 10px 14px }
-    .resumen-totales strong { font-size: 13px }
-    .productos-tabla td::before { min-width: 60px; font-size: 10px }
-    .productos-tabla td { padding: 6px 4px }
-    .productos-tabla input, .productos-tabla textarea, .productos-tabla select { font-size: 12px; padding: 4px 6px; min-height: 32px }
-    .productos-tabla textarea.desc { min-width: 80px; height: 28px }
-    .flex { gap: 8px }
-    .flex>* { min-width: 100% }
-    .fila-cfdi-entrega { flex-direction: column; gap: 6px }
-    .fila-cfdi-entrega>* { min-width: 100% }
-    .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 10px }
-    .modulo-item { width: 60px }
-    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
-    .modulo-item .modulo-leyenda { font-size: 10px }
-    header .logo .company .name { font-size: 14px }
-    header .logo .company .sub { font-size: 8px }
-    header small { font-size: 9px }
-    .btn-volver-menu { font-size: 11px; padding: 4px 10px; min-height: 28px }
-    .card { padding: 12px 14px }
-    .card h2 { font-size: 1.1rem }
-    .card h3, .card h4 { font-size: 1rem }
-    .filtros-container { flex-direction: column; align-items: stretch; gap: 8px }
-    .filtros-container .filtro-item { flex-direction: column; align-items: stretch }
-    .filtros-container .filtro-item label { font-size: 12px }
-    .filtros-container .filtro-item select { min-width: 100%; font-size: 13px; padding: 6px 10px; min-height: 36px }
-    .btn-pendientes-pagar { font-size: 12px; padding: 6px 12px; min-height: 36px }
+    .table-wrapper { overflow-x: auto; }
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { position: absolute; top: -9999px; left: -9999px; }
+    tr { border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 16px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 12px 16px; }
+    tr:hover { background: white; }
+    td { border: none; border-bottom: 1px solid var(--gray-100); padding: 8px 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+    td:last-child { border-bottom: none; }
+    td::before { content: attr(data-label); font-weight: 600; color: var(--gray-600); font-size: 12px; min-width: 80px; flex: 0 0 auto; }
+    td .actions { flex: 1; justify-content: flex-start; gap: 4px; }
+    td .actions button { font-size: 11px; padding: 4px 10px; min-height: 28px; min-width: 28px; }
+    td .badge { font-size: 11px; padding: 2px 10px; }
+    .resumen-totales { font-size: 12px; gap: 8px 16px; padding: 10px 14px; }
+    .resumen-totales strong { font-size: 13px; }
+    .productos-tabla td::before { min-width: 60px; font-size: 10px; }
+    .productos-tabla td { padding: 6px 4px; }
+    .productos-tabla input, .productos-tabla textarea, .productos-tabla select { font-size: 12px; padding: 4px 6px; min-height: 32px; }
+    .productos-tabla textarea.desc { min-width: 80px; height: 28px; }
+    .flex { gap: 8px; }
+    .flex>* { min-width: 100%; }
+    .fila-cfdi-entrega { flex-direction: column; gap: 6px; }
+    .fila-cfdi-entrega>* { min-width: 100%; }
+    .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .modulo-item { width: 60px; }
+    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px; }
+    .modulo-item .modulo-leyenda { font-size: 10px; }
+    header .logo .company .name { font-size: 14px; }
+    header .logo .company .sub { font-size: 8px; }
+    header small { font-size: 9px; }
+    .btn-volver-menu { font-size: 11px; padding: 4px 10px; min-height: 28px; }
+    .card { padding: 12px 14px; overflow-x: auto; }
+    .card h2 { font-size: 1.1rem; }
+    .card h3, .card h4 { font-size: 1rem; }
+    .filtros-container { flex-direction: column; align-items: stretch; gap: 8px; }
+    .filtros-container .filtro-item { flex-direction: column; align-items: stretch; }
+    .filtros-container .filtro-item label { font-size: 12px; }
+    .filtros-container .filtro-item select { min-width: 100%; font-size: 13px; padding: 6px 10px; min-height: 36px; }
+    .btn-pendientes-pagar { font-size: 12px; padding: 6px 12px; min-height: 36px; }
     .cxp-resumen { grid-template-columns: 1fr 1fr; }
     .cxp-filtros { flex-direction: column; align-items: stretch; }
     .cxp-filtros select, .cxp-filtros input { min-width: 100%; }
     .cxp-filtros .filtro-fecha { flex-wrap: wrap; }
     .cxp-filtros .filtro-fecha input[type="date"] { min-width: 100%; width: 100%; }
-    .cxp-periodo { justify-content: center; }
+    .cxp-dashboard-circular { grid-template-columns: 1fr 1fr; }
+    #login { margin: 20px 12px; padding: 20px 16px; }
+    #login h2 { font-size: 1.2rem; }
+    .ranking-item { flex-wrap: wrap; gap: 4px; }
+    #visualizarModal .modal-body iframe { height: 300px; }
+  }
+
+  @media (max-width: 480px) {
+    .cxp-dashboard-circular { grid-template-columns: 1fr; }
+    .modulos-grid { grid-template-columns: repeat(3, 1fr); }
+    .modulo-item { width: 70px; }
+    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px; }
+    #visualizarModal .modal-body iframe { height: 250px; }
   }
 
   .cxp-proyecto-card {
@@ -818,12 +941,12 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v49</span>
+        <span class="sub">Workflow OC ERP v52</span>
       </div>
     </div>
     <div class="header-actions">
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">⬅ Volver</button>
-      <small>BETA · Colores por empresa</small>
+      <button class="btn-visualizar" onclick="window.abrirFirma()" style="font-size:12px;padding:6px 12px;min-height:32px;">✍️ Firma</button>
     </div>
   </header>
 
@@ -844,7 +967,6 @@
       <div style="display:flex; justify-content:flex-end; width:100%; max-width:600px; margin:0 auto 20px auto;">
         <button onclick="window.salir()" class="danger" style="padding:8px 20px; font-size:14px;">🚪 Cerrar sesión</button>
       </div>
-      <h2>🏠 Selecciona un módulo</h2>
       <div class="modulos-grid" id="modulosGrid">
         <div class="modulo-item" data-modulo="oc"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OC</span></div>
         <div class="modulo-item" data-modulo="proyectos"><div class="modulo-cuadro funcional">📊</div><span class="modulo-leyenda">Proyectos</span></div>
@@ -868,10 +990,10 @@
       <div id="panelProyecto" class="card hidden">
         <h2>📁 Crear Proyecto</h2>
         <div class="flex">
-          <select id="empresaSelect" style="min-width:160px;display:none"></select>
-          <input id="empresaInput" placeholder="Empresa" style="display:none">
-          <select id="departamentoSelect" style="min-width:160px;display:none"></select>
-          <input id="departamentoInput" placeholder="Departamento" style="display:none">
+          <select id="empresaSelect" style="min-width:160px;"></select>
+          <input id="empresaInput" placeholder="Empresa" style="display:none;">
+          <select id="departamentoSelect" style="min-width:160px;"></select>
+          <input id="departamentoInput" placeholder="Departamento" style="display:none;">
           <input id="nombreProyecto" placeholder="Proyecto">
           <input id="cliente" placeholder="Cliente">
           <input id="presupuesto" type="number" placeholder="Presupuesto">
@@ -995,14 +1117,6 @@
             <option value="CONCLUIDA">Concluidas</option>
           </select>
           
-          <!-- Periodo -->
-          <div class="cxp-periodo">
-            <button onclick="window.setPeriodoCXP('global')" id="cxpPeriodoGlobal" class="active">Global</button>
-            <button onclick="window.setPeriodoCXP('mensual')" id="cxpPeriodoMensual">Mensual</button>
-            <button onclick="window.setPeriodoCXP('trimestral')" id="cxpPeriodoTrimestral">Trimestral</button>
-            <button onclick="window.setPeriodoCXP('anual')" id="cxpPeriodoAnual">Anual</button>
-          </div>
-          
           <!-- Fechas -->
           <div class="filtro-fecha">
             <label style="font-size:12px;font-weight:500;white-space:nowrap;">Desde:</label>
@@ -1014,7 +1128,17 @@
           </div>
           
           <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
+          <button class="btn-ranking" onclick="window.mostrarRanking()">🏆 Ranking</button>
           <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
+        </div>
+
+        <!-- Dashboard Circular -->
+        <div id="cxpDashboardCircular" class="cxp-dashboard-circular"></div>
+
+        <!-- Ranking -->
+        <div id="cxpRankingContainer" class="ranking-container hidden">
+          <h3>🏆 Ranking de Proyectos por Utilidad</h3>
+          <div id="cxpRankingContent"></div>
         </div>
 
         <!-- Resumen CXP -->
@@ -1126,11 +1250,31 @@
   <div id="visualizarModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Visualizar Orden de Compra</h3><button class="danger" onclick="window.cerrarVisualizar()">✕ Cerrar</button></div>
-      <div class="modal-body"><iframe id="visualizarFrame"></iframe></div>
+      <div class="modal-body">
+        <iframe id="visualizarFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe>
+      </div>
       <div class="modal-footer">
         <button class="danger" onclick="window.cerrarVisualizar()">Cerrar</button>
         <button class="btn-imprimir" onclick="window.imprimirDesdeVisualizar()">🖨️ Imprimir PDF</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Firma Digital -->
+  <div id="firmaModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:none;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;">
+      <h3 style="margin-bottom:16px;">✍️ Registrar Firma Digital</h3>
+      <p class="text-muted" style="margin-bottom:16px;">Dibuja tu firma en el área de abajo o selecciona una imagen.</p>
+      <div style="border:2px dashed var(--gray-300);border-radius:12px;padding:8px;margin-bottom:16px;background:white;touch-action:none;">
+        <canvas id="firmaCanvas" width="400" height="150" style="width:100%;height:150px;border-radius:8px;cursor:crosshair;"></canvas>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+        <button onclick="window.limpiarFirma()" class="warning" style="flex:1;">🗑️ Limpiar</button>
+        <button onclick="window.guardarFirma()" class="success" style="flex:1;">💾 Guardar Firma</button>
+        <button onclick="window.subirImagenFirma()" class="btn-visualizar" style="flex:1;">📁 Subir Imagen</button>
+      </div>
+      <input type="file" id="firmaFileInput" accept="image/*" style="display:none;" onchange="window.procesarImagenFirma(event)">
+      <button onclick="window.cerrarFirma()" class="danger full-width">Cerrar</button>
     </div>
   </div>
 
@@ -1161,9 +1305,148 @@
       let filtroPendientesActivo = false;
       let visualizarOCData = null;
       let visualizarOCPDF = null;
-      let cxpFiltros = { empresa: '', depto: '', proyecto: '', estado: '', periodo: 'global', fechaInicio: null, fechaFin: null };
+      let firmaUsuario = null;
+      let isDrawing = false;
+      let lastX = 0, lastY = 0;
 
       const UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
+
+      // ============================================================
+      // FUNCIONES DE FIRMA DIGITAL
+      // ============================================================
+      function initFirmaCanvas() {
+        const canvas = document.getElementById('firmaCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        canvas.addEventListener('mousedown', (e) => {
+          isDrawing = true;
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          lastX = (e.clientX - rect.left) * scaleX;
+          lastY = (e.clientY - rect.top) * scaleY;
+        });
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isDrawing) return;
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const x = (e.clientX - rect.left) * scaleX;
+          const y = (e.clientY - rect.top) * scaleY;
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          lastX = x;
+          lastY = y;
+        });
+        canvas.addEventListener('mouseup', () => { isDrawing = false; });
+        canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          isDrawing = true;
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          lastX = (touch.clientX - rect.left) * scaleX;
+          lastY = (touch.clientY - rect.top) * scaleY;
+        });
+        canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          if (!isDrawing) return;
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const x = (touch.clientX - rect.left) * scaleX;
+          const y = (touch.clientY - rect.top) * scaleY;
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          lastX = x;
+          lastY = y;
+        });
+        canvas.addEventListener('touchend', () => { isDrawing = false; });
+      }
+
+      window.limpiarFirma = function() {
+        const canvas = document.getElementById('firmaCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      };
+
+      window.guardarFirma = function() {
+        const canvas = document.getElementById('firmaCanvas');
+        if (!canvas) return;
+        const dataUrl = canvas.toDataURL('image/png');
+        if (dataUrl === 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAADICAYAAAD...') {
+          alert('⚠️ Dibuja tu firma primero.');
+          return;
+        }
+        firmaUsuario = dataUrl;
+        document.getElementById('firmaModal').style.display = 'none';
+        alert('✅ Firma guardada correctamente.');
+      };
+
+      window.subirImagenFirma = function() {
+        document.getElementById('firmaFileInput').click();
+      };
+
+      window.procesarImagenFirma = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.getElementById('firmaCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const aspectRatio = img.width / img.height;
+            let drawWidth = canvas.width;
+            let drawHeight = canvas.height;
+            if (aspectRatio > 1) {
+              drawHeight = canvas.width / aspectRatio;
+            } else {
+              drawWidth = canvas.height * aspectRatio;
+            }
+            const x = (canvas.width - drawWidth) / 2;
+            const y = (canvas.height - drawHeight) / 2;
+            ctx.drawImage(img, x, y, drawWidth, drawHeight);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        document.getElementById('firmaFileInput').value = '';
+      };
+
+      window.abrirFirma = function() {
+        document.getElementById('firmaModal').style.display = 'flex';
+        setTimeout(() => {
+          const canvas = document.getElementById('firmaCanvas');
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+          }
+        }, 100);
+      };
+
+      window.cerrarFirma = function() {
+        document.getElementById('firmaModal').style.display = 'none';
+      };
 
       // ============================================================
       // FUNCIONES DE NOTIFICACIÓN TELEGRAM
@@ -1420,6 +1703,8 @@
         const panelCXP = document.getElementById('panelCXP');
         const bandejaOCCard = document.getElementById('bandejaOCCard');
         const puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        const puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        const puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].includes(actual.rol));
 
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
@@ -1430,12 +1715,22 @@
           if (puedeCrear) panelOC.classList.remove('hidden');
           bandejaOCCard.classList.remove('hidden');
         } else if (modulo === 'proyectos') {
-          if (puedeCrear) { panelProyecto.classList.remove('hidden'); tablaProyectosCard.classList.remove('hidden'); }
+          if (puedeCrearProyecto) { 
+            panelProyecto.classList.remove('hidden'); 
+            cargarEmpresasDeptosParaProyecto();
+          }
+          tablaProyectosCard.classList.remove('hidden');
           bandejaOCCard.classList.remove('hidden');
         } else if (modulo === 'cxp') {
-          panelCXP.classList.remove('hidden');
-          cargarFiltrosCXP();
-          setTimeout(function() { window.renderCXP(); }, 100);
+          if (puedeVerCXP) {
+            panelCXP.classList.remove('hidden');
+            cargarFiltrosCXP();
+            setTimeout(function() { window.renderCXP(); }, 100);
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Cuentas por Pagar.');
+            window.mostrarMenu();
+            return;
+          }
           bandejaOCCard.classList.add('hidden');
         }
 
@@ -1450,6 +1745,71 @@
           }
         }, 100);
       };
+
+      function cargarEmpresasDeptosParaProyecto() {
+        const empresaSelect = document.getElementById('empresaSelect');
+        const deptoSelect = document.getElementById('departamentoSelect');
+        const empresaInput = document.getElementById('empresaInput');
+        const deptoInput = document.getElementById('departamentoInput');
+        
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
+          empresaSelect.style.display = 'inline-block';
+          empresaInput.style.display = 'none';
+          deptoSelect.style.display = 'inline-block';
+          deptoInput.style.display = 'none';
+          
+          const empresas = [...new Set(proyectos.map(p => p.empresa))];
+          const deptos = [...new Set(proyectos.map(p => p.departamento))];
+          
+          empresaSelect.innerHTML = '<option value="">Seleccionar empresa</option>';
+          empresas.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e;
+            opt.textContent = e;
+            empresaSelect.appendChild(opt);
+          });
+          
+          deptoSelect.innerHTML = '<option value="">Seleccionar departamento</option>';
+          deptos.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            deptoSelect.appendChild(opt);
+          });
+          
+          empresaSelect.disabled = false;
+          deptoSelect.disabled = false;
+        } else {
+          empresaSelect.style.display = 'inline-block';
+          empresaInput.style.display = 'none';
+          deptoSelect.style.display = 'inline-block';
+          deptoInput.style.display = 'none';
+          
+          const opcionesPerm = obtenerOpcionesPermisos(actual);
+          empresaSelect.innerHTML = '';
+          deptoSelect.innerHTML = '';
+          opcionesPerm.forEach((p, idx) => {
+            const optEmp = document.createElement('option');
+            optEmp.value = p.empresa;
+            optEmp.textContent = p.empresa;
+            empresaSelect.appendChild(optEmp);
+            const optDepto = document.createElement('option');
+            optDepto.value = p.depto;
+            optDepto.textContent = p.depto;
+            deptoSelect.appendChild(optDepto);
+          });
+          empresaSelect.onchange = function() {
+            const idx = empresaSelect.selectedIndex;
+            if (deptoSelect.options[idx]) deptoSelect.selectedIndex = idx;
+          };
+          if (opcionesPerm.length > 0) {
+            empresaSelect.selectedIndex = 0;
+            deptoSelect.selectedIndex = 0;
+          }
+          empresaSelect.disabled = (opcionesPerm.length <= 1);
+          deptoSelect.disabled = (opcionesPerm.length <= 1);
+        }
+      }
 
       window.volverAlMenu = function() { window.mostrarMenu(); };
 
@@ -1626,7 +1986,7 @@
             return;
           }
 
-          actual = { usuario: userData.usuario, u: userData.usuario, password: userData.password, rol: userData.rol, permisos: userData.permisos || [] };
+          actual = { usuario: userData.usuario, u: userData.usuario, password: userData.password, rol: userData.rol, permisos: userData.permisos || [], firma: userData.firma || null };
 
         } catch (e) {
           console.error('Error inesperado en login:', e);
@@ -1721,59 +2081,15 @@
           document.getElementById('adminActions').classList.add('hidden');
         }
 
-        const empresaSelect = document.getElementById('empresaSelect');
-        const empresaInput = document.getElementById('empresaInput');
-        const deptoSelect = document.getElementById('departamentoSelect');
-        const deptoInput = document.getElementById('departamentoInput');
-
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
-          empresaSelect.style.display = 'none';
-          empresaInput.style.display = 'inline-block';
-          deptoSelect.style.display = 'none';
-          deptoInput.style.display = 'inline-block';
-          empresaInput.disabled = false;
-          deptoInput.disabled = false;
-          empresaInput.value = '';
-          deptoInput.value = '';
-          empresaInput.placeholder = 'Empresa';
-          deptoInput.placeholder = 'Departamento';
-        } else {
-          empresaSelect.style.display = 'inline-block';
-          empresaInput.style.display = 'none';
-          deptoSelect.style.display = 'inline-block';
-          deptoInput.style.display = 'none';
-          const opcionesPerm = obtenerOpcionesPermisos(actual);
-          empresaSelect.innerHTML = '';
-          deptoSelect.innerHTML = '';
-          opcionesPerm.forEach((p, idx) => {
-            const optEmp = document.createElement('option');
-            optEmp.value = p.empresa;
-            optEmp.textContent = p.empresa;
-            empresaSelect.appendChild(optEmp);
-            const optDepto = document.createElement('option');
-            optDepto.value = p.depto;
-            optDepto.textContent = p.depto;
-            deptoSelect.appendChild(optDepto);
-          });
-          empresaSelect.onchange = function() {
-            const idx = empresaSelect.selectedIndex;
-            if (deptoSelect.options[idx]) deptoSelect.selectedIndex = idx;
-          };
-          if (opcionesPerm.length > 0) {
-            empresaSelect.selectedIndex = 0;
-            deptoSelect.selectedIndex = 0;
-          }
-          empresaSelect.disabled = (opcionesPerm.length <= 1);
-          deptoSelect.disabled = (opcionesPerm.length <= 1);
-        }
-
         const esElaborador = actual.rol === 'Elaborador';
         const esDirector = actual.rol === 'Director General';
         const esAdmin = actual.rol === 'Administrador';
         const esFinanzas = actual.rol === 'Finanzas';
+        const esContabilidad = actual.rol === 'Contabilidad';
+        const esJefe = actual.rol === 'Jefe Departamento';
 
-        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador);
-        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador);
+        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
+        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector && !esJefe);
 
         const filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
         const filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
@@ -1851,8 +2167,12 @@
       window.crearProyecto = async function() {
         let empresa, departamento;
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].includes(actual.rol)) {
-          empresa = document.getElementById('empresaInput').value.trim().toUpperCase();
-          departamento = document.getElementById('departamentoInput').value.trim().toUpperCase();
+          empresa = document.getElementById('empresaSelect').value.toUpperCase();
+          departamento = document.getElementById('departamentoSelect').value.toUpperCase();
+          if (!empresa || !departamento) {
+            document.getElementById('msgProyecto').innerHTML = '<div class="alert">⚠️ Selecciona una empresa y departamento válidos.</div>';
+            return;
+          }
         } else {
           empresa = document.getElementById('empresaSelect').value.toUpperCase();
           departamento = document.getElementById('departamentoSelect').value.toUpperCase();
@@ -2118,7 +2438,7 @@
       }
 
       // ============================================================
-      // GENERAR PDF - MODIFICADO PARA QUITAR (Pendiente) EN AUTORIZACIONES
+      // GENERAR PDF CON FIRMAS
       // ============================================================
       async function generarPDFParaPreview(datos, ocExistente = null) {
         const { jsPDF } = window.jspdf;
@@ -2291,33 +2611,39 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
-        // Obtener nombres y fechas de aprobación
         const solicitante = datos.responsable || 'No definido';
         const jefe = getJefeDepto(datos.empresa, datos.departamento);
         const director = getDirector();
         
-        // Si es una OC existente, usar los nombres y fechas guardados
         let solicitanteNombre = solicitante;
         let jefeNombre = jefe;
         let directorNombre = director;
         let fechaSolicitante = 'Pendiente';
         let fechaJefe = 'Pendiente';
         let fechaDirector = 'Pendiente';
+        let firmaSolicitante = null;
+        let firmaJefe = null;
+        let firmaDirector = null;
 
         if (ocExistente) {
           if (ocExistente.nombresolicitante) {
             solicitanteNombre = ocExistente.nombresolicitante;
             fechaSolicitante = ocExistente.fechaaprobacionsolicitante ? new Date(ocExistente.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
+            const userSolicitante = usuariosDB.find(u => u.usuario === ocExistente.nombresolicitante);
+            if (userSolicitante && userSolicitante.firma) firmaSolicitante = userSolicitante.firma;
           }
           if (ocExistente.nombrejefe) {
             jefeNombre = ocExistente.nombrejefe;
             fechaJefe = ocExistente.fechaaprobacionjefe ? new Date(ocExistente.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
+            const userJefe = usuariosDB.find(u => u.usuario === ocExistente.nombrejefe);
+            if (userJefe && userJefe.firma) firmaJefe = userJefe.firma;
           }
           if (ocExistente.nombredirector) {
             directorNombre = ocExistente.nombredirector;
             fechaDirector = ocExistente.fechaaprobaciondirector ? new Date(ocExistente.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
+            const userDirector = usuariosDB.find(u => u.usuario === ocExistente.nombredirector);
+            if (userDirector && userDirector.firma) firmaDirector = userDirector.firma;
           }
-          // Si está autorizada, mostrar las fechas correspondientes
           if (ocExistente.estado === 'AUTORIZADA' || ocExistente.estado === 'CONCLUIDA') {
             if (ocExistente.fechaaprobacionsolicitante) {
               fechaSolicitante = new Date(ocExistente.fechaaprobacionsolicitante).toLocaleString();
@@ -2333,34 +2659,66 @@
 
         const colWidth = (pageWidth - 2 * margin) / 3;
 
-        function dibujarAutorizacionPDF(doc, x, y, nombre, titulo, fecha) {
+        async function dibujarAutorizacionConFirma(doc, x, y, nombre, titulo, fecha, firmaDataUrl) {
           const lineWidth = colWidth - 20;
+          const centerX = x + (lineWidth / 2);
+          
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
-          doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
-          doc.setFontSize(10);
-          doc.setTextColor(0, 0, 0);
-          doc.setFont('helvetica', 'bold');
-          // Si la fecha es 'Pendiente', mostrar el nombre y opcionalmente (Pendiente)
-          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
-          const lineY = y + 14 + 20 + 10;
+          doc.text(titulo + ':', centerX, y, { align: 'center' });
+          
+          if (firmaDataUrl && fecha !== 'Pendiente') {
+            try {
+              const img = new Image();
+              img.src = firmaDataUrl;
+              await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              });
+              const imgWidth = 80;
+              const imgHeight = (img.height / img.width) * imgWidth;
+              const imgX = centerX - (imgWidth / 2);
+              const imgY = y + 10;
+              doc.addImage(firmaDataUrl, 'PNG', imgX, imgY, imgWidth, imgHeight);
+              y += imgHeight + 10;
+            } catch(e) {
+              doc.setFontSize(10);
+              doc.setTextColor(0, 0, 0);
+              doc.setFont('helvetica', 'bold');
+              const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+              doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
+              y += 20;
+            }
+          } else {
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+            doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
+            y += 20;
+          }
+          
+          const lineY = y + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
+          
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
-          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
+          doc.text('Fecha: ' + fechaDisplay, centerX, lineY + 10 + 10, { align: 'center' });
+          
+          return y + 20;
         }
 
         const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
-        dibujarAutorizacionPDF(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
-        dibujarAutorizacionPDF(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
-        dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
-        y += 70;
+        
+        y = await dibujarAutorizacionConFirma(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante, firmaSolicitante);
+        y = await dibujarAutorizacionConFirma(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe, firmaJefe);
+        y = await dibujarAutorizacionConFirma(doc, x3, y, directorNombre, 'Director General', fechaDirector, firmaDirector);
+        y += 20;
 
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
@@ -2386,7 +2744,7 @@
       }
 
       // ============================================================
-      // FUNCIONES DE VISUALIZACIÓN
+      // FUNCIONES DE VISUALIZACIÓN - CORREGIDAS
       // ============================================================
       window.visualizarOC = async function(index) {
         const oc = ordenes[index];
@@ -2413,14 +2771,24 @@
             productos: productos, cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido', banco: oc.banco || 'No especificado',
             cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
-            swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A'
+            swift: oc.swift || 'N/A', cie: oc.cie || 'N/A', referencia: oc.referencia || 'N/A',
+            codigo: oc.codigo
           };
-          // Pasar la OC existente para mostrar las fechas de aprobación
           const doc = await generarPDFParaPreview(datosOC, oc);
           visualizarOCPDF = doc;
           visualizarOCData = datosOC;
-          const pdfData = doc.output('datauristring');
-          document.getElementById('visualizarFrame').src = pdfData;
+          
+          // Convertir PDF a URL de objeto para evitar el mensaje de abandono
+          const pdfBlob = doc.output('blob');
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          
+          // Mostrar el PDF en el iframe usando object URL
+          const frame = document.getElementById('visualizarFrame');
+          if (frame) {
+            frame.src = pdfUrl;
+            frame.style.display = 'block';
+          }
+          
           document.getElementById('visualizarModal').classList.add('active');
         } catch (error) {
           console.error('❌ Error al visualizar OC:', error);
@@ -2430,6 +2798,15 @@
 
       window.cerrarVisualizar = function() {
         document.getElementById('visualizarModal').classList.remove('active');
+        // Liberar la URL del objeto
+        const frame = document.getElementById('visualizarFrame');
+        if (frame && frame.src) {
+          try {
+            URL.revokeObjectURL(frame.src);
+          } catch(e) {}
+          frame.src = '';
+          frame.style.display = 'block';
+        }
         visualizarOCData = null;
         visualizarOCPDF = null;
       };
@@ -2613,7 +2990,6 @@
       // APROBACIONES Y AUTORIZACIONES
       // ============================================================
 
-      // 1. SOLICITANTE (Responsable) aprueba
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
@@ -2624,6 +3000,15 @@
         const proyecto = proyectos.find(p => p.nombre === oc.proyecto);
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        
+        if (!actual.firma) {
+          if (!confirm('⚠️ No tienes una firma digital registrada. ¿Deseas registrarla ahora?')) {
+            return alert('Debes registrar tu firma digital para poder aprobar OC.');
+          }
+          window.abrirFirma();
+          return;
+        }
+        
         const updates = { 
           estado: 'APROBADA_SOLICITANTE', 
           fechaaprobacionsolicitante: new Date().toISOString(), 
@@ -2636,7 +3021,6 @@
         alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
       };
 
-      // 2. JEFE DE DEPARTAMENTO aprueba (evalúa 60%)
       window.aprobarJefe = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -2646,6 +3030,14 @@
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
+        if (!actual.firma) {
+          if (!confirm('⚠️ No tienes una firma digital registrada. ¿Deseas registrarla ahora?')) {
+            return alert('Debes registrar tu firma digital para poder aprobar OC.');
+          }
+          window.abrirFirma();
+          return;
+        }
+
         const gastado = gastoProyectoMoneda(proyecto.nombre);
         let montoEnMonedaProyecto = oc.montomxn || 0;
         if (proyecto.moneda === 'USD') {
@@ -2653,7 +3045,6 @@
           else montoEnMonedaProyecto = oc.montomxn / 20;
         }
 
-        // Caso 1: OC en USD sin paridad
         if (oc.moneda === 'USD' && !oc.tipocambio) {
           const updates = {
             estado: 'PENDIENTE_PARIDAD',
@@ -2668,7 +3059,6 @@
           return;
         }
 
-        // Caso 2: OC DENTRO del 60%
         if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
           const updates = {
             estado: 'AUTORIZADA',
@@ -2688,7 +3078,6 @@
           return;
         }
 
-        // Caso 3: OC SUPERA el 60% - Enviar al Director
         const updates = {
           estado: 'PENDIENTE_DIRECTOR',
           fechaaprobacionjefe: new Date().toISOString(),
@@ -2739,12 +3128,19 @@
         alert('⏳ OC supera el 60%. Enviada a Director para autorización.');
       };
 
-      // 3. DIRECTOR autoriza
       window.autorizarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+
+        if (!actual.firma) {
+          if (!confirm('⚠️ No tienes una firma digital registrada. ¿Deseas registrarla ahora?')) {
+            return alert('Debes registrar tu firma digital para poder autorizar OC.');
+          }
+          window.abrirFirma();
+          return;
+        }
 
         const updates = { 
           estado: 'AUTORIZADA', 
@@ -2766,7 +3162,6 @@
         alert('✅ OC autorizada por Director.');
       };
 
-      // 4. DIRECTOR cancela
       window.cancelarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         const oc = ordenes[index];
@@ -3015,28 +3410,74 @@
         const solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
         const jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
         const directorNombre = oc.nombredirector || getDirector();
+        
+        let firmaSolicitante = null;
+        let firmaJefe = null;
+        let firmaDirector = null;
+        
+        const userSolicitante = usuariosDB.find(u => u.usuario === oc.nombresolicitante);
+        if (userSolicitante && userSolicitante.firma) firmaSolicitante = userSolicitante.firma;
+        
+        const userJefe = usuariosDB.find(u => u.usuario === oc.nombrejefe);
+        if (userJefe && userJefe.firma) firmaJefe = userJefe.firma;
+        
+        const userDirector = usuariosDB.find(u => u.usuario === oc.nombredirector);
+        if (userDirector && userDirector.firma) firmaDirector = userDirector.firma;
+
         const colWidth = (pageWidth - 2 * margin) / 3;
 
-        function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
+        async function dibujarAutorizacionFirmadaFinal(doc, x, y, nombre, titulo, fecha, firmaDataUrl) {
           const lineWidth = colWidth - 20;
+          const centerX = x + (lineWidth / 2);
+          
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
-          doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
-          doc.setFontSize(10);
-          doc.setTextColor(0, 0, 0);
-          doc.setFont('helvetica', 'bold');
-          const fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
-          const lineY = y + 14 + 10 + 10;
+          doc.text(titulo + ':', centerX, y, { align: 'center' });
+          
+          if (firmaDataUrl && fecha !== 'Pendiente') {
+            try {
+              const img = new Image();
+              img.src = firmaDataUrl;
+              await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              });
+              const imgWidth = 80;
+              const imgHeight = (img.height / img.width) * imgWidth;
+              const imgX = centerX - (imgWidth / 2);
+              const imgY = y + 10;
+              doc.addImage(firmaDataUrl, 'PNG', imgX, imgY, imgWidth, imgHeight);
+              y += imgHeight + 10;
+            } catch(e) {
+              doc.setFontSize(10);
+              doc.setTextColor(0, 0, 0);
+              doc.setFont('helvetica', 'bold');
+              const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+              doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
+              y += 20;
+            }
+          } else {
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'bold');
+            const estado = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
+            doc.text(nombre + estado, centerX, y + 14, { align: 'center' });
+            y += 20;
+          }
+          
+          const lineY = y + 10;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
+          
           doc.setFontSize(8);
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           const fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
-          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
+          doc.text('Fecha: ' + fechaDisplay, centerX, lineY + 10 + 10, { align: 'center' });
+          
+          return y + 20;
         }
 
         const x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
@@ -3044,10 +3485,10 @@
         const fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
         const fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
 
-        dibujarAutorizacionFirmada(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
-        dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
-        dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
-        y += 70;
+        y = await dibujarAutorizacionFirmadaFinal(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante, firmaSolicitante);
+        y = await dibujarAutorizacionFirmadaFinal(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe, firmaJefe);
+        y = await dibujarAutorizacionFirmadaFinal(doc, x3, y, directorNombre, 'Director General', fechaDirector, firmaDirector);
+        y += 20;
 
         const pieY = doc.internal.pageSize.height - 55;
         doc.setDrawColor(200, 200, 200);
@@ -3204,7 +3645,6 @@
       // ============================================================
       
       function cargarFiltrosCXP() {
-        // Obtener empresas y departamentos visibles según el usuario
         let empresas = [];
         let deptos = [];
         let proyNombres = [];
@@ -3256,60 +3696,38 @@
           selectProyecto.appendChild(opt);
         });
 
-        // Event listeners
-        selectEmpresa.onchange = function() { window.renderCXP(); };
-        selectDepto.onchange = function() { window.renderCXP(); };
-        selectProyecto.onchange = function() { window.renderCXP(); };
-        document.getElementById('cxpFiltroEstado').onchange = function() { window.renderCXP(); };
+        selectEmpresa.onchange = function() { 
+          window.renderCXP(); 
+          document.getElementById('cxpRankingContainer').classList.add('hidden');
+        };
+        selectDepto.onchange = function() { 
+          window.renderCXP(); 
+          document.getElementById('cxpRankingContainer').classList.add('hidden');
+        };
+        selectProyecto.onchange = function() { 
+          window.renderCXP(); 
+          document.getElementById('cxpRankingContainer').classList.add('hidden');
+        };
+        document.getElementById('cxpFiltroEstado').onchange = function() { 
+          window.renderCXP(); 
+          document.getElementById('cxpRankingContainer').classList.add('hidden');
+        };
         
-        // Fechas por defecto: último mes
         const hoy = new Date();
         const haceUnMes = new Date(hoy);
         haceUnMes.setMonth(haceUnMes.getMonth() - 1);
         document.getElementById('cxpFechaInicio').value = haceUnMes.toISOString().split('T')[0];
         document.getElementById('cxpFechaFin').value = hoy.toISOString().split('T')[0];
         
-        document.getElementById('cxpFechaInicio').onchange = function() { window.renderCXP(); };
-        document.getElementById('cxpFechaFin').onchange = function() { window.renderCXP(); };
-      }
-
-      window.setPeriodoCXP = function(periodo) {
-        // Resetear botones
-        document.querySelectorAll('.cxp-periodo button').forEach(b => b.classList.remove('active'));
-        const btnMap = {
-          'global': 'cxpPeriodoGlobal',
-          'mensual': 'cxpPeriodoMensual',
-          'trimestral': 'cxpPeriodoTrimestral',
-          'anual': 'cxpPeriodoAnual'
+        document.getElementById('cxpFechaInicio').onchange = function() { 
+          window.renderCXP(); 
+          document.getElementById('cxpRankingContainer').classList.add('hidden');
         };
-        const btn = document.getElementById(btnMap[periodo]);
-        if (btn) btn.classList.add('active');
-        
-        cxpFiltros.periodo = periodo;
-        
-        const hoy = new Date();
-        let fechaInicio = new Date(hoy);
-        let fechaFin = new Date(hoy);
-        
-        switch(periodo) {
-          case 'global':
-            fechaInicio = new Date(2000, 0, 1);
-            break;
-          case 'mensual':
-            fechaInicio.setMonth(hoy.getMonth() - 1);
-            break;
-          case 'trimestral':
-            fechaInicio.setMonth(hoy.getMonth() - 3);
-            break;
-          case 'anual':
-            fechaInicio.setFullYear(hoy.getFullYear() - 1);
-            break;
-        }
-        
-        document.getElementById('cxpFechaInicio').value = fechaInicio.toISOString().split('T')[0];
-        document.getElementById('cxpFechaFin').value = fechaFin.toISOString().split('T')[0];
-        window.renderCXP();
-      };
+        document.getElementById('cxpFechaFin').onchange = function() { 
+          window.renderCXP(); 
+          document.getElementById('cxpRankingContainer').classList.add('hidden');
+        };
+      }
 
       function obtenerDatosCXP() {
         const filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
@@ -3319,22 +3737,17 @@
         const fechaInicio = document.getElementById('cxpFechaInicio').value;
         const fechaFin = document.getElementById('cxpFechaFin').value;
 
-        // Obtener proyectos visibles según el usuario
         let proyectosVisibles = filtrarProyectosSegunUsuario(actual);
         
-        // Aplicar filtros de empresa/departamento/proyecto
         if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(p => p.empresa === filtroEmpresa);
         if (filtroDepto) proyectosVisibles = proyectosVisibles.filter(p => p.departamento === filtroDepto);
         if (filtroProyecto) proyectosVisibles = proyectosVisibles.filter(p => p.nombre === filtroProyecto);
 
-        // Obtener OC visibles según el usuario
         let ocVisibles = filtrarOCSegunUsuario(actual);
         
-        // Filtrar por empresa/departamento/proyecto
         const nombresProyectos = proyectosVisibles.map(p => p.nombre);
         ocVisibles = ocVisibles.filter(o => nombresProyectos.includes(o.proyecto));
         
-        // Filtrar por fechas
         if (fechaInicio) {
           const fechaInicioObj = new Date(fechaInicio);
           ocVisibles = ocVisibles.filter(o => {
@@ -3351,10 +3764,8 @@
           });
         }
 
-        // Filtrar solo OC autorizadas o concluidas para CXP
         ocVisibles = ocVisibles.filter(o => o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estadopago === 'PAGADA');
 
-        // Filtrar por estado de pago
         if (filtroEstado === 'PAGADA') ocVisibles = ocVisibles.filter(o => o.estadopago === 'PAGADA');
         else if (filtroEstado === 'PENDIENTE') ocVisibles = ocVisibles.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'));
         else if (filtroEstado === 'VENCIDA') {
@@ -3371,13 +3782,151 @@
         return { proyectos: proyectosVisibles, oc: ocVisibles };
       }
 
+      function renderDashboardCircular(proys, ocFiltradas) {
+        const dashboardDiv = document.getElementById('cxpDashboardCircular');
+        dashboardDiv.innerHTML = '';
+
+        if (proys.length === 0) {
+          dashboardDiv.innerHTML = '<p class="text-muted">No hay proyectos para mostrar en el dashboard.</p>';
+          return;
+        }
+
+        const proyectosConDatos = proys.filter(p => {
+          const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
+          return ocProyecto.length > 0 || p.presupuesto > 0;
+        });
+
+        if (proyectosConDatos.length === 0) {
+          dashboardDiv.innerHTML = '<p class="text-muted">No hay datos para mostrar en el dashboard.</p>';
+          return;
+        }
+
+        proyectosConDatos.forEach(p => {
+          const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
+          const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
+          const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
+          let vencido = 0;
+          ocProyecto.forEach(o => {
+            if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
+              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              const ahora = new Date();
+              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              if (diffDias > 1) vencido += (o.montomxn || 0);
+            }
+          });
+
+          const totalGastado = pagado + pendiente + vencido;
+          const porcentajeUsado = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
+          const color = porcentajeUsado <= 60 ? '#22c55e' : (porcentajeUsado <= 80 ? '#f59e0b' : '#dc2626');
+          const deptoColor = getColorByEmpresa(p.empresa);
+
+          dashboardDiv.innerHTML += `
+            <div class="cxp-donut-card">
+              <h4>${p.nombre}</h4>
+              <div style="display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;">
+                <div class="donut-mini">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="#e9edf2" stroke-width="10"/>
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="${color}" stroke-width="10"
+                            stroke-dasharray="${Math.min(porcentajeUsado, 100) * 2.388} ${100 * 2.388 - Math.min(porcentajeUsado, 100) * 2.388}"
+                            stroke-linecap="round"/>
+                  </svg>
+                  <div class="center-text">
+                    ${porcentajeUsado.toFixed(1)}%
+                    <small>${porcentajeUsado <= 60 ? '✅ OK' : (porcentajeUsado <= 80 ? '⚠️ Alerta' : '🔴 Excedido')}</small>
+                  </div>
+                </div>
+                <div style="text-align:left; font-size:12px; color:var(--gray-600);">
+                  <div><span style="font-weight:600;">Presupuesto:</span> ${formatoMoneda(p.presupuesto, p.moneda)}</div>
+                  <div><span style="font-weight:600;">Límite 60%:</span> ${formatoMoneda(p.limite, p.moneda)}</div>
+                  <div><span style="font-weight:600;color:var(--success);">Pagado:</span> ${formatoMoneda(pagado, 'MXN')}</div>
+                  <div><span style="font-weight:600;color:var(--warning);">Pendiente:</span> ${formatoMoneda(pendiente, 'MXN')}</div>
+                  ${vencido > 0 ? `<div><span style="font-weight:600;color:var(--danger);">Vencido:</span> ${formatoMoneda(vencido, 'MXN')}</div>` : ''}
+                  <div><span style="font-weight:600;">Total gastado:</span> ${formatoMoneda(totalGastado, 'MXN')}</div>
+                  <div><span class="depto-color" style="background-color:${deptoColor};display:inline-block;margin-top:4px;">${p.departamento}</span></div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      window.mostrarRanking = function() {
+        const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
+        const rankingContainer = document.getElementById('cxpRankingContainer');
+        const rankingContent = document.getElementById('cxpRankingContent');
+        
+        const rankingData = proys.map(p => {
+          const ocProyecto = ocFiltradas.filter(o => o.proyecto === p.nombre);
+          const pagado = ocProyecto.filter(o => o.estadopago === 'PAGADA').reduce((sum, o) => sum + (o.montomxn || 0), 0);
+          const pendiente = ocProyecto.filter(o => o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')).reduce((sum, o) => sum + (o.montomxn || 0), 0);
+          let vencido = 0;
+          ocProyecto.forEach(o => {
+            if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
+              const fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+              const ahora = new Date();
+              const diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
+              if (diffDias > 1) vencido += (o.montomxn || 0);
+            }
+          });
+          const totalGastado = pagado + pendiente + vencido;
+          const utilidad = p.presupuesto - totalGastado;
+          const porcentajeUtilidad = p.presupuesto > 0 ? (utilidad / p.presupuesto) * 100 : 0;
+          return {
+            ...p,
+            totalGastado,
+            utilidad,
+            porcentajeUtilidad,
+            pagado,
+            pendiente,
+            vencido
+          };
+        });
+
+        rankingData.sort((a, b) => b.utilidad - a.utilidad);
+
+        rankingContainer.classList.remove('hidden');
+        rankingContent.innerHTML = '';
+
+        if (rankingData.length === 0) {
+          rankingContent.innerHTML = '<p class="text-muted">No hay datos suficientes para generar el ranking.</p>';
+          return;
+        }
+
+        rankingData.forEach((item, index) => {
+          const pos = index + 1;
+          let utilidadClass = 'utilidad-media';
+          let emoji = '⭐';
+          if (item.porcentajeUtilidad > 30) { utilidadClass = 'utilidad-alta'; emoji = '🏆'; }
+          else if (item.porcentajeUtilidad < 0) { utilidadClass = 'utilidad-baja'; emoji = '⚠️'; }
+          else if (item.porcentajeUtilidad > 15) { utilidadClass = 'utilidad-alta'; emoji = '🌟'; }
+          
+          const deptoColor = getColorByEmpresa(item.empresa);
+          
+          rankingContent.innerHTML += `
+            <div class="ranking-item">
+              <span class="posicion">${pos}</span>
+              <span class="nombre">${emoji} ${item.nombre}</span>
+              <span class="depto-color" style="background-color:${deptoColor};font-size:10px;">${item.departamento}</span>
+              <span class="monto">${formatoMoneda(item.utilidad, 'MXN')}</span>
+              <span class="utilidad ${utilidadClass}">${item.porcentajeUtilidad.toFixed(1)}%</span>
+              <span style="font-size:11px;color:var(--gray-500);">
+                G: ${formatoMoneda(item.totalGastado, 'MXN')} | P: ${formatoMoneda(item.pagado, 'MXN')}
+              </span>
+            </div>
+          `;
+        });
+      };
+
       window.renderCXP = function() {
         const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
 
-        // Calcular resumen
+        renderDashboardCircular(proys, ocFiltradas);
+
+        document.getElementById('cxpRankingContainer').classList.add('hidden');
+
         let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
         let totalPagadoUSD = 0, totalPendienteUSD = 0, totalVencidoUSD = 0;
-        let totalPagadoMXN = 0, totalPendienteMXN = 0, totalVencidoMXN = 0;
 
         ocFiltradas.forEach(o => {
           const monto = o.montomxn || 0;
@@ -3394,19 +3943,15 @@
           if (esPagada) {
             totalPagado += monto;
             if (o.moneda === 'USD') totalPagadoUSD += o.montototal;
-            else totalPagadoMXN += o.montototal;
           } else if (esVencida) {
             totalVencido += monto;
             if (o.moneda === 'USD') totalVencidoUSD += o.montototal;
-            else totalVencidoMXN += o.montototal;
           } else if (esPendiente) {
             totalPendiente += monto;
             if (o.moneda === 'USD') totalPendienteUSD += o.montototal;
-            else totalPendienteMXN += o.montototal;
           }
         });
 
-        // Mostrar resumen
         const resumenDiv = document.getElementById('cxpResumen');
         resumenDiv.innerHTML = `
           <div class="cxp-tarjeta pagado">
@@ -3430,7 +3975,6 @@
           </div>
         `;
 
-        // Tabla de proyectos
         const tbodyProyectos = document.getElementById('cxpCuerpoProyectos');
         tbodyProyectos.innerHTML = '';
 
@@ -3450,7 +3994,7 @@
                 if (diffDias > 1) vencido += (o.montomxn || 0);
               }
             });
-            const porcentaje = p.limite > 0 ? (pagado / p.limite) * 100 : 0;
+            const porcentaje = p.limite > 0 ? ((pagado + pendiente + vencido) / p.limite) * 100 : 0;
             const deptoColor = getColorByEmpresa(p.empresa);
 
             tbodyProyectos.innerHTML += `
@@ -3475,7 +4019,6 @@
           });
         }
 
-        // Tabla de OC detallada
         const tbodyOC = document.getElementById('cxpCuerpoOC');
         tbodyOC.innerHTML = '';
 
@@ -3533,6 +4076,9 @@
         document.getElementById('cxpTablaProyectos').scrollIntoView({ behavior: 'smooth' });
       };
 
+      // ============================================================
+      // REPORTE DE CXP
+      // ============================================================
       window.imprimirReporteCXP = function() {
         const { proyectos: proys, oc: ocFiltradas } = obtenerDatosCXP();
         const { jsPDF } = window.jspdf;
@@ -3549,10 +4095,9 @@
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'normal');
-        const periodo = document.querySelector('.cxp-periodo button.active')?.textContent || 'Global';
         const fechaInicio = document.getElementById('cxpFechaInicio').value;
         const fechaFin = document.getElementById('cxpFechaFin').value;
-        doc.text(`Periodo: ${periodo} | Desde: ${fechaInicio || 'N/A'} Hasta: ${fechaFin || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+        doc.text(`Periodo: Desde: ${fechaInicio || 'N/A'} Hasta: ${fechaFin || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
         y += 20;
 
         let totalPagado = 0, totalPendiente = 0, totalVencido = 0;
@@ -3603,7 +4148,7 @@
                 if (diffDias > 1) vencido += (o.montomxn || 0);
               }
             });
-            const porcentaje = p.limite > 0 ? (pagado / p.limite) * 100 : 0;
+            const porcentaje = p.limite > 0 ? ((pagado + pendiente + vencido) / p.limite) * 100 : 0;
             return [p.empresa, p.departamento, p.nombre, formatoMoneda(pagado, 'MXN'), formatoMoneda(pendiente, 'MXN'), formatoMoneda(vencido, 'MXN'), porcentaje.toFixed(1) + '%'];
           });
 
@@ -3916,6 +4461,26 @@
         }
       }
 
+      // ============================================================
+      // REPORTES PROGRAMADOS
+      // ============================================================
+      function verificarReportesProgramados() {
+        const hoy = new Date();
+        const dia = hoy.getDate();
+        const esFinDeMes = (dia === new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate());
+        const es25 = (dia === 25);
+        
+        if (esFinDeMes || es25) {
+          console.log(`📅 Ejecutando reporte programado - ${esFinDeMes ? 'Fin de mes' : 'Día 25'}`);
+          generarReporteProgramado(esFinDeMes ? 'fin_mes' : 'dia_25');
+        }
+      }
+
+      function generarReporteProgramado(tipo) {
+        console.log(`📊 Generando reporte programado: ${tipo}`);
+        // Aquí se implementaría la lógica de envío de reportes a jefes de departamento
+      }
+
       async function init() {
         const hoy = new Date();
         const fechaHoy = hoy.toISOString().split('T')[0];
@@ -3925,6 +4490,9 @@
         document.getElementById('fechaTermino').value = fechaFin.toISOString().split('T')[0];
         document.getElementById('fechaPago').value = fechaHoy;
         document.getElementById('fechaEntrega').value = fechaHoy;
+        
+        initFirmaCanvas();
+        verificarReportesProgramados();
       }
 
       document.addEventListener('DOMContentLoaded', function() {
