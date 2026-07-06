@@ -4095,7 +4095,7 @@
       }
 
       // ============================================================
-      // PREVISUALIZACIÓN DE REPORTE CXP - CON REDIMENSIONAMIENTO
+      // PREVISUALIZACIÓN DE REPORTE CXP - CON MARGEN DE 20 PUNTOS
       // ============================================================
       window.previsualizarReporteCXP = function() {
         var datos = obtenerDatosCXP();
@@ -4109,29 +4109,29 @@
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
-        var margin = 28; // 1 cm (28.35 pt)
+        var margin = 20; // 20 puntos de margen
         var y = margin;
 
-        // HEADER - respetando margen de 1cm
+        // HEADER - respetando margen de 20 puntos
         doc.setFillColor(11, 26, 51);
-        doc.rect(margin, 0, pageWidth - 2*margin, 60, 'F');
+        doc.rect(margin, 0, pageWidth - 2*margin, 55, 'F');
         
         doc.setFontSize(16);
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.text('REPORTE DE CUENTAS POR PAGAR', pageWidth / 2, 28, { align: 'center' });
+        doc.text('REPORTE DE CUENTAS POR PAGAR', pageWidth / 2, 25, { align: 'center' });
         
         doc.setFontSize(9);
         doc.setTextColor(200, 200, 200);
         doc.setFont('helvetica', 'normal');
-        doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth / 2, 44, { align: 'center' });
+        doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth / 2, 40, { align: 'center' });
         
         var fechaActual = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
         doc.setFontSize(7);
         doc.setTextColor(180, 180, 180);
-        doc.text('Generado: ' + fechaActual, pageWidth - margin - 10, 18, { align: 'right' });
+        doc.text('Generado: ' + fechaActual, pageWidth - margin - 5, 14, { align: 'right' });
 
-        y = 78;
+        y = 73;
 
         // PERIODO
         doc.setFontSize(10);
@@ -4141,13 +4141,13 @@
         var fechaFin = document.getElementById('cxpFechaFin').value;
         var empresaFiltro = document.getElementById('cxpFiltroEmpresa').value || 'Todas';
         doc.text('Empresa: ' + empresaFiltro + '  |  Periodo: ' + (fechaInicio || 'N/A') + '  —  ' + (fechaFin || 'N/A'), margin, y);
-        y += 16;
-
-        // Línea separadora más oscura
-        doc.setDrawColor(150, 150, 165);
-        doc.setLineWidth(0.8);
-        doc.line(margin, y, pageWidth - margin, y);
         y += 14;
+
+        // Línea separadora
+        doc.setDrawColor(150, 150, 165);
+        doc.setLineWidth(0.7);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 12;
 
         // RESUMEN FINANCIERO - Tarjetas
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
@@ -4175,20 +4175,20 @@
         function dibujarTarjetaResumen(x, y, w, titulo, valor) {
           var radius = 4;
           doc.setFillColor(248, 248, 250);
-          doc.roundedRect(x, y, w, 40, radius, radius, 'F');
+          doc.roundedRect(x, y, w, 38, radius, radius, 'F');
           doc.setDrawColor(170, 170, 185);
-          doc.setLineWidth(0.6);
-          doc.roundedRect(x, y, w, 40, radius, radius, 'S');
+          doc.setLineWidth(0.5);
+          doc.roundedRect(x, y, w, 38, radius, radius, 'S');
           
           doc.setFontSize(7);
           doc.setTextColor(100, 100, 110);
           doc.setFont('helvetica', 'normal');
-          doc.text(titulo, x + w/2, y + 11, { align: 'center' });
+          doc.text(titulo, x + w/2, y + 10, { align: 'center' });
           
           doc.setFontSize(13);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
-          doc.text(valor, x + w/2, y + 28, { align: 'center' });
+          doc.text(valor, x + w/2, y + 26, { align: 'center' });
         }
 
         dibujarTarjetaResumen(cardX, y, cardWidth, 'Pagado', formatoMoneda(totalPagado, 'MXN'));
@@ -4199,9 +4199,9 @@
         cardX += cardWidth + 8;
         dibujarTarjetaResumen(cardX, y, cardWidth, 'Total OC', String(totalOC));
         
-        y += 56;
+        y += 52;
 
-        // TABLA DE PROYECTOS - Ancho total menos 1cm cada lado
+        // TABLA DE PROYECTOS - Ancho total menos 20 puntos cada lado
         if (incluirProyectos && proys.length > 0) {
           doc.setFontSize(11);
           doc.setTextColor(11, 26, 51);
@@ -4240,10 +4240,9 @@
             ];
           });
 
-          // Calcular ancho de columnas para que ocupen todo el ancho disponible
-          var colWidths = [55, 50, 75, 55, 50, 48, 48, 48, 55, 40];
-          var totalColWidth = colWidths.reduce(function(a,b) { return a + b; }, 0);
           var availableWidth = pageWidth - 2 * margin;
+          var colWidths = [50, 48, 72, 50, 48, 45, 45, 45, 52, 38];
+          var totalColWidth = colWidths.reduce(function(a,b) { return a + b; }, 0);
           var scaleFactor = availableWidth / totalColWidth;
           colWidths = colWidths.map(function(w) { return w * scaleFactor; });
 
@@ -4316,9 +4315,9 @@
             ];
           });
 
-          var colWidths2 = [68, 70, 80, 30, 48, 50, 48, 50];
-          var totalColWidth2 = colWidths2.reduce(function(a,b) { return a + b; }, 0);
           var availableWidth2 = pageWidth - 2 * margin;
+          var colWidths2 = [62, 65, 75, 28, 45, 48, 45, 48];
+          var totalColWidth2 = colWidths2.reduce(function(a,b) { return a + b; }, 0);
           var scaleFactor2 = availableWidth2 / totalColWidth2;
           colWidths2 = colWidths2.map(function(w) { return w * scaleFactor2; });
 
