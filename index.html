@@ -401,26 +401,45 @@
   }
   .donut-container .center-text small { display: block; font-size: 12px; font-weight: normal; color: var(--gray-500) }
   
-  /* Aura para el donut circular */
+  /* Aura para el donut circular - más visible */
   .donut-container .donut-aura {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 180px;
-    height: 180px;
+    width: 190px;
+    height: 190px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(100,116,139,0.1) 0%, rgba(100,116,139,0.05) 50%, transparent 70%);
+    background: radial-gradient(circle, rgba(100,116,139,0.2) 0%, rgba(100,116,139,0.08) 40%, rgba(100,116,139,0.03) 70%, transparent 85%);
     pointer-events: none;
     z-index: 0;
     transition: all 0.5s ease;
+    box-shadow: 0 0 50px rgba(100,116,139,0.08);
+    border: 1px solid rgba(100,116,139,0.05);
   }
   .donut-container .donut-aura.active {
-    background: radial-gradient(circle, rgba(100,116,139,0.2) 0%, rgba(100,116,139,0.08) 50%, transparent 70%);
-    box-shadow: 0 0 40px rgba(100,116,139,0.15);
+    background: radial-gradient(circle, rgba(100,116,139,0.25) 0%, rgba(100,116,139,0.12) 40%, rgba(100,116,139,0.05) 70%, transparent 85%);
+    box-shadow: 0 0 60px rgba(100,116,139,0.15);
+    border-color: rgba(100,116,139,0.1);
   }
   .donut-container svg { position: relative; z-index: 1; }
   .donut-container .center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: bold; text-align: center; line-height: 1.2; z-index: 2; }
+  
+  .cxp-dashboard-circular .cxp-donut-card .donut-mini .donut-aura-mini {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 145px;
+    height: 145px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,116,139,0.2) 0%, rgba(100,116,139,0.08) 40%, rgba(100,116,139,0.03) 70%, transparent 85%);
+    pointer-events: none;
+    z-index: 0;
+    transition: all 0.5s ease;
+    box-shadow: 0 0 40px rgba(100,116,139,0.08);
+    border: 1px solid rgba(100,116,139,0.05);
+  }
   
   #dashboardOverlay {
     position: fixed;
@@ -787,13 +806,15 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 140px;
-    height: 140px;
+    width: 145px;
+    height: 145px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(100,116,139,0.1) 0%, rgba(100,116,139,0.05) 50%, transparent 70%);
+    background: radial-gradient(circle, rgba(100,116,139,0.2) 0%, rgba(100,116,139,0.08) 40%, rgba(100,116,139,0.03) 70%, transparent 85%);
     pointer-events: none;
     z-index: 0;
     transition: all 0.5s ease;
+    box-shadow: 0 0 40px rgba(100,116,139,0.08);
+    border: 1px solid rgba(100,116,139,0.05);
   }
   .cxp-dashboard-circular .cxp-donut-card .donut-mini svg {
     width: 100%;
@@ -1728,7 +1749,7 @@
       }
 
       // ============================================================
-      // GENERAR CÓDIGO OC CON FORMATO: DEPARTAMENTO-OC-AAMMDD-C-PROVEEDOR-PROYECTO-CLIENTE-INICIALES
+      // GENERAR CÓDIGO OC
       // ============================================================
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
         var fecha = new Date();
@@ -3917,10 +3938,8 @@
         var saludable = porcentaje <= 60;
         var color = saludable ? '#22c55e' : '#dc2626';
         var deptoColor = getColorByEmpresa(proyecto.empresa);
-        var mostrarGrafica = 'circular';
 
         function renderizarDashboard(tipo) {
-          mostrarGrafica = tipo;
           var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">';
           html += '<h2 style="margin:0;">📊 Dashboard: ' + proyecto.nombre + '</h2>';
           html += '<div style="display:flex; gap:8px;">';
@@ -3950,7 +3969,6 @@
             html += '</svg><div class="center-text" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; font-weight:bold; text-align:center; line-height:1.2; z-index:2;">';
             html += porcentaje.toFixed(1) + '%<small style="display:block; font-size:12px; font-weight:normal; color:var(--gray-500);">' + (saludable ? '✅ Saludable' : '⚠️ Excedido') + '</small></div></div>';
           } else {
-            // Gráfica de barras
             var totalPresupuesto = proyecto.presupuesto;
             var pagadoPorcentaje = totalPresupuesto > 0 ? (gastado / totalPresupuesto) * 100 : 0;
             var disponiblePorcentaje = totalPresupuesto > 0 ? (disponible / totalPresupuesto) * 100 : 0;
@@ -4097,7 +4115,65 @@
       };
 
       // ============================================================
-      // PREVISUALIZACIÓN DE REPORTE CXP - FORMATO HORIZONTAL CORPORATIVO
+      // NOTIFICACIONES TELEGRAM
+      // ============================================================
+      async function enviarNotificacionTelegram(mensaje) {
+        try {
+          console.log('📤 Intentando enviar notificación a Telegram...');
+          if (!mensaje || mensaje.trim() === '') {
+            console.error('❌ Mensaje vacío, no se enviará.');
+            return false;
+          }
+          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
+          var payload = { chat_id: TELEGRAM_CHAT_ID, text: mensaje, parse_mode: 'HTML', disable_web_page_preview: true };
+          var response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          var data = await response.json();
+          console.log('📨 Respuesta de Telegram:', data);
+          if (data.ok) { console.log('✅ Notificación enviada a Telegram'); return true; }
+          else { console.error('❌ Error al enviar notificación:', data.description); return false; }
+        } catch (error) { console.error('❌ Error al enviar notificación:', error); return false; }
+      }
+
+      function formatearMensajeOC(datos, proyecto, ocId) {
+        var gastado = gastoProyectoMoneda(proyecto.nombre);
+        var porcentaje = proyecto.limite > 0 ? (gastado / proyecto.limite) * 100 : 0;
+        var excedente = gastado - proyecto.limite;
+        var urlBase = window.location.origin + window.location.pathname;
+        var linkOC = urlBase + '?oc=' + ocId;
+
+        var mensaje = '<b>⚠️ OC QUE SUPERA EL 60% - REQUIERE AUTORIZACIÓN</b>\n\n';
+        mensaje += '<b>Código:</b> ' + (datos.codigo || 'Generando...') + '\n';
+        mensaje += '<b>Proyecto:</b> ' + (datos.proyectonombre || datos.proyecto) + '\n';
+        mensaje += '<b>Empresa:</b> ' + datos.empresa + '\n';
+        mensaje += '<b>Departamento:</b> ' + datos.departamento + '\n';
+        mensaje += '<b>Cliente:</b> ' + datos.cliente + '\n';
+        mensaje += '<b>Proveedor:</b> ' + datos.proveedor + '\n';
+        mensaje += '<b>RFC:</b> ' + datos.rfc + '\n';
+        mensaje += '<b>Responsable:</b> ' + datos.responsable + '\n';
+        mensaje += '<b>Elaborador:</b> ' + datos.elaborador + '\n';
+        mensaje += '<b>Moneda:</b> ' + datos.moneda + '\n';
+        mensaje += '<b>Monto Total:</b> ' + formatoMoneda(datos.montototal, datos.moneda) + '\n';
+        mensaje += '<b>Equivalente MXN:</b> ' + formatoMoneda(datos.montomxn, 'MXN') + '\n';
+        mensaje += '<b>Fecha Pago:</b> ' + new Date(datos.fechapago).toLocaleDateString('es-MX') + '\n';
+        mensaje += '<b>Fecha Entrega:</b> ' + new Date(datos.fechaentrega).toLocaleDateString('es-MX') + '\n\n';
+        mensaje += '<b>Presupuesto:</b> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
+        mensaje += '<b>Límite 60%:</b> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n';
+        mensaje += '<b>Pagado:</b> ' + formatoMoneda(gastado, proyecto.moneda) + '\n';
+        mensaje += '<b>Excedente:</b> ' + formatoMoneda(excedente, proyecto.moneda) + ' (' + porcentaje.toFixed(2) + '%)\n\n';
+        mensaje += '<b>Productos:</b>\n';
+        if (datos.productos && datos.productos.length > 0) {
+          datos.productos.forEach(function(p, i) {
+            mensaje += '  ' + (i + 1) + '. ' + p.descripcion + ' - ' + p.cantidad + ' ' + (p.udm || 'PZA') + ' x ' + formatoMoneda(p.precioUnitario, datos.moneda) + ' = ' + formatoMoneda(p.importe, datos.moneda) + '\n';
+          });
+        } else {
+          mensaje += '  No hay productos registrados\n';
+        }
+        mensaje += '\n🔗 <a href="' + linkOC + '">👉 Haz clic aquí para autorizar o cancelar la OC</a>';
+        return mensaje;
+      }
+
+      // ============================================================
+      // PREVISUALIZACIÓN DE REPORTE CXP - FORMATO HORIZONTAL
       // ============================================================
       window.previsualizarReporteCXP = function() {
         var datos = obtenerDatosCXP();
@@ -4108,14 +4184,13 @@
         var incluirOC = document.getElementById('cxpIncluirOC').checked;
         
         var { jsPDF } = window.jspdf;
-        // Orientación horizontal (landscape)
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
-        var margin = 28; // 1 cm aproximadamente en puntos (1 cm = 28.35 pt)
+        var margin = 28; // 1 cm (28.35 pt)
         var y = margin;
 
-        // ===== HEADER CORPORATIVO =====
+        // HEADER
         var logoY = 15;
         doc.setFillColor(11, 26, 51);
         doc.rect(0, 0, pageWidth, 65, 'F');
@@ -4130,7 +4205,6 @@
         doc.setFont('helvetica', 'normal');
         doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth / 2, 50, { align: 'center' });
         
-        // Fecha del reporte
         var fechaActual = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
         doc.setFontSize(8);
         doc.setTextColor(180, 180, 180);
@@ -4138,7 +4212,6 @@
 
         y = 82;
 
-        // ===== SUBTÍTULO CON PERIODO =====
         doc.setFontSize(11);
         doc.setTextColor(40, 40, 40);
         doc.setFont('helvetica', 'bold');
@@ -4148,13 +4221,13 @@
         doc.text('Empresa: ' + empresaFiltro + '  |  Periodo: ' + (fechaInicio || 'N/A') + '  —  ' + (fechaFin || 'N/A'), margin, y);
         y += 18;
 
-        // Línea separadora
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
+        // Línea separadora - más oscura
+        doc.setDrawColor(160, 160, 170);
+        doc.setLineWidth(0.7);
         doc.line(margin, y, pageWidth - margin, y);
         y += 14;
 
-        // ===== RESUMEN FINANCIERO =====
+        // RESUMEN FINANCIERO
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
         ocFiltradas.forEach(function(o) {
           var monto = o.montomxn || 0;
@@ -4172,20 +4245,18 @@
           else if (esPendiente) totalPendiente += monto;
         });
 
-        var totalGeneral = totalPagado + totalPendiente + totalVencido;
         var totalOC = ocFiltradas.length;
 
-        // Tarjetas de resumen - usando solo negro
         var cardWidth = (pageWidth - 2 * margin) / 4 - 8;
         var cardX = margin;
         var cardY = y;
 
-        function dibujarTarjetaResumen(x, y, w, titulo, valor, subtexto) {
+        function dibujarTarjetaResumen(x, y, w, titulo, valor, color) {
           var radius = 4;
           doc.setFillColor(248, 248, 250);
           doc.roundedRect(x, y, w, 44, radius, radius, 'F');
-          doc.setDrawColor(220, 220, 230);
-          doc.setLineWidth(0.3);
+          doc.setDrawColor(180, 180, 190);
+          doc.setLineWidth(0.5);
           doc.roundedRect(x, y, w, 44, radius, radius, 'S');
           
           doc.setFontSize(7);
@@ -4197,26 +4268,19 @@
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           doc.text(valor, x + w/2, y + 30, { align: 'center' });
-          
-          if (subtexto) {
-            doc.setFontSize(6);
-            doc.setTextColor(150, 150, 160);
-            doc.setFont('helvetica', 'normal');
-            doc.text(subtexto, x + w/2, y + 40, { align: 'center' });
-          }
         }
 
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '✅ Pagado', formatoMoneda(totalPagado, 'MXN'), '');
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, 'Pagado', formatoMoneda(totalPagado, 'MXN'), '#16a34a');
         cardX += cardWidth + 10;
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '⏳ Pendiente', formatoMoneda(totalPendiente, 'MXN'), '');
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, 'Pendiente', formatoMoneda(totalPendiente, 'MXN'), '#f59e0b');
         cardX += cardWidth + 10;
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '🔴 Vencido', formatoMoneda(totalVencido, 'MXN'), '');
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, 'Vencido', formatoMoneda(totalVencido, 'MXN'), '#dc2626');
         cardX += cardWidth + 10;
-        dibujarTarjetaResumen(cardX, cardY, cardWidth, '📄 Total OC', String(totalOC), '');
+        dibujarTarjetaResumen(cardX, cardY, cardWidth, 'Total OC', String(totalOC), '#1e293b');
         
         y += 62;
 
-        // ===== TABLA DE PROYECTOS =====
+        // TABLA DE PROYECTOS
         if (incluirProyectos && proys.length > 0) {
           doc.setFontSize(12);
           doc.setTextColor(11, 26, 51);
@@ -4261,32 +4325,32 @@
             startY: y,
             margin: { left: margin, right: margin },
             styles: {
-              fontSize: 6.5,
-              cellPadding: 3,
+              fontSize: 7,
+              cellPadding: 3.5,
               font: 'helvetica',
-              lineColor: [220, 220, 230],
-              lineWidth: 0.2,
+              lineColor: [180, 180, 190],
+              lineWidth: 0.3,
               textColor: [0, 0, 0]
             },
             headStyles: {
               fillColor: [11, 26, 51],
               textColor: [255, 255, 255],
-              fontSize: 6.5,
+              fontSize: 7,
               font: 'helvetica',
               fontStyle: 'bold',
               halign: 'center'
             },
             columnStyles: {
-              0: { cellWidth: 55 },
-              1: { cellWidth: 50 },
-              2: { cellWidth: 75 },
-              3: { cellWidth: 60 },
-              4: { cellWidth: 50, halign: 'right' },
-              5: { cellWidth: 48, halign: 'right' },
-              6: { cellWidth: 48, halign: 'right' },
-              7: { cellWidth: 48, halign: 'right' },
-              8: { cellWidth: 50, halign: 'right' },
-              9: { cellWidth: 40, halign: 'center' }
+              0: { cellWidth: 60 },
+              1: { cellWidth: 55 },
+              2: { cellWidth: 85 },
+              3: { cellWidth: 65 },
+              4: { cellWidth: 55, halign: 'right' },
+              5: { cellWidth: 52, halign: 'right' },
+              6: { cellWidth: 52, halign: 'right' },
+              7: { cellWidth: 52, halign: 'right' },
+              8: { cellWidth: 58, halign: 'right' },
+              9: { cellWidth: 45, halign: 'center' }
             },
             didDrawPage: function(data) {
               y = data.cursor.y + 12;
@@ -4294,7 +4358,7 @@
           });
         }
 
-        // ===== TABLA DE ÓRDENES DE COMPRA =====
+        // TABLA DE ÓRDENES DE COMPRA
         if (incluirOC && ocFiltradas.length > 0) {
           doc.setFontSize(12);
           doc.setTextColor(11, 26, 51);
@@ -4330,30 +4394,30 @@
             startY: y,
             margin: { left: margin, right: margin },
             styles: {
-              fontSize: 6,
-              cellPadding: 2.5,
+              fontSize: 6.5,
+              cellPadding: 3,
               font: 'helvetica',
-              lineColor: [220, 220, 230],
-              lineWidth: 0.2,
+              lineColor: [180, 180, 190],
+              lineWidth: 0.3,
               textColor: [0, 0, 0]
             },
             headStyles: {
               fillColor: [30, 40, 60],
               textColor: [255, 255, 255],
-              fontSize: 6,
+              fontSize: 6.5,
               font: 'helvetica',
               fontStyle: 'bold',
               halign: 'center'
             },
             columnStyles: {
-              0: { cellWidth: 65 },
-              1: { cellWidth: 65 },
-              2: { cellWidth: 75 },
-              3: { cellWidth: 30, halign: 'center' },
-              4: { cellWidth: 48, halign: 'right' },
-              5: { cellWidth: 48, halign: 'right' },
-              6: { cellWidth: 45, halign: 'center' },
-              7: { cellWidth: 50, halign: 'center' }
+              0: { cellWidth: 70 },
+              1: { cellWidth: 75 },
+              2: { cellWidth: 85 },
+              3: { cellWidth: 32, halign: 'center' },
+              4: { cellWidth: 50, halign: 'right' },
+              5: { cellWidth: 52, halign: 'right' },
+              6: { cellWidth: 48, halign: 'center' },
+              7: { cellWidth: 55, halign: 'center' }
             },
             didDrawPage: function(data) {
               y = data.cursor.y + 12;
@@ -4361,10 +4425,10 @@
           });
         }
 
-        // ===== FOOTER =====
+        // FOOTER
         var footerY = pageHeight - 28;
-        doc.setDrawColor(200, 200, 210);
-        doc.setLineWidth(0.3);
+        doc.setDrawColor(180, 180, 190);
+        doc.setLineWidth(0.5);
         doc.line(margin, footerY - 8, pageWidth - margin, footerY - 8);
         
         doc.setFontSize(7);
@@ -4373,7 +4437,6 @@
         doc.text('GRUPO INDUSTRIAL EXTINGUE', pageWidth / 2, footerY + 4, { align: 'center' });
         doc.text('Reporte confidencial - Uso interno exclusivo', pageWidth / 2, footerY + 14, { align: 'center' });
         
-        // Número de página
         doc.setFontSize(6);
         doc.setTextColor(150, 150, 160);
         var pageNum = doc.internal.getNumberOfPages();
@@ -4382,11 +4445,9 @@
           doc.text('Página ' + i + ' de ' + pageNum, pageWidth - margin, footerY + 4, { align: 'right' });
         }
 
-        // Guardar referencia
         cxpReportePDF = doc;
         cxpReporteData = { proys: proys, ocFiltradas: ocFiltradas };
 
-        // Mostrar en modal
         var pdfData = doc.output('datauristring');
         document.getElementById('cxpPreviewFrame').src = pdfData;
         document.getElementById('cxpPreviewModal').classList.add('active');
@@ -4407,7 +4468,7 @@
       };
 
       // ============================================================
-      // IMPRIMIR REPORTE CXP (DESDE PREVISUALIZACIÓN)
+      // IMPRIMIR REPORTE CXP
       // ============================================================
       window.imprimirReporteCXP = function() {
         if (cxpReportePDF) {
