@@ -42,7 +42,119 @@
     --shadow: 0 4px 20px rgba(0, 0, 0, .06);
     --font: Segoe UI, system-ui, -apple-system, sans-serif;
     --orange-gold: #FFC700;
+    --amarillo-quemado: #D4A017;
+    --amarillo-dorado: #FFD700;
   }
+
+  /* ===== ESTILO PARA OC NOTIFICADA - PARPADEANTE AMARILLO QUEMADO ===== */
+  @keyframes parpadeoAmarilloQuemado {
+    0% {
+      background-color: rgba(212, 160, 23, 0.1);
+      box-shadow: 0 0 5px rgba(212, 160, 23, 0.1);
+      transform: scale(1);
+    }
+    25% {
+      background-color: rgba(212, 160, 23, 0.3);
+      box-shadow: 0 0 25px rgba(212, 160, 23, 0.4);
+      transform: scale(1.01);
+    }
+    50% {
+      background-color: rgba(212, 160, 23, 0.55);
+      box-shadow: 0 0 45px rgba(212, 160, 23, 0.7);
+      transform: scale(1.03);
+    }
+    75% {
+      background-color: rgba(212, 160, 23, 0.3);
+      box-shadow: 0 0 25px rgba(212, 160, 23, 0.4);
+      transform: scale(1.01);
+    }
+    100% {
+      background-color: rgba(212, 160, 23, 0.1);
+      box-shadow: 0 0 5px rgba(212, 160, 23, 0.1);
+      transform: scale(1);
+    }
+  }
+
+  @keyframes bordeAmarilloQuemado {
+    0% {
+      border-color: rgba(212, 160, 23, 0.2);
+      border-width: 2px;
+    }
+    50% {
+      border-color: #D4A017;
+      border-width: 4px;
+    }
+    100% {
+      border-color: rgba(212, 160, 23, 0.2);
+      border-width: 2px;
+    }
+  }
+
+  @keyframes brilloAmarilloQuemado {
+    0% {
+      box-shadow: 0 0 5px rgba(212, 160, 23, 0.2), inset 0 0 5px rgba(212, 160, 23, 0.05);
+    }
+    50% {
+      box-shadow: 0 0 35px rgba(212, 160, 23, 0.6), inset 0 0 15px rgba(212, 160, 23, 0.2);
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(212, 160, 23, 0.2), inset 0 0 5px rgba(212, 160, 23, 0.05);
+    }
+  }
+
+  tr.fila-notificada {
+    animation: parpadeoAmarilloQuemado 1.8s ease-in-out infinite;
+    border-radius: 12px;
+    border-left: 6px solid #D4A017 !important;
+    border-right: 6px solid #D4A017 !important;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 10;
+    background: rgba(212, 160, 23, 0.08) !important;
+  }
+
+  tr.fila-notificada td {
+    animation: bordeAmarilloQuemado 1.8s ease-in-out infinite;
+  }
+
+  tr.fila-notificada .badge {
+    animation: brilloAmarilloQuemado 1.5s ease-in-out infinite;
+    font-weight: bold;
+    background: #D4A017 !important;
+    color: #1a1a1a !important;
+    box-shadow: 0 0 30px rgba(212, 160, 23, 0.5);
+    border: 2px solid #FFD700 !important;
+  }
+
+  .badge-pendiente-director-notificada {
+    background: #D4A017 !important;
+    color: #1a1a1a !important;
+    font-weight: bold;
+    animation: brilloAmarilloQuemado 1.5s ease-in-out infinite;
+    box-shadow: 0 0 30px rgba(212, 160, 23, 0.5);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    border: 2px solid #FFD700 !important;
+  }
+
+  .btn-aura-orange-gold {
+    background: #D4A017 !important;
+    color: #1a1a1a !important;
+    font-weight: bold;
+    animation: brilloAmarilloQuemado 1.5s ease-in-out infinite;
+    box-shadow: 0 0 30px rgba(212, 160, 23, 0.5) !important;
+    border: 2px solid #FFD700 !important;
+    transition: all 0.3s ease;
+  }
+
+  .btn-aura-orange-gold:hover {
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 50px rgba(212, 160, 23, 0.8) !important;
+    background: #FFD700 !important;
+  }
+
+  /* ===== RESTO DEL CSS (comprimido por espacio) ===== */
   html, body {
     max-width: 100%;
     overflow-x: hidden;
@@ -1398,98 +1510,6 @@
         return 'GRUPO INDUSTRIAL EXTINGUE';
       }
 
-      // ============================================================
-      // NOTIFICACIONES TELEGRAM (Director General)
-      // ============================================================
-      function obtenerUrlBaseApp() {
-        // Construye la URL base de la app tal como está desplegada actualmente
-        // (respeta dominio y subcarpeta, ej: https://msaa0018-blip.github.io/GRUPO/)
-        var origin = window.location.origin;
-        var path = window.location.pathname;
-        return origin + path;
-      }
-
-      function escaparMarkdownTelegram(texto) {
-        if (texto === null || texto === undefined) return '';
-        // Markdown clásico de Telegram: solo estos caracteres rompen el formato
-        return String(texto).replace(/([_*`\[\]])/g, '\\$1');
-      }
-
-      function formatearMensajeOC(datosOC, proyecto, ocId) {
-        var urlOC = obtenerUrlBaseApp() + '?oc=' + ocId;
-
-        var productos = datosOC.productos || [];
-        var listaProductos = productos.map(function(p) {
-          var desc = p.descripcion || p.producto || 'Producto';
-          var cant = p.cantidad || '';
-          var udm = p.udm || '';
-          return '• ' + escaparMarkdownTelegram(desc) + ' — ' + escaparMarkdownTelegram(cant) + ' ' + escaparMarkdownTelegram(udm);
-        }).join('\n');
-
-        var montoFmt = Number(datosOC.montototal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        var msg = '';
-        msg += '🔔 *NUEVA OC REQUIERE AUTORIZACIÓN DEL DIRECTOR*\n\n';
-        msg += '📋 *Código:* ' + escaparMarkdownTelegram(datosOC.codigo) + '\n';
-        msg += '🏢 *Empresa:* ' + escaparMarkdownTelegram(datosOC.empresa) + '\n';
-        msg += '📁 *Proyecto:* ' + escaparMarkdownTelegram(datosOC.proyectonombre) + '\n';
-        msg += '🏬 *Departamento:* ' + escaparMarkdownTelegram(datosOC.departamento) + '\n';
-        msg += '👤 *Cliente:* ' + escaparMarkdownTelegram(datosOC.cliente) + '\n';
-        msg += '🏭 *Proveedor:* ' + escaparMarkdownTelegram(datosOC.proveedor) + '\n';
-        msg += '💰 *Monto:* ' + escaparMarkdownTelegram(datosOC.moneda) + ' ' + escaparMarkdownTelegram(montoFmt) + '\n';
-        msg += '✍️ *Elaborador:* ' + escaparMarkdownTelegram(datosOC.elaborador) + '\n';
-        msg += '✅ *Responsable:* ' + escaparMarkdownTelegram(datosOC.responsable) + '\n';
-
-        if (listaProductos) {
-          msg += '\n📦 *Productos:*\n' + listaProductos + '\n';
-        }
-
-        msg += '\n👉 [Ingresar y autorizar la OC](' + urlOC + ')';
-
-        return msg;
-      }
-
-      async function enviarNotificacionTelegram(mensaje) {
-        var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
-        try {
-          var response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: mensaje,
-              parse_mode: 'Markdown',
-              disable_web_page_preview: true
-            })
-          });
-          var data = await response.json();
-          if (data.ok) return true;
-
-          // Si falla por error de formato Markdown, reintenta en texto plano
-          // para no perder la notificación (y el link) al Director.
-          console.error('❌ Error de la API de Telegram (Markdown):', data);
-          var mensajePlano = mensaje.replace(/\\([_*`\[\]])/g, '$1').replace(/[*_`]/g, '');
-          var responsePlano = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: mensajePlano,
-              disable_web_page_preview: true
-            })
-          });
-          var dataPlano = await responsePlano.json();
-          if (!dataPlano.ok) {
-            console.error('❌ Error de la API de Telegram (texto plano):', dataPlano);
-            return false;
-          }
-          return true;
-        } catch (e) {
-          console.error('❌ Error al enviar notificación a Telegram:', e);
-          return false;
-        }
-      }
-
       function getLeyendaPie(empresa) {
         if (!empresa) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
         var emp = empresa.trim().toUpperCase();
@@ -1615,6 +1635,85 @@
         }
         return null;
       }
+
+      // ============================================================
+      // FUNCIÓN PARA ENVIAR NOTIFICACIÓN POR TELEGRAM
+      // ============================================================
+      window.enviarNotificacionTelegram = async function(mensaje) {
+        try {
+            const TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
+            const TELEGRAM_CHAT_ID = '5425017187';
+            
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: mensaje,
+                    parse_mode: 'HTML'
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('❌ Error Telegram:', errorData);
+                return false;
+            }
+            
+            const data = await response.json();
+            console.log('✅ Notificación Telegram enviada:', data.ok);
+            return data.ok === true;
+        } catch (error) {
+            console.error('❌ Error al enviar notificación Telegram:', error);
+            return false;
+        }
+      };
+
+      // ============================================================
+      // FUNCIÓN PARA FORMATEAR MENSAJE DE TELEGRAM
+      // ============================================================
+      window.formatearMensajeOC = function(datos, proyecto, ocId) {
+        var mensaje = '🚨 <b>ORDEN DE COMPRA REQUIERE AUTORIZACIÓN</b>\n\n';
+        mensaje += '📄 <b>OC:</b> ' + (datos.codigo || 'Pendiente de código') + '\n';
+        mensaje += '🏢 <b>Empresa:</b> ' + datos.empresa + '\n';
+        mensaje += '🏷️ <b>Departamento:</b> ' + datos.departamento + '\n';
+        mensaje += '📌 <b>Proyecto:</b> ' + datos.proyectonombre + '\n';
+        mensaje += '👤 <b>Cliente:</b> ' + datos.cliente + '\n';
+        mensaje += '🏢 <b>Proveedor:</b> ' + datos.proveedor + '\n';
+        mensaje += '💰 <b>Total:</b> ' + formatoMoneda(datos.montototal, datos.moneda) + '\n';
+        mensaje += '📊 <b>Total MXN:</b> ' + formatoMoneda(datos.montomxn || 0, 'MXN') + '\n';
+        mensaje += '📅 <b>Fecha pago:</b> ' + new Date(datos.fechapago).toLocaleDateString() + '\n';
+        mensaje += '📅 <b>Fecha entrega:</b> ' + new Date(datos.fechaentrega).toLocaleDateString() + '\n';
+        mensaje += '👤 <b>Responsable:</b> ' + datos.responsable + '\n';
+        mensaje += '👤 <b>Elaborador:</b> ' + datos.elaborador + '\n\n';
+        
+        mensaje += '📦 <b>Productos:</b>\n';
+        if (datos.productos && datos.productos.length > 0) {
+            datos.productos.forEach(function(p, i) {
+                mensaje += (i + 1) + '. ' + (p.descripcion || 'Sin descripción') + ' - Cant: ' + (p.cantidad || 0) + ' - ' + formatoMoneda(p.importe || 0, datos.moneda) + '\n';
+            });
+        } else {
+            mensaje += 'Sin productos detallados.\n';
+        }
+        
+        var gastado = gastoProyectoMoneda(proyecto.nombre);
+        mensaje += '\n📊 <b>Presupuesto del proyecto:</b> ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
+        mensaje += '📊 <b>Límite 60%:</b> ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n';
+        mensaje += '📊 <b>Gastado:</b> ' + formatoMoneda(gastado, proyecto.moneda) + '\n';
+        mensaje += '📊 <b>Disponible:</b> ' + formatoMoneda(proyecto.limite - gastado, proyecto.moneda) + '\n\n';
+        
+        mensaje += '⚠️ <b>La OC supera el 60% del presupuesto.</b>\n';
+        // ===== URL CORREGIDA =====
+        mensaje += '🔗 <b>Enlace:</b> https://msaa0018-blip.github.io/GRUPO/?oc=' + ocId + '\n';
+        mensaje += '\n---\n';
+        mensaje += '👨‍💼 <b>Director General</b>\n';
+        mensaje += 'Por favor revisa y autoriza la OC.';
+        
+        return mensaje;
+      };
 
       // ============================================================
       // FUNCIONES DE CARGA DE DATOS
@@ -2010,10 +2109,23 @@
               window.agregarFilaProducto();
             }
             
-            setTimeout(function() {
+            // Scroll hacia la OC notificada y resaltado en amarillo            setTimeout(function() {
               var row = document.querySelector('tr[data-oc-id="' + ocNotificadaId + '"]');
               if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.classList.add('fila-notificada');
+                console.log('🟡 OC ' + ocNotificadaId + ' resaltada en amarillo quemado');
+              } else {
+                console.warn('⚠️ No se encontró la fila de la OC ' + ocNotificadaId);
+                // Reintentar después de un tiempo si no se encontró
+                setTimeout(function() {
+                  var rowRetry = document.querySelector('tr[data-oc-id="' + ocNotificadaId + '"]');
+                  if (rowRetry) {
+                    rowRetry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    rowRetry.classList.add('fila-notificada');
+                    console.log('🟡 OC ' + ocNotificadaId + ' resaltada en amarillo quemado (reintento)');
+                  }
+                }, 1500);
               }
             }, 800);
           }, 200);
@@ -2977,6 +3089,7 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
+        // Enviar notificación por Telegram
         try {
           var productos = oc.productos || [];
           if (typeof productos === 'string') {
@@ -3002,13 +3115,15 @@
             productos: productos
           };
 
-          var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id);
-          var enviado = await enviarNotificacionTelegram(mensajeTelegram);
+          var mensajeTelegram = window.formatearMensajeOC(datosOC, proyecto, oc.id);
+          var enviado = await window.enviarNotificacionTelegram(mensajeTelegram);
           if (enviado) {
             await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
             oc.notificacion_enviada = true;
             ocNotificadaId = oc.id;
             console.log('✅ Notificación enviada al Director');
+          } else {
+            console.warn('⚠️ No se pudo enviar la notificación Telegram');
           }
         } catch (error) {
           console.error('❌ Error al enviar notificación:', error);
@@ -5116,9 +5231,9 @@
 
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
-                rowClass = 'pendiente-director-notificada';
+                rowClass = 'fila-notificada';
                 botonAura = 'btn-aura-orange-gold';
-                console.log('🟡 Aura Amarillo Seguridad para OC notificada:', o.codigo);
+                console.log('🟡 OC notificada resaltada:', o.codigo);
               }
             }
 
