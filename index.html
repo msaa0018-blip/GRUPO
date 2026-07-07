@@ -38,9 +38,7 @@
     --shadow: 0 4px 20px rgba(0, 0, 0, .06);
     --font: Segoe UI, system-ui, -apple-system, sans-serif;
     --salmon: #FA8072;
-    --salmon-light: #FADBD8;
     --amarillo-seguridad: #FFD700;
-    --amarillo-seguridad-oscuro: #D4A017;
   }
 
   /* ===== ANIMACIONES PARA OC NOTIFICADA ===== */
@@ -112,7 +110,24 @@
     background: #FFE44D !important;
   }
 
-  /* ===== RESTO DEL CSS (comprimido por espacio) ===== */
+  /* ===== PRODUCTOS TABLA - MÁS ESPACIO ===== */
+  .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    margin: 2px 0;
+    border-radius: 6px
+  }
+  .productos-tabla textarea.desc { min-width: 180px; resize: vertical; height: 36px; overflow: hidden }
+  .productos-tabla input.part { min-width: 100px }
+  .productos-tabla input.precio { min-width: 110px }
+  .productos-tabla input.cantidad { min-width: 90px; width: 90px; }
+  .productos-tabla input.importe { min-width: 220px; background: var(--gray-100); font-weight: bold; font-size: 20px }
+  .productos-tabla select.udm { min-width: 110px; width: 110px; }
+  .productos-tabla input.descuento { min-width: 70px; width: 70px; }
+  .productos-tabla input.impuesto { min-width: 70px; width: 70px; }
+
+  /* ===== RESTO DEL CSS ===== */
   html, body { max-width: 100%; overflow-x: hidden; font-family: var(--font); background: var(--gray-100); color: var(--gray-900); line-height: 1.5; padding: 0; margin: 0 }
   a { color: var(--secondary); text-decoration: none }
   img { max-width: 100%; height: auto }
@@ -182,12 +197,6 @@
   .hidden { display: none !important }
   .actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
   .actions button { font-size: 12px; padding: 6px 12px; min-height: 32px; min-width: 32px }
-  .productos-tabla input, .productos-tabla textarea, .productos-tabla select { width: 100%; min-width: 50px; padding: 6px 8px; font-size: 13px; margin: 2px 0; border-radius: 6px }
-  .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
-  .productos-tabla input.part { min-width: 60px }
-  .productos-tabla input.precio { min-width: 80px }
-  .productos-tabla input.importe { min-width: 150px; background: var(--gray-100); font-weight: bold; font-size: 23px }
-  .productos-tabla select.udm { min-width: 100px; width: 100px; }
   .resumen-totales { background: var(--gray-50); padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 16px 30px; align-items: center; font-size: 14px }
   .resumen-totales strong { font-size: 15px }
   .donut-container { width: 160px; height: 160px; margin: 0 auto; position: relative }
@@ -513,14 +522,14 @@
               <thead>
                 <tr>
                   <th style="width:40px;">#</th>
-                  <th style="width:100px;">Núm. Parte</th>
-                  <th style="min-width:150px;">Descripción</th>
-                  <th style="width:80px;">Cantidad</th>
-                  <th style="min-width:100px;width:100px;">UDM</th>
-                  <th style="width:100px;">Precio Unit.</th>
-                  <th style="width:60px;">Dto.%</th>
-                  <th style="width:60px;">Imp.%</th>
-                  <th style="min-width:150px;width:150px;">Importe</th>
+                  <th style="min-width:100px;">Núm. Parte</th>
+                  <th style="min-width:180px;">Descripción</th>
+                  <th style="min-width:90px;width:90px;">Cantidad</th>
+                  <th style="min-width:110px;width:110px;">UDM</th>
+                  <th style="min-width:110px;">Precio Unit.</th>
+                  <th style="min-width:70px;width:70px;">Dto.%</th>
+                  <th style="min-width:70px;width:70px;">Imp.%</th>
+                  <th style="min-width:220px;">Importe</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -528,7 +537,7 @@
               <tfoot>
                 <tr>
                   <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:150px;width:150px;">$0.00</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:220px;">$0.00</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1478,7 +1487,6 @@
               console.log('🟠 OC ' + ocNotificadaId + ' resaltada en SALMÓN con AURA AMARILLO SEGURIDAD (reintento)');
             } else {
               console.warn('⚠️ OC ' + ocNotificadaId + ' no encontrada después de reintentar');
-              // Un último reintento después de más tiempo
               setTimeout(function() {
                 var rowLast = document.querySelector('tr[data-oc-id="' + ocNotificadaId + '"]');
                 if (rowLast) {
@@ -1577,7 +1585,7 @@
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:150px;width:150px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:110px;width:110px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:220px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -1756,7 +1764,7 @@
       }
 
       // ============================================================
-      // GENERAR PDF PARA OC (resumido por espacio)
+      // GENERAR PDF PARA OC
       // ============================================================
       async function generarPDFParaPreview(datos, ocExistente) {
         ocExistente = ocExistente || null;
@@ -1880,14 +1888,14 @@
           headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
           columnStyles: { 
             0: { cellWidth: 20 }, 
-            1: { cellWidth: 40 }, 
+            1: { cellWidth: 50 }, 
             2: { cellWidth: 'auto' }, 
-            3: { cellWidth: 30 }, 
-            4: { cellWidth: 35 }, 
-            5: { cellWidth: 45 }, 
+            3: { cellWidth: 35 }, 
+            4: { cellWidth: 40 }, 
+            5: { cellWidth: 50 }, 
             6: { cellWidth: 35 }, 
             7: { cellWidth: 35 }, 
-            8: { cellWidth: 55 } 
+            8: { cellWidth: 65 } 
           },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
@@ -2267,15 +2275,41 @@
       };
 
       // ============================================================
-      // FUNCIONES DE APROBACIONES
+      // FUNCIONES DE APROBACIONES - FLUJO: ELABORADOR→SOLICITANTE→JEFE→(DIRECTOR SI EXCEDE 60%)→PAGO
       // ============================================================
-      window.aprobarSolicitante = async function(index) {
+      
+      // APROBACIÓN POR ELABORADOR - Pasa de CREADA a APROBADA_ELABORADOR
+      window.aprobarElaborador = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
+        if (actual.rol !== 'Elaborador') return alert('Solo el Elaborador puede aprobar en esta etapa');
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
-        if (actual.u !== oc.responsable) return alert('Solo el responsable puede aprobar');
+        if (actual.u !== oc.elaborador) return alert('Solo el elaborador que creó la OC puede aprobar');
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        if (!proyecto) return alert('Proyecto no encontrado');
+        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        
+        var updates = { 
+          estado: 'APROBADA_ELABORADOR', 
+          fechaaprobacionelaborador: new Date().toISOString(), 
+          nombreelaborador: actual.u 
+        };
+        var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error) return alert('Error al actualizar OC');
+        Object.assign(oc, updates);
+        render();
+        alert('✅ OC aprobada por Elaborador. Ahora debe ser aprobada por el Solicitante.');
+      };
+
+      // APROBACIÓN POR SOLICITANTE - Pasa de APROBADA_ELABORADOR a APROBADA_SOLICITANTE
+      window.aprobarSolicitante = async function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        if (actual.rol !== 'Solicitante') return alert('Solo el Solicitante puede aprobar en esta etapa');
+        var oc = ordenes[index];
+        if (oc.pausada) return alert('⚠️ OC pausada');
+        if (oc.estado !== 'APROBADA_ELABORADOR') return alert('La OC debe estar aprobada por Elaborador primero');
+        if (actual.u !== oc.responsable) return alert('Solo el solicitante responsable puede aprobar');
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
@@ -2289,9 +2323,10 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         render();
-        alert('✅ OC aprobada por Solicitante.');
+        alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
       };
 
+      // APROBACIÓN POR JEFE DE DEPARTAMENTO - Verifica 60% y decide si va a Director o se autoriza
       window.aprobarJefe = async function(index) {
         if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
         var oc = ordenes[index];
@@ -2308,6 +2343,7 @@
           else montoEnMonedaProyecto = oc.montomxn / 20;
         }
 
+        // Si es USD y no tiene tipo de cambio, pasar a PENDIENTE_PARIDAD
         if (oc.moneda === 'USD' && !oc.tipocambio) {
           var updates = {
             estado: 'PENDIENTE_PARIDAD',
@@ -2322,13 +2358,15 @@
           return;
         }
 
+        // Verificar si excede el 60%
         if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
+          // NO EXCEDE 60% - Autorización automática (va directo a pago)
           var updates = {
             estado: 'AUTORIZADA',
             fechaaprobacionjefe: new Date().toISOString(),
             nombrejefe: actual.u,
             fechaaprobaciondirector: new Date().toISOString(),
-            nombredirector: actual.u,
+            nombredirector: 'AUTOMATICA (60%)',
             estadopago: null,
             notificacion_enviada: false
           };
@@ -2337,10 +2375,11 @@
           Object.assign(oc, updates);
           render();
           generarPDFFirmado(oc);
-          alert('✅ OC autorizada automáticamente (dentro del 60%).');
+          alert('✅ OC autorizada automáticamente (dentro del 60%). Pasa directo a pago.');
           return;
         }
 
+        // EXCEDE 60% - Enviar a Director y notificar por Telegram
         var updates = {
           estado: 'PENDIENTE_DIRECTOR',
           fechaaprobacionjefe: new Date().toISOString(),
@@ -2350,7 +2389,7 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
-        // Enviar notificación por Telegram
+        // Enviar notificación por Telegram al Director
         try {
           var productos = oc.productos || [];
           if (typeof productos === 'string') {
@@ -2393,6 +2432,7 @@
         alert('⏳ OC supera el 60%. Enviada a Director para autorización.');
       };
 
+      // AUTORIZACIÓN POR DIRECTOR GENERAL
       window.autorizarDirector = async function(index) {
         if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         var oc = ordenes[index];
@@ -2411,7 +2451,7 @@
         
         render();
         generarPDFFirmado(oc);
-        alert('✅ OC autorizada por Director.');
+        alert('✅ OC autorizada por Director. Pasa a pago.');
       };
 
       window.cancelarDirector = async function(index) {
@@ -2445,6 +2485,7 @@
         if (!tipoCambio || tipoCambio <= 0) { alert('Tipo de cambio inválido.'); return; }
         var nuevoMontoMXN = oc.montototal * tipoCambio;
         var updates = { tipocambio: tipoCambio, montomxn: nuevoMontoMXN, estado: 'AUTORIZADA', estadopago: null };
+        if (!oc.fechaaprobacionelaborador) { updates.fechaaprobacionelaborador = new Date().toISOString(); updates.nombreelaborador = 'No definido'; }
         if (!oc.fechaaprobacionsolicitante) { updates.fechaaprobacionsolicitante = new Date().toISOString(); updates.nombresolicitante = 'No definido'; }
         if (!oc.fechaaprobacionjefe) { updates.fechaaprobacionjefe = new Date().toISOString(); updates.nombrejefe = 'No definido'; }
         if (!oc.fechaaprobaciondirector) { updates.fechaaprobaciondirector = new Date().toISOString(); updates.nombredirector = 'No definido'; }
@@ -2604,14 +2645,14 @@
           headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
           columnStyles: { 
             0: { cellWidth: 20 }, 
-            1: { cellWidth: 40 }, 
+            1: { cellWidth: 50 }, 
             2: { cellWidth: 'auto' }, 
-            3: { cellWidth: 30 }, 
-            4: { cellWidth: 35 }, 
-            5: { cellWidth: 45 }, 
+            3: { cellWidth: 35 }, 
+            4: { cellWidth: 40 }, 
+            5: { cellWidth: 50 }, 
             6: { cellWidth: 35 }, 
             7: { cellWidth: 35 }, 
-            8: { cellWidth: 55 } 
+            8: { cellWidth: 65 } 
           },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
@@ -2656,11 +2697,12 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
+        var elaboradorNombre = oc.nombreelaborador || oc.elaborador || 'No definido';
         var solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
         var jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
         var directorNombre = oc.nombredirector || getDirector();
 
-        var colWidth = (pageWidth - 2 * margin) / 3;
+        var colWidth = (pageWidth - 2 * margin) / 4;
 
         function dibujarAutorizacionFirmada(doc, x, y, nombre, titulo, fecha) {
           var lineWidth = colWidth - 20;
@@ -2684,14 +2726,16 @@
           doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
         }
 
-        var x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2;
+        var x1 = margin, x2 = margin + colWidth, x3 = margin + colWidth * 2, x4 = margin + colWidth * 3;
+        var fechaElaborador = oc.fechaaprobacionelaborador ? new Date(oc.fechaaprobacionelaborador).toLocaleString() : 'Pendiente';
         var fechaSolicitante = oc.fechaaprobacionsolicitante ? new Date(oc.fechaaprobacionsolicitante).toLocaleString() : 'Pendiente';
         var fechaJefe = oc.fechaaprobacionjefe ? new Date(oc.fechaaprobacionjefe).toLocaleString() : 'Pendiente';
         var fechaDirector = oc.fechaaprobaciondirector ? new Date(oc.fechaaprobaciondirector).toLocaleString() : 'Pendiente';
 
-        dibujarAutorizacionFirmada(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
-        dibujarAutorizacionFirmada(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
-        dibujarAutorizacionFirmada(doc, x3, y, directorNombre, 'Director General', fechaDirector);
+        dibujarAutorizacionFirmada(doc, x1, y, elaboradorNombre, 'Elaborador', fechaElaborador);
+        dibujarAutorizacionFirmada(doc, x2, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
+        dibujarAutorizacionFirmada(doc, x3, y, jefeNombre, 'Jefe Depto', fechaJefe);
+        dibujarAutorizacionFirmada(doc, x4, y, directorNombre, 'Director', fechaDirector);
         y += 70;
 
         var pieY = doc.internal.pageSize.height - 55;
@@ -2772,7 +2816,8 @@
               estadoMostrado = 'CONCLUIDA';
             } else {
               var classes = {
-                'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
+                'CREADA': 'badge-creada', 'APROBADA_ELABORADOR': 'badge-creada',
+                'APROBADA_SOLICITANTE': 'badge-solicitante',
                 'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
                 'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
               };
@@ -3130,7 +3175,7 @@
       };
 
       // ============================================================
-      // FUNCIONES CXC
+      // FUNCIONES CXC (resumidas)
       // ============================================================
       function cargarFiltrosCXC() {
         var empresas = [], deptos = [], clientes = [];
@@ -3376,7 +3421,7 @@
       };
 
       // ============================================================
-      // FUNCIONES OF (Órdenes de Fabricación)
+      // FUNCIONES OF (resumidas)
       // ============================================================
       function cargarFiltrosOF() {
         var empresas = [], deptos = [];
@@ -3533,7 +3578,7 @@
       };
 
       // ============================================================
-      // FUNCIONES DE REPORTES
+      // FUNCIONES DE REPORTES (resumidas)
       // ============================================================
       window.previsualizarReporteCXP = function() {
         var datos = obtenerDatosCXP();
@@ -4201,7 +4246,8 @@
               estadoMostrado = '✅ CONCLUIDA';
             } else {
               var classes = {
-                'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
+                'CREADA': 'badge-creada', 'APROBADA_ELABORADOR': 'badge-creada',
+                'APROBADA_SOLICITANTE': 'badge-solicitante',
                 'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
                 'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
               };
@@ -4244,7 +4290,10 @@
                 }
               } else {
                 if (!o.pausada) {
-                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
+                  if (rol === 'Elaborador' && o.estado === 'CREADA') {
+                    acciones += '<button class="success" onclick="window.aprobarElaborador(' + idxOriginal + ')">✅ Aprobar (Elaborador)</button>';
+                  }
+                  if (rol === 'Solicitante' && o.estado === 'APROBADA_ELABORADOR') {
                     acciones += '<button class="success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar (Solicitante)</button>';
                   }
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
