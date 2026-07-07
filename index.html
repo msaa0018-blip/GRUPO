@@ -1033,13 +1033,11 @@
       <div id="panelProyecto" class="card hidden">
         <h2>📁 Crear Proyecto</h2>
         <div class="flex">
-          <select id="empresaSelect" style="min-width:160px;"></select>
-          <input id="empresaInput" placeholder="Empresa" style="display:none;">
-          <select id="departamentoSelect" style="min-width:160px;"></select>
-          <input id="departamentoInput" placeholder="Departamento" style="display:none;">
-          <input id="nombreProyecto" placeholder="Proyecto">
-          <input id="cliente" placeholder="Cliente">
-          <input id="presupuesto" type="number" placeholder="Presupuesto">
+          <input id="empresaProyecto" placeholder="Empresa" disabled style="background:var(--gray-200);">
+          <input id="departamentoProyecto" placeholder="Departamento" disabled style="background:var(--gray-200);">
+          <input id="nombreProyecto" placeholder="Nombre del Proyecto *">
+          <input id="cliente" placeholder="Cliente *">
+          <input id="presupuesto" type="number" placeholder="Presupuesto *">
           <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
           <input id="fechaInicio" type="date">
           <input id="fechaTermino" type="date">
@@ -1063,12 +1061,28 @@
 
       <div id="panelOC" class="card hidden">
         <h2>📄 Crear Orden de Compra</h2>
-        <div class="grupo-formulario"><div class="flex"><select id="selectProyecto" onchange="window.actualizarResponsables()" style="flex:1.5;"></select></div></div>
-        <div class="grupo-formulario"><div class="flex"><input id="proveedor" placeholder="Proveedor" style="flex:1.5;"><input id="rfc" placeholder="RFC (opcional)" style="flex:1;"><input id="direccion" placeholder="Dirección" style="flex:1.5;"></div></div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1.5;"></select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <input id="empresaOC" placeholder="Empresa" disabled style="background:var(--gray-200); flex:1;">
+            <input id="departamentoOC" placeholder="Departamento" disabled style="background:var(--gray-200); flex:1;">
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <input id="proveedor" placeholder="Proveedor *" style="flex:1.5;">
+            <input id="rfc" placeholder="RFC (opcional)" style="flex:1;">
+            <input id="direccion" placeholder="Dirección *" style="flex:1.5;">
+          </div>
+        </div>
         <div class="grupo-formulario">
           <div class="fila-cfdi-entrega">
             <select id="usoCFDI"><option value="G01">G01 - ADQUISICION DE MERCANCIAS</option><option value="G03">G03 - GASTOS EN GENERAL</option><option value="I03">I03 - EQUIPO DE TRANSPORTE</option><option value="I04">I04 - EQUIPO DE COMPUTO Y ACCESORIOS</option><option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option><option value="P01">P01 - POR DEFINIR</option></select>
-            <input id="direccionEntrega" placeholder="Dirección de entrega">
+            <input id="direccionEntrega" placeholder="Dirección de entrega *">
             <input id="cp" placeholder="Código Postal" style="min-width:100px;">
             <select id="monedaOC" onchange="window.mostrarParidadInicial()"><option value="MXN">Pesos (MXN)</option><option value="USD">Dólares (USD)</option></select>
             <input id="paridadInicial" type="number" placeholder="Tipo Cambio" style="display:none;">
@@ -1476,13 +1490,13 @@
         var monedaProyecto = proyecto.moneda || 'MXN';
         return ordenes
           .filter(function(o) { return o.proyecto === nombreProyecto && o.estadopago === 'PAGADA'; })
-          .reduce(function(sum, oc) {
-            var montoEnMonedaProyecto = oc.montomxn || 0;
+          .reduce(function(sum, o) {
+            var montoEnMonedaProyecto = o.montomxn || 0;
             if (monedaProyecto === 'USD') {
-              if (oc.tipocambio && oc.tipocambio > 0) {
-                montoEnMonedaProyecto = oc.montomxn / oc.tipocambio;
+              if (o.tipocambio && o.tipocambio > 0) {
+                montoEnMonedaProyecto = o.montomxn / o.tipocambio;
               } else {
-                montoEnMonedaProyecto = oc.montomxn / 20;
+                montoEnMonedaProyecto = o.montomxn / 20;
               }
             }
             return sum + montoEnMonedaProyecto;
@@ -1680,16 +1694,139 @@
           bandejaOCCard.classList.add('hidden');
         }
 
+        // Configurar campos automáticos
+        if (modulo === 'proyectos' || modulo === 'oc') {
+          window.actualizarDatosOC();
+          window.actualizarDatosProyecto();
+        }
+
         setTimeout(function() {
           render();
           if (modulo === 'oc' && actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
-            window.actualizarResponsables();
+            window.actualizarDatosOC();
           }
           var cuerpo = document.getElementById('cuerpoProductos');
           if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
             window.agregarFilaProducto();
           }
         }, 100);
+      };
+
+      // ============================================================
+      // FUNCIONES PARA ACTUALIZAR CAMPOS AUTOMÁTICOS
+      // ============================================================
+      window.actualizarDatosProyecto = function() {
+        // Para el panel de proyectos, obtener la empresa y departamento del usuario
+        var empresaInput = document.getElementById('empresaProyecto');
+        var deptoInput = document.getElementById('departamentoProyecto');
+        
+        if (!actual) return;
+        
+        // Si es Director General, permitir selección libre
+        if (actual.rol === 'Director General') {
+          empresaInput.disabled = false;
+          empresaInput.style.background = 'white';
+          empresaInput.placeholder = 'Escribe la empresa';
+          empresaInput.value = '';
+          
+          deptoInput.disabled = false;
+          deptoInput.style.background = 'white';
+          deptoInput.placeholder = 'Escribe el departamento';
+          deptoInput.value = '';
+          return;
+        }
+        
+        // Para otros roles, obtener de los permisos
+        var permisos = obtenerOpcionesPermisos(actual);
+        if (permisos.length > 0) {
+          empresaInput.value = permisos[0].empresa || '';
+          deptoInput.value = permisos[0].depto || '';
+        } else {
+          empresaInput.value = '';
+          deptoInput.value = '';
+        }
+        
+        empresaInput.disabled = true;
+        empresaInput.style.background = 'var(--gray-200)';
+        deptoInput.disabled = true;
+        deptoInput.style.background = 'var(--gray-200)';
+      };
+
+      window.actualizarDatosOC = function() {
+        var selectProyecto = document.getElementById('selectProyecto');
+        var empresaInput = document.getElementById('empresaOC');
+        var deptoInput = document.getElementById('departamentoOC');
+        var selectResp = document.getElementById('responsableOC');
+        
+        var selectedId = parseInt(selectProyecto.value);
+        
+        // Si no hay proyecto seleccionado o es Director, permitir edición
+        if (!selectedId || isNaN(selectedId)) {
+          if (actual && actual.rol === 'Director General') {
+            empresaInput.disabled = false;
+            empresaInput.style.background = 'white';
+            empresaInput.placeholder = 'Escribe la empresa';
+            empresaInput.value = '';
+            
+            deptoInput.disabled = false;
+            deptoInput.style.background = 'white';
+            deptoInput.placeholder = 'Escribe el departamento';
+            deptoInput.value = '';
+            
+            selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
+          } else {
+            // Si no es Director, mostrar mensaje
+            empresaInput.value = 'Selecciona un proyecto';
+            empresaInput.disabled = true;
+            empresaInput.style.background = 'var(--gray-200)';
+            deptoInput.value = 'Selecciona un proyecto';
+            deptoInput.disabled = true;
+            deptoInput.style.background = 'var(--gray-200)';
+            selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
+          }
+          return;
+        }
+        
+        var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
+        if (!proyecto) {
+          selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
+          return;
+        }
+        
+        // Si es Director General, permitir editar los campos
+        if (actual && actual.rol === 'Director General') {
+          empresaInput.disabled = false;
+          empresaInput.style.background = 'white';
+          empresaInput.value = proyecto.empresa;
+          
+          deptoInput.disabled = false;
+          deptoInput.style.background = 'white';
+          deptoInput.value = proyecto.departamento;
+        } else {
+          // Para otros roles, campos fijos
+          empresaInput.value = proyecto.empresa;
+          empresaInput.disabled = true;
+          empresaInput.style.background = 'var(--gray-200)';
+          
+          deptoInput.value = proyecto.departamento;
+          deptoInput.disabled = true;
+          deptoInput.style.background = 'var(--gray-200)';
+        }
+        
+        // Actualizar responsables
+        var posibles = getPosiblesResponsables();
+        var filtrados = posibles.filter(function(u) { return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento); });
+        selectResp.innerHTML = '';
+        if (filtrados.length === 0) {
+          selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
+        } else {
+          filtrados.forEach(function(u) {
+            var opt = document.createElement('option');
+            opt.value = u.usuario;
+            opt.textContent = u.usuario + ' (' + u.rol + ')';
+            selectResp.appendChild(opt);
+          });
+        }
       };
 
       window.filtrarPendientesPagar = function() {
@@ -1732,34 +1869,6 @@
         }
         return ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; }).length;
       }
-
-      window.actualizarResponsables = function() {
-        var selectProyecto = document.getElementById('selectProyecto');
-        var selectResp = document.getElementById('responsableOC');
-        var selectedId = parseInt(selectProyecto.value);
-        if (!selectedId || isNaN(selectedId)) {
-          selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
-          return;
-        }
-        var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
-        if (!proyecto) {
-          selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
-          return;
-        }
-        var posibles = getPosiblesResponsables();
-        var filtrados = posibles.filter(function(u) { return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento); });
-        selectResp.innerHTML = '';
-        if (filtrados.length === 0) {
-          selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
-        } else {
-          filtrados.forEach(function(u) {
-            var opt = document.createElement('option');
-            opt.value = u.usuario;
-            opt.textContent = u.usuario + ' (' + u.rol + ')';
-            selectResp.appendChild(opt);
-          });
-        }
-      };
 
       window.mostrarParidadInicial = function() {
         var moneda = document.getElementById('monedaOC').value;
@@ -1911,7 +2020,7 @@
           setTimeout(function() {
             render();
             if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
-              window.actualizarResponsables();
+              window.actualizarDatosOC();
             }
             var cuerpo = document.getElementById('cuerpoProductos');
             if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
@@ -1977,7 +2086,7 @@
         }
 
         var selectProyecto = document.getElementById('selectProyecto');
-        selectProyecto.onchange = window.actualizarResponsables;
+        selectProyecto.onchange = window.actualizarDatosOC;
 
         var filtroProyecto = document.getElementById('filtroProyecto');
         filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
@@ -2032,17 +2141,23 @@
       // ============================================================
       window.crearProyecto = async function() {
         var empresa, departamento;
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
-          empresa = document.getElementById('empresaSelect').value.toUpperCase();
-          departamento = document.getElementById('departamentoSelect').value.toUpperCase();
-          if (!empresa || !departamento) {
-            document.getElementById('msgProyecto').innerHTML = '<div class="alert">⚠️ Selecciona una empresa y departamento válidos.</div>';
+        
+        // Si es Director, usar los valores de los campos (pueden ser editados)
+        if (actual && actual.rol === 'Director General') {
+          empresa = document.getElementById('empresaProyecto').value.trim().toUpperCase();
+          departamento = document.getElementById('departamentoProyecto').value.trim().toUpperCase();
+        } else {
+          // Para otros roles, usar valores de permisos
+          var permisos = obtenerOpcionesPermisos(actual);
+          if (permisos.length > 0) {
+            empresa = permisos[0].empresa || '';
+            departamento = permisos[0].depto || '';
+          } else {
+            document.getElementById('msgProyecto').innerHTML = '<div class="alert">⚠️ No tienes permisos para crear proyectos.</div>';
             return;
           }
-        } else {
-          empresa = document.getElementById('empresaSelect').value.toUpperCase();
-          departamento = document.getElementById('departamentoSelect').value.toUpperCase();
         }
+        
         var nombre = document.getElementById('nombreProyecto').value.trim().toUpperCase();
         var cliente = document.getElementById('cliente').value.trim().toUpperCase();
         var presupuesto = Number(document.getElementById('presupuesto').value);
@@ -2059,9 +2174,13 @@
           msgDiv.innerHTML = '<div class="alert">⚠️ LA FECHA DE INICIO NO PUEDE SER POSTERIOR A LA FECHA DE TÉRMINO.</div>';
           return;
         }
-        if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
-          return;
+        
+        // Solo validar permisos si no es Director
+        if (actual.rol !== 'Director General') {
+          if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
+            return;
+          }
         }
 
         var nuevoProyecto = { empresa: empresa, departamento: departamento, nombre: nombre, cliente: cliente, presupuesto: presupuesto, moneda: moneda, limite: presupuesto * 0.60, fecha_inicio: fechaInicio, fecha_termino: fechaTermino };
@@ -2169,20 +2288,80 @@
       function recopilarDatosOC() {
         var selectProyecto = document.getElementById('selectProyecto');
         var selectedId = parseInt(selectProyecto.value);
-        if (!selectedId) {
-          document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ SELECCIONE UN PROYECTO VÁLIDO.</div>';
-          return null;
+        var msgDiv = document.getElementById('mensajeOC');
+        
+        // Obtener empresa y departamento de los campos (pueden ser editados por Director)
+        var empresaOC = document.getElementById('empresaOC').value.trim().toUpperCase();
+        var deptoOC = document.getElementById('departamentoOC').value.trim().toUpperCase();
+        
+        // Si no hay proyecto seleccionado y es Director, permitir crear con datos manuales
+        if (!selectedId || isNaN(selectedId)) {
+          if (actual && actual.rol === 'Director General') {
+            if (!empresaOC || !deptoOC) {
+              msgDiv.innerHTML = '<div class="alert">⚠️ INGRESA EMPRESA Y DEPARTAMENTO.</div>';
+              return null;
+            }
+          } else {
+            msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONE UN PROYECTO VÁLIDO.</div>';
+            return null;
+          }
+          
+          // Para Director sin proyecto, usar datos manuales
+          var proyecto = null;
+          var nombreProyecto = 'PROYECTO_MANUAL_' + new Date().toISOString().slice(0,10);
+          var cliente = 'CLIENTE_MANUAL';
+          
+          // Verificar si existe un proyecto con ese nombre
+          var proyectoExistente = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
+          if (!proyectoExistente) {
+            // Crear proyecto temporal
+            var nuevoProyecto = {
+              empresa: empresaOC,
+              departamento: deptoOC,
+              nombre: nombreProyecto,
+              cliente: cliente,
+              presupuesto: 999999,
+              moneda: 'MXN',
+              limite: 599999,
+              fecha_inicio: new Date().toISOString().slice(0,10),
+              fecha_termino: new Date(Date.now() + 365*24*60*60*1000).toISOString().slice(0,10)
+            };
+            // No guardamos en BD, solo para validación
+            proyecto = nuevoProyecto;
+          } else {
+            proyecto = proyectoExistente;
+          }
+          
+          if (!proyecto) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ ERROR AL CREAR PROYECTO TEMPORAL.</div>';
+            return null;
+          }
+          
+          // Continuar con la creación de OC
+          return crearOCConDatos(proyecto, empresaOC, deptoOC, msgDiv);
         }
+        
         var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
         if (!proyecto) {
-          document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ PROYECTO NO ENCONTRADO.</div>';
+          msgDiv.innerHTML = '<div class="alert">⚠️ PROYECTO NO ENCONTRADO.</div>';
           return null;
         }
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
-          document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR OC EN ESTE PROYECTO.</div>';
-          return null;
+        
+        // Si no es Director, usar empresa y departamento del proyecto
+        if (actual.rol !== 'Director General') {
+          empresaOC = proyecto.empresa;
+          deptoOC = proyecto.departamento;
+          
+          if (!usuarioPuedeAcceder(actual, empresaOC, deptoOC)) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR OC EN ESTA EMPRESA/DEPARTAMENTO.</div>';
+            return null;
+          }
         }
+        
+        return crearOCConDatos(proyecto, empresaOC, deptoOC, msgDiv);
+      }
 
+      function crearOCConDatos(proyecto, empresa, departamento, msgDiv) {
         var proveedor = document.getElementById('proveedor').value.trim().toUpperCase();
         var rfc = document.getElementById('rfc').value.trim().toUpperCase();
         var direccion = document.getElementById('direccion').value.trim().toUpperCase();
@@ -2199,7 +2378,6 @@
         var swift = document.getElementById('swift').value.trim().toUpperCase();
         var cie = document.getElementById('cie').value.trim().toUpperCase();
         var referencia = document.getElementById('referencia').value.trim().toUpperCase();
-        var msgDiv = document.getElementById('mensajeOC');
 
         if (!banco) { msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>'; return null; }
         if (!cuenta && !clabe) { msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>'; return null; }
@@ -2221,9 +2399,17 @@
         }
 
         var responsableUser = buscarUsuarioDB(responsable);
-        if (!responsableUser || !usuarioPuedeAcceder(responsableUser, proyecto.empresa, proyecto.departamento)) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
+        if (!responsableUser) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO EXISTE.</div>';
           return null;
+        }
+        
+        // Validar permisos del responsable si no es Director
+        if (actual.rol !== 'Director General') {
+          if (!usuarioPuedeAcceder(responsableUser, empresa, departamento)) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
+            return null;
+          }
         }
 
         var tbody = document.getElementById('cuerpoProductos');
@@ -2258,9 +2444,9 @@
         var motivo = '';
 
         return {
-          empresa: proyecto.empresa,
-          departamento: proyecto.departamento,
-          proyectonombre: proyecto.nombre,
+          empresa: empresa,
+          departamento: departamento,
+          proyectonombre: proyecto.nombre || 'PROYECTO_MANUAL',
           proveedor: proveedor,
           rfc: rfc || 'NA',
           direccion: direccion,
@@ -2277,7 +2463,7 @@
           responsable: responsable,
           productos: productos,
           motivo: motivo,
-          cliente: proyecto.cliente,
+          cliente: proyecto.cliente || 'CLIENTE_MANUAL',
           elaborador: actual.u,
           banco: banco,
           cuenta: cuenta || null,
@@ -4995,11 +5181,19 @@
           });
         }
 
+        // Si es Director y no hay proyectos, permitir crear sin proyecto
+        if (actual && actual.rol === 'Director General') {
+          var optionManual = document.createElement('option');
+          optionManual.value = '';
+          optionManual.textContent = '📝 Crear sin proyecto (manual)';
+          selectProyecto.appendChild(optionManual);
+        }
+
         if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
             selectProyecto.selectedIndex = 0;
           }
-          window.actualizarResponsables();
+          window.actualizarDatosOC();
         }
 
         ocVisibles.reverse();
