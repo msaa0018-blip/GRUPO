@@ -2076,6 +2076,18 @@
               var row = document.querySelector('tr[data-oc-id="' + ocNotificadaId + '"]');
               if (row) {
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                setTimeout(function() {
+                  var btnAutorizar = row.querySelector('button.success');
+                  if (btnAutorizar) {
+                    btnAutorizar.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                  } else {
+                    var wrapper = row.closest('.table-wrapper');
+                    if (wrapper) {
+                      wrapper.scrollTo({ left: wrapper.scrollWidth, behavior: 'smooth' });
+                    }
+                  }
+                }, 500);
               }
             }, 800);
           }, 200);
