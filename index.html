@@ -1410,6 +1410,18 @@
       var actual = null;
       var proyectos = [];
       var ordenes = [];
+
+      // La columna en Supabase se llama "responsable" (no "solicitante").
+      // Internamente el resto del sistema sigue usando oc.solicitante en muchos
+      // lugares (filtros, aprobaciones, PDF, Telegram), así que al cargar/insertar
+      // datos generamos ese alias en memoria para no tener que tocar todo el código.
+      function normalizarOrdenes(lista) {
+        (lista || []).forEach(function(o) {
+          if (o && !o.solicitante && o.responsable) o.solicitante = o.responsable;
+          if (o && !o.responsable && o.solicitante) o.responsable = o.solicitante;
+        });
+        return lista;
+      }
       var cuentasCXC = [];
       var ordenesFabricacion = [];
       var consecutivoOC = 1;
@@ -1603,7 +1615,7 @@
           
           var { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
           if (e2) throw e2;
-          ordenes = oData || [];
+          ordenes = normalizarOrdenes(oData || []);
           
           var { data: cxcData, error: e3 } = await supabase.from('cuentas_cxc').select('*');
           if (e3) throw e3;
@@ -2880,7 +2892,7 @@
           montototal: datos.montototal, montomxn: datos.montomxn,
           estado: datos.estado, fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago, fechaentrega: datos.fechaentrega,
-          responsable: datos.responsable, solicitante: datos.solicitante,
+          responsable: datos.responsable,
           pausada: false,
           motivo: datos.motivo || null, fechaaprobacionsolicitante: null,
           fechaaprobacionjefe: null, fechaaprobaciondirector: null,
@@ -2903,7 +2915,7 @@
           document.getElementById('cuerpoProductos').innerHTML = '';
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
-          if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
+          if (data && data.length > 0) { ordenes.push(normalizarOrdenes(data)[0]); } else { await cargarDatos(); }
           render();
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
@@ -2944,7 +2956,7 @@
           montototal: datos.montototal, montomxn: datos.montomxn,
           estado: datos.estado, fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago, fechaentrega: datos.fechaentrega,
-          responsable: datos.responsable, solicitante: datos.solicitante,
+          responsable: datos.responsable,
           pausada: false,
           motivo: datos.motivo || null, fechaaprobacionsolicitante: null,
           fechaaprobacionjefe: null, fechaaprobaciondirector: null,
@@ -2970,7 +2982,7 @@
           document.getElementById('cuerpoProductos').innerHTML = '';
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
-          if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
+          if (data && data.length > 0) { ordenes.push(normalizarOrdenes(data)[0]); } else { await cargarDatos(); }
           render();
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
