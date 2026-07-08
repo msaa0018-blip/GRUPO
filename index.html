@@ -51,7 +51,10 @@
     color: var(--gray-900);
     line-height: 1.5;
     padding: 0;
-    margin: 0
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
   a {
     color: var(--secondary);
@@ -73,7 +76,8 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .2)
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+    flex-shrink: 0;
   }
   header .logo {
     display: flex;
@@ -110,6 +114,9 @@
     margin: 0 auto;
     padding: 12px 16px;
     overflow-x: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
   .card {
     background: white;
@@ -348,8 +355,8 @@
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
   .productos-tabla input.cantidad { min-width: 130px }
-  .productos-tabla input.precio { min-width: 80px }
-  .productos-tabla input.importe { min-width: 190px; background: var(--gray-100); font-weight: bold; font-size: 23px }
+  .productos-tabla input.precio { min-width: 90px; width: 100px; } /* Aumentado 5 puntos */
+  .productos-tabla input.importe { min-width: 200px; background: var(--gray-100); font-weight: bold; font-size: 23px; width: 210px; } /* Aumentado espacio horizontal */
   .productos-tabla select.udm { min-width: 100px; width: 100px; }
   .resumen-totales {
     background: var(--gray-50);
@@ -401,17 +408,97 @@
     margin-bottom: 16px;
     font-size: 16px
   }
+  
+  /* ===== LOGIN CENTRADO ===== */
   #login { 
     max-width: 460px; 
-    margin: 60px auto; 
+    margin: auto; 
     text-align: center; 
-    padding: 32px 24px;
+    padding: 40px 32px;
     background: white;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--gray-200);
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
-  #login .flex { justify-content: center }
-  #login h2 { margin-bottom: 20px; }
+  #login .login-logo {
+    margin-bottom: 24px;
+  }
+  #login .login-logo img {
+    height: 60px;
+    width: auto;
+  }
+  #login h2 {
+    font-size: 22px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 8px;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  #login .login-subtitle {
+    color: var(--gray-500);
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  #login .flex {
+    gap: 12px;
+    width: 100%;
+    flex-direction: column;
+  }
+  #login .flex input {
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--gray-300);
+    background: var(--gray-50);
+    font-size: 14px;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  #login .flex input:focus {
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
+  }
+  #login .flex button {
+    min-height: 48px;
+    padding: 12px 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  #login .flex button:hover {
+    background: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(11, 26, 51, 0.2);
+  }
+  #login .flex button:active {
+    transform: translateY(0);
+  }
+  #login .alert {
+    margin-top: 12px;
+    border-radius: 8px;
+    width: 100%;
+  }
+
+  .container-login {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
   #pdfPreviewModal {
     position: fixed;
     top: 0;
@@ -606,7 +693,9 @@
     .modulo-item { width: 60px }
     .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
     .modulo-item .modulo-leyenda { font-size: 11px }
-    #login { margin: 30px 16px; padding: 24px 16px; }
+    #login { margin: 20px 16px; padding: 32px 20px; width: auto; }
+    #login .flex input { min-height: 44px; font-size: 14px; }
+    #login .flex button { min-height: 44px; font-size: 14px; }
   }
 
   #contenidoApp { display: none !important }
@@ -817,10 +906,11 @@
     .cxc-resumen { grid-template-columns: 1fr 1fr; }
     .cxc-form-row { flex-direction: column; }
     .cxc-form-row>* { min-width: 100%; }
-    #login { margin: 20px 12px; padding: 20px 16px; }
+    #login { margin: 20px 12px; padding: 28px 16px; }
     #login h2 { font-size: 1.2rem; }
     #visualizarModal .modal-body iframe { height: 300px; }
     #pdfPreviewModal .modal-body iframe { height: 300px; }
+    .container-login { padding: 12px; }
   }
 
   @media (max-width: 480px) {
@@ -830,6 +920,7 @@
     #visualizarModal .modal-body iframe { height: 250px; }
     #pdfPreviewModal .modal-body iframe { height: 250px; }
     .cxc-resumen { grid-template-columns: 1fr; }
+    #login { margin: 12px 8px; padding: 24px 16px; }
   }
 
   #cxpPreviewModal {
@@ -908,85 +999,32 @@
     accent-color: var(--primary);
   }
 
-  #login {
-    max-width: 460px;
-    margin: 80px auto;
-    text-align: center;
-    padding: 40px 32px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--gray-200);
-  }
-  #login .login-logo {
-    margin-bottom: 24px;
-  }
-  #login .login-logo img {
-    height: 60px;
-    width: auto;
-  }
-  #login h2 {
-    font-size: 22px;
-    color: var(--primary);
-    font-weight: 600;
-    margin-bottom: 8px;
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-  #login .login-subtitle {
-    color: var(--gray-500);
-    font-size: 13px;
-    margin-bottom: 24px;
-  }
-  #login .flex {
-    gap: 12px;
-  }
-  #login .flex input {
-    min-height: 48px;
-    padding: 12px 16px;
-    border-radius: 10px;
-    border: 1px solid var(--gray-300);
-    background: var(--gray-50);
-    font-size: 14px;
-    transition: all 0.2s;
-  }
-  #login .flex input:focus {
-    background: white;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
-  }
-  #login .flex button {
-    min-height: 48px;
-    padding: 12px 32px;
-    background: var(--primary);
-    color: white;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 15px;
-    transition: all 0.2s;
-    width: 100%;
-  }
-  #login .flex button:hover {
-    background: var(--primary-light);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(11, 26, 51, 0.2);
-  }
-  #login .flex button:active {
-    transform: translateY(0);
-  }
-  #login .alert {
-    margin-top: 12px;
-    border-radius: 8px;
-  }
-
-  /* Estilo para la OC notificada */
+  /* Estilo para la OC notificada - AURA DORADA + PARPADEO */
   .pendiente-director-notificada {
-    background: #ffffe0 !important;
-    border-left: 4px solid #FFC700 !important;
-    transition: background 0.5s ease;
+    background: #FFC700 !important;
+    border-left: 6px solid #FF8C00 !important;
+    transition: background 0.3s ease;
+    animation: pulse-gold 1.5s ease-in-out infinite !important;
+    box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3) !important;
+    position: relative;
+    z-index: 10;
   }
   .pendiente-director-notificada:hover {
-    background: #ffffb3 !important;
+    background: #FFD700 !important;
+    box-shadow: 0 0 50px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4) !important;
+  }
+  .pendiente-director-notificada td {
+    color: #1a1a1a !important;
+    font-weight: 600 !important;
+  }
+  .pendiente-director-notificada td code {
+    color: #1a1a1a !important;
+    font-weight: 700 !important;
+  }
+  @keyframes pulse-gold {
+    0% { background: #FFC700; box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3); }
+    50% { background: #FFD740; box-shadow: 0 0 50px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4); }
+    100% { background: #FFC700; box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3); }
   }
   .btn-aura-orange-gold {
     background: #FFC700 !important;
@@ -1021,18 +1059,20 @@
   </header>
 
   <div class="container">
-    <div id="login">
-      <div class="login-logo">
-        <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'" style="height:60px; width:auto;">
+    <div class="container-login" id="loginContainer">
+      <div id="login">
+        <div class="login-logo">
+          <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'" style="height:60px; width:auto;">
+        </div>
+        <h2>Bienvenido</h2>
+        <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
+        <div class="flex">
+          <input id="usuario" placeholder="Usuario">
+          <input id="password" type="password" placeholder="Contraseña">
+          <button id="btnLogin" type="button">Ingresar</button>
+        </div>
+        <div id="error" class="alert hidden"></div>
       </div>
-      <h2>Bienvenido</h2>
-      <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
-      <div class="flex">
-        <input id="usuario" placeholder="Usuario">
-        <input id="password" type="password" placeholder="Contraseña">
-        <button id="btnLogin" type="button">Ingresar</button>
-      </div>
-      <div id="error" class="alert hidden"></div>
     </div>
 
     <div id="menuPrincipal" class="hidden">
@@ -1044,7 +1084,7 @@
         <div class="modulo-item" data-modulo="proyectos"><div class="modulo-cuadro funcional">📊</div><span class="modulo-leyenda">Proyectos</span></div>
         <div class="modulo-item" data-modulo="cxp"><div class="modulo-cuadro funcional">💰</div><span class="modulo-leyenda">CXP</span></div>
         <div class="modulo-item" data-modulo="cxc"><div class="modulo-cuadro funcional">💳</div><span class="modulo-leyenda">CXC</span></div>
-        <div class="modulo-item" data-modulo="of"><div class="modulo-cuadro funcional">📋</div><span class="modulo-leyenda">OF</span></div>
+        <div class="modulo-item" data-modulo="of"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OF</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
         <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
@@ -1153,10 +1193,10 @@
                   <th style="min-width:150px;">Descripción</th>
                   <th style="width:140px;">Cantidad</th>
                   <th style="min-width:100px;width:100px;">UDM</th>
-                  <th style="width:100px;">Precio Unit.</th>
+                  <th style="width:110px;min-width:110px;">Precio Unit.</th>
                   <th style="width:60px;">Dto.%</th>
                   <th style="width:60px;">Imp.%</th>
-                  <th style="min-width:190px;width:190px;">Importe</th>
+                  <th style="min-width:200px;width:210px;">Importe</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -1164,7 +1204,7 @@
               <tfoot>
                 <tr>
                   <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:190px;width:190px;">$0.00</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:200px;width:210px;">$0.00</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1282,8 +1322,8 @@
       </div>
 
       <div id="panelOF" class="card hidden">
-        <h2>📋 Órdenes de Fabricación (OF)</h2>
-        <p class="text-muted" style="margin-bottom:12px;">Gestión de órdenes de fabricación por empresa y departamento.</p>
+        <h2>📄 Órdenes de Facturación (OF)</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Gestión de órdenes de facturación por empresa y departamento.</p>
         <div class="cxp-filtros">
           <select id="ofFiltroEmpresa"><option value="">Todas las empresas</option></select>
           <select id="ofFiltroDepto"><option value="">Todos los departamentos</option></select>
@@ -1299,10 +1339,10 @@
         </div>
 
         <div class="card" style="margin:12px 0; padding:14px 16px;">
-          <h4>➕ Nueva Orden de Fabricación</h4>
+          <h4>➕ Nueva Orden de Facturación</h4>
           <div class="cxc-form-row">
             <input id="ofCodigo" placeholder="Código OF *" required>
-            <input id="ofProducto" placeholder="Producto *" required>
+            <input id="ofProducto" placeholder="Concepto *" required>
             <input id="ofCantidad" type="number" step="1" placeholder="Cantidad *" required>
             <input id="ofFechaInicio" type="date" required>
           </div>
@@ -1320,10 +1360,10 @@
         </div>
 
         <div id="ofResumen" class="cxc-resumen"></div>
-        <h3>📋 Órdenes de Fabricación</h3>
+        <h3>📋 Órdenes de Facturación</h3>
         <div class="table-wrapper">
           <table id="ofTabla">
-            <thead><tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>F.Inicio</th><th>F.Término</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Código</th><th>Concepto</th><th>Cantidad</th><th>F.Inicio</th><th>F.Término</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="ofCuerpo"></tbody>
           </table>
         </div>
@@ -1734,7 +1774,7 @@
             cargarFiltrosOF();
             setTimeout(function() { window.renderOF(); }, 100);
           } else {
-            alert('⚠️ No tienes permiso para acceder a Órdenes de Fabricación.');
+            alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
             window.mostrarMenu();
             return;
           }
@@ -2027,6 +2067,7 @@
         errorDiv.classList.add('hidden');
 
         document.getElementById('login').classList.add('hidden');
+        document.getElementById('loginContainer').style.display = 'none';
 
         var urlParams = new URLSearchParams(window.location.search);
         var ocParam = urlParams.get('oc');
@@ -2072,22 +2113,15 @@
               window.agregarFilaProducto();
             }
             
+            // Scroll y resaltado de la OC notificada
             setTimeout(function() {
               var row = document.querySelector('tr[data-oc-id="' + ocNotificadaId + '"]');
               if (row) {
-                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                setTimeout(function() {
-                  var btnAutorizar = row.querySelector('button.success');
-                  if (btnAutorizar) {
-                    btnAutorizar.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                  } else {
-                    var wrapper = row.closest('.table-wrapper');
-                    if (wrapper) {
-                      wrapper.scrollTo({ left: wrapper.scrollWidth, behavior: 'smooth' });
-                    }
-                  }
-                }, 500);
+                // Scroll al inicio de la fila para que sea visible
+                row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                console.log('🟡 Resaltando OC notificada:', ocNotificadaId);
+              } else {
+                console.log('⚠️ No se encontró la fila para OC ID:', ocNotificadaId);
               }
             }, 800);
           }, 200);
@@ -2283,7 +2317,7 @@
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:190px;width:190px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:90px;width:100px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -2655,10 +2689,10 @@
             2: { cellWidth: 'auto' }, 
             3: { cellWidth: 30 }, 
             4: { cellWidth: 35 }, 
-            5: { cellWidth: 45 }, 
+            5: { cellWidth: 50 }, 
             6: { cellWidth: 35 }, 
             7: { cellWidth: 35 }, 
-            8: { cellWidth: 55 } 
+            8: { cellWidth: 60 } 
           },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
@@ -2674,7 +2708,8 @@
           iva = subtotal * (impuestoPorcentaje / 100);
         }
 
-        var totalX = pageWidth * 0.72;
+        // Ajuste: recorrer leyendas a la izquierda 5 puntos
+        var totalX = pageWidth * 0.72 - 5; // 5 puntos a la izquierda
         var lineSpacing = 13;
         y += 15;
 
@@ -3408,10 +3443,10 @@
             2: { cellWidth: 'auto' }, 
             3: { cellWidth: 30 }, 
             4: { cellWidth: 35 }, 
-            5: { cellWidth: 45 }, 
+            5: { cellWidth: 50 }, 
             6: { cellWidth: 35 }, 
             7: { cellWidth: 35 }, 
-            8: { cellWidth: 55 } 
+            8: { cellWidth: 60 } 
           },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
@@ -3427,7 +3462,8 @@
           iva = subtotal * (impuestoPorcentaje / 100);
         }
 
-        var totalX = pageWidth * 0.72;
+        // Ajuste: recorrer leyendas a la izquierda 5 puntos
+        var totalX = pageWidth * 0.72 - 5;
         var lineSpacing = 13;
         y += 15;
 
@@ -4384,7 +4420,7 @@
       };
 
       // ============================================================
-      // FUNCIONES OF (Órdenes de Fabricación)
+      // FUNCIONES OF (Órdenes de Facturación)
       // ============================================================
       
       function cargarFiltrosOF() {
@@ -4484,7 +4520,7 @@
             msgDiv.innerHTML = '<div class="alert">⚠️ ERROR: ' + error.message + '</div>';
             return;
           }
-          msgDiv.innerHTML = '<div class="success-msg">✅ ORDEN DE FABRICACIÓN REGISTRADA.</div>';
+          msgDiv.innerHTML = '<div class="success-msg">✅ ORDEN DE FACTURACIÓN REGISTRADA.</div>';
           document.getElementById('ofCodigo').value = '';
           document.getElementById('ofProducto').value = '';
           document.getElementById('ofCantidad').value = '';
@@ -4500,12 +4536,12 @@
       window.eliminarOF = async function(index) {
         if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
         var of = ordenesFabricacion[index];
-        if (!confirm('¿Eliminar la orden de fabricación ' + of.codigo + '?')) return;
+        if (!confirm('¿Eliminar la orden de facturación ' + of.codigo + '?')) return;
         try {
           await supabase.from('ordenes_fabricacion').delete().eq('id', of.id);
           ordenesFabricacion.splice(index, 1);
           window.renderOF();
-          alert('✅ Orden de fabricación eliminada.');
+          alert('✅ Orden de facturación eliminada.');
         } catch (error) { alert('❌ Error: ' + error.message); }
       };
 
@@ -4538,7 +4574,7 @@
 
         tbody.innerHTML = '';
         if (ofs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="mensaje-sin-datos">No hay órdenes de fabricación que coincidan con los filtros</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="mensaje-sin-datos">No hay órdenes de facturación que coincidan con los filtros</td></tr>';
         } else {
           ofs.slice().reverse().forEach(function(o, i) {
             var idxOriginal = ordenesFabricacion.indexOf(o);
@@ -4561,7 +4597,7 @@
             tbody.innerHTML += 
               '<tr>' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
-              '<td data-label="Producto">' + o.producto + '</td>' +
+              '<td data-label="Concepto">' + o.producto + '</td>' +
               '<td data-label="Cantidad">' + o.cantidad + '</td>' +
               '<td data-label="F.Inicio">' + new Date(o.fecha_inicio).toLocaleDateString() + '</td>' +
               '<td data-label="F.Término">' + new Date(o.fecha_termino).toLocaleDateString() + '</td>' +
@@ -5117,7 +5153,7 @@
         doc.setFontSize(16);
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.text('REPORTE DE ÓRDENES DE FABRICACIÓN', pageWidth / 2, 22, { align: 'center' });
+        doc.text('REPORTE DE ÓRDENES DE FACTURACIÓN', pageWidth / 2, 22, { align: 'center' });
         
         doc.setFontSize(9);
         doc.setTextColor(200, 200, 200);
@@ -5179,10 +5215,10 @@
           doc.setFontSize(11);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
-          doc.text('DETALLE DE ÓRDENES DE FABRICACIÓN', margin, y);
+          doc.text('DETALLE DE ÓRDENES DE FACTURACIÓN', margin, y);
           y += 10;
 
-          var headers = ['Código', 'Producto', 'Cantidad', 'F.Inicio', 'F.Término', 'Estado'];
+          var headers = ['Código', 'Concepto', 'Cantidad', 'F.Inicio', 'F.Término', 'Estado'];
           var rows = ofs.slice().reverse().map(function(o) {
             return [
               o.codigo,
