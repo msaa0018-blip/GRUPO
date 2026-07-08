@@ -977,6 +977,32 @@
     margin-top: 12px;
     border-radius: 8px;
   }
+
+  /* Estilo para la OC notificada */
+  .pendiente-director-notificada {
+    background: #ffffe0 !important;
+    border-left: 4px solid #FFC700 !important;
+    transition: background 0.5s ease;
+  }
+  .pendiente-director-notificada:hover {
+    background: #ffffb3 !important;
+  }
+  .btn-aura-orange-gold {
+    background: #FFC700 !important;
+    color: #0b1a33 !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 20px rgba(255, 199, 0, 0.6) !important;
+    animation: pulse-aura 2s infinite !important;
+  }
+  .btn-aura-orange-gold:hover {
+    background: #e6b300 !important;
+    transform: scale(1.05) !important;
+  }
+  @keyframes pulse-aura {
+    0% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
+    50% { box-shadow: 0 0 40px rgba(255, 199, 0, 0.9), 0 0 60px rgba(255, 199, 0, 0.3); }
+    100% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
+  }
 </style>
 </head>
 <body>
@@ -985,7 +1011,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v55</span>
+        <span class="sub">Workflow OC ERP v56</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1093,7 +1119,13 @@
           <div class="flex">
             <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha pago:</label><input id="fechaPago" type="date" style="flex:1;">
             <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha entrega:</label><input id="fechaEntrega" type="date" style="flex:1;">
-            <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable:</label><select id="responsableOC" style="flex:1.5;"></select>
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable (Elaborador):</label><select id="responsableOC" style="flex:1.5;"></select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Solicitante:</label>
+            <select id="solicitanteOC" style="flex:1.5;"></select>
           </div>
         </div>
         <div class="grupo-formulario">
@@ -1460,7 +1492,10 @@
           });
         }
         if (usuario.rol === 'Solicitante') {
-          ocFiltradas = ocFiltradas.filter(function(o) { return o.responsable === usuario.usuario; });
+          ocFiltradas = ocFiltradas.filter(function(o) { return o.solicitante === usuario.usuario; });
+        }
+        if (usuario.rol === 'Elaborador') {
+          ocFiltradas = ocFiltradas.filter(function(o) { return o.elaborador === usuario.usuario; });
         }
         return ocFiltradas;
       }
@@ -1471,7 +1506,11 @@
       }
 
       function getPosiblesResponsables() {
-        return usuariosDB.filter(function(u) { return u.rol === 'Solicitante' || u.rol === 'Elaborador'; });
+        return usuariosDB.filter(function(u) { return u.rol === 'Elaborador' || u.rol === 'Solicitante'; });
+      }
+
+      function getSolicitantes() {
+        return usuariosDB.filter(function(u) { return u.rol === 'Solicitante'; });
       }
 
       function getJefeDepto(empresa, depto) {
@@ -1558,22 +1597,18 @@
         try {
           await cargarUsuarios();
           
-          // Cargar proyectos
           var { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
           if (e1) throw e1;
           proyectos = pData || [];
           
-          // Cargar órdenes
           var { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
           if (e2) throw e2;
           ordenes = oData || [];
           
-          // Cargar cuentas CXC
           var { data: cxcData, error: e3 } = await supabase.from('cuentas_cxc').select('*');
           if (e3) throw e3;
           cuentasCXC = cxcData || [];
           
-          // Cargar órdenes de fabricación
           var { data: ofData, error: e4 } = await supabase.from('ordenes_fabricacion').select('*');
           if (e4) throw e4;
           ordenesFabricacion = ofData || [];
@@ -1694,7 +1729,6 @@
           bandejaOCCard.classList.add('hidden');
         }
 
-        // Configurar campos automáticos
         if (modulo === 'proyectos' || modulo === 'oc') {
           window.actualizarDatosOC();
           window.actualizarDatosProyecto();
@@ -1716,13 +1750,11 @@
       // FUNCIONES PARA ACTUALIZAR CAMPOS AUTOMÁTICOS
       // ============================================================
       window.actualizarDatosProyecto = function() {
-        // Para el panel de proyectos, obtener la empresa y departamento del usuario
         var empresaInput = document.getElementById('empresaProyecto');
         var deptoInput = document.getElementById('departamentoProyecto');
         
         if (!actual) return;
         
-        // Si es Director General, permitir selección libre
         if (actual.rol === 'Director General') {
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
@@ -1736,7 +1768,6 @@
           return;
         }
         
-        // Para otros roles, obtener de los permisos
         var permisos = obtenerOpcionesPermisos(actual);
         if (permisos.length > 0) {
           empresaInput.value = permisos[0].empresa || '';
@@ -1757,10 +1788,10 @@
         var empresaInput = document.getElementById('empresaOC');
         var deptoInput = document.getElementById('departamentoOC');
         var selectResp = document.getElementById('responsableOC');
+        var selectSol = document.getElementById('solicitanteOC');
         
         var selectedId = parseInt(selectProyecto.value);
         
-        // Si no hay proyecto seleccionado o es Director, permitir edición
         if (!selectedId || isNaN(selectedId)) {
           if (actual && actual.rol === 'Director General') {
             empresaInput.disabled = false;
@@ -1774,8 +1805,8 @@
             deptoInput.value = '';
             
             selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
+            selectSol.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
           } else {
-            // Si no es Director, mostrar mensaje
             empresaInput.value = 'Selecciona un proyecto';
             empresaInput.disabled = true;
             empresaInput.style.background = 'var(--gray-200)';
@@ -1783,6 +1814,7 @@
             deptoInput.disabled = true;
             deptoInput.style.background = 'var(--gray-200)';
             selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
+            selectSol.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
           }
           return;
         }
@@ -1790,10 +1822,10 @@
         var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
         if (!proyecto) {
           selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
+          selectSol.innerHTML = '<option value="">Proyecto no encontrado</option>';
           return;
         }
         
-        // Si es Director General, permitir editar los campos
         if (actual && actual.rol === 'Director General') {
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
@@ -1803,7 +1835,6 @@
           deptoInput.style.background = 'white';
           deptoInput.value = proyecto.departamento;
         } else {
-          // Para otros roles, campos fijos
           empresaInput.value = proyecto.empresa;
           empresaInput.disabled = true;
           empresaInput.style.background = 'var(--gray-200)';
@@ -1813,18 +1844,41 @@
           deptoInput.style.background = 'var(--gray-200)';
         }
         
-        // Actualizar responsables
-        var posibles = getPosiblesResponsables();
-        var filtrados = posibles.filter(function(u) { return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento); });
+        // Actualizar responsables (Elaboradores)
+        var posiblesElaboradores = getPosiblesResponsables();
+        var filtradosElaboradores = posiblesElaboradores.filter(function(u) { 
+          return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento) && u.rol === 'Elaborador';
+        });
+        
         selectResp.innerHTML = '';
-        if (filtrados.length === 0) {
-          selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
+        if (filtradosElaboradores.length === 0) {
+          selectResp.innerHTML = '<option value="">No hay elaboradores disponibles</option>';
         } else {
-          filtrados.forEach(function(u) {
+          filtradosElaboradores.forEach(function(u) {
             var opt = document.createElement('option');
             opt.value = u.usuario;
-            opt.textContent = u.usuario + ' (' + u.rol + ')';
+            opt.textContent = u.usuario + ' (Elaborador)';
+            if (actual && actual.rol === 'Elaborador' && u.usuario === actual.usuario) {
+              opt.selected = true;
+            }
             selectResp.appendChild(opt);
+          });
+        }
+        
+        // Actualizar solicitantes
+        var posiblesSolicitantes = usuariosDB.filter(function(u) { 
+          return u.rol === 'Solicitante' && usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento);
+        });
+        
+        selectSol.innerHTML = '';
+        if (posiblesSolicitantes.length === 0) {
+          selectSol.innerHTML = '<option value="">No hay solicitantes disponibles</option>';
+        } else {
+          posiblesSolicitantes.forEach(function(u) {
+            var opt = document.createElement('option');
+            opt.value = u.usuario;
+            opt.textContent = u.usuario + ' (Solicitante)';
+            selectSol.appendChild(opt);
           });
         }
       };
@@ -2142,12 +2196,10 @@
       window.crearProyecto = async function() {
         var empresa, departamento;
         
-        // Si es Director, usar los valores de los campos (pueden ser editados)
         if (actual && actual.rol === 'Director General') {
           empresa = document.getElementById('empresaProyecto').value.trim().toUpperCase();
           departamento = document.getElementById('departamentoProyecto').value.trim().toUpperCase();
         } else {
-          // Para otros roles, usar valores de permisos
           var permisos = obtenerOpcionesPermisos(actual);
           if (permisos.length > 0) {
             empresa = permisos[0].empresa || '';
@@ -2175,7 +2227,6 @@
           return;
         }
         
-        // Solo validar permisos si no es Director
         if (actual.rol !== 'Director General') {
           if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
             msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
@@ -2290,11 +2341,9 @@
         var selectedId = parseInt(selectProyecto.value);
         var msgDiv = document.getElementById('mensajeOC');
         
-        // Obtener empresa y departamento de los campos (pueden ser editados por Director)
         var empresaOC = document.getElementById('empresaOC').value.trim().toUpperCase();
         var deptoOC = document.getElementById('departamentoOC').value.trim().toUpperCase();
         
-        // Si no hay proyecto seleccionado y es Director, permitir crear con datos manuales
         if (!selectedId || isNaN(selectedId)) {
           if (actual && actual.rol === 'Director General') {
             if (!empresaOC || !deptoOC) {
@@ -2306,15 +2355,12 @@
             return null;
           }
           
-          // Para Director sin proyecto, usar datos manuales
           var proyecto = null;
           var nombreProyecto = 'PROYECTO_MANUAL_' + new Date().toISOString().slice(0,10);
           var cliente = 'CLIENTE_MANUAL';
           
-          // Verificar si existe un proyecto con ese nombre
           var proyectoExistente = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
           if (!proyectoExistente) {
-            // Crear proyecto temporal
             var nuevoProyecto = {
               empresa: empresaOC,
               departamento: deptoOC,
@@ -2326,7 +2372,6 @@
               fecha_inicio: new Date().toISOString().slice(0,10),
               fecha_termino: new Date(Date.now() + 365*24*60*60*1000).toISOString().slice(0,10)
             };
-            // No guardamos en BD, solo para validación
             proyecto = nuevoProyecto;
           } else {
             proyecto = proyectoExistente;
@@ -2337,7 +2382,6 @@
             return null;
           }
           
-          // Continuar con la creación de OC
           return crearOCConDatos(proyecto, empresaOC, deptoOC, msgDiv);
         }
         
@@ -2347,7 +2391,6 @@
           return null;
         }
         
-        // Si no es Director, usar empresa y departamento del proyecto
         if (actual.rol !== 'Director General') {
           empresaOC = proyecto.empresa;
           deptoOC = proyecto.departamento;
@@ -2372,6 +2415,7 @@
         var fechapago = document.getElementById('fechaPago').value;
         var fechaentrega = document.getElementById('fechaEntrega').value;
         var responsable = document.getElementById('responsableOC').value;
+        var solicitante = document.getElementById('solicitanteOC').value;
         var banco = document.getElementById('banco').value.trim().toUpperCase();
         var cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
         var clabe = document.getElementById('clabe').value.trim().toUpperCase();
@@ -2393,8 +2437,8 @@
           tipocambio = parseFloat(tcInput);
         }
 
-        if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable || !fechaentrega) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y RESPONSABLE.</div>';
+        if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable || !fechaentrega || !solicitante) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA, RESPONSABLE Y SOLICITANTE.</div>';
           return null;
         }
 
@@ -2404,10 +2448,23 @@
           return null;
         }
         
-        // Validar permisos del responsable si no es Director
+        var solicitanteUser = buscarUsuarioDB(solicitante);
+        if (!solicitanteUser) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE SELECCIONADO NO EXISTE.</div>';
+          return null;
+        }
+        
         if (actual.rol !== 'Director General') {
           if (!usuarioPuedeAcceder(responsableUser, empresa, departamento)) {
             msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
+            return null;
+          }
+          if (!usuarioPuedeAcceder(solicitanteUser, empresa, departamento)) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
+            return null;
+          }
+          if (solicitanteUser.rol !== 'Solicitante') {
+            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE DEBE TENER ROL "Solicitante".</div>';
             return null;
           }
         }
@@ -2461,6 +2518,7 @@
           fechapago: fechapago,
           fechaentrega: fechaentrega,
           responsable: responsable,
+          solicitante: solicitante,
           productos: productos,
           motivo: motivo,
           cliente: proyecto.cliente || 'CLIENTE_MANUAL',
@@ -2566,7 +2624,8 @@
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
           { label: 'Uso CFDI:', value: datos.usocfdi },
           { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Moneda:', value: datos.moneda }
+          { label: 'Moneda:', value: datos.moneda },
+          { label: 'Solicitante:', value: datos.solicitante || 'No especificado' }
         ];
 
         datosLista.forEach(function(item) {
@@ -2651,7 +2710,7 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
-        var solicitante = datos.responsable || 'No definido';
+        var solicitante = datos.solicitante || 'No definido';
         var jefe = getJefeDepto(datos.empresa, datos.departamento);
         var director = getDirector();
         
@@ -2766,6 +2825,7 @@
             fechapago: oc.fechapago || new Date().toISOString(),
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             responsable: oc.responsable || 'No definido',
+            solicitante: oc.solicitante || 'No definido',
             productos: productos, cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido', banco: oc.banco || 'No especificado',
             cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
@@ -2851,7 +2911,8 @@
           montototal: datos.montototal, montomxn: datos.montomxn,
           estado: datos.estado, fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago, fechaentrega: datos.fechaentrega,
-          responsable: datos.responsable, pausada: false,
+          responsable: datos.responsable, solicitante: datos.solicitante,
+          pausada: false,
           motivo: datos.motivo || null, fechaaprobacionsolicitante: null,
           fechaaprobacionjefe: null, fechaaprobaciondirector: null,
           nombresolicitante: null, nombrejefe: null, nombredirector: null,
@@ -2914,7 +2975,8 @@
           montototal: datos.montototal, montomxn: datos.montomxn,
           estado: datos.estado, fechacreacion: new Date().toISOString(),
           fechapago: datos.fechapago, fechaentrega: datos.fechaentrega,
-          responsable: datos.responsable, pausada: false,
+          responsable: datos.responsable, solicitante: datos.solicitante,
+          pausada: false,
           motivo: datos.motivo || null, fechaaprobacionsolicitante: null,
           fechaaprobacionjefe: null, fechaaprobaciondirector: null,
           nombresolicitante: null, nombrejefe: null, nombredirector: null,
@@ -2974,6 +3036,7 @@
             fechapago: oc.fechapago || new Date().toISOString(),
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             responsable: oc.responsable || 'No definido',
+            solicitante: oc.solicitante || 'No definido',
             productos: productos, cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido', banco: oc.banco || 'No especificado',
             cuenta: oc.cuenta || 'N/A', clabe: oc.clabe || 'N/A',
@@ -2992,11 +3055,15 @@
       // ============================================================
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('No tienes permiso');
+        if (actual.rol !== 'Solicitante') return alert('Solo un usuario con rol "Solicitante" puede aprobar.');
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
-        if (actual.u !== oc.responsable) return alert('Solo el responsable puede aprobar');
+        
+        if (actual.u !== oc.solicitante) {
+          return alert('❌ Solo el solicitante designado (' + oc.solicitante + ') puede aprobar esta OC.');
+        }
+        
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
@@ -3087,6 +3154,7 @@
             proveedor: oc.proveedor,
             rfc: oc.rfc || 'No especificado',
             responsable: oc.responsable,
+            solicitante: oc.solicitante || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
             moneda: oc.moneda || 'MXN',
             montototal: oc.montototal || 0,
@@ -3201,8 +3269,8 @@
       window.registrarFactura = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         var oc = ordenes[index];
-        if (actual.u !== oc.responsable && actual.rol !== 'Elaborador' && actual.rol !== 'Administrador') {
-          return alert('Solo el responsable de la OC puede registrar la factura.');
+        if (actual.u !== oc.solicitante && actual.u !== oc.elaborador && actual.rol !== 'Administrador') {
+          return alert('Solo el solicitante, elaborador o administrador pueden registrar la factura.');
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
@@ -3300,7 +3368,8 @@
           { label: 'Cuenta:', value: oc.cuenta || 'N/A' },
           { label: 'Uso CFDI:', value: oc.usocfdi },
           { label: 'CLABE:', value: oc.clabe || 'N/A' },
-          { label: 'Moneda:', value: oc.moneda }
+          { label: 'Moneda:', value: oc.moneda },
+          { label: 'Solicitante:', value: oc.solicitante || 'No especificado' }
         ];
 
         datosLista.forEach(function(item) {
@@ -3385,7 +3454,7 @@
         doc.text('AUTORIZACIONES', margin, y);
         y += 12;
 
-        var solicitanteNombre = oc.nombresolicitante || oc.responsable || 'No definido';
+        var solicitanteNombre = oc.nombresolicitante || oc.solicitante || 'No definido';
         var jefeNombre = oc.nombrejefe || (proyecto ? getJefeDepto(proyecto.empresa, proyecto.departamento) : 'No definido');
         var directorNombre = oc.nombredirector || getDirector();
 
@@ -3443,6 +3512,58 @@
         doc.save(oc.codigo + '.pdf');
       }
 
+      // ============================================================
+      // NOTIFICACIONES TELEGRAM
+      // ============================================================
+      async function enviarNotificacionTelegram(mensaje) {
+        try {
+          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
+          var response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CHAT_ID,
+              text: mensaje,
+              parse_mode: 'Markdown'
+            })
+          });
+          var data = await response.json();
+          if (data.ok) {
+            console.log('✅ Notificación enviada a Telegram');
+            return true;
+          } else {
+            console.error('❌ Error al enviar notificación:', data);
+            return false;
+          }
+        } catch (error) {
+          console.error('❌ Error al enviar notificación:', error);
+          return false;
+        }
+      }
+
+      function formatearMensajeOC(datosOC, proyecto, ocId) {
+        var mensaje = '📋 *NUEVA OC PENDIENTE DE AUTORIZACIÓN* (Supera el 60%)\n\n';
+        mensaje += '📌 *Código:* ' + datosOC.codigo + '\n';
+        mensaje += '🏢 *Empresa:* ' + datosOC.empresa + '\n';
+        mensaje += '📁 *Departamento:* ' + datosOC.departamento + '\n';
+        mensaje += '📂 *Proyecto:* ' + datosOC.proyectonombre + '\n';
+        mensaje += '👤 *Solicitante:* ' + datosOC.solicitante + '\n';
+        mensaje += '👤 *Elaborador:* ' + datosOC.elaborador + '\n';
+        mensaje += '👤 *Responsable:* ' + datosOC.responsable + '\n';
+        mensaje += '🏢 *Proveedor:* ' + datosOC.proveedor + '\n';
+        mensaje += '📅 *Fecha Pago:* ' + new Date(datosOC.fechapago).toLocaleDateString() + '\n';
+        mensaje += '📅 *Fecha Entrega:* ' + new Date(datosOC.fechaentrega).toLocaleDateString() + '\n';
+        mensaje += '💰 *Moneda:* ' + datosOC.moneda + '\n';
+        mensaje += '💰 *Total:* ' + formatoMoneda(datosOC.montototal, datosOC.moneda) + '\n';
+        mensaje += '💰 *Equivalente MXN:* ' + formatoMoneda(datosOC.montomxn, 'MXN') + '\n';
+        mensaje += '📊 *Presupuesto:* ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
+        mensaje += '📊 *Límite 60%:* ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n\n';
+        mensaje += '🔗 *Para autorizar, ingresa al sistema:*\n';
+        mensaje += 'https://extingue.com.mx/index.html?oc=' + ocId + '\n\n';
+        mensaje += '_Esta notificación es automática. Por favor, revisa el sistema para autorizar._';
+        return mensaje;
+      }
+
       window.mostrarDashboard = function(index) {
         var proyecto = proyectos[index];
         if (!proyecto) return;
@@ -3473,7 +3594,7 @@
         if (ocProyecto.length === 0) {
           html += '<p class="text-muted">No hay OC para este proyecto.</p>';
         } else {
-          html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
+          html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Solicitante</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
           ocProyecto.forEach(function(o) {
             var badgeClass = '';
             var estadoMostrado = o.estado;
@@ -3507,7 +3628,7 @@
               };
               badgeClass = classes[o.estado] || '';
             }
-            html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
+            html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + (o.solicitante || '—') + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
           });
           html += '</tbody></table></div>';
         }
@@ -3837,7 +3958,7 @@
           if (ocProyecto.length === 0) {
             html += '<p class="text-muted">No hay OC para este proyecto.</p>';
           } else {
-            html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
+            html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Solicitante</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
             ocProyecto.forEach(function(o) {
               var badgeClass = '';
               var estadoMostrado = o.estado;
@@ -3861,7 +3982,7 @@
                 badgeClass = 'badge-concluida';
                 estadoMostrado = 'CONCLUIDA';
               }
-              html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
+              html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + (o.solicitante || '—') + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
             });
             html += '</tbody></table></div>';
           }
@@ -3928,7 +4049,7 @@
         if (ocProyecto.length === 0) {
           html += '<p class="text-muted">No hay OC para este proyecto.</p>';
         } else {
-          html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
+          html += '<div class="table-wrapper"><table><thead><tr><th>Código</th><th>Proveedor</th><th>RFC</th><th>Responsable</th><th>Solicitante</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th></tr></thead><tbody>';
           ocProyecto.forEach(function(o) {
             var badgeClass = '';
             var estadoMostrado = o.estado;
@@ -3952,7 +4073,7 @@
               badgeClass = 'badge-concluida';
               estadoMostrado = 'CONCLUIDA';
             }
-            html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
+            html += '<tr><td><code>' + o.codigo + '</code></td><td>' + o.proveedor + '</td><td>' + o.rfc + '</td><td>' + o.responsable + '</td><td>' + (o.solicitante || '—') + '</td><td>' + o.moneda + '</td><td>' + formatoMoneda(o.montototal, o.moneda) + '</td><td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td>' + new Date(o.fechapago).toLocaleDateString() + '</td><td>' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td>' + (o.uuidfactura || '—') + '</td><td><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td></tr>';
           });
           html += '</tbody></table></div>';
         }
@@ -4180,7 +4301,6 @@
           '<div class="cxc-tarjeta vencido"><div class="numero">' + formatoMoneda(totalVencidoMXN, 'MXN') + '</div><div class="etiqueta">🔴 Vencido (MXN)</div>' + (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + totalVencidoUSD.toFixed(2) + '</div>' : '') + '</div>' +
           '<div class="cxc-tarjeta total"><div class="numero">' + cuentas.length + '</div><div class="etiqueta">📄 Total Registros</div></div>';
 
-        // Saldo por cliente
         var saldoClientes = {};
         cuentas.forEach(function(c) {
           if (c.estado !== 'PAGADO') {
@@ -4206,7 +4326,6 @@
 
         saldoDiv.innerHTML = saldoHtml || '<p class="text-muted">No hay saldos pendientes por cliente.</p>';
 
-        // Tabla
         tbody.innerHTML = '';
         if (cuentas.length === 0) {
           tbody.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay cuentas por cobrar que coincidan con los filtros</td></tr>';
@@ -4465,7 +4584,6 @@
         var margin = 20;
         var y = margin;
 
-        // Header
         doc.setFillColor(11, 26, 51);
         doc.rect(margin, 0, pageWidth - 2*margin, 50, 'F');
         
@@ -4481,7 +4599,6 @@
 
         y = margin + 55;
 
-        // Periodo
         doc.setFontSize(10);
         doc.setTextColor(40, 40, 40);
         doc.setFont('helvetica', 'bold');
@@ -4496,7 +4613,6 @@
         doc.line(margin, y, pageWidth - margin, y);
         y += 10;
 
-        // Resumen
         var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
         ocFiltradas.forEach(function(o) {
           var monto = o.montomxn || 0;
@@ -4548,7 +4664,6 @@
         
         y += 50;
 
-        // Tabla de proyectos
         if (proys.length > 0) {
           doc.setFontSize(11);
           doc.setTextColor(11, 26, 51);
@@ -4632,7 +4747,6 @@
           });
         }
 
-        // Tabla de OC
         if (ocFiltradas.length > 0) {
           doc.setFontSize(11);
           doc.setTextColor(11, 26, 51);
@@ -4640,7 +4754,7 @@
           doc.text('ÓRDENES DE COMPRA', margin, y);
           y += 10;
 
-          var headers = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Eq. MXN', 'F. Pago', 'Estado'];
+          var headers = ['Código', 'Proyecto', 'Proveedor', 'Solicitante', 'Moneda', 'Total', 'Eq. MXN', 'F. Pago', 'Estado'];
           var rows = ocFiltradas.slice().reverse().map(function(o) {
             var estadoLabel = o.estado;
             if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
@@ -4654,6 +4768,7 @@
               o.codigo,
               o.proyecto,
               o.proveedor,
+              o.solicitante || '—',
               o.moneda,
               formatoMoneda(o.montototal, o.moneda),
               formatoMoneda(o.montomxn || 0, 'MXN'),
@@ -4663,7 +4778,7 @@
           });
 
           var availableWidth2 = pageWidth - 2 * margin;
-          var colWidths2 = [62, 65, 75, 28, 45, 48, 45, 48];
+          var colWidths2 = [55, 58, 65, 50, 28, 42, 45, 42, 42];
           var totalColWidth2 = colWidths2.reduce(function(a,b) { return a + b; }, 0);
           var scaleFactor2 = availableWidth2 / totalColWidth2;
           colWidths2 = colWidths2.map(function(w) { return w * scaleFactor2; });
@@ -4693,11 +4808,12 @@
               0: { cellWidth: colWidths2[0] },
               1: { cellWidth: colWidths2[1] },
               2: { cellWidth: colWidths2[2] },
-              3: { cellWidth: colWidths2[3], halign: 'center' },
-              4: { cellWidth: colWidths2[4], halign: 'right' },
+              3: { cellWidth: colWidths2[3] },
+              4: { cellWidth: colWidths2[4], halign: 'center' },
               5: { cellWidth: colWidths2[5], halign: 'right' },
-              6: { cellWidth: colWidths2[6], halign: 'center' },
-              7: { cellWidth: colWidths2[7], halign: 'center' }
+              6: { cellWidth: colWidths2[6], halign: 'right' },
+              7: { cellWidth: colWidths2[7], halign: 'center' },
+              8: { cellWidth: colWidths2[8], halign: 'center' }
             },
             didDrawPage: function(data) {
               y = data.cursor.y + 12;
@@ -4705,7 +4821,6 @@
           });
         }
 
-        // Footer
         var footerY = pageHeight - margin - 5;
         doc.setDrawColor(170, 170, 185);
         doc.setLineWidth(0.5);
@@ -4767,7 +4882,7 @@
       };
 
       // ============================================================
-      // FUNCIONES DE REPORTE CXC (Cuentas por Cobrar)
+      // FUNCIONES DE REPORTE CXC
       // ============================================================
       window.previsualizarReporteCXC = function() {
         var cuentas = obtenerDatosCXC();
@@ -4778,7 +4893,6 @@
         var margin = 20;
         var y = margin;
 
-        // Header
         doc.setFillColor(11, 26, 51);
         doc.rect(margin, 0, pageWidth - 2*margin, 50, 'F');
         
@@ -4794,7 +4908,6 @@
 
         y = margin + 55;
 
-        // Periodo
         doc.setFontSize(10);
         doc.setTextColor(40, 40, 40);
         doc.setFont('helvetica', 'bold');
@@ -4809,7 +4922,6 @@
         doc.line(margin, y, pageWidth - margin, y);
         y += 10;
 
-        // Resumen
         var totalMXN = 0, totalUSD = 0;
         var totalPagadoMXN = 0, totalPagadoUSD = 0;
         var totalPendienteMXN = 0, totalPendienteUSD = 0;
@@ -4875,7 +4987,6 @@
         
         y += 58;
 
-        // Saldo por Cliente
         var saldoClientes = {};
         cuentas.forEach(function(c) {
           if (c.estado !== 'PAGADO') {
@@ -4915,7 +5026,6 @@
           y = doc.lastAutoTable.finalY + 12;
         }
 
-        // Tabla de cuentas
         if (cuentas.length > 0) {
           doc.setFontSize(11);
           doc.setTextColor(11, 26, 51);
@@ -4970,7 +5080,6 @@
           });
         }
 
-        // Footer
         var footerY = pageHeight - margin - 5;
         doc.setDrawColor(170, 170, 185);
         doc.setLineWidth(0.5);
@@ -4988,7 +5097,7 @@
       };
 
       // ============================================================
-      // FUNCIONES DE REPORTE OF (Órdenes de Fabricación)
+      // FUNCIONES DE REPORTE OF
       // ============================================================
       window.previsualizarReporteOF = function() {
         var ofs = obtenerDatosOF();
@@ -4999,7 +5108,6 @@
         var margin = 20;
         var y = margin;
 
-        // Header
         doc.setFillColor(11, 26, 51);
         doc.rect(margin, 0, pageWidth - 2*margin, 50, 'F');
         
@@ -5015,7 +5123,6 @@
 
         y = margin + 55;
 
-        // Periodo
         doc.setFontSize(10);
         doc.setTextColor(40, 40, 40);
         doc.setFont('helvetica', 'bold');
@@ -5028,7 +5135,6 @@
         doc.line(margin, y, pageWidth - margin, y);
         y += 10;
 
-        // Resumen
         var totales = { PENDIENTE: 0, EN_PROCESO: 0, TERMINADA: 0, CANCELADA: 0 };
         ofs.forEach(function(o) {
           totales[o.estado] = (totales[o.estado] || 0) + 1;
@@ -5066,7 +5172,6 @@
         
         y += 50;
 
-        // Tabla de OF
         if (ofs.length > 0) {
           doc.setFontSize(11);
           doc.setTextColor(11, 26, 51);
@@ -5110,7 +5215,6 @@
           });
         }
 
-        // Footer
         var footerY = pageHeight - margin - 5;
         doc.setDrawColor(170, 170, 185);
         doc.setLineWidth(0.5);
@@ -5181,7 +5285,6 @@
           });
         }
 
-        // Si es Director y no hay proyectos, permitir crear sin proyecto
         if (actual && actual.rol === 'Director General') {
           var optionManual = document.createElement('option');
           optionManual.value = '';
@@ -5294,7 +5397,7 @@
                 }
               } else {
                 if (!o.pausada) {
-                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA') {
+                  if (rol === 'Solicitante' && o.estado === 'CREADA' && o.solicitante === actual.u) {
                     acciones += '<button class="success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar (Solicitante)</button>';
                   }
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
@@ -5383,13 +5486,11 @@
         document.getElementById('fechaPago').value = fechaHoy;
         document.getElementById('fechaEntrega').value = fechaHoy;
         
-        // Fechas CXC
         var cxcFechaEmision = document.getElementById('cxcFechaEmision');
         if (cxcFechaEmision) cxcFechaEmision.value = fechaHoy;
         var cxcFechaPago = document.getElementById('cxcFechaPago');
         if (cxcFechaPago) cxcFechaPago.value = fechaHoy;
         
-        // Fechas OF
         var ofFechaInicio = document.getElementById('ofFechaInicio');
         if (ofFechaInicio) ofFechaInicio.value = fechaHoy;
         var fechaFinOF = new Date(hoy);
