@@ -409,94 +409,107 @@
     font-size: 16px
   }
   
-  /* ===== LOGIN CENTRADO - TAMAÑO FIJO 639x300 ===== */
+  /* ===== LOGIN CON PROPORCIÓN ÁUREA ===== */
+  /* 639 / 9 = 71px de ancho */
   #login { 
-    width: 639px;
-    min-height: 300px;
-    max-height: 300px;
+    width: 71px;
+    min-height: 115px; /* 71 * 1.618 = 114.878 ≈ 115px (proporción áurea) */
+    max-height: 115px;
     margin: auto; 
     text-align: center; 
-    padding: 20px 28px;
+    padding: 4px 6px;
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--gray-200);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    overflow-y: auto;
+    overflow: hidden;
   }
   #login .login-logo {
-    margin-bottom: 12px;
+    margin-bottom: 2px;
     flex-shrink: 0;
   }
   #login .login-logo img {
-    height: 44px;
+    height: 12px;
     width: auto;
   }
   #login h2 {
-    font-size: 18px;
+    font-size: 5px;
     color: var(--primary);
-    font-weight: 600;
-    margin-bottom: 2px;
+    font-weight: 700;
+    margin-bottom: 0px;
     border-bottom: none;
     padding-bottom: 0;
+    letter-spacing: 0.3px;
   }
   #login .login-subtitle {
     color: var(--gray-500);
-    font-size: 11px;
-    margin-bottom: 14px;
+    font-size: 3px;
+    margin-bottom: 2px;
+    line-height: 1.2;
   }
   #login .flex {
-    gap: 8px;
+    gap: 2px;
     width: 100%;
-    flex-direction: row;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: center;
   }
+  /* Campos con 2/3 del ancho del login: 71 * 2/3 = 47.33px */
   #login .flex input {
-    min-height: 38px;
-    padding: 8px 12px;
-    border-radius: 8px;
+    min-height: 10px;
+    padding: 2px 4px;
+    border-radius: 3px;
     border: 1px solid var(--gray-300);
     background: var(--gray-50);
-    font-size: 13px;
+    font-size: 4px;
     transition: all 0.2s;
-    width: 100%;
-    flex: 1;
+    width: 47px;
+    min-width: 47px;
+    max-width: 47px;
+    flex: 0 0 auto;
   }
   #login .flex input:focus {
     background: white;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
+    box-shadow: 0 0 0 2px rgba(11, 26, 51, 0.1);
+  }
+  #login .flex input::placeholder {
+    font-size: 3px;
   }
   #login .flex button {
-    min-height: 38px;
-    padding: 8px 20px;
+    min-height: 10px;
+    padding: 2px 4px;
     background: var(--primary);
     color: white;
-    border-radius: 8px;
+    border-radius: 3px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 4px;
     transition: all 0.2s;
-    width: auto;
+    width: 47px;
+    min-width: 47px;
+    max-width: 47px;
     flex: 0 0 auto;
-    min-width: 100px;
+    border: none;
+    cursor: pointer;
   }
   #login .flex button:hover {
     background: var(--primary-light);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(11, 26, 51, 0.2);
+    transform: translateY(-0.5px);
+    box-shadow: 0 2px 8px rgba(11, 26, 51, 0.2);
   }
   #login .flex button:active {
     transform: translateY(0);
   }
   #login .alert {
-    margin-top: 8px;
-    border-radius: 8px;
-    width: 100%;
-    font-size: 12px;
-    padding: 6px 12px;
+    margin-top: 2px;
+    border-radius: 3px;
+    width: 47px;
+    font-size: 3px;
+    padding: 2px 4px;
+    min-height: auto;
   }
 
   .container-login {
@@ -504,70 +517,90 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    min-height: calc(100vh - 80px);
+    padding: 10px;
+    min-height: calc(100vh - 70px);
   }
 
-  /* Responsive para móvil */
-  @media (max-width: 700px) {
+  /* Responsive para móvil - mantener proporciones */
+  @media (max-width: 100px) {
     #login {
-      width: 95%;
-      max-width: 400px;
-      min-height: auto;
-      max-height: none;
-      padding: 20px 16px;
-    }
-    #login .flex {
-      flex-direction: column;
-      flex-wrap: wrap;
+      width: 60px;
+      min-height: 97px;
+      max-height: 97px;
+      padding: 3px 4px;
     }
     #login .flex input {
-      min-height: 40px;
-      font-size: 13px;
-      padding: 8px 12px;
+      width: 40px;
+      min-width: 40px;
+      max-width: 40px;
+      min-height: 8px;
+      font-size: 3px;
+    }
+    #login .flex input::placeholder {
+      font-size: 2.5px;
     }
     #login .flex button {
-      min-height: 40px;
-      font-size: 13px;
-      padding: 8px 16px;
-      width: 100%;
-      flex: 1;
+      width: 40px;
+      min-width: 40px;
+      max-width: 40px;
+      min-height: 8px;
+      font-size: 3px;
     }
     #login .login-logo img {
-      height: 36px;
+      height: 10px;
     }
     #login h2 {
-      font-size: 16px;
+      font-size: 4px;
     }
     #login .login-subtitle {
-      font-size: 11px;
-      margin-bottom: 12px;
+      font-size: 2.5px;
     }
-    .container-login {
-      padding: 12px;
-      min-height: calc(100vh - 70px);
+    #login .alert {
+      width: 40px;
+      font-size: 2.5px;
     }
   }
 
-  @media (max-width: 480px) {
+  /* Para pantallas muy pequeñas, mantener la proporción pero legible */
+  @media (max-width: 80px) {
     #login {
-      width: 98%;
-      max-width: 360px;
-      padding: 16px 14px;
-    }
-    #login .login-logo img {
-      height: 32px;
-    }
-    #login h2 {
-      font-size: 15px;
+      width: 50px;
+      min-height: 81px;
+      max-height: 81px;
+      padding: 2px 3px;
     }
     #login .flex input {
-      min-height: 36px;
-      font-size: 12px;
+      width: 33px;
+      min-width: 33px;
+      max-width: 33px;
+      min-height: 6px;
+      font-size: 2.5px;
+      padding: 1px 2px;
+    }
+    #login .flex input::placeholder {
+      font-size: 2px;
     }
     #login .flex button {
-      min-height: 36px;
-      font-size: 12px;
+      width: 33px;
+      min-width: 33px;
+      max-width: 33px;
+      min-height: 6px;
+      font-size: 2.5px;
+      padding: 1px 2px;
+    }
+    #login .login-logo img {
+      height: 8px;
+    }
+    #login h2 {
+      font-size: 3.5px;
+    }
+    #login .login-subtitle {
+      font-size: 2px;
+    }
+    #login .alert {
+      width: 33px;
+      font-size: 2px;
+      padding: 1px 2px;
     }
   }
 
@@ -1127,10 +1160,10 @@
     <div class="container-login" id="loginContainer">
       <div id="login">
         <div class="login-logo">
-          <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'" style="height:44px; width:auto;">
+          <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
         </div>
         <h2>Bienvenido</h2>
-        <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
+        <p class="login-subtitle">Sistema de Gestión</p>
         <div class="flex">
           <input id="usuario" placeholder="Usuario">
           <input id="password" type="password" placeholder="Contraseña">
