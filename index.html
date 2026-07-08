@@ -347,8 +347,9 @@
   }
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
+  .productos-tabla input.cantidad { min-width: 130px }
   .productos-tabla input.precio { min-width: 80px }
-  .productos-tabla input.importe { min-width: 150px; background: var(--gray-100); font-weight: bold; font-size: 23px }
+  .productos-tabla input.importe { min-width: 190px; background: var(--gray-100); font-weight: bold; font-size: 23px }
   .productos-tabla select.udm { min-width: 100px; width: 100px; }
   .resumen-totales {
     background: var(--gray-50);
@@ -1119,12 +1120,11 @@
           <div class="flex">
             <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha pago:</label><input id="fechaPago" type="date" style="flex:1;">
             <label style="font-weight:500;flex:0.2;min-width:80px;">Fecha entrega:</label><input id="fechaEntrega" type="date" style="flex:1;">
-            <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable (Elaborador):</label><select id="responsableOC" style="flex:1.5;"></select>
           </div>
         </div>
         <div class="grupo-formulario">
           <div class="flex">
-            <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Solicitante:</label>
+            <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Solicitante / Responsable:</label>
             <select id="solicitanteOC" style="flex:1.5;"></select>
           </div>
         </div>
@@ -1151,12 +1151,12 @@
                   <th style="width:40px;">#</th>
                   <th style="width:100px;">Núm. Parte</th>
                   <th style="min-width:150px;">Descripción</th>
-                  <th style="width:80px;">Cantidad</th>
+                  <th style="width:140px;">Cantidad</th>
                   <th style="min-width:100px;width:100px;">UDM</th>
                   <th style="width:100px;">Precio Unit.</th>
                   <th style="width:60px;">Dto.%</th>
                   <th style="width:60px;">Imp.%</th>
-                  <th style="min-width:150px;width:150px;">Importe</th>
+                  <th style="min-width:190px;width:190px;">Importe</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -1164,7 +1164,7 @@
               <tfoot>
                 <tr>
                   <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
-                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:150px;width:150px;">$0.00</td>
+                  <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:190px;width:190px;">$0.00</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1787,7 +1787,6 @@
         var selectProyecto = document.getElementById('selectProyecto');
         var empresaInput = document.getElementById('empresaOC');
         var deptoInput = document.getElementById('departamentoOC');
-        var selectResp = document.getElementById('responsableOC');
         var selectSol = document.getElementById('solicitanteOC');
         
         var selectedId = parseInt(selectProyecto.value);
@@ -1804,7 +1803,6 @@
             deptoInput.placeholder = 'Escribe el departamento';
             deptoInput.value = '';
             
-            selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
             selectSol.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
           } else {
             empresaInput.value = 'Selecciona un proyecto';
@@ -1813,7 +1811,6 @@
             deptoInput.value = 'Selecciona un proyecto';
             deptoInput.disabled = true;
             deptoInput.style.background = 'var(--gray-200)';
-            selectResp.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
             selectSol.innerHTML = '<option value="">Seleccione un proyecto primero</option>';
           }
           return;
@@ -1821,7 +1818,6 @@
         
         var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
         if (!proyecto) {
-          selectResp.innerHTML = '<option value="">Proyecto no encontrado</option>';
           selectSol.innerHTML = '<option value="">Proyecto no encontrado</option>';
           return;
         }
@@ -1844,30 +1840,10 @@
           deptoInput.style.background = 'var(--gray-200)';
         }
         
-        // Actualizar responsables (Elaboradores)
-        var posiblesElaboradores = getPosiblesResponsables();
-        var filtradosElaboradores = posiblesElaboradores.filter(function(u) { 
-          return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento) && u.rol === 'Elaborador';
-        });
-        
-        selectResp.innerHTML = '';
-        if (filtradosElaboradores.length === 0) {
-          selectResp.innerHTML = '<option value="">No hay elaboradores disponibles</option>';
-        } else {
-          filtradosElaboradores.forEach(function(u) {
-            var opt = document.createElement('option');
-            opt.value = u.usuario;
-            opt.textContent = u.usuario + ' (Elaborador)';
-            if (actual && actual.rol === 'Elaborador' && u.usuario === actual.usuario) {
-              opt.selected = true;
-            }
-            selectResp.appendChild(opt);
-          });
-        }
-        
-        // Actualizar solicitantes
-        var posiblesSolicitantes = usuariosDB.filter(function(u) { 
-          return u.rol === 'Solicitante' && usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento);
+        // Actualizar Solicitante/Responsable: solo usuarios (Solicitantes o Elaboradores)
+        // que compartan la MISMA empresa y el MISMO departamento que el proyecto.
+        var posiblesSolicitantes = getPosiblesResponsables().filter(function(u) { 
+          return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento);
         });
         
         selectSol.innerHTML = '';
@@ -1877,7 +1853,10 @@
           posiblesSolicitantes.forEach(function(u) {
             var opt = document.createElement('option');
             opt.value = u.usuario;
-            opt.textContent = u.usuario + ' (Solicitante)';
+            opt.textContent = u.usuario + ' (' + u.rol + ')';
+            if (actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador') && u.usuario === actual.usuario) {
+              opt.selected = true;
+            }
             selectSol.appendChild(opt);
           });
         }
@@ -2280,7 +2259,7 @@
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:150px;width:150px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:190px;width:190px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -2414,8 +2393,8 @@
         var moneda = document.getElementById('monedaOC').value;
         var fechapago = document.getElementById('fechaPago').value;
         var fechaentrega = document.getElementById('fechaEntrega').value;
-        var responsable = document.getElementById('responsableOC').value;
         var solicitante = document.getElementById('solicitanteOC').value;
+        var responsable = solicitante; // El responsable de la OC es el mismo Solicitante seleccionado
         var banco = document.getElementById('banco').value.trim().toUpperCase();
         var cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
         var clabe = document.getElementById('clabe').value.trim().toUpperCase();
@@ -2437,34 +2416,24 @@
           tipocambio = parseFloat(tcInput);
         }
 
-        if (!proveedor || !direccion || !direccionentrega || !fechapago || !responsable || !fechaentrega || !solicitante) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA, RESPONSABLE Y SOLICITANTE.</div>';
+        if (!proveedor || !direccion || !direccionentrega || !fechapago || !fechaentrega || !solicitante) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE TODOS LOS CAMPOS OBLIGATORIOS: PROVEEDOR, DIRECCIÓN, DIRECCIÓN DE ENTREGA, FECHA DE PAGO, FECHA DE ENTREGA Y SOLICITANTE/RESPONSABLE.</div>';
           return null;
         }
 
-        var responsableUser = buscarUsuarioDB(responsable);
-        if (!responsableUser) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO EXISTE.</div>';
-          return null;
-        }
-        
         var solicitanteUser = buscarUsuarioDB(solicitante);
         if (!solicitanteUser) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE SELECCIONADO NO EXISTE.</div>';
+          msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE SELECCIONADO NO EXISTE.</div>';
           return null;
         }
         
         if (actual.rol !== 'Director General') {
-          if (!usuarioPuedeAcceder(responsableUser, empresa, departamento)) {
-            msgDiv.innerHTML = '<div class="alert">⚠️ EL RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
-            return null;
-          }
           if (!usuarioPuedeAcceder(solicitanteUser, empresa, departamento)) {
-            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
+            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
             return null;
           }
-          if (solicitanteUser.rol !== 'Solicitante') {
-            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE DEBE TENER ROL "Solicitante".</div>';
+          if (solicitanteUser.rol !== 'Solicitante' && solicitanteUser.rol !== 'Elaborador') {
+            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE DEBE TENER ROL "Solicitante" O "Elaborador".</div>';
             return null;
           }
         }
@@ -3055,7 +3024,7 @@
       // ============================================================
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Solicitante') return alert('Solo un usuario con rol "Solicitante" puede aprobar.');
+        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('Solo el Solicitante/Responsable designado puede aprobar.');
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
@@ -3089,7 +3058,6 @@
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
-        var gastado = gastoProyectoMoneda(proyecto.nombre);
         var montoEnMonedaProyecto = oc.montomxn || 0;
         if (proyecto.moneda === 'USD') {
           if (oc.paridadinicial) montoEnMonedaProyecto = oc.montomxn / oc.paridadinicial;
@@ -3110,7 +3078,13 @@
           return;
         }
 
-        if (gastado + montoEnMonedaProyecto <= proyecto.limite) {
+        // Solo se considera lo ya PAGADO del proyecto + esta OC en curso para evaluar el 60%
+        // (las demás OC no pagadas no cuentan para este cálculo).
+        var comprometidoPrevio = gastoProyectoMoneda(proyecto.nombre);
+        var excedePorSiSola = montoEnMonedaProyecto > proyecto.limite;
+        var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= proyecto.limite;
+
+        if (!excedePorSiSola && !excedeAcumulado) {
           var updates = {
             estado: 'AUTORIZADA',
             fechaaprobacionjefe: new Date().toISOString(),
@@ -3164,7 +3138,11 @@
             productos: productos
           };
 
-          var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id);
+          var motivoExceso = excedePorSiSola
+            ? 'Esta OC por sí sola excede el 60% del presupuesto del proyecto.'
+            : 'La suma de lo ya pagado en el proyecto más esta OC alcanza o supera el 60% del presupuesto.';
+
+          var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
           var enviado = await enviarNotificacionTelegram(mensajeTelegram);
           if (enviado) {
             await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
@@ -3541,8 +3519,9 @@
         }
       }
 
-      function formatearMensajeOC(datosOC, proyecto, ocId) {
+      function formatearMensajeOC(datosOC, proyecto, ocId, motivoExceso) {
         var mensaje = '📋 *NUEVA OC PENDIENTE DE AUTORIZACIÓN* (Supera el 60%)\n\n';
+        if (motivoExceso) mensaje += '⚠️ ' + motivoExceso + '\n\n';
         mensaje += '📌 *Código:* ' + datosOC.codigo + '\n';
         mensaje += '🏢 *Empresa:* ' + datosOC.empresa + '\n';
         mensaje += '📁 *Departamento:* ' + datosOC.departamento + '\n';
@@ -5397,7 +5376,7 @@
                 }
               } else {
                 if (!o.pausada) {
-                  if (rol === 'Solicitante' && o.estado === 'CREADA' && o.solicitante === actual.u) {
+                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA' && o.solicitante === actual.u) {
                     acciones += '<button class="success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar (Solicitante)</button>';
                   }
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
