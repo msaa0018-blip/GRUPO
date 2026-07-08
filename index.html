@@ -355,8 +355,8 @@
   .productos-tabla textarea.desc { min-width: 120px; resize: vertical; height: 36px; overflow: hidden }
   .productos-tabla input.part { min-width: 60px }
   .productos-tabla input.cantidad { min-width: 130px }
-  .productos-tabla input.precio { min-width: 90px; width: 100px; } /* Aumentado 5 puntos */
-  .productos-tabla input.importe { min-width: 200px; background: var(--gray-100); font-weight: bold; font-size: 23px; width: 210px; } /* Aumentado espacio horizontal */
+  .productos-tabla input.precio { min-width: 90px; width: 100px; }
+  .productos-tabla input.importe { min-width: 200px; background: var(--gray-100); font-weight: bold; font-size: 23px; width: 210px; }
   .productos-tabla select.udm { min-width: 100px; width: 100px; }
   .resumen-totales {
     background: var(--gray-50);
@@ -409,57 +409,61 @@
     font-size: 16px
   }
   
-  /* ===== LOGIN CENTRADO ===== */
+  /* ===== LOGIN CENTRADO - TAMAÑO FIJO 639x300 ===== */
   #login { 
-    max-width: 460px; 
+    width: 639px;
+    min-height: 300px;
+    max-height: 300px;
     margin: auto; 
     text-align: center; 
-    padding: 40px 32px;
+    padding: 20px 28px;
     background: white;
     border-radius: 16px;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--gray-200);
-    width: 100%;
-    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    overflow-y: auto;
   }
   #login .login-logo {
-    margin-bottom: 24px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
   }
   #login .login-logo img {
-    height: 60px;
+    height: 44px;
     width: auto;
   }
   #login h2 {
-    font-size: 22px;
+    font-size: 18px;
     color: var(--primary);
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
     border-bottom: none;
     padding-bottom: 0;
   }
   #login .login-subtitle {
     color: var(--gray-500);
-    font-size: 13px;
-    margin-bottom: 24px;
+    font-size: 11px;
+    margin-bottom: 14px;
   }
   #login .flex {
-    gap: 12px;
+    gap: 8px;
     width: 100%;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
   }
   #login .flex input {
-    min-height: 48px;
-    padding: 12px 16px;
-    border-radius: 10px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 8px;
     border: 1px solid var(--gray-300);
     background: var(--gray-50);
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.2s;
     width: 100%;
+    flex: 1;
   }
   #login .flex input:focus {
     background: white;
@@ -467,15 +471,17 @@
     box-shadow: 0 0 0 3px rgba(11, 26, 51, 0.1);
   }
   #login .flex button {
-    min-height: 48px;
-    padding: 12px 32px;
+    min-height: 38px;
+    padding: 8px 20px;
     background: var(--primary);
     color: white;
-    border-radius: 10px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 13px;
     transition: all 0.2s;
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
+    min-width: 100px;
   }
   #login .flex button:hover {
     background: var(--primary-light);
@@ -486,9 +492,11 @@
     transform: translateY(0);
   }
   #login .alert {
-    margin-top: 12px;
+    margin-top: 8px;
     border-radius: 8px;
     width: 100%;
+    font-size: 12px;
+    padding: 6px 12px;
   }
 
   .container-login {
@@ -497,6 +505,70 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* Responsive para móvil */
+  @media (max-width: 700px) {
+    #login {
+      width: 95%;
+      max-width: 400px;
+      min-height: auto;
+      max-height: none;
+      padding: 20px 16px;
+    }
+    #login .flex {
+      flex-direction: column;
+      flex-wrap: wrap;
+    }
+    #login .flex input {
+      min-height: 40px;
+      font-size: 13px;
+      padding: 8px 12px;
+    }
+    #login .flex button {
+      min-height: 40px;
+      font-size: 13px;
+      padding: 8px 16px;
+      width: 100%;
+      flex: 1;
+    }
+    #login .login-logo img {
+      height: 36px;
+    }
+    #login h2 {
+      font-size: 16px;
+    }
+    #login .login-subtitle {
+      font-size: 11px;
+      margin-bottom: 12px;
+    }
+    .container-login {
+      padding: 12px;
+      min-height: calc(100vh - 70px);
+    }
+  }
+
+  @media (max-width: 480px) {
+    #login {
+      width: 98%;
+      max-width: 360px;
+      padding: 16px 14px;
+    }
+    #login .login-logo img {
+      height: 32px;
+    }
+    #login h2 {
+      font-size: 15px;
+    }
+    #login .flex input {
+      min-height: 36px;
+      font-size: 12px;
+    }
+    #login .flex button {
+      min-height: 36px;
+      font-size: 12px;
+    }
   }
 
   #pdfPreviewModal {
@@ -693,9 +765,6 @@
     .modulo-item { width: 60px }
     .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
     .modulo-item .modulo-leyenda { font-size: 11px }
-    #login { margin: 20px 16px; padding: 32px 20px; width: auto; }
-    #login .flex input { min-height: 44px; font-size: 14px; }
-    #login .flex button { min-height: 44px; font-size: 14px; }
   }
 
   #contenidoApp { display: none !important }
@@ -906,11 +975,8 @@
     .cxc-resumen { grid-template-columns: 1fr 1fr; }
     .cxc-form-row { flex-direction: column; }
     .cxc-form-row>* { min-width: 100%; }
-    #login { margin: 20px 12px; padding: 28px 16px; }
-    #login h2 { font-size: 1.2rem; }
     #visualizarModal .modal-body iframe { height: 300px; }
     #pdfPreviewModal .modal-body iframe { height: 300px; }
-    .container-login { padding: 12px; }
   }
 
   @media (max-width: 480px) {
@@ -920,7 +986,6 @@
     #visualizarModal .modal-body iframe { height: 250px; }
     #pdfPreviewModal .modal-body iframe { height: 250px; }
     .cxc-resumen { grid-template-columns: 1fr; }
-    #login { margin: 12px 8px; padding: 24px 16px; }
   }
 
   #cxpPreviewModal {
@@ -1062,7 +1127,7 @@
     <div class="container-login" id="loginContainer">
       <div id="login">
         <div class="login-logo">
-          <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'" style="height:60px; width:auto;">
+          <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'" style="height:44px; width:auto;">
         </div>
         <h2>Bienvenido</h2>
         <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
