@@ -1698,48 +1698,116 @@
       </div>
 
       <div id="panelOF" class="card hidden">
-        <h2>📄 Órdenes de Facturación (OF)</h2>
-        <p class="text-muted" style="margin-bottom:12px;">Gestión de órdenes de facturación por empresa y departamento.</p>
+        <h2>🧾 Órdenes de Facturación (OF)</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Generación y autorización de órdenes de facturación por departamento.</p>
         <div class="cxp-filtros">
-          <select id="ofFiltroEmpresa"><option value="">Todas las empresas</option></select>
           <select id="ofFiltroDepto"><option value="">Todos los departamentos</option></select>
           <select id="ofFiltroEstado">
             <option value="">Todos los estados</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="EN_PROCESO">En Proceso</option>
-            <option value="TERMINADA">Terminada</option>
+            <option value="CREADA">Creada</option>
+            <option value="AUTORIZADA">Autorizada</option>
             <option value="CANCELADA">Cancelada</option>
           </select>
           <button class="btn-of" onclick="window.renderOF()">📊 Aplicar Filtros</button>
-          <button class="btn-imprimir" onclick="window.previsualizarReporteOF()">🖨️ Previsualizar Reporte</button>
         </div>
 
         <div class="card" style="margin:12px 0; padding:14px 16px;">
           <h4>➕ Nueva Orden de Facturación</h4>
-          <div class="cxc-form-row">
-            <input id="ofCodigo" placeholder="Código OF *" required>
-            <input id="ofProducto" placeholder="Concepto *" required>
-            <input id="ofCantidad" type="number" step="1" placeholder="Cantidad *" required>
-            <input id="ofFechaInicio" type="date" required>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <input id="ofEmpresa" placeholder="Empresa" style="flex:1;">
+              <select id="ofDepartamento" onchange="window.actualizarFolioOF()" style="flex:1;"><option value="">Departamento *</option></select>
+              <input id="ofFolio" placeholder="Folio (automático)" disabled style="background:var(--gray-200); flex:1;">
+              <input id="ofFecha" type="date" disabled style="background:var(--gray-200); flex:0.8;">
+            </div>
           </div>
-          <div class="cxc-form-row">
-            <input id="ofFechaTermino" type="date" required>
-            <select id="ofEstado">
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="EN_PROCESO">En Proceso</option>
-              <option value="TERMINADA">Terminada</option>
-              <option value="CANCELADA">Cancelada</option>
-            </select>
-            <button onclick="window.agregarOF()" class="btn-of" style="flex:0.5; min-width:120px;">➕ Agregar</button>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <input id="ofRazonSocial" placeholder="Razón Social *" style="flex:1.5;">
+              <input id="ofRFC" placeholder="RFC *" style="flex:1;">
+              <select id="ofCfdi" style="flex:1.5;">
+                <option value="G01">G01 - ADQUISICION DE MERCANCIAS</option>
+                <option value="G03">G03 - GASTOS EN GENERAL</option>
+                <option value="I03">I03 - EQUIPO DE TRANSPORTE</option>
+                <option value="I04">I04 - EQUIPO DE COMPUTO Y ACCESORIOS</option>
+                <option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option>
+                <option value="P01">P01 - POR DEFINIR</option>
+              </select>
+            </div>
+          </div>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <input id="ofDireccion" placeholder="Dirección *" style="flex:2;">
+              <input id="ofOCNumero" placeholder="Orden de Compra No." list="listaOC" style="flex:1;">
+              <datalist id="listaOC"></datalist>
+            </div>
+          </div>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <select id="ofFormaPago" style="flex:1;">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia Electrónica</option>
+                <option value="CHEQUE">Cheque Nominativo</option>
+                <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
+                <option value="TARJETA_DEBITO">Tarjeta de Débito</option>
+                <option value="OTRO">Otro</option>
+              </select>
+              <select id="ofMetodoPago" style="flex:1;">
+                <option value="PUE">PUE - Pago en una sola exhibición</option>
+                <option value="PPD">PPD - Pago en parcialidades o diferido</option>
+              </select>
+              <select id="ofMoneda" style="flex:0.7;">
+                <option value="MXN">Pesos (MXN)</option>
+                <option value="USD">Dólares (USD)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <input id="ofBanco" placeholder="Banco" style="flex:1;">
+              <input id="ofCuenta" placeholder="No. de Cuenta" style="flex:1;">
+              <input id="ofMonto" placeholder="Monto (con IVA)" disabled style="background:var(--gray-200); flex:1;">
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <h4>Partidas a facturar</h4>
+            <div class="table-wrapper">
+              <table class="productos-tabla" id="tablaPartidasOF">
+                <thead>
+                  <tr>
+                    <th style="width:60px;">Partida</th>
+                    <th style="min-width:200px;">Concepto</th>
+                    <th style="width:110px;">Cantidad</th>
+                    <th style="min-width:100px;width:100px;">UM</th>
+                    <th style="width:110px;min-width:110px;">PU</th>
+                    <th style="min-width:170px;width:180px;">Importe</th>
+                    <th style="width:60px;">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoPartidasOF"></tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="5" style="text-align:right;font-weight:bold">SUMA:</td>
+                    <td id="sumaPartidasOF" style="font-weight:bold;font-size:16px;min-width:170px;width:180px;">$0.00</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <button onclick="window.agregarFilaPartidaOF()" class="success" style="margin-top:8px;">➕ Agregar Partida</button>
+          </div>
+
+          <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
+            <button onclick="window.guardarOF()" class="warning">✅ Generar y Guardar OF</button>
           </div>
           <div id="msgOF"></div>
         </div>
 
-        <div id="ofResumen" class="cxc-resumen"></div>
         <h3>📋 Órdenes de Facturación</h3>
         <div class="table-wrapper">
           <table id="ofTabla">
-            <thead><tr><th>Código</th><th>Concepto</th><th>Cantidad</th><th>F.Inicio</th><th>F.Término</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Depto</th><th>Razón Social</th><th>OC No.</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="ofCuerpo"></tbody>
           </table>
         </div>
@@ -1843,7 +1911,7 @@
         return lista;
       }
       var cuentasCXC = [];
-      var ordenesFabricacion = [];
+      var ordenesFacturacion = [];
       var consecutivoOC = 1;
       var ocNotificadaId = null;
       var ocPreviewData = null;
@@ -2180,11 +2248,11 @@
           if (e3) throw e3;
           cuentasCXC = cxcData || [];
           
-          var { data: ofData, error: e4 } = await supabase.from('ordenes_fabricacion').select('*');
+          var { data: ofData, error: e4 } = await supabase.from('ordenes_facturacion').select('*');
           if (e4) throw e4;
-          ordenesFabricacion = ofData || [];
+          ordenesFacturacion = ofData || [];
           
-          console.log('📊 Datos cargados - Proyectos:', proyectos.length, 'OC:', ordenes.length, 'CXC:', cuentasCXC.length, 'OF:', ordenesFabricacion.length);
+          console.log('📊 Datos cargados - Proyectos:', proyectos.length, 'OC:', ordenes.length, 'CXC:', cuentasCXC.length, 'OF:', ordenesFacturacion.length);
           return true;
         } catch (e) { 
           console.error('❌ Error cargando datos:', e); 
@@ -3900,29 +3968,275 @@
         // Función existente...
       };
 
-      function cargarFiltrosOF() {
-        // Función existente...
+      // ============================================================
+      // FOLIO AUTOMÁTICO POR DEPARTAMENTO (OF)
+      // ============================================================
+      function generarFolioOF(departamento) {
+        var deptoClean = (departamento || 'GENERAL').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
+        var existentes = ordenesFacturacion.filter(function(o) { return (o.departamento || '').toUpperCase() === (departamento || '').toUpperCase(); });
+        var consecutivo = existentes.length + 1;
+        var folio, intentos = 0;
+        do {
+          folio = deptoClean + '-OF-' + String(consecutivo).padStart(4, '0');
+          var yaExiste = ordenesFacturacion.some(function(o) { return o.folio === folio; });
+          if (!yaExiste) break;
+          consecutivo++;
+          intentos++;
+        } while (intentos < 1000);
+        return folio;
       }
 
-      function obtenerDatosOF() {
-        // Función existente...
-        return [];
+      window.actualizarFolioOF = function() {
+        var depto = document.getElementById('ofDepartamento').value;
+        document.getElementById('ofFolio').value = depto ? generarFolioOF(depto) : '';
+      };
+
+      // ============================================================
+      // PARTIDAS A FACTURAR (mismo formato de celdas que la tabla de la OC)
+      // ============================================================
+      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu) {
+        concepto = concepto || '';
+        cantidad = cantidad || 1;
+        um = um || 'PZA';
+        pu = pu || 0;
+        var tbody = document.getElementById('cuerpoPartidasOF');
+        var fila = document.createElement('tr');
+        var idx = tbody.children.length + 1;
+        var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === um ? 'selected' : '') + '>' + u + '</option>'; }).join('');
+        fila.innerHTML = '<td class="indice">' + idx + '</td>' +
+          '<td><textarea class="concepto" placeholder="Concepto" oninput="window.autoAjustar(this)">' + concepto.toUpperCase() + '</textarea></td>' +
+          '<td><input class="cantidad" type="number" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
+          '<td><select class="udm" onchange="window.recalcularFilaOF(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td>' +
+          '<td><input class="pu" type="number" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
+          '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:170px;width:180px;"></td>' +
+          '<td><button class="danger" onclick="window.eliminarFilaPartidaOF(this)">🗑️</button></td>';
+        tbody.appendChild(fila);
+        window.recalcularFilaOF(fila);
+        window.reindexarPartidasOF();
+      };
+
+      window.eliminarFilaPartidaOF = function(boton) {
+        boton.closest('tr').remove();
+        window.reindexarPartidasOF();
+        window.recalcularSumaOF();
+      };
+
+      window.reindexarPartidasOF = function() {
+        var tbody = document.getElementById('cuerpoPartidasOF');
+        tbody.querySelectorAll('tr').forEach(function(fila, i) {
+          var tdIndice = fila.querySelector('.indice');
+          if (tdIndice) tdIndice.textContent = i + 1;
+        });
+      };
+
+      window.recalcularFilaOF = function(elemento) {
+        var fila = elemento.closest ? elemento.closest('tr') : elemento;
+        if (!fila) return;
+        var cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
+        var pu = parseFloat(fila.querySelector('.pu').value) || 0;
+        var importe = cantidad * pu;
+        var importeInput = fila.querySelector('.importe');
+        if (importeInput) importeInput.value = importe.toFixed(2);
+        window.recalcularSumaOF();
+      };
+
+      window.recalcularSumaOF = function() {
+        var tbody = document.getElementById('cuerpoPartidasOF');
+        var total = 0;
+        tbody.querySelectorAll('tr').forEach(function(fila) {
+          var importeInput = fila.querySelector('.importe');
+          if (importeInput) total += parseFloat(importeInput.value) || 0;
+        });
+        var sumaEl = document.getElementById('sumaPartidasOF');
+        if (sumaEl) sumaEl.textContent = '$' + total.toFixed(2);
+        var montoInput = document.getElementById('ofMonto');
+        if (montoInput) montoInput.value = '$' + total.toFixed(2);
+        return total;
+      };
+
+      function recopilarPartidasOF() {
+        var tbody = document.getElementById('cuerpoPartidasOF');
+        var partidas = [];
+        tbody.querySelectorAll('tr').forEach(function(fila, i) {
+          var concepto = fila.querySelector('.concepto').value.trim();
+          if (!concepto) return;
+          partidas.push({
+            partida: i + 1,
+            concepto: concepto,
+            cantidad: parseFloat(fila.querySelector('.cantidad').value) || 0,
+            um: fila.querySelector('.udm').value,
+            pu: parseFloat(fila.querySelector('.pu').value) || 0,
+            importe: parseFloat(fila.querySelector('.importe').value) || 0
+          });
+        });
+        return partidas;
       }
 
-      window.agregarOF = async function() {
-        // Función existente...
+      // ============================================================
+      // GUARDAR / GENERAR OF
+      // ============================================================
+      window.guardarOF = async function() {
+        var msgDiv = document.getElementById('msgOF');
+        msgDiv.innerHTML = '';
+
+        var departamento = document.getElementById('ofDepartamento').value.trim().toUpperCase();
+        var empresa = document.getElementById('ofEmpresa').value.trim().toUpperCase();
+        var razonSocial = document.getElementById('ofRazonSocial').value.trim().toUpperCase();
+        var rfc = document.getElementById('ofRFC').value.trim().toUpperCase();
+        var cfdi = document.getElementById('ofCfdi').value;
+        var direccion = document.getElementById('ofDireccion').value.trim();
+        var formaPago = document.getElementById('ofFormaPago').value;
+        var metodoPago = document.getElementById('ofMetodoPago').value;
+        var banco = document.getElementById('ofBanco').value.trim().toUpperCase();
+        var cuenta = document.getElementById('ofCuenta').value.trim();
+        var moneda = document.getElementById('ofMoneda').value;
+        var ocNumero = document.getElementById('ofOCNumero').value.trim().toUpperCase();
+
+        if (!departamento) { msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL DEPARTAMENTO (NECESARIO PARA EL FOLIO).</div>'; return; }
+        if (!razonSocial || !rfc || !direccion) { msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETA RAZÓN SOCIAL, RFC Y DIRECCIÓN.</div>'; return; }
+
+        var partidas = recopilarPartidasOF();
+        if (partidas.length === 0) { msgDiv.innerHTML = '<div class="alert">⚠️ AGREGA AL MENOS UNA PARTIDA A FACTURAR.</div>'; return; }
+
+        var suma = window.recalcularSumaOF();
+        var folio = generarFolioOF(departamento);
+
+        var nuevaOF = {
+          folio: folio,
+          fecha: new Date().toISOString().slice(0, 10),
+          empresa: empresa,
+          departamento: departamento,
+          razon_social: razonSocial,
+          rfc: rfc,
+          cfdi: cfdi,
+          direccion: direccion,
+          forma_pago: formaPago,
+          metodo_pago: metodoPago,
+          banco: banco,
+          num_cuenta: cuenta,
+          monto: suma,
+          moneda: moneda,
+          oc_numero: ocNumero,
+          partidas: partidas,
+          suma: suma,
+          elaborador: actual ? actual.u : 'Desconocido',
+          estado: 'CREADA'
+        };
+
+        var { data, error } = await supabase.from('ordenes_facturacion').insert(nuevaOF).select().single();
+        if (error) { msgDiv.innerHTML = '<div class="alert">❌ ERROR AL GUARDAR LA OF: ' + error.message + '</div>'; return; }
+
+        ordenesFacturacion.push(data);
+        msgDiv.innerHTML = '<div class="success-msg">✅ OF GENERADA Y GUARDADA. FOLIO: ' + folio + '</div>';
+
+        document.getElementById('cuerpoPartidasOF').innerHTML = '';
+        window.agregarFilaPartidaOF();
+        document.getElementById('ofRazonSocial').value = '';
+        document.getElementById('ofRFC').value = '';
+        document.getElementById('ofDireccion').value = '';
+        document.getElementById('ofBanco').value = '';
+        document.getElementById('ofCuenta').value = '';
+        document.getElementById('ofOCNumero').value = '';
+        window.actualizarFolioOF();
+
+        window.renderOF();
       };
 
-      window.eliminarOF = async function(index) {
-        // Función existente...
+      // ============================================================
+      // AUTORIZACIÓN DE OF (igual que las OC)
+      // ============================================================
+      window.autorizarOF = async function(index) {
+        if (!actual || (actual.rol !== 'Director General' && actual.rol !== 'Jefe Departamento' && actual.rol !== 'Administrador')) {
+          return alert('❌ No tienes permiso para autorizar órdenes de facturación.');
+        }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+        if (of.estado !== 'CREADA') return alert('La OF no está en estado CREADA.');
+
+        var updates = { estado: 'AUTORIZADA', autorizado_por: actual.u, fecha_autorizacion: new Date().toISOString() };
+        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
+        if (error) return alert('Error al autorizar la OF: ' + error.message);
+        Object.assign(of, updates);
+        window.renderOF();
+        alert('✅ OF ' + of.folio + ' autorizada.');
       };
 
-      window.cambiarEstadoOF = async function(index, nuevoEstado) {
-        // Función existente...
+      window.cancelarOF = async function(index) {
+        if (!actual || (actual.rol !== 'Director General' && actual.rol !== 'Jefe Departamento' && actual.rol !== 'Administrador')) {
+          return alert('❌ No tienes permiso.');
+        }
+        var of = ordenesFacturacion[index];
+        if (!of || of.estado === 'CANCELADA') return;
+        if (!confirm('¿Cancelar la OF ' + of.folio + '?')) return;
+
+        var updates = { estado: 'CANCELADA' };
+        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
+        if (error) return alert('Error al cancelar la OF: ' + error.message);
+        Object.assign(of, updates);
+        window.renderOF();
       };
 
       window.renderOF = function() {
-        // Función existente...
+        var tbody = document.getElementById('ofCuerpo');
+        if (!tbody) return;
+
+        // Poblar select y filtro de departamentos con los deptos existentes en proyectos + OF ya guardadas
+        var deptosSet = new Set();
+        proyectos.forEach(function(p) { if (p.departamento) deptosSet.add(p.departamento); });
+        ordenesFacturacion.forEach(function(o) { if (o.departamento) deptosSet.add(o.departamento); });
+        var deptosList = Array.from(deptosSet).sort();
+
+        var selectDepto = document.getElementById('ofDepartamento');
+        if (selectDepto) {
+          var valorActual = selectDepto.value;
+          selectDepto.innerHTML = '<option value="">Departamento *</option>' + deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
+          if (valorActual) selectDepto.value = valorActual;
+        }
+        var filtroDepto = document.getElementById('ofFiltroDepto');
+        if (filtroDepto) {
+          var valorFiltro = filtroDepto.value;
+          filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>' + deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
+          filtroDepto.value = valorFiltro;
+        }
+
+        // Poblar sugerencias de OC (datalist)
+        var listaOC = document.getElementById('listaOC');
+        if (listaOC) {
+          listaOC.innerHTML = ordenes.map(function(o) { return '<option value="' + o.codigo + '">'; }).join('');
+        }
+
+        var visibles = ordenesFacturacion.slice();
+        if (filtroDepto && filtroDepto.value) visibles = visibles.filter(function(o) { return o.departamento === filtroDepto.value; });
+        var filtroEstado = document.getElementById('ofFiltroEstado');
+        if (filtroEstado && filtroEstado.value) visibles = visibles.filter(function(o) { return o.estado === filtroEstado.value; });
+
+        visibles = visibles.slice().reverse();
+
+        if (visibles.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="mensaje-sin-datos">No hay órdenes de facturación disponibles</td></tr>';
+          return;
+        }
+
+        var esAutorizador = actual && (actual.rol === 'Director General' || actual.rol === 'Jefe Departamento' || actual.rol === 'Administrador');
+
+        tbody.innerHTML = visibles.map(function(o) {
+          var idxOriginal = ordenesFacturacion.indexOf(o);
+          var badgeClass = o.estado === 'AUTORIZADA' ? 'badge-autorizada-pagada' : (o.estado === 'CANCELADA' ? 'badge-vencida' : 'badge-creada');
+          var acciones = '';
+          if (o.estado === 'CREADA' && esAutorizador) {
+            acciones += '<button class="success" onclick="window.autorizarOF(' + idxOriginal + ')">✅ Autorizar</button>';
+            acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
+          }
+          return '<tr><td data-label="Folio"><code>' + o.folio + '</code></td>' +
+            '<td data-label="Fecha">' + (o.fecha || '') + '</td>' +
+            '<td data-label="Depto">' + o.departamento + '</td>' +
+            '<td data-label="Razón Social">' + o.razon_social + '</td>' +
+            '<td data-label="OC No.">' + (o.oc_numero || '-') + '</td>' +
+            '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
+            '<td data-label="Moneda">' + o.moneda + '</td>' +
+            '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + o.estado + '</span></td>' +
+            '<td data-label="Acciones"><div class="actions">' + acciones + '</div></td></tr>';
+        }).join('');
       };
 
       // ============================================================
@@ -4548,12 +4862,12 @@
         var cxcFechaPago = document.getElementById('cxcFechaPago');
         if (cxcFechaPago) cxcFechaPago.value = fechaHoy;
         
-        var ofFechaInicio = document.getElementById('ofFechaInicio');
-        if (ofFechaInicio) ofFechaInicio.value = fechaHoy;
-        var fechaFinOF = new Date(hoy);
-        fechaFinOF.setMonth(fechaFinOF.getMonth() + 1);
-        var ofFechaTermino = document.getElementById('ofFechaTermino');
-        if (ofFechaTermino) ofFechaTermino.value = fechaFinOF.toISOString().split('T')[0];
+        var ofFecha = document.getElementById('ofFecha');
+        if (ofFecha) ofFecha.value = fechaHoy;
+        var cuerpoPartidasOF = document.getElementById('cuerpoPartidasOF');
+        if (cuerpoPartidasOF && cuerpoPartidasOF.children.length === 0) {
+          window.agregarFilaPartidaOF();
+        }
         
         // Solo detectar el enlace, NO ejecutar scroll automáticamente
         detectarEnlaceTelegram();
