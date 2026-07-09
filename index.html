@@ -1980,6 +1980,7 @@
       // ============================================================
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
+        // Director General, Administrador, Finanzas y Contabilidad tienen acceso total
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
@@ -1987,6 +1988,26 @@
         return usuario.permisos.some(function(p) { 
           return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm; 
         });
+      }
+
+      // ============================================================
+      // FUNCIÓN PARA OBTENER EMPRESA/DEPARTAMENTO POR DEFECTO DEL USUARIO
+      // ============================================================
+      function obtenerEmpresaDeptoDefault(usuario) {
+        if (!usuario) return { empresa: '', departamento: '' };
+        // Roles con acceso total pueden elegir libremente
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
+          return { empresa: '', departamento: '', libre: true };
+        }
+        // Para otros roles, tomar el primer permiso
+        if (usuario.permisos && usuario.permisos.length > 0) {
+          return { 
+            empresa: usuario.permisos[0].empresa || '', 
+            departamento: usuario.permisos[0].depto || '',
+            libre: false
+          };
+        }
+        return { empresa: '', departamento: '', libre: false };
       }
 
       function filtrarProyectosSegunUsuario(usuario) {
@@ -3965,7 +3986,7 @@
       };
 
       // ============================================================
-      // FUNCIONES PARA OF (CON PERMISOS DE EMPRESA/DEPARTAMENTO)
+      // FUNCIONES PARA OF (CON PERMISOS DE EMPRESA/DEPARTAMENTO Y CAMPOS POR DEFECTO)
       // ============================================================
       
       function generarFolioOF(departamento) {
@@ -3991,6 +4012,67 @@
         var depto = document.getElementById('ofDepartamento').value;
         document.getElementById('ofFolio').value = depto ? generarFolioOF(depto) : '';
       };
+
+      // ============================================================
+      // CONFIGURAR CAMPOS POR DEFECTO PARA OF
+      // ============================================================
+      function configurarCamposDefaultOF() {
+        if (!actual) return;
+        
+        var empresaInput = document.getElementById('ofEmpresa');
+        var deptoSelect = document.getElementById('ofDepartamento');
+        var folioInput = document.getElementById('ofFolio');
+        
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var esAccesoTotal = defaultData.libre === true;
+        
+        if (esAccesoTotal) {
+          // Director General, Administrador, Finanzas, Contabilidad - pueden elegir libremente
+          empresaInput.disabled = false;
+          empresaInput.style.background = 'white';
+          empresaInput.placeholder = 'Escribe la empresa';
+          empresaInput.value = '';
+          
+          deptoSelect.disabled = false;
+          deptoSelect.style.background = 'white';
+          deptoSelect.innerHTML = '<option value="">Departamento *</option>';
+          
+          // Poblar con todos los departamentos disponibles
+          var todosDeptos = new Set();
+          proyectos.forEach(function(p) { if (p.departamento) todosDeptos.add(p.departamento); });
+          ordenesFacturacion.forEach(function(o) { if (o.departamento) todosDeptos.add(o.departamento); });
+          var deptosList = Array.from(todosDeptos).sort();
+          deptosList.forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            deptoSelect.appendChild(opt);
+          });
+          
+          deptoSelect.onchange = window.actualizarFolioOF;
+        } else {
+          // Solicitante, Elaborador, Jefe Departamento - campos fijos según sus permisos
+          if (defaultData.empresa && defaultData.departamento) {
+            empresaInput.value = defaultData.empresa;
+            empresaInput.disabled = true;
+            empresaInput.style.background = 'var(--gray-200)';
+            
+            deptoSelect.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
+            deptoSelect.disabled = true;
+            deptoSelect.style.background = 'var(--gray-200)';
+            
+            // Generar folio automáticamente
+            folioInput.value = generarFolioOF(defaultData.departamento);
+          } else {
+            empresaInput.value = 'Sin permisos asignados';
+            empresaInput.disabled = true;
+            empresaInput.style.background = 'var(--gray-200)';
+            deptoSelect.innerHTML = '<option value="">Sin permisos</option>';
+            deptoSelect.disabled = true;
+            deptoSelect.style.background = 'var(--gray-200)';
+          }
+        }
+      }
 
       // ============================================================
       // PARTIDAS A FACTURAR (OF)
@@ -4293,28 +4375,48 @@
 
         var deptosList = Array.from(deptosSet).sort();
 
-        // Poblar select de departamento para nueva OF
+        // Poblar select de departamento para nueva OF (respetando permisos)
         var selectDepto = document.getElementById('ofDepartamento');
+        var empresaInput = document.getElementById('ofEmpresa');
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var esAccesoTotal = defaultData.libre === true;
+        
         if (selectDepto) {
-          var valorActual = selectDepto.value;
-          selectDepto.innerHTML = '<option value="">Departamento *</option>' + 
-            deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
-          if (valorActual && deptosList.indexOf(valorActual) !== -1) selectDepto.value = valorActual;
+          if (!esAccesoTotal && defaultData.departamento) {
+            // Usuario con permisos limitados - solo ve su departamento
+            selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
+            selectDepto.disabled = true;
+            selectDepto.style.background = 'var(--gray-200)';
+            
+            if (empresaInput) {
+              empresaInput.value = defaultData.empresa || '';
+              empresaInput.disabled = true;
+              empresaInput.style.background = 'var(--gray-200)';
+            }
+          } else {
+            // Acceso total - puede elegir cualquier departamento
+            selectDepto.disabled = false;
+            selectDepto.style.background = 'white';
+            selectDepto.innerHTML = '<option value="">Departamento *</option>' + 
+              deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
+            
+            if (empresaInput) {
+              empresaInput.disabled = false;
+              empresaInput.style.background = 'white';
+              empresaInput.placeholder = 'Escribe la empresa';
+              if (empresasSet.size === 1) empresaInput.value = Array.from(empresasSet)[0];
+            }
+          }
+          selectDepto.onchange = window.actualizarFolioOF;
         }
 
-        // Poblar filtro de departamento
+        // Poblar filtro de departamento (solo con departamentos a los que el usuario tiene acceso)
         var filtroDepto = document.getElementById('ofFiltroDepto');
         if (filtroDepto) {
           var valorFiltro = filtroDepto.value;
           filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>' + 
             deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
           if (valorFiltro && deptosList.indexOf(valorFiltro) !== -1) filtroDepto.value = valorFiltro;
-        }
-
-        // Poblar campo empresa (sugerir)
-        var inputEmpresa = document.getElementById('ofEmpresa');
-        if (inputEmpresa && empresasSet.size === 1) {
-          inputEmpresa.value = Array.from(empresasSet)[0];
         }
 
         // Poblar sugerencias de OC (datalist)
@@ -4907,6 +5009,11 @@
           }
           render();
         };
+
+        // Configurar campos por defecto para OF después del login
+        setTimeout(function() {
+          configurarCamposDefaultOF();
+        }, 100);
 
         setTimeout(function() {
           render();
