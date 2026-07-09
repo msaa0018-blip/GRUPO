@@ -1855,6 +1855,7 @@
       var cxpReportePDF = null;
       var cxpReporteData = null;
       var ocBannerVisible = false;
+      var pendingOcId = null; // ID de OC pendiente de scroll después del login
 
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -2014,6 +2015,11 @@
       // FUNCIÓN MEJORADA PARA LOCALIZAR Y SCROLLEAR A LA OC
       // ============================================================
       function irDirectoALaOC(ocId) {
+        if (!ocId) {
+          console.log('⚠️ No se proporcionó ID de OC');
+          return;
+        }
+        
         console.log('🔍 Buscando OC con ID:', ocId);
         
         // Función que intenta localizar y hacer scroll a la OC
@@ -2154,34 +2160,19 @@
       };
 
       // ============================================================
-      // FUNCIÓN PARA ASEGURAR SCROLL DESDE ENLACE
+      // FUNCIÓN PARA DETECTAR ENLACE DE TELEGRAM (SIN EJECUTAR AUTOMÁTICAMENTE)
       // ============================================================
-      function asegurarScrollEnlace() {
+      function detectarEnlaceTelegram() {
         var urlParams = new URLSearchParams(window.location.search);
         var ocParam = urlParams.get('oc');
         
         if (ocParam) {
           var ocId = parseInt(ocParam);
           console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
-          
-          // Guardar el ID para uso posterior
-          ocNotificadaId = ocId;
-          
-          // Esperar a que la página esté completamente cargada
-          if (document.readyState === 'complete') {
-            // Si ya está cargada, intentar el scroll
-            setTimeout(function() {
-              irDirectoALaOC(ocId);
-            }, 400);
-          } else {
-            // Si no está cargada, esperar
-            window.addEventListener('load', function() {
-              setTimeout(function() {
-                irDirectoALaOC(ocId);
-              }, 600);
-            });
-          }
+          pendingOcId = ocId;
+          return ocId;
         }
+        return null;
       }
 
       // ============================================================
@@ -2352,10 +2343,11 @@
             window.agregarFilaProducto();
           }
           
-          // Si hay una OC notificada pendiente, intentar localizarla
-          if (ocNotificadaId) {
+          // Si hay una OC pendiente de scroll (desde enlace de Telegram), intentar localizarla
+          if (pendingOcId) {
+            console.log('🔄 Ejecutando scroll pendiente para OC ID:', pendingOcId);
             setTimeout(function() {
-              irDirectoALaOC(ocNotificadaId);
+              irDirectoALaOC(pendingOcId);
             }, 800);
           }
         }, 100);
@@ -4232,13 +4224,336 @@
           window.renderOF();
         }
         
-        // Si hay una OC notificada pendiente, intentar localizarla después del render
-        if (ocNotificadaId && !ocBannerVisible) {
+        // Si hay una OC pendiente de scroll (desde enlace de Telegram), intentar localizarla después del render
+        if (pendingOcId && !ocBannerVisible) {
+          console.log('🔄 Render completado, ejecutando scroll para OC ID:', pendingOcId);
           setTimeout(function() {
-            irDirectoALaOC(ocNotificadaId);
-          }, 500);
+            irDirectoALaOC(pendingOcId);
+          }, 600);
         }
       }
+
+      // ============================================================
+      // FUNCIÓN DE LOGIN
+      // ============================================================
+      window.login = async function() {
+        var userInput = document.getElementById('usuario');
+        var passInput = document.getElementById('password');
+        var errorDiv = document.getElementById('error');
+        var btnLogin = document.getElementById('btnLogin');
+
+        if (!userInput || !passInput) { 
+          alert('❌ Campos no encontrados'); 
+          return; 
+        }
+
+        var user = userInput.value.trim().toUpperCase();
+        var pass = passInput.value.trim();
+
+        if (!user || !pass) {
+          errorDiv.classList.remove('hidden');
+          errorDiv.innerHTML = '❌ Ingresa usuario y contraseña';
+          return;
+        }
+
+        btnLogin.disabled = true;
+        btnLogin.textContent = '⏳ Verificando...';
+        errorDiv.classList.add('hidden');
+
+        try {
+          await cargarUsuarios();
+
+          var { data: userData, error: authError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .ilike('usuario', user)
+            .eq('password', pass)
+            .maybeSingle();
+
+          if (authError) {
+            console.error('Error de conexión:', authError);
+            errorDiv.classList.remove('hidden');
+            errorDiv.innerHTML = '❌ Error de conexión con la base de datos: ' + (authError.message || authError.code || 'Verifica la API key en Supabase Dashboard → Settings → API');
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Ingresar';
+            return;
+          }
+
+          if (!userData) {
+            errorDiv.classList.remove('hidden');
+            errorDiv.innerHTML = '❌ Usuario no encontrado o contraseña incorrecta';
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Ingresar';
+            return;
+          }
+
+          var cargaOk = await cargarDatos();
+          if (!cargaOk) {
+            errorDiv.classList.remove('hidden');
+            errorDiv.innerHTML = '❌ No se pudieron cargar los datos. Verifica conexión con Supabase.';
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Ingresar';
+            return;
+          }
+
+          actual = { 
+            usuario: userData.usuario, 
+            u: userData.usuario, 
+            password: userData.password, 
+            rol: userData.rol, 
+            permisos: userData.permisos || []
+          };
+
+        } catch (e) {
+          console.error('Error inesperado en login:', e);
+          errorDiv.classList.remove('hidden');
+          errorDiv.innerHTML = '❌ Error inesperado: ' + e.message;
+          btnLogin.disabled = false;
+          btnLogin.textContent = 'Ingresar';
+          return;
+        }
+
+        btnLogin.disabled = false;
+        btnLogin.textContent = 'Ingresar';
+        errorDiv.classList.add('hidden');
+
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('loginContainer').style.display = 'none';
+
+        // Detectar si hay un enlace de Telegram con OC
+        var ocId = detectarEnlaceTelegram();
+
+        if (ocId) {
+          console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
+          pendingOcId = ocId;
+          
+          configurarModulos();
+          
+          document.getElementById('menuPrincipal').classList.add('hidden');
+          document.getElementById('contenidoApp').classList.remove('hidden');
+          document.getElementById('contenidoApp').classList.add('visible');
+          document.getElementById('btnVolverMenu').classList.remove('hidden');
+          
+          var panelOC = document.getElementById('panelOC');
+          var panelProyecto = document.getElementById('panelProyecto');
+          var tablaProyectosCard = document.getElementById('tablaProyectosCard');
+          var panelCXP = document.getElementById('panelCXP');
+          var panelCXC = document.getElementById('panelCXC');
+          var panelOF = document.getElementById('panelOF');
+          var bandejaOCCard = document.getElementById('bandejaOCCard');
+          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+          
+          panelProyecto.classList.add('hidden');
+          tablaProyectosCard.classList.add('hidden');
+          panelCXP.classList.add('hidden');
+          panelCXC.classList.add('hidden');
+          panelOF.classList.add('hidden');
+          if (puedeCrear) panelOC.classList.remove('hidden');
+          else panelOC.classList.add('hidden');
+          bandejaOCCard.classList.remove('hidden');
+          
+          moduloActual = 'oc';
+          
+          setTimeout(function() {
+            render();
+            if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
+              window.actualizarDatosOC();
+            }
+            var cuerpo = document.getElementById('cuerpoProductos');
+            if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
+              window.agregarFilaProducto();
+            }
+            
+            // Ejecutar el scroll para la OC
+            setTimeout(function() {
+              irDirectoALaOC(pendingOcId);
+            }, 800);
+            
+            setTimeout(function() {
+              irDirectoALaOC(pendingOcId);
+            }, 1500);
+            
+            setTimeout(function() {
+              irDirectoALaOC(pendingOcId);
+            }, 3000);
+            
+          }, 300);
+          
+        } else {
+          document.getElementById('menuPrincipal').classList.remove('hidden');
+          document.getElementById('contenidoApp').classList.add('hidden');
+          configurarModulos();
+        }
+
+        var infoSesion = '👤 ' + actual.u + ' (' + actual.rol + ')';
+        var opciones = obtenerOpcionesPermisos(actual);
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          infoSesion += ' - Acceso total';
+        } else if (opciones.length === 1) {
+          infoSesion += ' - ' + opciones[0].empresa + ' / ' + opciones[0].depto;
+        } else if (opciones.length > 1) {
+          infoSesion += ' - ' + opciones.length + ' empresas/departamentos';
+        }
+        document.getElementById('sesion').textContent = infoSesion;
+
+        if (actual.rol === 'Administrador') {
+          document.getElementById('adminActions').classList.remove('hidden');
+        } else {
+          document.getElementById('adminActions').classList.add('hidden');
+        }
+
+        var esElaborador = actual.rol === 'Elaborador';
+        var esDirector = actual.rol === 'Director General';
+        var esAdmin = actual.rol === 'Administrador';
+        var esFinanzas = actual.rol === 'Finanzas';
+
+        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
+        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
+
+        var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
+        var filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
+        var btnPendientes = document.getElementById('btnPendientesPagar');
+        var btnLimpiar = document.getElementById('btnLimpiarFiltros');
+
+        var puedeFiltrar = esDirector || esAdmin || esFinanzas;
+        filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
+        filtroDeptoContainer.classList.toggle('hidden', !puedeFiltrar);
+
+        if (esFinanzas) {
+          btnPendientes.classList.remove('hidden');
+          btnLimpiar.classList.remove('hidden');
+          var pendientes = contarPendientesPagar();
+          btnPendientes.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
+        } else {
+          btnPendientes.classList.add('hidden');
+          btnLimpiar.classList.add('hidden');
+        }
+
+        var selectProyecto = document.getElementById('selectProyecto');
+        selectProyecto.onchange = window.actualizarDatosOC;
+
+        var filtroProyecto = document.getElementById('filtroProyecto');
+        filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
+        proyectos.forEach(function(p) {
+          var opt = document.createElement('option');
+          opt.value = p.nombre;
+          opt.textContent = p.nombre;
+          filtroProyecto.appendChild(opt);
+        });
+        filtroProyecto.onchange = function() {
+          if (actual.rol === 'Finanzas') {
+            var pendientes = contarPendientesPagar();
+            var btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
+          }
+          render();
+        };
+
+        var filtroDepto = document.getElementById('filtroDepto');
+        filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
+        var deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
+        deptos.forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          filtroDepto.appendChild(opt);
+        });
+        filtroDepto.onchange = function() {
+          if (actual.rol === 'Finanzas') {
+            var pendientes = contarPendientesPagar();
+            var btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
+          }
+          render();
+        };
+
+        setTimeout(function() {
+          render();
+          var cuerpo = document.getElementById('cuerpoProductos');
+          if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
+            window.agregarFilaProducto();
+          }
+        }, 200);
+      };
+
+      window.salir = function() { location.reload(); };
+
+      // ============================================================
+      // FUNCIONES DE CREACIÓN Y GESTIÓN DE PROYECTOS
+      // ============================================================
+      window.crearProyecto = async function() {
+        var empresa, departamento;
+        
+        if (actual && actual.rol === 'Director General') {
+          empresa = document.getElementById('empresaProyecto').value.trim().toUpperCase();
+          departamento = document.getElementById('departamentoProyecto').value.trim().toUpperCase();
+        } else {
+          var permisos = obtenerOpcionesPermisos(actual);
+          if (permisos.length > 0) {
+            empresa = permisos[0].empresa || '';
+            departamento = permisos[0].depto || '';
+          } else {
+            document.getElementById('msgProyecto').innerHTML = '<div class="alert">⚠️ No tienes permisos para crear proyectos.</div>';
+            return;
+          }
+        }
+        
+        var nombre = document.getElementById('nombreProyecto').value.trim().toUpperCase();
+        var cliente = document.getElementById('cliente').value.trim().toUpperCase();
+        var presupuesto = Number(document.getElementById('presupuesto').value);
+        var moneda = document.getElementById('monedaProyecto').value;
+        var fechaInicio = document.getElementById('fechaInicio').value;
+        var fechaTermino = document.getElementById('fechaTermino').value;
+        var msgDiv = document.getElementById('msgProyecto');
+
+        if (!empresa || !departamento || !nombre || !cliente || presupuesto <= 0 || !fechaInicio || !fechaTermino) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ TODOS LOS CAMPOS SON OBLIGATORIOS Y PRESUPUESTO > 0.</div>';
+          return;
+        }
+        if (fechaInicio > fechaTermino) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ LA FECHA DE INICIO NO PUEDE SER POSTERIOR A LA FECHA DE TÉRMINO.</div>';
+          return;
+        }
+        
+        if (actual.rol !== 'Director General') {
+          if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
+            return;
+          }
+        }
+
+        var nuevoProyecto = { empresa: empresa, departamento: departamento, nombre: nombre, cliente: cliente, presupuesto: presupuesto, moneda: moneda, limite: presupuesto * 0.60, fecha_inicio: fechaInicio, fecha_termino: fechaTermino };
+
+        try {
+          var { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
+          if (error) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ ERROR: ' + error.message + '</div>';
+            return;
+          }
+          msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO.</div>';
+          document.getElementById('nombreProyecto').value = '';
+          document.getElementById('cliente').value = '';
+          document.getElementById('presupuesto').value = '';
+          if (data && data.length > 0) proyectos.push(data[0]);
+          else await cargarDatos();
+          render();
+        } catch (error) {
+          console.error('❌ Error inesperado en crearProyecto:', error.stack || error);
+          msgDiv.innerHTML = '<div class="alert">⚠️ ERROR INESPERADO: ' + error.message + '</div>';
+        }
+      };
+
+      window.eliminarProyecto = async function(index) {
+        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        var proyecto = proyectos[index];
+        if (!confirm('¿Eliminar proyecto "' + proyecto.nombre + '" y todas sus OC asociadas?')) return;
+        await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
+        await supabase.from('proyectos').delete().eq('id', proyecto.id);
+        proyectos.splice(index, 1);
+        render();
+      };
 
       // ============================================================
       // INICIALIZACIÓN
@@ -4265,8 +4580,8 @@
         var ofFechaTermino = document.getElementById('ofFechaTermino');
         if (ofFechaTermino) ofFechaTermino.value = fechaFinOF.toISOString().split('T')[0];
         
-        // Detectar enlace de Telegram al cargar
-        asegurarScrollEnlace();
+        // Solo detectar el enlace, NO ejecutar scroll automáticamente
+        detectarEnlaceTelegram();
       }
 
       document.addEventListener('DOMContentLoaded', function() {
@@ -4278,15 +4593,6 @@
         if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
         var userInput = document.getElementById('usuario');
         if (userInput) userInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
-        
-        // También detectar enlace después de que la página esté cargada
-        if (document.readyState === 'complete') {
-          asegurarScrollEnlace();
-        } else {
-          window.addEventListener('load', function() {
-            asegurarScrollEnlace();
-          });
-        }
       });
 
       // Exponer la función de scroll para que pueda ser llamada desde cualquier lugar
