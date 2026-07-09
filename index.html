@@ -1807,7 +1807,7 @@
         <h3>📋 Órdenes de Facturación</h3>
         <div class="table-wrapper">
           <table id="ofTabla">
-            <thead><tr><th>Folio</th><th>Fecha</th><th>Depto</th><th>Razón Social</th><th>OC No.</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>OC No.</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="ofCuerpo"></tbody>
           </table>
         </div>
@@ -1923,7 +1923,7 @@
       var cxpReportePDF = null;
       var cxpReporteData = null;
       var ocBannerVisible = false;
-      var pendingOcId = null; // ID de OC pendiente de scroll después del login
+      var pendingOcId = null;
 
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -1973,6 +1973,20 @@
         var empNorm = normalizar(empresa);
         var deptoNorm = normalizar(depto);
         return usuario.permisos.some(function(p) { return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm; });
+      }
+
+      // ============================================================
+      // FUNCIÓN DE PERMISOS PARA OF (EMPRESA/DEPARTAMENTO)
+      // ============================================================
+      function usuarioPuedeAccederOF(usuario, empresa, departamento) {
+        if (!usuario) return false;
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
+        if (!usuario.permisos) return false;
+        var empNorm = normalizar(empresa);
+        var deptoNorm = normalizar(departamento);
+        return usuario.permisos.some(function(p) { 
+          return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm; 
+        });
       }
 
       function filtrarProyectosSegunUsuario(usuario) {
@@ -2080,7 +2094,7 @@
       }
 
       // ============================================================
-      // FUNCIÓN MEJORADA PARA LOCALIZAR Y SCROLLEAR A LA OC
+      // FUNCIÓN PARA LOCALIZAR Y SCROLLEAR A LA OC
       // ============================================================
       function irDirectoALaOC(ocId) {
         if (!ocId) {
@@ -2090,29 +2104,24 @@
         
         console.log('🔍 Buscando OC con ID:', ocId);
         
-        // Función que intenta localizar y hacer scroll a la OC
         function intentarScroll() {
           var row = document.querySelector('tr[data-oc-id="' + ocId + '"]');
           if (row) {
             console.log('✅ OC encontrada, haciendo scroll...');
             
-            // Scroll SOLO vertical - centrar la fila en la vista, sin mover el scroll horizontal
             row.scrollIntoView({ 
               behavior: 'smooth', 
               block: 'center', 
               inline: 'nearest' 
             });
             
-            // Efecto de resaltado mejorado
             row.style.transition = 'background 0.5s ease, box-shadow 0.5s ease, border 0.5s ease';
             row.style.background = '#FFD740';
             row.style.boxShadow = '0 0 40px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4)';
             row.style.border = '3px solid #FF8C00';
             
-            // Mostrar banner de localización
             mostrarBannerLocalizacion(ocId);
             
-            // Mantener el resaltado por más tiempo y luego atenuar
             setTimeout(function() {
               row.style.background = '#FFC700';
               row.style.boxShadow = '0 0 20px rgba(255, 199, 0, 0.5)';
@@ -2130,22 +2139,17 @@
           return false;
         }
         
-        // Intentar inmediatamente
         if (intentarScroll()) return;
         
-        // Reintentar después de 500ms (posible renderizado pendiente)
         setTimeout(function() {
           if (intentarScroll()) return;
           
-          // Reintentar después de 1s
           setTimeout(function() {
             if (intentarScroll()) return;
             
-            // Reintentar después de 2s
             setTimeout(function() {
               if (intentarScroll()) return;
               
-              // Último intento después de 3.5s
               setTimeout(function() {
                 if (intentarScroll()) {
                   console.log('✅ OC encontrada en intento tardío');
@@ -2169,7 +2173,6 @@
         
         if (!banner) return;
         
-        // Buscar la OC para mostrar su código
         var oc = ordenes.find(function(o) { return o.id === ocId; });
         var codigo = oc ? oc.codigo : 'ID: ' + ocId;
         
@@ -2184,7 +2187,6 @@
         banner.classList.remove('hidden');
         ocBannerVisible = true;
         
-        // Ocultar automáticamente después de 15 segundos si no se interactúa
         clearTimeout(window._bannerTimeout);
         window._bannerTimeout = setTimeout(function() {
           ocultarBannerLocalizacion();
@@ -2201,7 +2203,7 @@
       };
 
       // ============================================================
-      // FUNCIÓN PARA DETECTAR ENLACE DE TELEGRAM (SIN EJECUTAR AUTOMÁTICAMENTE)
+      // FUNCIÓN PARA DETECTAR ENLACE DE TELEGRAM
       // ============================================================
       function detectarEnlaceTelegram() {
         var urlParams = new URLSearchParams(window.location.search);
@@ -2384,7 +2386,6 @@
             window.agregarFilaProducto();
           }
           
-          // Si hay una OC pendiente de scroll (desde enlace de Telegram), intentar localizarla
           if (pendingOcId) {
             console.log('🔄 Ejecutando scroll pendiente para OC ID:', pendingOcId);
             setTimeout(function() {
@@ -3691,7 +3692,7 @@
       }
 
       // ============================================================
-      // FUNCIONES CXP, CXC, OF (simplificadas pero funcionales)
+      // FUNCIONES CXP, CXC (resumidas)
       // ============================================================
       function cargarFiltrosCXP() {
         var empresas = [];
@@ -3936,44 +3937,44 @@
       };
 
       window.verDashboardProyectoCXP = function(nombreProyecto) {
-        // Función existente...
-      };
-
-      window.verDashboardProyectoCXP_Barras = function(nombreProyecto) {
-        // Función existente...
+        // Función de dashboard
       };
 
       function cargarFiltrosCXC() {
-        // Función existente...
+        // Función existente
       }
 
       function obtenerDatosCXC() {
-        // Función existente...
         return [];
       }
 
       window.agregarCXC = async function() {
-        // Función existente...
+        // Función existente
       };
 
       window.eliminarCXC = async function(index) {
-        // Función existente...
+        // Función existente
       };
 
       window.marcarCXC = async function(index, estado) {
-        // Función existente...
+        // Función existente
       };
 
       window.renderCXC = function() {
-        // Función existente...
+        // Función existente
       };
 
       // ============================================================
-      // FOLIO AUTOMÁTICO POR DEPARTAMENTO (OF)
+      // FUNCIONES PARA OF (CON PERMISOS DE EMPRESA/DEPARTAMENTO)
       // ============================================================
+      
       function generarFolioOF(departamento) {
         var deptoClean = (departamento || 'GENERAL').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
-        var existentes = ordenesFacturacion.filter(function(o) { return (o.departamento || '').toUpperCase() === (departamento || '').toUpperCase(); });
+        var existentes = ordenesFacturacion.filter(function(o) { 
+          var deptoOF = (o.departamento || '').toUpperCase();
+          var deptoParam = (departamento || '').toUpperCase();
+          return deptoOF === deptoParam;
+        });
         var consecutivo = existentes.length + 1;
         var folio, intentos = 0;
         do {
@@ -3992,7 +3993,7 @@
       };
 
       // ============================================================
-      // PARTIDAS A FACTURAR (mismo formato de celdas que la tabla de la OC)
+      // PARTIDAS A FACTURAR (OF)
       // ============================================================
       window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu) {
         concepto = concepto || '';
@@ -4073,11 +4074,16 @@
       }
 
       // ============================================================
-      // GUARDAR / GENERAR OF
+      // GUARDAR / GENERAR OF (CON VALIDACIÓN DE PERMISOS)
       // ============================================================
       window.guardarOF = async function() {
         var msgDiv = document.getElementById('msgOF');
         msgDiv.innerHTML = '';
+
+        if (!actual) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ No has iniciado sesión.</div>';
+          return;
+        }
 
         var departamento = document.getElementById('ofDepartamento').value.trim().toUpperCase();
         var empresa = document.getElementById('ofEmpresa').value.trim().toUpperCase();
@@ -4092,11 +4098,30 @@
         var moneda = document.getElementById('ofMoneda').value;
         var ocNumero = document.getElementById('ofOCNumero').value.trim().toUpperCase();
 
-        if (!departamento) { msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL DEPARTAMENTO (NECESARIO PARA EL FOLIO).</div>'; return; }
-        if (!razonSocial || !rfc || !direccion) { msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETA RAZÓN SOCIAL, RFC Y DIRECCIÓN.</div>'; return; }
+        if (!departamento) { 
+          msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL DEPARTAMENTO (NECESARIO PARA EL FOLIO).</div>'; 
+          return; 
+        }
+        if (!empresa) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ INGRESA LA EMPRESA.</div>';
+          return;
+        }
+        if (!razonSocial || !rfc || !direccion) { 
+          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETA RAZÓN SOCIAL, RFC Y DIRECCIÓN.</div>'; 
+          return; 
+        }
+
+        // **VALIDACIÓN DE PERMISOS: EL USUARIO DEBE PERTENECER A LA EMPRESA/DEPARTAMENTO**
+        if (!usuarioPuedeAccederOF(actual, empresa, departamento)) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR ÓRDENES DE FACTURACIÓN EN ESTA EMPRESA/DEPARTAMENTO.</div>';
+          return;
+        }
 
         var partidas = recopilarPartidasOF();
-        if (partidas.length === 0) { msgDiv.innerHTML = '<div class="alert">⚠️ AGREGA AL MENOS UNA PARTIDA A FACTURAR.</div>'; return; }
+        if (partidas.length === 0) { 
+          msgDiv.innerHTML = '<div class="alert">⚠️ AGREGA AL MENOS UNA PARTIDA A FACTURAR.</div>'; 
+          return; 
+        }
 
         var suma = window.recalcularSumaOF();
         var folio = generarFolioOF(departamento);
@@ -4124,7 +4149,10 @@
         };
 
         var { data, error } = await supabase.from('ordenes_facturacion').insert(nuevaOF).select().single();
-        if (error) { msgDiv.innerHTML = '<div class="alert">❌ ERROR AL GUARDAR LA OF: ' + error.message + '</div>'; return; }
+        if (error) { 
+          msgDiv.innerHTML = '<div class="alert">❌ ERROR AL GUARDAR LA OF: ' + error.message + '</div>'; 
+          return; 
+        }
 
         ordenesFacturacion.push(data);
         msgDiv.innerHTML = '<div class="success-msg">✅ OF GENERADA Y GUARDADA. FOLIO: ' + folio + '</div>';
@@ -4143,99 +4171,225 @@
       };
 
       // ============================================================
-      // AUTORIZACIÓN DE OF (igual que las OC)
+      // AUTORIZACIÓN DE OF (CON VALIDACIÓN DE PERMISOS)
       // ============================================================
       window.autorizarOF = async function(index) {
-        if (!actual || (actual.rol !== 'Director General' && actual.rol !== 'Jefe Departamento' && actual.rol !== 'Administrador')) {
-          return alert('❌ No tienes permiso para autorizar órdenes de facturación.');
+        if (!actual) {
+          alert('❌ No has iniciado sesión.');
+          return;
         }
+
         var of = ordenesFacturacion[index];
         if (!of) return;
-        if (of.estado !== 'CREADA') return alert('La OF no está en estado CREADA.');
+        
+        if (of.estado !== 'CREADA') {
+          alert('La OF no está en estado CREADA.');
+          return;
+        }
 
-        var updates = { estado: 'AUTORIZADA', autorizado_por: actual.u, fecha_autorizacion: new Date().toISOString() };
+        // **VALIDACIÓN DE PERMISOS PARA AUTORIZAR**
+        // Solo pueden autorizar: Jefe Departamento, Director General, Administrador, Finanzas, Contabilidad
+        var rolesAutorizados = ['Jefe Departamento', 'Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
+        
+        if (rolesAutorizados.indexOf(actual.rol) === -1) {
+          alert('❌ No tienes permiso para autorizar órdenes de facturación. Solo Jefes de Departamento, Directores, Administradores, Finanzas y Contabilidad pueden autorizar.');
+          return;
+        }
+
+        // Verificar que el usuario pertenece a la empresa/departamento de la OF
+        if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
+          alert('❌ No tienes permiso para autorizar OF en esta empresa/departamento.');
+          return;
+        }
+
+        var updates = { 
+          estado: 'AUTORIZADA', 
+          autorizado_por: actual.u, 
+          fecha_autorizacion: new Date().toISOString() 
+        };
+        
         var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
-        if (error) return alert('Error al autorizar la OF: ' + error.message);
+        if (error) {
+          alert('Error al autorizar la OF: ' + error.message);
+          return;
+        }
+        
         Object.assign(of, updates);
         window.renderOF();
-        alert('✅ OF ' + of.folio + ' autorizada.');
+        alert('✅ OF ' + of.folio + ' autorizada por ' + actual.u + '.');
       };
 
+      // ============================================================
+      // CANCELAR OF (CON VALIDACIÓN DE PERMISOS)
+      // ============================================================
       window.cancelarOF = async function(index) {
-        if (!actual || (actual.rol !== 'Director General' && actual.rol !== 'Jefe Departamento' && actual.rol !== 'Administrador')) {
-          return alert('❌ No tienes permiso.');
+        if (!actual) {
+          alert('❌ No has iniciado sesión.');
+          return;
         }
+
         var of = ordenesFacturacion[index];
-        if (!of || of.estado === 'CANCELADA') return;
+        if (!of) return;
+        
+        if (of.estado === 'CANCELADA') {
+          alert('La OF ya está cancelada.');
+          return;
+        }
+
+        // **VALIDACIÓN DE PERMISOS PARA CANCELAR**
+        var rolesAutorizados = ['Jefe Departamento', 'Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
+        
+        if (rolesAutorizados.indexOf(actual.rol) === -1) {
+          alert('❌ No tienes permiso para cancelar órdenes de facturación.');
+          return;
+        }
+
+        // Verificar que el usuario pertenece a la empresa/departamento de la OF
+        if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
+          alert('❌ No tienes permiso para cancelar OF en esta empresa/departamento.');
+          return;
+        }
+
         if (!confirm('¿Cancelar la OF ' + of.folio + '?')) return;
 
         var updates = { estado: 'CANCELADA' };
         var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
-        if (error) return alert('Error al cancelar la OF: ' + error.message);
+        if (error) {
+          alert('Error al cancelar la OF: ' + error.message);
+          return;
+        }
+        
         Object.assign(of, updates);
         window.renderOF();
+        alert('❌ OF ' + of.folio + ' cancelada por ' + actual.u + '.');
       };
 
+      // ============================================================
+      // RENDER OF (CON FILTRADO POR PERMISOS)
+      // ============================================================
       window.renderOF = function() {
         var tbody = document.getElementById('ofCuerpo');
         if (!tbody) return;
 
-        // Poblar select y filtro de departamentos con los deptos existentes en proyectos + OF ya guardadas
+        // Obtener todos los departamentos de proyectos + OF para los selects
         var deptosSet = new Set();
-        proyectos.forEach(function(p) { if (p.departamento) deptosSet.add(p.departamento); });
-        ordenesFacturacion.forEach(function(o) { if (o.departamento) deptosSet.add(o.departamento); });
+        var empresasSet = new Set();
+        
+        // Solo agregar departamentos a los que el usuario tiene acceso
+        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+        proyectosVisibles.forEach(function(p) { 
+          if (p.departamento) deptosSet.add(p.departamento);
+          if (p.empresa) empresasSet.add(p.empresa);
+        });
+        
+        // También agregar departamentos de OF existentes que el usuario pueda ver
+        var ofVisibles = ordenesFacturacion.filter(function(o) {
+          return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+        });
+        ofVisibles.forEach(function(o) {
+          if (o.departamento) deptosSet.add(o.departamento);
+          if (o.empresa) empresasSet.add(o.empresa);
+        });
+
         var deptosList = Array.from(deptosSet).sort();
 
+        // Poblar select de departamento para nueva OF
         var selectDepto = document.getElementById('ofDepartamento');
         if (selectDepto) {
           var valorActual = selectDepto.value;
-          selectDepto.innerHTML = '<option value="">Departamento *</option>' + deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
-          if (valorActual) selectDepto.value = valorActual;
+          selectDepto.innerHTML = '<option value="">Departamento *</option>' + 
+            deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
+          if (valorActual && deptosList.indexOf(valorActual) !== -1) selectDepto.value = valorActual;
         }
+
+        // Poblar filtro de departamento
         var filtroDepto = document.getElementById('ofFiltroDepto');
         if (filtroDepto) {
           var valorFiltro = filtroDepto.value;
-          filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>' + deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
-          filtroDepto.value = valorFiltro;
+          filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>' + 
+            deptosList.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('');
+          if (valorFiltro && deptosList.indexOf(valorFiltro) !== -1) filtroDepto.value = valorFiltro;
+        }
+
+        // Poblar campo empresa (sugerir)
+        var inputEmpresa = document.getElementById('ofEmpresa');
+        if (inputEmpresa && empresasSet.size === 1) {
+          inputEmpresa.value = Array.from(empresasSet)[0];
         }
 
         // Poblar sugerencias de OC (datalist)
         var listaOC = document.getElementById('listaOC');
         if (listaOC) {
-          listaOC.innerHTML = ordenes.map(function(o) { return '<option value="' + o.codigo + '">'; }).join('');
+          listaOC.innerHTML = ordenes.map(function(o) { 
+            return '<option value="' + o.codigo + '">'; 
+          }).join('');
         }
 
-        var visibles = ordenesFacturacion.slice();
-        if (filtroDepto && filtroDepto.value) visibles = visibles.filter(function(o) { return o.departamento === filtroDepto.value; });
+        // **FILTRAR OF POR PERMISOS DEL USUARIO**
+        var visibles = ordenesFacturacion.filter(function(o) {
+          return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+        });
+
+        // Aplicar filtros adicionales
+        if (filtroDepto && filtroDepto.value) {
+          visibles = visibles.filter(function(o) { 
+            return o.departamento === filtroDepto.value; 
+          });
+        }
+        
         var filtroEstado = document.getElementById('ofFiltroEstado');
-        if (filtroEstado && filtroEstado.value) visibles = visibles.filter(function(o) { return o.estado === filtroEstado.value; });
+        if (filtroEstado && filtroEstado.value) {
+          visibles = visibles.filter(function(o) { 
+            return o.estado === filtroEstado.value; 
+          });
+        }
 
         visibles = visibles.slice().reverse();
 
         if (visibles.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" class="mensaje-sin-datos">No hay órdenes de facturación disponibles</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay órdenes de facturación disponibles para tus empresas/departamentos</td></tr>';
           return;
         }
 
-        var esAutorizador = actual && (actual.rol === 'Director General' || actual.rol === 'Jefe Departamento' || actual.rol === 'Administrador');
+        // Determinar si el usuario puede autorizar
+        var rolesAutorizados = ['Jefe Departamento', 'Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
+        var puedeAutorizar = actual && rolesAutorizados.indexOf(actual.rol) !== -1;
 
         tbody.innerHTML = visibles.map(function(o) {
           var idxOriginal = ordenesFacturacion.indexOf(o);
-          var badgeClass = o.estado === 'AUTORIZADA' ? 'badge-autorizada-pagada' : (o.estado === 'CANCELADA' ? 'badge-vencida' : 'badge-creada');
+          var badgeClass = o.estado === 'AUTORIZADA' ? 'badge-autorizada-pagada' : 
+                           (o.estado === 'CANCELADA' ? 'badge-vencida' : 'badge-creada');
+          
           var acciones = '';
-          if (o.estado === 'CREADA' && esAutorizador) {
+          
+          // Mostrar botón de autorizar SOLO si:
+          // 1. El usuario tiene rol autorizado
+          // 2. La OF está en estado CREADA
+          // 3. El usuario pertenece a la empresa/departamento de la OF
+          if (o.estado === 'CREADA' && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="success" onclick="window.autorizarOF(' + idxOriginal + ')">✅ Autorizar</button>';
             acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
           }
-          return '<tr><td data-label="Folio"><code>' + o.folio + '</code></td>' +
+          
+          // Mostrar acción de cancelar también para usuarios autorizados en OF ya autorizadas (pero no canceladas)
+          if (o.estado === 'AUTORIZADA' && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
+            acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
+          }
+
+          if (!acciones) acciones = '—';
+
+          return '<tr>' +
+            '<td data-label="Folio"><code>' + o.folio + '</code></td>' +
             '<td data-label="Fecha">' + (o.fecha || '') + '</td>' +
+            '<td data-label="Empresa">' + (o.empresa || '') + '</td>' +
             '<td data-label="Depto">' + o.departamento + '</td>' +
             '<td data-label="Razón Social">' + o.razon_social + '</td>' +
             '<td data-label="OC No.">' + (o.oc_numero || '-') + '</td>' +
             '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
             '<td data-label="Moneda">' + o.moneda + '</td>' +
             '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + o.estado + '</span></td>' +
-            '<td data-label="Acciones"><div class="actions">' + acciones + '</div></td></tr>';
+            '<td data-label="Acciones"><div class="actions">' + acciones + '</div></td>' +
+            '</tr>';
         }).join('');
       };
 
@@ -4243,31 +4397,31 @@
       // FUNCIONES DE REPORTE
       // ============================================================
       window.previsualizarReporteCXP = function() {
-        // Función existente...
+        // Función existente
       };
 
       window.imprimirReporteCXP = function() {
-        // Función existente...
+        // Función existente
       };
 
       window.cerrarPreviewCXP = function() {
-        // Función existente...
+        // Función existente
       };
 
       window.previsualizarReporteCXC = function() {
-        // Función existente...
+        // Función existente
       };
 
       window.previsualizarReporteOF = function() {
-        // Función existente...
+        // Función existente
       };
 
       window.mostrarDashboard = function(index) {
-        // Función existente...
+        // Función existente
       };
 
       window.cerrarDashboard = function() {
-        // Función existente...
+        // Función existente
       };
 
       // ============================================================
@@ -4511,7 +4665,6 @@
           window.renderOF();
         }
         
-        // Si hay una OC pendiente de scroll (desde enlace de Telegram), intentar localizarla después del render
         if (pendingOcId && !ocBannerVisible) {
           console.log('🔄 Render completado, ejecutando scroll para OC ID:', pendingOcId);
           setTimeout(function() {
@@ -4607,13 +4760,11 @@
         document.getElementById('login').classList.add('hidden');
         document.getElementById('loginContainer').style.display = 'none';
 
-        // Detectar si hay un enlace de Telegram con OC
         var ocId = detectarEnlaceTelegram();
 
         if (ocId) {
           console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
           pendingOcId = ocId;
-          // Mantiene el parpadeo (aura dorada) fijo en ESTA OC hasta que el director la autorice o rechace
           ocNotificadaId = ocId;
           
           configurarModulos();
@@ -4653,7 +4804,6 @@
               window.agregarFilaProducto();
             }
             
-            // Ejecutar el scroll para la OC
             setTimeout(function() {
               irDirectoALaOC(pendingOcId);
             }, 800);
@@ -4869,7 +5019,6 @@
           window.agregarFilaPartidaOF();
         }
         
-        // Solo detectar el enlace, NO ejecutar scroll automáticamente
         detectarEnlaceTelegram();
       }
 
@@ -4884,7 +5033,6 @@
         if (userInput) userInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
       });
 
-      // Exponer la función de scroll para que pueda ser llamada desde cualquier lugar
       window.irDirectoALaOC = irDirectoALaOC;
 
     })();
