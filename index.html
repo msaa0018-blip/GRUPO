@@ -1360,6 +1360,64 @@
     50% { box-shadow: 0 0 40px rgba(255, 199, 0, 0.9), 0 0 60px rgba(255, 199, 0, 0.3); }
     100% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
   }
+
+  /* ===== ESTILO PARA EL BANNER DE LOCALIZACIÓN DE OC ===== */
+  .oc-location-banner {
+    background: linear-gradient(135deg, #FFC700, #FFD740);
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin: 10px 0 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-left: 6px solid #FF8C00;
+    box-shadow: 0 4px 20px rgba(255, 199, 0, 0.3);
+    animation: pulse-banner 2s ease-in-out infinite;
+    color: #1a1a1a;
+  }
+  .oc-location-banner .banner-icon {
+    font-size: 28px;
+    margin-right: 8px;
+  }
+  .oc-location-banner .banner-text {
+    font-weight: 600;
+    font-size: 15px;
+    flex: 1;
+  }
+  .oc-location-banner .banner-text small {
+    font-weight: 400;
+    font-size: 13px;
+    display: block;
+    opacity: 0.8;
+  }
+  .oc-location-banner .banner-close {
+    background: rgba(0,0,0,0.15);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a1a;
+    transition: background 0.2s;
+    min-height: 32px;
+    min-width: 32px;
+    padding: 0;
+  }
+  .oc-location-banner .banner-close:hover {
+    background: rgba(0,0,0,0.25);
+  }
+  
+  @keyframes pulse-banner {
+    0% { box-shadow: 0 4px 20px rgba(255, 199, 0, 0.3); }
+    50% { box-shadow: 0 4px 30px rgba(255, 199, 0, 0.6), 0 0 40px rgba(255, 199, 0, 0.2); }
+    100% { box-shadow: 0 4px 20px rgba(255, 199, 0, 0.3); }
+  }
 </style>
 </head>
 <body>
@@ -1368,7 +1426,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v56</span>
+        <span class="sub">Workflow OC ERP v57</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1689,6 +1747,14 @@
 
       <div class="card" id="bandejaOCCard">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
+        <div id="ocLocationBanner" class="oc-location-banner hidden">
+          <span class="banner-icon">🔍</span>
+          <div class="banner-text">
+            <span id="bannerOCInfo">OC localizada</span>
+            <small id="bannerOCDetail">La orden de compra ha sido resaltada en la tabla</small>
+          </div>
+          <button class="banner-close" onclick="window.ocultarBannerLocalizacion()">✕</button>
+        </div>
         <div class="filtros-container">
           <div id="filtroProyectoContainer" class="filtro-item hidden"><label>Proyecto:</label><select id="filtroProyecto"><option value="">Todos</option></select></div>
           <div id="filtroDeptoContainer" class="filtro-item hidden"><label>Departamento:</label><select id="filtroDepto"><option value="">Todos</option></select></div>
@@ -1788,6 +1854,7 @@
       var visualizarOCPDF = null;
       var cxpReportePDF = null;
       var cxpReporteData = null;
+      var ocBannerVisible = false;
 
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -1944,6 +2011,180 @@
       }
 
       // ============================================================
+      // FUNCIÓN MEJORADA PARA LOCALIZAR Y SCROLLEAR A LA OC
+      // ============================================================
+      function irDirectoALaOC(ocId) {
+        console.log('🔍 Buscando OC con ID:', ocId);
+        
+        // Función que intenta localizar y hacer scroll a la OC
+        function intentarScroll() {
+          var row = document.querySelector('tr[data-oc-id="' + ocId + '"]');
+          if (row) {
+            console.log('✅ OC encontrada, haciendo scroll...');
+            
+            // Obtener el contenedor de la tabla
+            var wrapper = row.closest('.table-wrapper');
+            var card = wrapper ? wrapper.closest('.card') : null;
+            
+            // Scroll vertical - centrar la fila en la vista
+            row.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center', 
+              inline: 'center' 
+            });
+            
+            // Scroll horizontal para asegurar que la fila esté visible
+            if (wrapper) {
+              setTimeout(function() {
+                var rect = row.getBoundingClientRect();
+                var wrapperRect = wrapper.getBoundingClientRect();
+                
+                // Si la fila está fuera del viewport horizontalmente
+                if (rect.left < wrapperRect.left || rect.right > wrapperRect.right) {
+                  // Calcular el offset necesario
+                  var offset = 0;
+                  if (rect.left < wrapperRect.left) {
+                    offset = rect.left - wrapperRect.left - 20;
+                  } else if (rect.right > wrapperRect.right) {
+                    offset = rect.right - wrapperRect.right + 20;
+                  }
+                  wrapper.scrollTo({ 
+                    left: wrapper.scrollLeft + offset, 
+                    behavior: 'smooth' 
+                  });
+                }
+              }, 400);
+            }
+            
+            // Efecto de resaltado mejorado
+            row.style.transition = 'background 0.5s ease, box-shadow 0.5s ease, border 0.5s ease';
+            row.style.background = '#FFD740';
+            row.style.boxShadow = '0 0 40px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4)';
+            row.style.border = '3px solid #FF8C00';
+            
+            // Mostrar banner de localización
+            mostrarBannerLocalizacion(ocId);
+            
+            // Mantener el resaltado por más tiempo y luego atenuar
+            setTimeout(function() {
+              row.style.background = '#FFC700';
+              row.style.boxShadow = '0 0 20px rgba(255, 199, 0, 0.5)';
+            }, 1000);
+            
+            setTimeout(function() {
+              row.style.background = '';
+              row.style.boxShadow = '';
+              row.style.border = '';
+            }, 6000);
+            
+            console.log('🟡 OC resaltada y visible');
+            return true;
+          }
+          return false;
+        }
+        
+        // Intentar inmediatamente
+        if (intentarScroll()) return;
+        
+        // Reintentar después de 500ms (posible renderizado pendiente)
+        setTimeout(function() {
+          if (intentarScroll()) return;
+          
+          // Reintentar después de 1s
+          setTimeout(function() {
+            if (intentarScroll()) return;
+            
+            // Reintentar después de 2s
+            setTimeout(function() {
+              if (intentarScroll()) return;
+              
+              // Último intento después de 3.5s
+              setTimeout(function() {
+                if (intentarScroll()) {
+                  console.log('✅ OC encontrada en intento tardío');
+                } else {
+                  console.log('⚠️ No se encontró la OC después de múltiples intentos');
+                  mostrarBannerLocalizacion(ocId, true);
+                }
+              }, 1500);
+            }, 1500);
+          }, 1000);
+        }, 500);
+      }
+
+      // ============================================================
+      // FUNCIONES PARA BANNER DE LOCALIZACIÓN
+      // ============================================================
+      function mostrarBannerLocalizacion(ocId, noEncontrada) {
+        var banner = document.getElementById('ocLocationBanner');
+        var info = document.getElementById('bannerOCInfo');
+        var detail = document.getElementById('bannerOCDetail');
+        
+        if (!banner) return;
+        
+        // Buscar la OC para mostrar su código
+        var oc = ordenes.find(function(o) { return o.id === ocId; });
+        var codigo = oc ? oc.codigo : 'ID: ' + ocId;
+        
+        if (noEncontrada) {
+          info.textContent = '🔍 OC ' + codigo + ' no encontrada en la tabla';
+          detail.textContent = 'La orden de compra podría no estar visible con los filtros actuales. Revisa los filtros o recarga la página.';
+        } else {
+          info.textContent = '📌 OC ' + codigo + ' localizada';
+          detail.textContent = 'La orden de compra ha sido resaltada en la tabla. Haz scroll hacia arriba si no la ves.';
+        }
+        
+        banner.classList.remove('hidden');
+        ocBannerVisible = true;
+        
+        // Ocultar automáticamente después de 15 segundos si no se interactúa
+        clearTimeout(window._bannerTimeout);
+        window._bannerTimeout = setTimeout(function() {
+          ocultarBannerLocalizacion();
+        }, 15000);
+      }
+
+      window.ocultarBannerLocalizacion = function() {
+        var banner = document.getElementById('ocLocationBanner');
+        if (banner) {
+          banner.classList.add('hidden');
+          ocBannerVisible = false;
+          clearTimeout(window._bannerTimeout);
+        }
+      };
+
+      // ============================================================
+      // FUNCIÓN PARA ASEGURAR SCROLL DESDE ENLACE
+      // ============================================================
+      function asegurarScrollEnlace() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var ocParam = urlParams.get('oc');
+        
+        if (ocParam) {
+          var ocId = parseInt(ocParam);
+          console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
+          
+          // Guardar el ID para uso posterior
+          ocNotificadaId = ocId;
+          
+          // Esperar a que la página esté completamente cargada
+          if (document.readyState === 'complete') {
+            // Si ya está cargada, intentar el scroll
+            setTimeout(function() {
+              irDirectoALaOC(ocId);
+            }, 400);
+          } else {
+            // Si no está cargada, esperar
+            window.addEventListener('load', function() {
+              setTimeout(function() {
+                irDirectoALaOC(ocId);
+              }, 600);
+            });
+          }
+        }
+      }
+
+      // ============================================================
       // FUNCIONES DE CARGA DE DATOS
       // ============================================================
       async function cargarUsuarios() {
@@ -1998,6 +2239,7 @@
         moduloActual = null;
         filtroPendientesActivo = false;
         ocNotificadaId = null;
+        window.ocultarBannerLocalizacion();
       };
 
       window.volverAlMenu = function() { window.mostrarMenu(); };
@@ -2108,6 +2350,13 @@
           var cuerpo = document.getElementById('cuerpoProductos');
           if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
             window.agregarFilaProducto();
+          }
+          
+          // Si hay una OC notificada pendiente, intentar localizarla
+          if (ocNotificadaId) {
+            setTimeout(function() {
+              irDirectoALaOC(ocNotificadaId);
+            }, 800);
           }
         }, 100);
       };
@@ -2292,375 +2541,6 @@
           render();
           alert('✅ Todos los proyectos y OC eliminados.');
         } catch (error) { alert('❌ Error: ' + error.message); }
-      };
-
-      // ============================================================
-      // FUNCIÓN PARA IR DIRECTAMENTE A LA OC NOTIFICADA
-      // ============================================================
-      function irDirectoALaOC(ocId) {
-        console.log('🔍 Buscando OC con ID:', ocId);
-        var row = document.querySelector('tr[data-oc-id="' + ocId + '"]');
-        if (row) {
-          console.log('✅ OC encontrada, haciendo scroll...');
-          row.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-          var wrapper = row.closest('.table-wrapper');
-          if (wrapper) {
-            var rect = row.getBoundingClientRect();
-            var wrapperRect = wrapper.getBoundingClientRect();
-            if (rect.left < wrapperRect.left || rect.right > wrapperRect.right) {
-              wrapper.scrollTo({ left: rect.left - wrapperRect.left - 10, behavior: 'smooth' });
-            }
-          }
-          row.style.transition = 'background 0.3s ease';
-          row.style.background = '#FFD700';
-          setTimeout(function() {
-            row.style.background = '#FFC700';
-          }, 300);
-          console.log('🟡 OC resaltada y visible');
-        } else {
-          console.log('⚠️ No se encontró la fila para OC ID:', ocId);
-          setTimeout(function() {
-            var rowRetry = document.querySelector('tr[data-oc-id="' + ocId + '"]');
-            if (rowRetry) {
-              console.log('✅ OC encontrada en reintento, haciendo scroll...');
-              rowRetry.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-              var wrapperRetry = rowRetry.closest('.table-wrapper');
-              if (wrapperRetry) {
-                var rect = rowRetry.getBoundingClientRect();
-                var wrapperRect = wrapperRetry.getBoundingClientRect();
-                if (rect.left < wrapperRect.left || rect.right > wrapperRect.right) {
-                  wrapperRetry.scrollTo({ left: rect.left - wrapperRect.left - 10, behavior: 'smooth' });
-                }
-              }
-              rowRetry.style.transition = 'background 0.3s ease';
-              rowRetry.style.background = '#FFD700';
-              setTimeout(function() {
-                rowRetry.style.background = '#FFC700';
-              }, 300);
-            }
-          }, 1000);
-        }
-      }
-
-      // ============================================================
-      // LOGIN
-      // ============================================================
-      window.login = async function() {
-        var userInput = document.getElementById('usuario');
-        var passInput = document.getElementById('password');
-        var errorDiv = document.getElementById('error');
-        var btnLogin = document.getElementById('btnLogin');
-
-        if (!userInput || !passInput) { 
-          alert('❌ Campos no encontrados'); 
-          return; 
-        }
-
-        var user = userInput.value.trim().toUpperCase();
-        var pass = passInput.value.trim();
-
-        if (!user || !pass) {
-          errorDiv.classList.remove('hidden');
-          errorDiv.innerHTML = '❌ Ingresa usuario y contraseña';
-          return;
-        }
-
-        btnLogin.disabled = true;
-        btnLogin.textContent = '⏳ Verificando...';
-        errorDiv.classList.add('hidden');
-
-        try {
-          await cargarUsuarios();
-
-          var { data: userData, error: authError } = await supabase
-            .from('usuarios')
-            .select('*')
-            .ilike('usuario', user)
-            .eq('password', pass)
-            .maybeSingle();
-
-          if (authError) {
-            console.error('Error de conexión:', authError);
-            errorDiv.classList.remove('hidden');
-            errorDiv.innerHTML = '❌ Error de conexión con la base de datos: ' + (authError.message || authError.code || 'Verifica la API key en Supabase Dashboard → Settings → API');
-            btnLogin.disabled = false;
-            btnLogin.textContent = 'Ingresar';
-            return;
-          }
-
-          if (!userData) {
-            errorDiv.classList.remove('hidden');
-            errorDiv.innerHTML = '❌ Usuario no encontrado o contraseña incorrecta';
-            btnLogin.disabled = false;
-            btnLogin.textContent = 'Ingresar';
-            return;
-          }
-
-          var cargaOk = await cargarDatos();
-          if (!cargaOk) {
-            errorDiv.classList.remove('hidden');
-            errorDiv.innerHTML = '❌ No se pudieron cargar los datos. Verifica conexión con Supabase.';
-            btnLogin.disabled = false;
-            btnLogin.textContent = 'Ingresar';
-            return;
-          }
-
-          actual = { 
-            usuario: userData.usuario, 
-            u: userData.usuario, 
-            password: userData.password, 
-            rol: userData.rol, 
-            permisos: userData.permisos || []
-          };
-
-        } catch (e) {
-          console.error('Error inesperado en login:', e);
-          errorDiv.classList.remove('hidden');
-          errorDiv.innerHTML = '❌ Error inesperado: ' + e.message;
-          btnLogin.disabled = false;
-          btnLogin.textContent = 'Ingresar';
-          return;
-        }
-
-        btnLogin.disabled = false;
-        btnLogin.textContent = 'Ingresar';
-        errorDiv.classList.add('hidden');
-
-        document.getElementById('login').classList.add('hidden');
-        document.getElementById('loginContainer').style.display = 'none';
-
-        var urlParams = new URLSearchParams(window.location.search);
-        var ocParam = urlParams.get('oc');
-        
-        if (ocParam) {
-          ocNotificadaId = parseInt(ocParam);
-          console.log('🔍 OC notificada ID:', ocNotificadaId);
-          
-          configurarModulos();
-          
-          document.getElementById('menuPrincipal').classList.add('hidden');
-          document.getElementById('contenidoApp').classList.remove('hidden');
-          document.getElementById('contenidoApp').classList.add('visible');
-          document.getElementById('btnVolverMenu').classList.remove('hidden');
-          
-          var panelOC = document.getElementById('panelOC');
-          var panelProyecto = document.getElementById('panelProyecto');
-          var tablaProyectosCard = document.getElementById('tablaProyectosCard');
-          var panelCXP = document.getElementById('panelCXP');
-          var panelCXC = document.getElementById('panelCXC');
-          var panelOF = document.getElementById('panelOF');
-          var bandejaOCCard = document.getElementById('bandejaOCCard');
-          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
-          
-          panelProyecto.classList.add('hidden');
-          tablaProyectosCard.classList.add('hidden');
-          panelCXP.classList.add('hidden');
-          panelCXC.classList.add('hidden');
-          panelOF.classList.add('hidden');
-          if (puedeCrear) panelOC.classList.remove('hidden');
-          else panelOC.classList.add('hidden');
-          bandejaOCCard.classList.remove('hidden');
-          
-          moduloActual = 'oc';
-          
-          setTimeout(function() {
-            render();
-            if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
-              window.actualizarDatosOC();
-            }
-            var cuerpo = document.getElementById('cuerpoProductos');
-            if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
-              window.agregarFilaProducto();
-            }
-            
-            setTimeout(function() {
-              irDirectoALaOC(ocNotificadaId);
-            }, 500);
-            
-            setTimeout(function() {
-              irDirectoALaOC(ocNotificadaId);
-            }, 1200);
-            
-            setTimeout(function() {
-              irDirectoALaOC(ocNotificadaId);
-            }, 2500);
-            
-          }, 300);
-          
-        } else {
-          document.getElementById('menuPrincipal').classList.remove('hidden');
-          document.getElementById('contenidoApp').classList.add('hidden');
-          configurarModulos();
-        }
-
-        var infoSesion = '👤 ' + actual.u + ' (' + actual.rol + ')';
-        var opciones = obtenerOpcionesPermisos(actual);
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
-          infoSesion += ' - Acceso total';
-        } else if (opciones.length === 1) {
-          infoSesion += ' - ' + opciones[0].empresa + ' / ' + opciones[0].depto;
-        } else if (opciones.length > 1) {
-          infoSesion += ' - ' + opciones.length + ' empresas/departamentos';
-        }
-        document.getElementById('sesion').textContent = infoSesion;
-
-        if (actual.rol === 'Administrador') {
-          document.getElementById('adminActions').classList.remove('hidden');
-        } else {
-          document.getElementById('adminActions').classList.add('hidden');
-        }
-
-        var esElaborador = actual.rol === 'Elaborador';
-        var esDirector = actual.rol === 'Director General';
-        var esAdmin = actual.rol === 'Administrador';
-        var esFinanzas = actual.rol === 'Finanzas';
-
-        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
-        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
-
-        var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
-        var filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
-        var btnPendientes = document.getElementById('btnPendientesPagar');
-        var btnLimpiar = document.getElementById('btnLimpiarFiltros');
-
-        var puedeFiltrar = esDirector || esAdmin || esFinanzas;
-        filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
-        filtroDeptoContainer.classList.toggle('hidden', !puedeFiltrar);
-
-        if (esFinanzas) {
-          btnPendientes.classList.remove('hidden');
-          btnLimpiar.classList.remove('hidden');
-          var pendientes = contarPendientesPagar();
-          btnPendientes.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
-        } else {
-          btnPendientes.classList.add('hidden');
-          btnLimpiar.classList.add('hidden');
-        }
-
-        var selectProyecto = document.getElementById('selectProyecto');
-        selectProyecto.onchange = window.actualizarDatosOC;
-
-        var filtroProyecto = document.getElementById('filtroProyecto');
-        filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
-        proyectos.forEach(function(p) {
-          var opt = document.createElement('option');
-          opt.value = p.nombre;
-          opt.textContent = p.nombre;
-          filtroProyecto.appendChild(opt);
-        });
-        filtroProyecto.onchange = function() {
-          if (actual.rol === 'Finanzas') {
-            var pendientes = contarPendientesPagar();
-            var btn = document.getElementById('btnPendientesPagar');
-            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
-            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
-          }
-          render();
-        };
-
-        var filtroDepto = document.getElementById('filtroDepto');
-        filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
-        var deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
-        deptos.forEach(function(d) {
-          var opt = document.createElement('option');
-          opt.value = d;
-          opt.textContent = d;
-          filtroDepto.appendChild(opt);
-        });
-        filtroDepto.onchange = function() {
-          if (actual.rol === 'Finanzas') {
-            var pendientes = contarPendientesPagar();
-            var btn = document.getElementById('btnPendientesPagar');
-            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
-            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
-          }
-          render();
-        };
-
-        setTimeout(function() {
-          render();
-          var cuerpo = document.getElementById('cuerpoProductos');
-          if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
-            window.agregarFilaProducto();
-          }
-        }, 200);
-      };
-
-      window.salir = function() { location.reload(); };
-
-      // ============================================================
-      // FUNCIONES DE CREACIÓN Y GESTIÓN
-      // ============================================================
-      window.crearProyecto = async function() {
-        var empresa, departamento;
-        
-        if (actual && actual.rol === 'Director General') {
-          empresa = document.getElementById('empresaProyecto').value.trim().toUpperCase();
-          departamento = document.getElementById('departamentoProyecto').value.trim().toUpperCase();
-        } else {
-          var permisos = obtenerOpcionesPermisos(actual);
-          if (permisos.length > 0) {
-            empresa = permisos[0].empresa || '';
-            departamento = permisos[0].depto || '';
-          } else {
-            document.getElementById('msgProyecto').innerHTML = '<div class="alert">⚠️ No tienes permisos para crear proyectos.</div>';
-            return;
-          }
-        }
-        
-        var nombre = document.getElementById('nombreProyecto').value.trim().toUpperCase();
-        var cliente = document.getElementById('cliente').value.trim().toUpperCase();
-        var presupuesto = Number(document.getElementById('presupuesto').value);
-        var moneda = document.getElementById('monedaProyecto').value;
-        var fechaInicio = document.getElementById('fechaInicio').value;
-        var fechaTermino = document.getElementById('fechaTermino').value;
-        var msgDiv = document.getElementById('msgProyecto');
-
-        if (!empresa || !departamento || !nombre || !cliente || presupuesto <= 0 || !fechaInicio || !fechaTermino) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ TODOS LOS CAMPOS SON OBLIGATORIOS Y PRESUPUESTO > 0.</div>';
-          return;
-        }
-        if (fechaInicio > fechaTermino) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ LA FECHA DE INICIO NO PUEDE SER POSTERIOR A LA FECHA DE TÉRMINO.</div>';
-          return;
-        }
-        
-        if (actual.rol !== 'Director General') {
-          if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
-            msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
-            return;
-          }
-        }
-
-        var nuevoProyecto = { empresa: empresa, departamento: departamento, nombre: nombre, cliente: cliente, presupuesto: presupuesto, moneda: moneda, limite: presupuesto * 0.60, fecha_inicio: fechaInicio, fecha_termino: fechaTermino };
-
-        try {
-          var { data, error } = await supabase.from('proyectos').insert([nuevoProyecto]).select();
-          if (error) {
-            msgDiv.innerHTML = '<div class="alert">⚠️ ERROR: ' + error.message + '</div>';
-            return;
-          }
-          msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO.</div>';
-          document.getElementById('nombreProyecto').value = '';
-          document.getElementById('cliente').value = '';
-          document.getElementById('presupuesto').value = '';
-          if (data && data.length > 0) proyectos.push(data[0]);
-          else await cargarDatos();
-          render();
-        } catch (error) {
-          console.error('❌ Error inesperado en crearProyecto:', error.stack || error);
-          msgDiv.innerHTML = '<div class="alert">⚠️ ERROR INESPERADO: ' + error.message + '</div>';
-        }
-      };
-
-      window.eliminarProyecto = async function(index) {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
-        var proyecto = proyectos[index];
-        if (!confirm('¿Eliminar proyecto "' + proyecto.nombre + '" y todas sus OC asociadas?')) return;
-        await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
-        await supabase.from('proyectos').delete().eq('id', proyecto.id);
-        proyectos.splice(index, 1);
-        render();
       };
 
       // ============================================================
@@ -3593,6 +3473,7 @@
         if (oc.id === ocNotificadaId) {
           await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
           ocNotificadaId = null;
+          window.ocultarBannerLocalizacion();
         }
         
         render();
@@ -3619,6 +3500,7 @@
         if (oc.id === ocNotificadaId) {
           await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
           ocNotificadaId = null;
+          window.ocultarBannerLocalizacion();
         }
         
         render();
@@ -3936,7 +3818,6 @@
           '</div>' +
           '<div class="cxp-tarjeta"><div class="numero">' + ocFiltradas.length + '</div><div class="etiqueta">📄 Total OC</div></div>';
 
-        // Resto de renderCXP...
         var tbodyProyectos = document.getElementById('cxpCuerpoProyectos');
         tbodyProyectos.innerHTML = '';
         if (proys.length === 0) {
@@ -4350,6 +4231,13 @@
         if (!panelOF.classList.contains('hidden')) {
           window.renderOF();
         }
+        
+        // Si hay una OC notificada pendiente, intentar localizarla después del render
+        if (ocNotificadaId && !ocBannerVisible) {
+          setTimeout(function() {
+            irDirectoALaOC(ocNotificadaId);
+          }, 500);
+        }
       }
 
       // ============================================================
@@ -4376,6 +4264,9 @@
         fechaFinOF.setMonth(fechaFinOF.getMonth() + 1);
         var ofFechaTermino = document.getElementById('ofFechaTermino');
         if (ofFechaTermino) ofFechaTermino.value = fechaFinOF.toISOString().split('T')[0];
+        
+        // Detectar enlace de Telegram al cargar
+        asegurarScrollEnlace();
       }
 
       document.addEventListener('DOMContentLoaded', function() {
@@ -4387,7 +4278,19 @@
         if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
         var userInput = document.getElementById('usuario');
         if (userInput) userInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.login(); });
+        
+        // También detectar enlace después de que la página esté cargada
+        if (document.readyState === 'complete') {
+          asegurarScrollEnlace();
+        } else {
+          window.addEventListener('load', function() {
+            asegurarScrollEnlace();
+          });
+        }
       });
+
+      // Exponer la función de scroll para que pueda ser llamada desde cualquier lugar
+      window.irDirectoALaOC = irDirectoALaOC;
 
     })();
   </script>
