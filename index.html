@@ -2028,39 +2028,12 @@
           if (row) {
             console.log('✅ OC encontrada, haciendo scroll...');
             
-            // Obtener el contenedor de la tabla
-            var wrapper = row.closest('.table-wrapper');
-            var card = wrapper ? wrapper.closest('.card') : null;
-            
-            // Scroll vertical - centrar la fila en la vista
+            // Scroll SOLO vertical - centrar la fila en la vista, sin mover el scroll horizontal
             row.scrollIntoView({ 
               behavior: 'smooth', 
               block: 'center', 
-              inline: 'center' 
+              inline: 'nearest' 
             });
-            
-            // Scroll horizontal para asegurar que la fila esté visible
-            if (wrapper) {
-              setTimeout(function() {
-                var rect = row.getBoundingClientRect();
-                var wrapperRect = wrapper.getBoundingClientRect();
-                
-                // Si la fila está fuera del viewport horizontalmente
-                if (rect.left < wrapperRect.left || rect.right > wrapperRect.right) {
-                  // Calcular el offset necesario
-                  var offset = 0;
-                  if (rect.left < wrapperRect.left) {
-                    offset = rect.left - wrapperRect.left - 20;
-                  } else if (rect.right > wrapperRect.right) {
-                    offset = rect.right - wrapperRect.right + 20;
-                  }
-                  wrapper.scrollTo({ 
-                    left: wrapper.scrollLeft + offset, 
-                    behavior: 'smooth' 
-                  });
-                }
-              }, 400);
-            }
             
             // Efecto de resaltado mejorado
             row.style.transition = 'background 0.5s ease, box-shadow 0.5s ease, border 0.5s ease';
@@ -4326,6 +4299,8 @@
         if (ocId) {
           console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
           pendingOcId = ocId;
+          // Mantiene el parpadeo (aura dorada) fijo en ESTA OC hasta que el director la autorice o rechace
+          ocNotificadaId = ocId;
           
           configurarModulos();
           
