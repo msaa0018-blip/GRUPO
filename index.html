@@ -2941,9 +2941,11 @@
           { label: 'Proveedor:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
           { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
+          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' },
           { label: 'Dirección:', value: datos.direccion },
           { label: 'Dirección de entrega:', value: datos.direccionentrega },
           { label: 'Código Postal:', value: datos.cp || '' },
+          { label: 'Banco:', value: datos.banco || 'No especificado' },
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
           { label: 'Uso CFDI:', value: datos.usocfdi },
           { label: 'CLABE:', value: datos.clabe || 'N/A' },
@@ -4519,11 +4521,83 @@
       };
 
       window.mostrarDashboard = function(index) {
-        // Función existente
+        var p = proyectos[index];
+        if (!p) { alert('Proyecto no encontrado'); return; }
+
+        var gastado = gastoProyectoMoneda(p.nombre);
+        var disponible = p.limite - gastado;
+        var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
+        var porcentajeMostrado = Math.max(0, Math.min(porcentaje, 100));
+        var colorDonut = porcentaje > 60 ? '#dc2626' : (porcentaje > 40 ? '#f59e0b' : '#22c55e');
+
+        var r = 70;
+        var circunferencia = 2 * Math.PI * r;
+        var dashOffset = circunferencia - (porcentajeMostrado / 100) * circunferencia;
+
+        var ocsProyecto = ordenes.filter(function(o) { return o.proyecto === p.nombre; });
+        var totalOC = ocsProyecto.length;
+        var pagadas = ocsProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).length;
+        var pendientes = ocsProyecto.filter(function(o) { return o.estadopago !== 'PAGADA'; }).length;
+
+        var filasOC = ocsProyecto.map(function(o) {
+          var estadoPagoTxt = o.estadopago === 'PAGADA' ? 'PAGADA' : 'PENDIENTE';
+          var colorEstado = o.estadopago === 'PAGADA' ? '#16a34a' : '#f59e0b';
+          return '<tr>' +
+            '<td><code>' + (o.codigo || '') + '</code></td>' +
+            '<td>' + (o.proveedor || '') + '</td>' +
+            '<td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
+            '<td>' + (o.estado || '') + '</td>' +
+            '<td><span style="color:' + colorEstado + ';font-weight:600">' + estadoPagoTxt + '</span></td>' +
+          '</tr>';
+        }).join('');
+
+        if (!filasOC) {
+          filasOC = '<tr><td colspan="5" class="mensaje-sin-datos">Este proyecto no tiene órdenes de compra registradas</td></tr>';
+        }
+
+        var deptoColor = getColorByEmpresa(p.empresa);
+
+        var html = '' +
+        '<h2 style="margin-bottom:16px;">📊 Dashboard del Proyecto</h2>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;">' +
+          '<div style="flex:1;min-width:280px;background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;">' +
+            '<h3 style="margin-bottom:12px;">' + p.nombre + '</h3>' +
+            '<p><strong>Empresa:</strong> ' + p.empresa + '</p>' +
+            '<p><strong>Departamento:</strong> <span class="depto-color" style="background-color:' + deptoColor + '">' + p.departamento + '</span></p>' +
+            '<p><strong>Cliente:</strong> ' + (p.cliente || 'No especificado') + '</p>' +
+            '<p style="margin-top:10px;"><strong>Presupuesto:</strong> ' + formatoMoneda(p.presupuesto, p.moneda) + '</p>' +
+            '<p><strong>Límite (60%):</strong> ' + formatoMoneda(p.limite, p.moneda) + '</p>' +
+            '<p><strong>Pagado:</strong> ' + formatoMoneda(gastado, p.moneda) + '</p>' +
+            '<p><strong>Disponible:</strong> <span style="color:' + (disponible < 0 ? '#b91c1c' : '#166534') + '">' + formatoMoneda(disponible, p.moneda) + '</span></p>' +
+            '<p style="margin-top:10px;"><strong>OC totales:</strong> ' + totalOC + ' &nbsp;|&nbsp; <strong>Pagadas:</strong> ' + pagadas + ' &nbsp;|&nbsp; <strong>Pendientes:</strong> ' + pendientes + '</p>' +
+          '</div>' +
+          '<div style="flex:0 0 auto;background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;text-align:center;">' +
+            '<div class="donut-container">' +
+              '<svg viewBox="0 0 160 160">' +
+                '<circle cx="80" cy="80" r="' + r + '" fill="none" stroke="#e2e8f0" stroke-width="16"></circle>' +
+                '<circle cx="80" cy="80" r="' + r + '" fill="none" stroke="' + colorDonut + '" stroke-width="16" ' +
+                  'stroke-dasharray="' + circunferencia + '" stroke-dashoffset="' + dashOffset + '" stroke-linecap="round"></circle>' +
+              '</svg>' +
+              '<div class="center-text">' + porcentaje.toFixed(1) + '%<small>gastado</small></div>' +
+            '</div>' +
+            '<p style="margin-top:12px;color:var(--gray-600);font-size:13px;">% del límite (60% del presupuesto)</p>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-top:20px;overflow-x:auto;">' +
+          '<h3 style="margin-bottom:12px;">Órdenes de Compra del Proyecto</h3>' +
+          '<table style="width:100%;border-collapse:collapse;">' +
+            '<thead><tr><th style="text-align:left;padding:8px;">Código</th><th style="text-align:left;padding:8px;">Proveedor</th><th style="text-align:left;padding:8px;">Monto MXN</th><th style="text-align:left;padding:8px;">Estado</th><th style="text-align:left;padding:8px;">Pago</th></tr></thead>' +
+            '<tbody>' + filasOC + '</tbody>' +
+          '</table>' +
+        '</div>';
+
+        document.getElementById('dashboardContent').innerHTML = html;
+        document.getElementById('dashboardOverlay').classList.add('active');
       };
 
       window.cerrarDashboard = function() {
-        // Función existente
+        document.getElementById('dashboardOverlay').classList.remove('active');
+        document.getElementById('dashboardContent').innerHTML = '';
       };
 
       // ============================================================
