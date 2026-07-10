@@ -1911,6 +1911,8 @@
         return lista;
       }
       var cuentasCXC = [];
+      var reportePreviewPDF = null;
+      var reportePreviewNombre = 'Reporte';
       var ordenesFacturacion = [];
       var consecutivoOC = 1;
       var ocNotificadaId = null;
@@ -3963,28 +3965,258 @@
         // Función de dashboard
       };
 
+      function obtenerInfoProyectoCXC(cxc) {
+        var orden = ordenes.find(function(o) { return o.codigo === cxc.occontrato; });
+        if (!orden) return { empresa: null, departamento: null };
+        var proyecto = proyectos.find(function(p) { return p.nombre === orden.proyecto; });
+        return { empresa: proyecto ? proyecto.empresa : null, departamento: proyecto ? proyecto.departamento : null };
+      }
+
+      function estadoRealCXC(c) {
+        if (c.estado === 'PAGADO') return 'PAGADO';
+        var hoy = new Date();
+        var fPago = new Date(c.fechapago);
+        if (fPago < hoy) return 'VENCIDO';
+        return 'PENDIENTE';
+      }
+
       function cargarFiltrosCXC() {
-        // Función existente
+        var clientes = [...new Set(cuentasCXC.map(function(c) { return c.cliente; }).filter(Boolean))];
+        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+        var empresas = [...new Set(proyectosVisibles.map(function(p) { return p.empresa; }))];
+        var deptos = [...new Set(proyectosVisibles.map(function(p) { return p.departamento; }))];
+
+        var selectEmpresa = document.getElementById('cxcFiltroEmpresa');
+        var selectDepto = document.getElementById('cxcFiltroDepto');
+        var selectCliente = document.getElementById('cxcFiltroCliente');
+
+        selectEmpresa.innerHTML = '<option value="">Todas las empresas</option>';
+        empresas.forEach(function(e) {
+          var opt = document.createElement('option');
+          opt.value = e; opt.textContent = e;
+          selectEmpresa.appendChild(opt);
+        });
+
+        selectDepto.innerHTML = '<option value="">Todos los departamentos</option>';
+        deptos.forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d; opt.textContent = d;
+          selectDepto.appendChild(opt);
+        });
+
+        selectCliente.innerHTML = '<option value="">Todos los clientes</option>';
+        clientes.forEach(function(c) {
+          var opt = document.createElement('option');
+          opt.value = c; opt.textContent = c;
+          selectCliente.appendChild(opt);
+        });
+
+        selectEmpresa.onchange = function() { window.renderCXC(); };
+        selectDepto.onchange = function() { window.renderCXC(); };
+        selectCliente.onchange = function() { window.renderCXC(); };
+        document.getElementById('cxcFiltroEstado').onchange = function() { window.renderCXC(); };
+
+        var fInicio = document.getElementById('cxcFechaInicio');
+        var fFin = document.getElementById('cxcFechaFin');
+        if (!fInicio.value && !fFin.value) {
+          var hoy = new Date();
+          var haceUnMes = new Date(hoy);
+          haceUnMes.setMonth(haceUnMes.getMonth() - 1);
+          fInicio.value = haceUnMes.toISOString().split('T')[0];
+          fFin.value = hoy.toISOString().split('T')[0];
+        }
+        fInicio.onchange = function() { window.renderCXC(); };
+        fFin.onchange = function() { window.renderCXC(); };
       }
 
       function obtenerDatosCXC() {
-        return [];
+        var filtroEmpresa = document.getElementById('cxcFiltroEmpresa').value;
+        var filtroDepto = document.getElementById('cxcFiltroDepto').value;
+        var filtroCliente = document.getElementById('cxcFiltroCliente').value;
+        var filtroEstado = document.getElementById('cxcFiltroEstado').value;
+        var fechaInicio = document.getElementById('cxcFechaInicio').value;
+        var fechaFin = document.getElementById('cxcFechaFin').value;
+
+        var cuentas = cuentasCXC.slice();
+
+        if (filtroCliente) cuentas = cuentas.filter(function(c) { return c.cliente === filtroCliente; });
+
+        if (filtroEmpresa || filtroDepto) {
+          cuentas = cuentas.filter(function(c) {
+            var info = obtenerInfoProyectoCXC(c);
+            if (filtroEmpresa && info.empresa !== filtroEmpresa) return false;
+            if (filtroDepto && info.departamento !== filtroDepto) return false;
+            return true;
+          });
+        }
+
+        if (fechaInicio) {
+          var fechaInicioObj = new Date(fechaInicio);
+          cuentas = cuentas.filter(function(c) { return new Date(c.fechapago) >= fechaInicioObj; });
+        }
+        if (fechaFin) {
+          var fechaFinObj = new Date(fechaFin);
+          fechaFinObj.setHours(23, 59, 59, 999);
+          cuentas = cuentas.filter(function(c) { return new Date(c.fechapago) <= fechaFinObj; });
+        }
+
+        if (filtroEstado) cuentas = cuentas.filter(function(c) { return estadoRealCXC(c) === filtroEstado; });
+
+        return cuentas;
       }
 
       window.agregarCXC = async function() {
-        // Función existente
+        var msgDiv = document.getElementById('msgCXC');
+        msgDiv.innerHTML = '';
+
+        var cliente = document.getElementById('cxcCliente').value.trim();
+        var occontrato = document.getElementById('cxcOCContrato').value.trim();
+        var concepto = document.getElementById('cxcConcepto').value.trim();
+        var foliofactura = document.getElementById('cxcFolioFactura').value.trim();
+        var fechaemision = document.getElementById('cxcFechaEmision').value;
+        var fechapago = document.getElementById('cxcFechaPago').value;
+        var importe = parseFloat(document.getElementById('cxcImporte').value);
+        var moneda = document.getElementById('cxcMoneda').value;
+
+        if (!cliente || !occontrato || !concepto || !foliofactura || !fechaemision || !fechapago || !importe || isNaN(importe)) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ TODOS LOS CAMPOS MARCADOS CON * SON OBLIGATORIOS.</div>';
+          return;
+        }
+
+        var nuevaCuenta = {
+          cliente: cliente.toUpperCase(), occontrato: occontrato.toUpperCase(), concepto: concepto,
+          foliofactura: foliofactura.toUpperCase(), fechaemision: fechaemision, fechapago: fechapago,
+          importe: importe, moneda: moneda, estado: 'PENDIENTE'
+        };
+
+        try {
+          var { data, error } = await supabase.from('cuentas_cxc').insert([nuevaCuenta]).select();
+          if (error) throw error;
+          cuentasCXC.push(data[0]);
+
+          document.getElementById('cxcCliente').value = '';
+          document.getElementById('cxcOCContrato').value = '';
+          document.getElementById('cxcConcepto').value = '';
+          document.getElementById('cxcFolioFactura').value = '';
+          document.getElementById('cxcFechaEmision').value = '';
+          document.getElementById('cxcFechaPago').value = '';
+          document.getElementById('cxcImporte').value = '';
+
+          msgDiv.innerHTML = '<div class="success-msg">✅ Cuenta por cobrar registrada correctamente.</div>';
+          cargarFiltrosCXC();
+          window.renderCXC();
+        } catch (error) {
+          console.error('❌ Error al agregar CXC:', error);
+          msgDiv.innerHTML = '<div class="alert">⚠️ ERROR AL GUARDAR: ' + (error.message || 'DESCONOCIDO') + '</div>';
+        }
       };
 
       window.eliminarCXC = async function(index) {
-        // Función existente
+        var cuenta = cuentasCXC[index];
+        if (!cuenta) return alert('Cuenta no encontrada');
+        if (!confirm('¿Eliminar la cuenta por cobrar de ' + cuenta.cliente + '?')) return;
+        try {
+          if (cuenta.id) {
+            var { error } = await supabase.from('cuentas_cxc').delete().eq('id', cuenta.id);
+            if (error) throw error;
+          }
+          cuentasCXC.splice(index, 1);
+          window.renderCXC();
+        } catch (error) {
+          console.error('❌ Error al eliminar CXC:', error);
+          alert('Error al eliminar: ' + error.message);
+        }
       };
 
       window.marcarCXC = async function(index, estado) {
-        // Función existente
+        var cuenta = cuentasCXC[index];
+        if (!cuenta) return alert('Cuenta no encontrada');
+        try {
+          if (cuenta.id) {
+            var { error } = await supabase.from('cuentas_cxc').update({ estado: estado }).eq('id', cuenta.id);
+            if (error) throw error;
+          }
+          cuenta.estado = estado;
+          window.renderCXC();
+        } catch (error) {
+          console.error('❌ Error al actualizar CXC:', error);
+          alert('Error al actualizar: ' + error.message);
+        }
       };
 
       window.renderCXC = function() {
-        // Función existente
+        var cuentas = obtenerDatosCXC();
+
+        var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        var totalPagadoUSD = 0, totalPendienteUSD = 0, totalVencidoUSD = 0;
+        var saldoPorCliente = {};
+
+        cuentas.forEach(function(c) {
+          var estadoReal = estadoRealCXC(c);
+          var monto = c.importe || 0;
+          if (estadoReal === 'PAGADO') {
+            if (c.moneda === 'USD') totalPagadoUSD += monto; else totalPagado += monto;
+          } else if (estadoReal === 'VENCIDO') {
+            if (c.moneda === 'USD') totalVencidoUSD += monto; else totalVencido += monto;
+            saldoPorCliente[c.cliente] = (saldoPorCliente[c.cliente] || 0) + (c.moneda === 'USD' ? monto : monto);
+          } else {
+            if (c.moneda === 'USD') totalPendienteUSD += monto; else totalPendiente += monto;
+            saldoPorCliente[c.cliente] = (saldoPorCliente[c.cliente] || 0) + (c.moneda === 'USD' ? monto : monto);
+          }
+        });
+
+        var resumenDiv = document.getElementById('cxcResumen');
+        resumenDiv.innerHTML =
+          '<div class="cxc-tarjeta pagado"><div class="numero">' + formatoMoneda(totalPagado, 'MXN') + '</div><div class="etiqueta">✅ Pagado</div>' +
+          (totalPagadoUSD > 0 ? '<div class="etiqueta">USD ' + totalPagadoUSD.toFixed(2) + '</div>' : '') +
+          '</div>' +
+          '<div class="cxc-tarjeta pendiente"><div class="numero">' + formatoMoneda(totalPendiente, 'MXN') + '</div><div class="etiqueta">⏳ Pendiente</div>' +
+          (totalPendienteUSD > 0 ? '<div class="etiqueta">USD ' + totalPendienteUSD.toFixed(2) + '</div>' : '') +
+          '</div>' +
+          '<div class="cxc-tarjeta vencido"><div class="numero">' + formatoMoneda(totalVencido, 'MXN') + '</div><div class="etiqueta">🔴 Vencido</div>' +
+          (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + totalVencidoUSD.toFixed(2) + '</div>' : '') +
+          '</div>' +
+          '<div class="cxc-tarjeta total"><div class="numero">' + cuentas.length + '</div><div class="etiqueta">📄 Total registros</div></div>';
+
+        var saldoDiv = document.getElementById('cxcSaldoContent');
+        var clientesConSaldo = Object.keys(saldoPorCliente).filter(function(k) { return saldoPorCliente[k] > 0; });
+        if (clientesConSaldo.length === 0) {
+          saldoDiv.innerHTML = '<p class="text-muted">No hay saldos pendientes por cliente.</p>';
+        } else {
+          saldoDiv.innerHTML = clientesConSaldo.sort(function(a, b) { return saldoPorCliente[b] - saldoPorCliente[a]; }).map(function(cli) {
+            return '<div class="saldo-item"><span class="cliente">' + cli + '</span><span class="monto">' + formatoMoneda(saldoPorCliente[cli], 'MXN') + '</span></div>';
+          }).join('');
+        }
+
+        var tbody = document.getElementById('cxcCuerpo');
+        tbody.innerHTML = '';
+        if (cuentas.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay cuentas por cobrar que coincidan con los filtros</td></tr>';
+          return;
+        }
+
+        cuentas.slice().reverse().forEach(function(c) {
+          var idxOriginal = cuentasCXC.indexOf(c);
+          var estadoReal = estadoRealCXC(c);
+          var badgeClass = estadoReal === 'PAGADO' ? 'badge-cxc-pagado' : (estadoReal === 'VENCIDO' ? 'badge-cxc-vencido' : 'badge-cxc-pendiente');
+          var acciones = '';
+          if (estadoReal !== 'PAGADO') acciones += '<button class="success" onclick="window.marcarCXC(' + idxOriginal + ', \'PAGADO\')">✅ Marcar pagado</button>';
+          acciones += '<button class="danger" onclick="window.eliminarCXC(' + idxOriginal + ')">🗑️</button>';
+
+          tbody.innerHTML +=
+            '<tr>' +
+            '<td data-label="Cliente">' + c.cliente + '</td>' +
+            '<td data-label="OC/Contrato">' + c.occontrato + '</td>' +
+            '<td data-label="Concepto">' + c.concepto + '</td>' +
+            '<td data-label="Folio Factura">' + c.foliofactura + '</td>' +
+            '<td data-label="F.Emisión">' + new Date(c.fechaemision).toLocaleDateString() + '</td>' +
+            '<td data-label="F.Pago">' + new Date(c.fechapago).toLocaleDateString() + '</td>' +
+            '<td data-label="Moneda">' + c.moneda + '</td>' +
+            '<td data-label="Importe">' + formatoMoneda(c.importe, c.moneda) + '</td>' +
+            '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoReal + '</span></td>' +
+            '<td data-label="Acciones"><div class="actions">' + acciones + '</div></td>' +
+            '</tr>';
+        });
       };
 
       // ============================================================
@@ -4500,20 +4732,169 @@
       // ============================================================
       // FUNCIONES DE REPORTE
       // ============================================================
+      function generarPDFReporteCXP(datos) {
+        var proys = datos.proyectos;
+        var ocFiltradas = datos.oc;
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('l', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 30;
+        var y = 40;
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE DE CUENTAS POR PAGAR (CXP)', pageWidth / 2, y, { align: 'center' });
+        y += 16;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generado: ' + new Date().toLocaleString(), pageWidth / 2, y, { align: 'center' });
+        y += 20;
+        doc.setTextColor(0, 0, 0);
+
+        var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        ocFiltradas.forEach(function(o) {
+          var monto = o.montomxn || 0;
+          var esPagada = o.estadopago === 'PAGADA';
+          var esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
+          var esVencida = false;
+          if (!esPagada && o.estado === 'AUTORIZADA') {
+            var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
+            var diffDias = (new Date() - fechaAut) / (1000 * 60 * 60 * 24);
+            esVencida = diffDias > 1;
+          }
+          if (esPagada) totalPagado += monto;
+          else if (esVencida) totalVencido += monto;
+          else if (esPendiente) totalPendiente += monto;
+        });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Pagado: ' + formatoMoneda(totalPagado, 'MXN'), margin, y);
+        doc.text('Pendiente: ' + formatoMoneda(totalPendiente, 'MXN'), margin + 200, y);
+        doc.text('Vencido: ' + formatoMoneda(totalVencido, 'MXN'), margin + 400, y);
+        doc.text('Total OC: ' + ocFiltradas.length, margin + 600, y);
+        y += 20;
+
+        var headersProy = ['Empresa', 'Depto', 'Proyecto', 'Cliente', 'Presupuesto', 'Límite 60%'];
+        var rowsProy = proys.map(function(p) {
+          return [p.empresa, p.departamento, p.nombre, p.cliente, formatoMoneda(p.presupuesto, p.moneda), formatoMoneda(p.limite, p.moneda)];
+        });
+        doc.autoTable({
+          head: [headersProy], body: rowsProy, startY: y,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+          headStyles: { fillColor: [11, 26, 51] }
+        });
+
+        var y2 = doc.lastAutoTable.finalY + 20;
+        var headersOC = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Equiv. MXN', 'F.Pago', 'Estado'];
+        var rowsOC = ocFiltradas.map(function(o) {
+          var estadoLabel = o.estado;
+          if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
+          else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) estadoLabel = 'PENDIENTE';
+          return [o.codigo, o.proyecto, o.proveedor, o.moneda, formatoMoneda(o.montototal, o.moneda), formatoMoneda(o.montomxn || 0, 'MXN'), new Date(o.fechapago).toLocaleDateString(), estadoLabel];
+        });
+        doc.autoTable({
+          head: [headersOC], body: rowsOC, startY: y2,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+          headStyles: { fillColor: [11, 26, 51] }
+        });
+
+        return doc;
+      }
+
+      function generarPDFReporteCXC(cuentas) {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('l', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 30;
+        var y = 40;
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE DE CUENTAS POR COBRAR (CXC)', pageWidth / 2, y, { align: 'center' });
+        y += 16;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generado: ' + new Date().toLocaleString(), pageWidth / 2, y, { align: 'center' });
+        y += 20;
+        doc.setTextColor(0, 0, 0);
+
+        var totalPagado = 0, totalPendiente = 0, totalVencido = 0;
+        cuentas.forEach(function(c) {
+          var estadoReal = estadoRealCXC(c);
+          var monto = c.importe || 0;
+          if (estadoReal === 'PAGADO') totalPagado += monto;
+          else if (estadoReal === 'VENCIDO') totalVencido += monto;
+          else totalPendiente += monto;
+        });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Pagado: ' + formatoMoneda(totalPagado, 'MXN'), margin, y);
+        doc.text('Pendiente: ' + formatoMoneda(totalPendiente, 'MXN'), margin + 200, y);
+        doc.text('Vencido: ' + formatoMoneda(totalVencido, 'MXN'), margin + 400, y);
+        doc.text('Total registros: ' + cuentas.length, margin + 600, y);
+        y += 20;
+
+        var headers = ['Cliente', 'OC/Contrato', 'Concepto', 'Folio Factura', 'F.Emisión', 'F.Pago', 'Moneda', 'Importe', 'Estado'];
+        var rows = cuentas.map(function(c) {
+          return [
+            c.cliente, c.occontrato, c.concepto, c.foliofactura,
+            new Date(c.fechaemision).toLocaleDateString(), new Date(c.fechapago).toLocaleDateString(),
+            c.moneda, formatoMoneda(c.importe, c.moneda), estadoRealCXC(c)
+          ];
+        });
+        doc.autoTable({
+          head: [headers], body: rows, startY: y,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+          headStyles: { fillColor: [11, 26, 51] }
+        });
+
+        return doc;
+      }
+
       window.previsualizarReporteCXP = function() {
-        // Función existente
-      };
-
-      window.imprimirReporteCXP = function() {
-        // Función existente
-      };
-
-      window.cerrarPreviewCXP = function() {
-        // Función existente
+        try {
+          var datos = obtenerDatosCXP();
+          var doc = generarPDFReporteCXP(datos);
+          reportePreviewPDF = doc;
+          reportePreviewNombre = 'Reporte_CXP_' + new Date().toISOString().split('T')[0] + '.pdf';
+          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
+          document.getElementById('cxpPreviewModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al generar reporte CXP:', error);
+          alert('Error al generar el reporte: ' + error.message);
+        }
       };
 
       window.previsualizarReporteCXC = function() {
-        // Función existente
+        try {
+          var cuentas = obtenerDatosCXC();
+          var doc = generarPDFReporteCXC(cuentas);
+          reportePreviewPDF = doc;
+          reportePreviewNombre = 'Reporte_CXC_' + new Date().toISOString().split('T')[0] + '.pdf';
+          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
+          document.getElementById('cxpPreviewModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al generar reporte CXC:', error);
+          alert('Error al generar el reporte: ' + error.message);
+        }
+      };
+
+      window.imprimirReporteCXP = function() {
+        if (!reportePreviewPDF) return;
+        reportePreviewPDF.save(reportePreviewNombre);
+      };
+
+      window.cerrarPreviewCXP = function() {
+        document.getElementById('cxpPreviewModal').classList.remove('active');
+        document.getElementById('cxpPreviewFrame').src = '';
+        reportePreviewPDF = null;
       };
 
       window.previsualizarReporteOF = function() {
