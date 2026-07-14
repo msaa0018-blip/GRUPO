@@ -1744,7 +1744,6 @@
           <div class="grupo-formulario">
             <div class="flex">
               <input id="ofCP" placeholder="CP *" maxlength="5" style="flex:0.7;">
-              <input id="ofCodigoSAT" placeholder="Código SAT" style="flex:1;">
               <input id="ofODCContrato" placeholder="ODC o Contrato" style="flex:1;">
             </div>
           </div>
@@ -1783,6 +1782,7 @@
                 <thead>
                   <tr>
                     <th style="width:60px;">Partida</th>
+                    <th style="width:130px;min-width:130px;">Código SAT</th>
                     <th style="min-width:200px;">Concepto</th>
                     <th style="width:110px;">Cantidad</th>
                     <th style="min-width:100px;width:100px;">UM</th>
@@ -1794,7 +1794,7 @@
                 <tbody id="cuerpoPartidasOF"></tbody>
                 <tfoot>
                   <tr>
-                    <td colspan="5" style="text-align:right;font-weight:bold">SUMA:</td>
+                    <td colspan="6" style="text-align:right;font-weight:bold">SUMA:</td>
                     <td id="sumaPartidasOF" style="font-weight:bold;font-size:16px;min-width:170px;width:180px;">$0.00</td>
                     <td></td>
                   </tr>
@@ -4317,16 +4317,18 @@
       // ============================================================
       // PARTIDAS A FACTURAR (OF)
       // ============================================================
-      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu) {
+      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu, codigoSat) {
         concepto = concepto || '';
         cantidad = cantidad || 1;
         um = um || 'PZA';
         pu = pu || 0;
+        codigoSat = codigoSat || '';
         var tbody = document.getElementById('cuerpoPartidasOF');
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === um ? 'selected' : '') + '>' + u + '</option>'; }).join('');
         fila.innerHTML = '<td class="indice">' + idx + '</td>' +
+          '<td><input class="codigo-sat" type="text" value="' + codigoSat.toUpperCase() + '" placeholder="Código SAT" style="min-width:110px;width:130px;text-transform:uppercase;"></td>' +
           '<td><textarea class="concepto" placeholder="Concepto" oninput="window.autoAjustar(this)">' + concepto.toUpperCase() + '</textarea></td>' +
           '<td><input class="cantidad" type="number" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
           '<td><select class="udm" onchange="window.recalcularFilaOF(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td>' +
@@ -4385,6 +4387,7 @@
           if (!concepto) return;
           partidas.push({
             partida: i + 1,
+            codigo_sat: fila.querySelector('.codigo-sat').value.trim().toUpperCase(),
             concepto: concepto,
             cantidad: parseFloat(fila.querySelector('.cantidad').value) || 0,
             um: fila.querySelector('.udm').value,
@@ -4419,7 +4422,6 @@
         var cuenta = document.getElementById('ofCuenta').value.trim();
         var moneda = document.getElementById('ofMoneda').value;
         var cp = document.getElementById('ofCP').value.trim();
-        var codigoSAT = document.getElementById('ofCodigoSAT').value.trim().toUpperCase();
         var odcContrato = document.getElementById('ofODCContrato').value.trim().toUpperCase();
 
         if (!departamento) { 
@@ -4473,7 +4475,6 @@
           monto: suma,
           moneda: moneda,
           cp: cp,
-          codigo_sat: codigoSAT,
           odc_contrato: odcContrato,
           partidas: partidas,
           suma: suma,
@@ -4498,7 +4499,6 @@
         document.getElementById('ofBanco').value = '';
         document.getElementById('ofCuenta').value = '';
         document.getElementById('ofCP').value = '';
-        document.getElementById('ofCodigoSAT').value = '';
         document.getElementById('ofODCContrato').value = '';
         window.actualizarFolioOF();
 
