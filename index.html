@@ -1704,7 +1704,8 @@
           <select id="ofFiltroDepto"><option value="">Todos los departamentos</option></select>
           <select id="ofFiltroEstado">
             <option value="">Todos los estados</option>
-            <option value="CREADA">Creada</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="PAGADO">Pagado</option>
             <option value="AUTORIZADA">Autorizada</option>
             <option value="CANCELADA">Cancelada</option>
           </select>
@@ -1738,15 +1739,12 @@
           <div class="grupo-formulario">
             <div class="flex">
               <input id="ofDireccion" placeholder="Dirección *" style="flex:2;">
-              <input id="ofOCNumero" placeholder="Orden de Compra No." list="listaOC" style="flex:1;">
-              <datalist id="listaOC"></datalist>
             </div>
           </div>
           <div class="grupo-formulario">
             <div class="flex">
               <input id="ofCP" placeholder="CP *" maxlength="5" style="flex:0.7;">
               <input id="ofCodigoSAT" placeholder="Código SAT" style="flex:1;">
-              <input id="ofODCContrato" placeholder="ODC o Contrato" style="flex:1;">
             </div>
           </div>
           <div class="grupo-formulario">
@@ -1814,7 +1812,7 @@
         <h3>📋 Órdenes de Facturación</h3>
         <div class="table-wrapper">
           <table id="ofTabla">
-            <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>OC No.</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="ofCuerpo"></tbody>
           </table>
         </div>
@@ -4419,10 +4417,8 @@
         var banco = document.getElementById('ofBanco').value.trim().toUpperCase();
         var cuenta = document.getElementById('ofCuenta').value.trim();
         var moneda = document.getElementById('ofMoneda').value;
-        var ocNumero = document.getElementById('ofOCNumero').value.trim().toUpperCase();
         var cp = document.getElementById('ofCP').value.trim();
         var codigoSAT = document.getElementById('ofCodigoSAT').value.trim().toUpperCase();
-        var odcContrato = document.getElementById('ofODCContrato').value.trim().toUpperCase();
 
         if (!departamento) { 
           msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL DEPARTAMENTO (NECESARIO PARA EL FOLIO).</div>'; 
@@ -4456,6 +4452,9 @@
         var suma = window.recalcularSumaOF();
         var folio = generarFolioOF(departamento);
 
+        // Estatus según método de pago: PPD -> PENDIENTE, PUE -> PAGADO
+        var estadoOF = metodoPago === 'PPD' ? 'PENDIENTE' : (metodoPago === 'PUE' ? 'PAGADO' : 'CREADA');
+
         var nuevaOF = {
           folio: folio,
           fecha: new Date().toISOString().slice(0, 10),
@@ -4471,14 +4470,12 @@
           num_cuenta: cuenta,
           monto: suma,
           moneda: moneda,
-          oc_numero: ocNumero,
           cp: cp,
           codigo_sat: codigoSAT,
-          odc_contrato: odcContrato,
           partidas: partidas,
           suma: suma,
           elaborador: actual ? actual.u : 'Desconocido',
-          estado: 'CREADA'
+          estado: estadoOF
         };
 
         var { data, error } = await supabase.from('ordenes_facturacion').insert(nuevaOF).select().single();
@@ -4497,10 +4494,8 @@
         document.getElementById('ofDireccion').value = '';
         document.getElementById('ofBanco').value = '';
         document.getElementById('ofCuenta').value = '';
-        document.getElementById('ofOCNumero').value = '';
         document.getElementById('ofCP').value = '';
         document.getElementById('ofCodigoSAT').value = '';
-        document.getElementById('ofODCContrato').value = '';
         window.actualizarFolioOF();
 
         window.renderOF();
@@ -4518,8 +4513,8 @@
         var of = ordenesFacturacion[index];
         if (!of) return;
         
-        if (of.estado !== 'CREADA') {
-          alert('La OF no está en estado CREADA.');
+        if (of.estado !== 'CREADA' && of.estado !== 'PENDIENTE') {
+          alert('La OF no está en estado CREADA o PENDIENTE.');
           return;
         }
 
@@ -4673,14 +4668,6 @@
           if (valorFiltro && deptosList.indexOf(valorFiltro) !== -1) filtroDepto.value = valorFiltro;
         }
 
-        // Poblar sugerencias de OC (datalist)
-        var listaOC = document.getElementById('listaOC');
-        if (listaOC) {
-          listaOC.innerHTML = ordenes.map(function(o) { 
-            return '<option value="' + o.codigo + '">'; 
-          }).join('');
-        }
-
         // **FILTRAR OF POR PERMISOS DEL USUARIO**
         var visibles = ordenesFacturacion.filter(function(o) {
           return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
@@ -4713,22 +4700,23 @@
 
         tbody.innerHTML = visibles.map(function(o) {
           var idxOriginal = ordenesFacturacion.indexOf(o);
-          var badgeClass = o.estado === 'AUTORIZADA' ? 'badge-autorizada-pagada' : 
-                           (o.estado === 'CANCELADA' ? 'badge-vencida' : 'badge-creada');
+          var badgeClass = (o.estado === 'AUTORIZADA' || o.estado === 'PAGADO') ? 'badge-autorizada-pagada' : 
+                           (o.estado === 'CANCELADA' ? 'badge-vencida' : 
+                           (o.estado === 'PENDIENTE' ? 'badge-pendiente' : 'badge-creada'));
           
           var acciones = '';
           
           // Mostrar botón de autorizar SOLO si:
           // 1. El usuario tiene rol autorizado
-          // 2. La OF está en estado CREADA
+          // 2. La OF está en estado CREADA o PENDIENTE
           // 3. El usuario pertenece a la empresa/departamento de la OF
-          if (o.estado === 'CREADA' && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
+          if ((o.estado === 'CREADA' || o.estado === 'PENDIENTE') && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="success" onclick="window.autorizarOF(' + idxOriginal + ')">✅ Autorizar</button>';
             acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
           }
           
-          // Mostrar acción de cancelar también para usuarios autorizados en OF ya autorizadas (pero no canceladas)
-          if (o.estado === 'AUTORIZADA' && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
+          // Mostrar acción de cancelar también para usuarios autorizados en OF ya autorizadas o pagadas (pero no canceladas)
+          if ((o.estado === 'AUTORIZADA' || o.estado === 'PAGADO') && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
           }
 
@@ -4740,7 +4728,6 @@
             '<td data-label="Empresa">' + (o.empresa || '') + '</td>' +
             '<td data-label="Depto">' + o.departamento + '</td>' +
             '<td data-label="Razón Social">' + o.razon_social + '</td>' +
-            '<td data-label="OC No.">' + (o.oc_numero || '-') + '</td>' +
             '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
             '<td data-label="Moneda">' + o.moneda + '</td>' +
             '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + o.estado + '</span></td>' +
