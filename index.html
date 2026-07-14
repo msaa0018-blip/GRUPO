@@ -1787,6 +1787,7 @@
                     <th style="width:110px;">Cantidad</th>
                     <th style="min-width:100px;width:100px;">UM</th>
                     <th style="width:110px;min-width:110px;">PU</th>
+                    <th style="width:100px;min-width:100px;">Impuesto (%)</th>
                     <th style="min-width:170px;width:180px;">Importe</th>
                     <th style="width:60px;">Acción</th>
                   </tr>
@@ -1794,7 +1795,7 @@
                 <tbody id="cuerpoPartidasOF"></tbody>
                 <tfoot>
                   <tr>
-                    <td colspan="6" style="text-align:right;font-weight:bold">SUMA:</td>
+                    <td colspan="7" style="text-align:right;font-weight:bold">SUMA:</td>
                     <td id="sumaPartidasOF" style="font-weight:bold;font-size:16px;min-width:170px;width:180px;">$0.00</td>
                     <td></td>
                   </tr>
@@ -4316,12 +4317,13 @@
       // ============================================================
       // PARTIDAS A FACTURAR (OF)
       // ============================================================
-      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu, codigoSat) {
+      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu, codigoSat, impuesto) {
         concepto = concepto || '';
         cantidad = cantidad || 1;
         um = um || 'PZA';
         pu = pu || 0;
         codigoSat = codigoSat || '';
+        impuesto = impuesto || 0;
         var tbody = document.getElementById('cuerpoPartidasOF');
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
@@ -4332,6 +4334,7 @@
           '<td><input class="cantidad" type="number" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
           '<td><select class="udm" onchange="window.recalcularFilaOF(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td>' +
           '<td><input class="pu" type="number" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
+          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:170px;width:180px;"></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaPartidaOF(this)">🗑️</button></td>';
         tbody.appendChild(fila);
@@ -4358,7 +4361,9 @@
         if (!fila) return;
         var cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
         var pu = parseFloat(fila.querySelector('.pu').value) || 0;
-        var importe = cantidad * pu;
+        var impuesto = parseFloat(fila.querySelector('.impuesto').value) || 0;
+        var subtotal = cantidad * pu;
+        var importe = subtotal + (subtotal * (impuesto / 100));
         var importeInput = fila.querySelector('.importe');
         if (importeInput) importeInput.value = importe.toFixed(2);
         window.recalcularSumaOF();
@@ -4391,6 +4396,7 @@
             cantidad: parseFloat(fila.querySelector('.cantidad').value) || 0,
             um: fila.querySelector('.udm').value,
             pu: parseFloat(fila.querySelector('.pu').value) || 0,
+            impuesto: parseFloat(fila.querySelector('.impuesto').value) || 0,
             importe: parseFloat(fila.querySelector('.importe').value) || 0
           });
         });
