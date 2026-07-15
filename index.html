@@ -5373,8 +5373,76 @@
         reportePreviewPDF = null;
       };
 
-      window.previsualizarReporteOF = function() {
-        // Función existente
+      // ============================================================
+      // REPORTE CXF: OF PAGADAS VS PENDIENTES (POR PERMISOS DEL USUARIO)
+      // ============================================================
+      function generarPDFReporteCXF(ofs) {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('l', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 30;
+        var y = 40;
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE DE CUENTAS POR FACTURAR (CXF)', pageWidth / 2, y, { align: 'center' });
+        y += 16;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generado: ' + new Date().toLocaleString(), pageWidth / 2, y, { align: 'center' });
+        y += 20;
+        doc.setTextColor(0, 0, 0);
+
+        var totalPagado = 0, totalPendiente = 0, totalCancelado = 0;
+        var numPagado = 0, numPendiente = 0, numCancelado = 0;
+        ofs.forEach(function(o) {
+          var monto = o.monto || o.suma || 0;
+          if (o.estado === 'PAGADO') { totalPagado += monto; numPagado++; }
+          else if (o.estado === 'CANCELADO') { totalCancelado += monto; numCancelado++; }
+          else { totalPendiente += monto; numPendiente++; } // PENDIENTE, FACTURADA, SOL_CANCELACION, CREADA
+        });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Pagadas (' + numPagado + '): ' + formatoMoneda(totalPagado, 'MXN'), margin, y);
+        doc.text('Pendientes (' + numPendiente + '): ' + formatoMoneda(totalPendiente, 'MXN'), margin + 220, y);
+        doc.text('Canceladas (' + numCancelado + '): ' + formatoMoneda(totalCancelado, 'MXN'), margin + 440, y);
+        doc.text('Total registros: ' + ofs.length, margin + 660, y);
+        y += 20;
+
+        var headers = ['Folio', 'Fecha', 'Empresa', 'Depto', 'Razón Social', 'Responsable', 'Folio Factura', 'Moneda', 'Monto', 'Estado'];
+        var rows = ofs.map(function(o) {
+          return [
+            o.folio, o.fecha || '', o.empresa || '', o.departamento, o.razon_social,
+            o.responsable || '-', o.folio_factura || '-', o.moneda,
+            formatoMoneda(o.monto || o.suma || 0, o.moneda || 'MXN'), o.estado
+          ];
+        });
+        doc.autoTable({
+          head: [headers], body: rows, startY: y,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+          headStyles: { fillColor: [11, 26, 51] }
+        });
+
+        return doc;
+      }
+
+      window.previsualizarReporteCXF = function() {
+        try {
+          var ofsVisibles = ordenesFacturacion.filter(function(o) {
+            return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+          });
+          var doc = generarPDFReporteCXF(ofsVisibles);
+          reportePreviewPDF = doc;
+          reportePreviewNombre = 'Reporte_CXF_' + new Date().toISOString().split('T')[0] + '.pdf';
+          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
+          document.getElementById('cxpPreviewModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al generar reporte CXF:', error);
+          alert('Error al generar el reporte: ' + error.message);
+        }
       };
 
       window.mostrarDashboard = function(index) {
