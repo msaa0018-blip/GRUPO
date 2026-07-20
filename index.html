@@ -837,6 +837,61 @@
     justify-content: flex-end;
     flex-wrap: wrap
   }
+  #ofDocModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, .6);
+    z-index: 2001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px
+  }
+  #ofDocModal.active { display: flex }
+  #ofDocModal .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    width: 100%;
+    max-width: 1000px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column
+  }
+  #ofDocModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px
+  }
+  #ofDocModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #ofDocModal .modal-body {
+    flex: 1;
+    overflow: auto;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #ofDocModal .modal-body iframe {
+    width: 100%;
+    height: 500px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    display: block;
+  }
+  #ofDocModal .modal-footer {
+    padding-top: 12px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap
+  }
   .progress-bar { height: 10px; background: var(--gray-200); border-radius: 6px; overflow: hidden; margin-top: 4px }
   .progress-bar .fill { height: 100%; border-radius: 6px; transition: width .4s }
   .depto-color {
@@ -1206,6 +1261,7 @@
     
     #visualizarModal .modal-body iframe { height: 300px; }
     #pdfPreviewModal .modal-body iframe { height: 300px; }
+    #ofDocModal .modal-body iframe { height: 300px; }
     
     #tablaProyectosCard .table-wrapper table { min-width: 700px; }
     #bandejaOCCard .table-wrapper table { min-width: 1100px; }
@@ -1221,6 +1277,7 @@
     .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px; }
     #visualizarModal .modal-body iframe { height: 250px; }
     #pdfPreviewModal .modal-body iframe { height: 250px; }
+    #ofDocModal .modal-body iframe { height: 250px; }
     .cxc-resumen { grid-template-columns: 1fr; }
     .table-wrapper table { min-width: 800px; }
     #bandejaOCCard .table-wrapper table { min-width: 1000px; }
@@ -1704,18 +1761,23 @@
           <select id="ofFiltroDepto"><option value="">Todos los departamentos</option></select>
           <select id="ofFiltroEstado">
             <option value="">Todos los estados</option>
-            <option value="CREADA">Creada</option>
-            <option value="AUTORIZADA">Autorizada</option>
-            <option value="CANCELADA">Cancelada</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="FACTURADA">Facturada</option>
+            <option value="PAGADO">Pagado</option>
+            <option value="SOL_CANCELACION">Sol. Cancelación</option>
+            <option value="CANCELADO">Cancelado</option>
           </select>
           <button class="btn-of" onclick="window.renderOF()">📊 Aplicar Filtros</button>
+          <button class="btn-imprimir" onclick="window.previsualizarReporteCXF()">🖨️ Reporte CXF</button>
         </div>
+        <div id="ofResumenCXF" style="margin:10px 0;"></div>
+
 
         <div class="card" style="margin:12px 0; padding:14px 16px;">
           <h4>➕ Nueva Orden de Facturación</h4>
           <div class="grupo-formulario">
             <div class="flex">
-              <input id="ofEmpresa" placeholder="Empresa" style="flex:1;">
+              <input id="ofEmpresa" placeholder="Empresa" oninput="window.actualizarResponsablesOF()" style="flex:1;">
               <select id="ofDepartamento" onchange="window.actualizarFolioOF()" style="flex:1;"><option value="">Departamento *</option></select>
               <input id="ofFolio" placeholder="Folio (automático)" disabled style="background:var(--gray-200); flex:1;">
               <input id="ofFecha" type="date" disabled style="background:var(--gray-200); flex:0.8;">
@@ -1738,8 +1800,13 @@
           <div class="grupo-formulario">
             <div class="flex">
               <input id="ofDireccion" placeholder="Dirección *" style="flex:2;">
-              <input id="ofOCNumero" placeholder="Orden de Compra No." list="listaOC" style="flex:1;">
-              <datalist id="listaOC"></datalist>
+            </div>
+          </div>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <input id="ofCP" placeholder="CP *" maxlength="5" style="flex:0.7;">
+              <input id="ofODCContrato" placeholder="ODC o Contrato" style="flex:1;">
+              <select id="ofResponsable" style="flex:1;"><option value="">Responsable *</option></select>
             </div>
           </div>
           <div class="grupo-formulario">
@@ -1777,10 +1844,12 @@
                 <thead>
                   <tr>
                     <th style="width:60px;">Partida</th>
+                    <th style="width:130px;min-width:130px;">Código SAT</th>
                     <th style="min-width:200px;">Concepto</th>
                     <th style="width:110px;">Cantidad</th>
                     <th style="min-width:100px;width:100px;">UM</th>
                     <th style="width:110px;min-width:110px;">PU</th>
+                    <th style="width:100px;min-width:100px;">Impuesto (%)</th>
                     <th style="min-width:170px;width:180px;">Importe</th>
                     <th style="width:60px;">Acción</th>
                   </tr>
@@ -1788,7 +1857,7 @@
                 <tbody id="cuerpoPartidasOF"></tbody>
                 <tfoot>
                   <tr>
-                    <td colspan="5" style="text-align:right;font-weight:bold">SUMA:</td>
+                    <td colspan="7" style="text-align:right;font-weight:bold">SUMA:</td>
                     <td id="sumaPartidasOF" style="font-weight:bold;font-size:16px;min-width:170px;width:180px;">$0.00</td>
                     <td></td>
                   </tr>
@@ -1799,6 +1868,7 @@
           </div>
 
           <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
+            <button onclick="window.previsualizarOF()" class="success">👁️ Previsualizar</button>
             <button onclick="window.guardarOF()" class="warning">✅ Generar y Guardar OF</button>
           </div>
           <div id="msgOF"></div>
@@ -1807,7 +1877,7 @@
         <h3>📋 Órdenes de Facturación</h3>
         <div class="table-wrapper">
           <table id="ofTabla">
-            <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>OC No.</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>Responsable</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="ofCuerpo"></tbody>
           </table>
         </div>
@@ -1884,6 +1954,17 @@
     </div>
   </div>
 
+  <div id="ofDocModal">
+    <div class="modal-content">
+      <div class="modal-header"><h3>📄 Orden de Facturación</h3><button class="danger" onclick="window.cerrarOfDocModal()">✕ Cerrar</button></div>
+      <div class="modal-body"><iframe id="ofDocFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
+      <div class="modal-footer">
+        <button class="danger" onclick="window.cerrarOfDocModal()">Cerrar</button>
+        <button class="btn-imprimir" onclick="window.descargarOfDocModal()">🖨️ Imprimir / Descargar PDF</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function() {
       'use strict';
@@ -1926,6 +2007,8 @@
       var cxpReporteData = null;
       var ocBannerVisible = false;
       var pendingOcId = null;
+      var ofDocPDF = null;
+      var ofDocData = null;
 
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
@@ -2047,6 +2130,44 @@
       function getPosiblesResponsables() {
         return usuariosDB.filter(function(u) { return u.rol === 'Elaborador' || u.rol === 'Solicitante'; });
       }
+
+      // ============================================================
+      // RESPONSABLES DE OF (RESTRINGIDOS POR EMPRESA/DEPARTAMENTO)
+      // ============================================================
+      function getResponsablesOF(empresa, departamento) {
+        return usuariosDB.filter(function(u) {
+          return usuarioPuedeAccederOF(u, empresa, departamento);
+        });
+      }
+
+      window.actualizarResponsablesOF = function() {
+        var selectResp = document.getElementById('ofResponsable');
+        if (!selectResp) return;
+        var empresa = document.getElementById('ofEmpresa').value.trim().toUpperCase();
+        var departamento = document.getElementById('ofDepartamento').value.trim().toUpperCase();
+        var valorPrevio = selectResp.value;
+
+        if (!empresa || !departamento) {
+          selectResp.innerHTML = '<option value="">Responsable *</option>';
+          return;
+        }
+
+        var responsables = getResponsablesOF(empresa, departamento);
+        if (responsables.length === 0) {
+          selectResp.innerHTML = '<option value="">No hay responsables disponibles</option>';
+          return;
+        }
+
+        selectResp.innerHTML = '<option value="">Responsable *</option>' + responsables.map(function(u) {
+          return '<option value="' + u.usuario + '">' + u.usuario + ' (' + u.rol + ')</option>';
+        }).join('');
+
+        if (valorPrevio && responsables.some(function(u) { return u.usuario === valorPrevio; })) {
+          selectResp.value = valorPrevio;
+        } else if (actual && responsables.some(function(u) { return u.usuario === actual.usuario; })) {
+          selectResp.value = actual.usuario;
+        }
+      };
 
       function getSolicitantes() {
         return usuariosDB.filter(function(u) { return u.rol === 'Solicitante'; });
@@ -2384,7 +2505,6 @@
         } else if (modulo === 'of') {
           if (puedeVerOF) {
             panelOF.classList.remove('hidden');
-            cargarFiltrosOF();
             setTimeout(function() { window.renderOF(); }, 100);
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
@@ -2815,7 +2935,7 @@
         });
 
         if (!valido || productos.length === 0) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETE AL MENOS UN PRODUCTO CON DESCRIPCIÓN, CANTIDAD Y PRECIO VÁLIDOS.</div>';
+          msgDiv.innerHTML = '<div class="alert">⚠️ NO SE TIENEN PARTIDAS AGREGADAS, FAVOR DE AGREGAR.</div>';
           return null;
         }
 
@@ -4245,6 +4365,7 @@
       window.actualizarFolioOF = function() {
         var depto = document.getElementById('ofDepartamento').value;
         document.getElementById('ofFolio').value = depto ? generarFolioOF(depto) : '';
+        window.actualizarResponsablesOF();
       };
 
       // ============================================================
@@ -4297,6 +4418,7 @@
             
             // Generar folio automáticamente
             folioInput.value = generarFolioOF(defaultData.departamento);
+            window.actualizarResponsablesOF();
           } else {
             empresaInput.value = 'Sin permisos asignados';
             empresaInput.disabled = true;
@@ -4311,20 +4433,24 @@
       // ============================================================
       // PARTIDAS A FACTURAR (OF)
       // ============================================================
-      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu) {
+      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu, codigoSat, impuesto) {
         concepto = concepto || '';
         cantidad = cantidad || 1;
         um = um || 'PZA';
         pu = pu || 0;
+        codigoSat = codigoSat || '';
+        impuesto = impuesto || 0;
         var tbody = document.getElementById('cuerpoPartidasOF');
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === um ? 'selected' : '') + '>' + u + '</option>'; }).join('');
         fila.innerHTML = '<td class="indice">' + idx + '</td>' +
+          '<td><input class="codigo-sat" type="text" value="' + codigoSat.toUpperCase() + '" placeholder="Código SAT" style="min-width:110px;width:130px;text-transform:uppercase;"></td>' +
           '<td><textarea class="concepto" placeholder="Concepto" oninput="window.autoAjustar(this)">' + concepto.toUpperCase() + '</textarea></td>' +
           '<td><input class="cantidad" type="number" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
           '<td><select class="udm" onchange="window.recalcularFilaOF(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td>' +
           '<td><input class="pu" type="number" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
+          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:170px;width:180px;"></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaPartidaOF(this)">🗑️</button></td>';
         tbody.appendChild(fila);
@@ -4351,7 +4477,9 @@
         if (!fila) return;
         var cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
         var pu = parseFloat(fila.querySelector('.pu').value) || 0;
-        var importe = cantidad * pu;
+        var impuesto = parseFloat(fila.querySelector('.impuesto').value) || 0;
+        var subtotal = cantidad * pu;
+        var importe = subtotal + (subtotal * (impuesto / 100));
         var importeInput = fila.querySelector('.importe');
         if (importeInput) importeInput.value = importe.toFixed(2);
         window.recalcularSumaOF();
@@ -4379,15 +4507,256 @@
           if (!concepto) return;
           partidas.push({
             partida: i + 1,
+            codigo_sat: fila.querySelector('.codigo-sat').value.trim().toUpperCase(),
             concepto: concepto,
             cantidad: parseFloat(fila.querySelector('.cantidad').value) || 0,
             um: fila.querySelector('.udm').value,
             pu: parseFloat(fila.querySelector('.pu').value) || 0,
+            impuesto: parseFloat(fila.querySelector('.impuesto').value) || 0,
             importe: parseFloat(fila.querySelector('.importe').value) || 0
           });
         });
         return partidas;
       }
+
+      // ============================================================
+      // RECOLECTAR DATOS DEL FORMULARIO DE OF (SIN GUARDAR)
+      // ============================================================
+      function recopilarDatosOF() {
+        return {
+          departamento: document.getElementById('ofDepartamento').value.trim().toUpperCase(),
+          empresa: document.getElementById('ofEmpresa').value.trim().toUpperCase(),
+          folio: document.getElementById('ofFolio').value || 'PREVIA',
+          fecha: new Date().toISOString().slice(0, 10),
+          razonSocial: document.getElementById('ofRazonSocial').value.trim().toUpperCase(),
+          rfc: document.getElementById('ofRFC').value.trim().toUpperCase(),
+          cfdi: document.getElementById('ofCfdi').value,
+          direccion: document.getElementById('ofDireccion').value.trim(),
+          formaPago: document.getElementById('ofFormaPago').value,
+          metodoPago: document.getElementById('ofMetodoPago').value,
+          banco: document.getElementById('ofBanco').value.trim().toUpperCase(),
+          cuenta: document.getElementById('ofCuenta').value.trim(),
+          moneda: document.getElementById('ofMoneda').value,
+          cp: document.getElementById('ofCP').value.trim(),
+          odcContrato: document.getElementById('ofODCContrato').value.trim().toUpperCase(),
+          responsable: document.getElementById('ofResponsable').value,
+          partidas: recopilarPartidasOF(),
+          suma: window.recalcularSumaOF(),
+          elaborador: actual ? actual.u : 'Desconocido',
+          estado: 'PREVIA'
+        };
+      }
+
+      // ============================================================
+      // GENERAR PDF DE LA OF (MISMA CONFIGURACIÓN DE LOGO/RESTRICCIONES QUE LA OC)
+      // ============================================================
+      async function generarPDFOF(datos) {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 40;
+        var y = margin;
+
+        var nombreEmpresa = getNombreMembrete(datos.empresa);
+        var leyendaPie = getLeyendaPie(datos.empresa);
+        var esExtingue = datos.empresa && datos.empresa.toUpperCase().indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1;
+        var esVexpar = datos.empresa && datos.empresa.toUpperCase().indexOf('VEXPAR OPERACIONES') !== -1;
+
+        try {
+          if (esExtingue) {
+            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+            var response = await fetch(imgUrl);
+            if (response.ok) {
+              var blob = await response.blob();
+              var imgData = await new Promise(function(resolve) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result); };
+                reader.readAsDataURL(blob);
+              });
+              var img = new Image();
+              img.src = imgData;
+              await new Promise(function(resolve) { img.onload = resolve; });
+              var imgWidth = 140;
+              var imgHeight = (img.height / img.width) * imgWidth;
+              doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+              y += imgHeight + 25;
+            } else throw new Error('No se pudo cargar la imagen');
+          } else if (esVexpar) {
+            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
+            var response = await fetch(imgUrl);
+            if (response.ok) {
+              var blob = await response.blob();
+              var imgData = await new Promise(function(resolve) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result); };
+                reader.readAsDataURL(blob);
+              });
+              var img = new Image();
+              img.src = imgData;
+              await new Promise(function(resolve) { img.onload = resolve; });
+              var imgWidth = 140;
+              var imgHeight = (img.height / img.width) * imgWidth;
+              doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+              y += imgHeight + 25;
+            } else throw new Error('No se pudo cargar la imagen');
+          } else {
+            doc.setFontSize(18);
+            doc.setTextColor(11, 26, 51);
+            doc.setFont('helvetica', 'bold');
+            doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+            y += 60;
+          }
+        } catch (e) {
+          doc.setFontSize(18);
+          doc.setTextColor(11, 26, 51);
+          doc.setFont('helvetica', 'bold');
+          doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+          y += 60;
+        }
+
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ORDEN DE FACTURACIÓN', margin, y);
+        y += 12;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 10;
+
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+
+        var datosLista = [
+          { label: 'Folio:', value: datos.folio },
+          { label: 'Fecha:', value: datos.fecha },
+          { label: 'Departamento:', value: datos.departamento },
+          { label: 'Razón Social:', value: datos.razonSocial },
+          { label: 'RFC:', value: datos.rfc },
+          { label: 'Uso CFDI:', value: datos.cfdi },
+          { label: 'Dirección:', value: datos.direccion },
+          { label: 'Código Postal:', value: datos.cp || '' },
+          { label: 'ODC o Contrato:', value: datos.odcContrato || 'N/A' },
+          { label: 'Forma de Pago:', value: datos.formaPago },
+          { label: 'Método de Pago:', value: datos.metodoPago },
+          { label: 'Banco:', value: datos.banco || 'No especificado' },
+          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
+          { label: 'Moneda:', value: datos.moneda },
+          { label: 'Responsable:', value: datos.responsable || 'No definido' },
+          { label: 'Elaborador:', value: datos.elaborador },
+          { label: 'Estado:', value: datos.estado }
+        ];
+
+        datosLista.forEach(function(item) {
+          doc.setFont('helvetica', 'bold');
+          doc.text(item.label, margin, y);
+          doc.setFont('helvetica', 'normal');
+          var labelWidth = doc.getTextWidth(item.label) + 8;
+          var maxWidth = pageWidth - margin - labelWidth - 20;
+          var textLines = doc.splitTextToSize(String(item.value || ''), maxWidth);
+          doc.text(textLines, margin + labelWidth, y);
+          y += textLines.length * 9 + 2;
+        });
+        y += 5;
+
+        var headers = ['#', 'Cód. SAT', 'Concepto', 'Cant.', 'UM', 'PU', 'Imp.%', 'Importe'];
+        var rows = (datos.partidas || []).map(function(p) {
+          return [
+            p.partida, p.codigo_sat || '', p.concepto, p.cantidad, p.um,
+            formatoMoneda(p.pu, datos.moneda),
+            (p.impuesto || 0).toFixed(2) + '%',
+            formatoMoneda(p.importe, datos.moneda)
+          ];
+        });
+
+        doc.autoTable({
+          head: [headers], body: rows, startY: y,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 55 },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 35 },
+            5: { cellWidth: 55 },
+            6: { cellWidth: 40 },
+            7: { cellWidth: 65 }
+          },
+          didDrawPage: function(data) { window._tableFinalYOF = data.cursor.y; }
+        });
+
+        y = window._tableFinalYOF || doc.lastAutoTable.finalY + 10;
+        y += 20;
+
+        var totalX = pageWidth * 0.72 - 5;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('TOTAL:', totalX, y);
+        doc.text(formatoMoneda(datos.suma || 0, datos.moneda), pageWidth - margin, y, { align: 'right' });
+        y += 40;
+
+        var pieY = doc.internal.pageSize.height - 55;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(margin, pieY, pageWidth - margin, pieY);
+        doc.setFontSize(9);
+        doc.setTextColor(11, 26, 51);
+        doc.setFont('helvetica', 'bold');
+        doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
+
+        doc.setFontSize(7);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.text(datos.folio || '', pageWidth / 2, pieY + 20, { align: 'center' });
+
+        return doc;
+      }
+
+      window.previsualizarOF = async function() {
+        var datos = recopilarDatosOF();
+        if (!datos.razonSocial || !datos.rfc || !datos.direccion) {
+          alert('⚠️ COMPLETA RAZÓN SOCIAL, RFC Y DIRECCIÓN PARA PREVISUALIZAR.');
+          return;
+        }
+        if (datos.partidas.length === 0) {
+          alert('⚠️ NO SE TIENEN PARTIDAS AGREGADAS, FAVOR DE AGREGAR.');
+          return;
+        }
+        try {
+          var doc = await generarPDFOF(datos);
+          ofDocPDF = doc;
+          ofDocData = datos;
+          var pdfBlob = doc.output('blob');
+          var pdfUrl = URL.createObjectURL(pdfBlob);
+          var frame = document.getElementById('ofDocFrame');
+          if (frame) frame.src = pdfUrl;
+          document.getElementById('ofDocModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al previsualizar la OF:', error);
+          alert('Error al previsualizar la OF: ' + error.message);
+        }
+      };
+
+      window.cerrarOfDocModal = function() {
+        document.getElementById('ofDocModal').classList.remove('active');
+        var frame = document.getElementById('ofDocFrame');
+        if (frame && frame.src) {
+          try { URL.revokeObjectURL(frame.src); } catch (e) {}
+          frame.src = '';
+        }
+        ofDocPDF = null;
+        ofDocData = null;
+      };
+
+      window.descargarOfDocModal = function() {
+        if (!ofDocPDF) { alert('No hay PDF para descargar'); return; }
+        var nombre = (ofDocData && ofDocData.folio) ? ofDocData.folio : 'OF';
+        ofDocPDF.save(nombre + '.pdf');
+      };
 
       // ============================================================
       // GUARDAR / GENERAR OF (CON VALIDACIÓN DE PERMISOS)
@@ -4412,7 +4781,9 @@
         var banco = document.getElementById('ofBanco').value.trim().toUpperCase();
         var cuenta = document.getElementById('ofCuenta').value.trim();
         var moneda = document.getElementById('ofMoneda').value;
-        var ocNumero = document.getElementById('ofOCNumero').value.trim().toUpperCase();
+        var cp = document.getElementById('ofCP').value.trim();
+        var odcContrato = document.getElementById('ofODCContrato').value.trim().toUpperCase();
+        var responsable = document.getElementById('ofResponsable').value;
 
         if (!departamento) { 
           msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL DEPARTAMENTO (NECESARIO PARA EL FOLIO).</div>'; 
@@ -4426,6 +4797,14 @@
           msgDiv.innerHTML = '<div class="alert">⚠️ COMPLETA RAZÓN SOCIAL, RFC Y DIRECCIÓN.</div>'; 
           return; 
         }
+        if (!cp) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ INGRESA EL CP (CÓDIGO POSTAL).</div>';
+          return;
+        }
+        if (!responsable) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL RESPONSABLE DE LA OF.</div>';
+          return;
+        }
 
         // **VALIDACIÓN DE PERMISOS: EL USUARIO DEBE PERTENECER A LA EMPRESA/DEPARTAMENTO**
         if (!usuarioPuedeAccederOF(actual, empresa, departamento)) {
@@ -4435,12 +4814,15 @@
 
         var partidas = recopilarPartidasOF();
         if (partidas.length === 0) { 
-          msgDiv.innerHTML = '<div class="alert">⚠️ AGREGA AL MENOS UNA PARTIDA A FACTURAR.</div>'; 
+          msgDiv.innerHTML = '<div class="alert">⚠️ NO SE TIENEN PARTIDAS AGREGADAS, FAVOR DE AGREGAR.</div>'; 
           return; 
         }
 
         var suma = window.recalcularSumaOF();
         var folio = generarFolioOF(departamento);
+
+        // Estatus según método de pago: PPD -> PENDIENTE, PUE -> PAGADO
+        var estadoOF = metodoPago === 'PPD' ? 'PENDIENTE' : (metodoPago === 'PUE' ? 'PAGADO' : 'CREADA');
 
         var nuevaOF = {
           folio: folio,
@@ -4457,11 +4839,13 @@
           num_cuenta: cuenta,
           monto: suma,
           moneda: moneda,
-          oc_numero: ocNumero,
+          cp: cp,
+          odc_contrato: odcContrato,
+          responsable: responsable,
           partidas: partidas,
           suma: suma,
           elaborador: actual ? actual.u : 'Desconocido',
-          estado: 'CREADA'
+          estado: estadoOF
         };
 
         var { data, error } = await supabase.from('ordenes_facturacion').insert(nuevaOF).select().single();
@@ -4480,101 +4864,178 @@
         document.getElementById('ofDireccion').value = '';
         document.getElementById('ofBanco').value = '';
         document.getElementById('ofCuenta').value = '';
-        document.getElementById('ofOCNumero').value = '';
+        document.getElementById('ofCP').value = '';
+        document.getElementById('ofODCContrato').value = '';
+        document.getElementById('ofResponsable').value = '';
         window.actualizarFolioOF();
 
         window.renderOF();
       };
 
       // ============================================================
-      // AUTORIZACIÓN DE OF (CON VALIDACIÓN DE PERMISOS)
+      // FINANZAS: IMPRIMIR OF (misma configuración de logo/restricciones que la OC)
       // ============================================================
-      window.autorizarOF = async function(index) {
-        if (!actual) {
-          alert('❌ No has iniciado sesión.');
-          return;
-        }
-
+      window.imprimirOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
         if (!of) return;
-        
-        if (of.estado !== 'CREADA') {
-          alert('La OF no está en estado CREADA.');
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador' && actual.rol !== 'Director General') {
+          alert('❌ Solo Finanzas puede imprimir la OF.');
           return;
         }
-
-        // **VALIDACIÓN DE PERMISOS PARA AUTORIZAR**
-        // Solo pueden autorizar: Jefe Departamento, Director General, Administrador, Finanzas, Contabilidad
-        var rolesAutorizados = ['Jefe Departamento', 'Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
-        
-        if (rolesAutorizados.indexOf(actual.rol) === -1) {
-          alert('❌ No tienes permiso para autorizar órdenes de facturación. Solo Jefes de Departamento, Directores, Administradores, Finanzas y Contabilidad pueden autorizar.');
-          return;
-        }
-
-        // Verificar que el usuario pertenece a la empresa/departamento de la OF
         if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
-          alert('❌ No tienes permiso para autorizar OF en esta empresa/departamento.');
+          alert('❌ No tienes permiso sobre esta empresa/departamento.');
           return;
         }
-
-        var updates = { 
-          estado: 'AUTORIZADA', 
-          autorizado_por: actual.u, 
-          fecha_autorizacion: new Date().toISOString() 
-        };
-        
-        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
-        if (error) {
-          alert('Error al autorizar la OF: ' + error.message);
-          return;
+        try {
+          var partidas = of.partidas;
+          if (typeof partidas === 'string') { try { partidas = JSON.parse(partidas); } catch (e) { partidas = []; } }
+          if (!Array.isArray(partidas)) partidas = [];
+          var datos = {
+            folio: of.folio, fecha: of.fecha, departamento: of.departamento, empresa: of.empresa,
+            razonSocial: of.razon_social, rfc: of.rfc, cfdi: of.cfdi, direccion: of.direccion,
+            cp: of.cp, odcContrato: of.odc_contrato, formaPago: of.forma_pago, metodoPago: of.metodo_pago,
+            banco: of.banco, cuenta: of.num_cuenta, moneda: of.moneda, responsable: of.responsable,
+            elaborador: of.elaborador, estado: of.estado, partidas: partidas, suma: of.suma || of.monto || 0
+          };
+          var doc = await generarPDFOF(datos);
+          doc.save(of.folio + '.pdf');
+        } catch (error) {
+          console.error('❌ Error al imprimir la OF:', error);
+          alert('Error al imprimir la OF: ' + error.message);
         }
-        
-        Object.assign(of, updates);
-        window.renderOF();
-        alert('✅ OF ' + of.folio + ' autorizada por ' + actual.u + '.');
       };
 
       // ============================================================
-      // CANCELAR OF (CON VALIDACIÓN DE PERMISOS)
+      // FINANZAS: APROBAR OF (SOLICITA FOLIO DE FACTURA -> FACTURADA)
       // ============================================================
-      window.cancelarOF = async function(index) {
-        if (!actual) {
-          alert('❌ No has iniciado sesión.');
-          return;
-        }
-
+      window.aprobarOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
         if (!of) return;
-        
-        if (of.estado === 'CANCELADA') {
-          alert('La OF ya está cancelada.');
+
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador' && actual.rol !== 'Director General') {
+          alert('❌ Solo Finanzas puede aprobar la OF.');
           return;
         }
-
-        // **VALIDACIÓN DE PERMISOS PARA CANCELAR**
-        var rolesAutorizados = ['Jefe Departamento', 'Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
-        
-        if (rolesAutorizados.indexOf(actual.rol) === -1) {
-          alert('❌ No tienes permiso para cancelar órdenes de facturación.');
-          return;
-        }
-
-        // Verificar que el usuario pertenece a la empresa/departamento de la OF
         if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
-          alert('❌ No tienes permiso para cancelar OF en esta empresa/departamento.');
+          alert('❌ No tienes permiso sobre esta empresa/departamento.');
+          return;
+        }
+        if (of.estado !== 'PENDIENTE' && of.estado !== 'CREADA') {
+          alert('La OF debe estar en estado Pendiente para aprobarse.');
           return;
         }
 
-        if (!confirm('¿Cancelar la OF ' + of.folio + '?')) return;
+        var folioFactura = prompt('Ingresa el folio de factura para la OF ' + of.folio + ':');
+        if (folioFactura === null) return;
+        folioFactura = folioFactura.trim();
+        if (!folioFactura) { alert('⚠️ El folio de factura es obligatorio.'); return; }
 
-        var updates = { estado: 'CANCELADA' };
+        var updates = {
+          estado: 'FACTURADA',
+          folio_factura: folioFactura.toUpperCase(),
+          aprobado_por: actual.u,
+          fecha_aprobacion: new Date().toISOString()
+        };
+
         var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
-        if (error) {
-          alert('Error al cancelar la OF: ' + error.message);
+        if (error) { alert('Error al aprobar la OF: ' + error.message); return; }
+
+        Object.assign(of, updates);
+        window.renderOF();
+        alert('✅ OF ' + of.folio + ' facturada con folio ' + updates.folio_factura + '.');
+      };
+
+      // ============================================================
+      // RESPONSABLE: MARCAR OF COMO PAGADA
+      // ============================================================
+      window.marcarPagadaOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+
+        var esResponsable = of.responsable && of.responsable === actual.usuario;
+        var esOverride = actual.rol === 'Administrador' || actual.rol === 'Director General';
+        if (!esResponsable && !esOverride) {
+          alert('❌ Solo el responsable asignado a esta OF puede marcarla como pagada.');
           return;
         }
-        
+        if (of.estado !== 'FACTURADA') {
+          alert('La OF debe estar en estado Facturada para marcarse como pagada.');
+          return;
+        }
+
+        if (!confirm('¿Marcar la OF ' + of.folio + ' como pagada?')) return;
+
+        var updates = { estado: 'PAGADO', fecha_pago: new Date().toISOString(), pagado_por: actual.u };
+        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
+        if (error) { alert('Error al marcar como pagada la OF: ' + error.message); return; }
+
+        Object.assign(of, updates);
+        window.renderOF();
+        alert('✅ OF ' + of.folio + ' marcada como pagada.');
+      };
+
+      // ============================================================
+      // RESPONSABLE: SOLICITAR CANCELACIÓN DE OF
+      // ============================================================
+      window.solicitarCancelacionOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+
+        var esResponsable = of.responsable && of.responsable === actual.usuario;
+        var esOverride = actual.rol === 'Administrador' || actual.rol === 'Director General';
+        if (!esResponsable && !esOverride) {
+          alert('❌ Solo el responsable asignado a esta OF puede solicitar su cancelación.');
+          return;
+        }
+        if (of.estado !== 'FACTURADA') {
+          alert('La OF debe estar en estado Facturada para solicitar su cancelación.');
+          return;
+        }
+
+        var motivo = prompt('Motivo de la solicitud de cancelación (opcional):') || '';
+
+        if (!confirm('¿Enviar solicitud de cancelación para la OF ' + of.folio + '?')) return;
+
+        var updates = { estado: 'SOL_CANCELACION', motivo_cancelacion: motivo.trim(), solicitado_por: actual.u };
+        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
+        if (error) { alert('Error al solicitar la cancelación de la OF: ' + error.message); return; }
+
+        Object.assign(of, updates);
+        window.renderOF();
+        alert('⚠️ Solicitud de cancelación enviada para la OF ' + of.folio + '. Finanzas la revisará.');
+      };
+
+      // ============================================================
+      // FINANZAS: CANCELAR OF (FINALIZA UNA SOLICITUD DE CANCELACIÓN)
+      // ============================================================
+      window.cancelarOFFinanzas = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador' && actual.rol !== 'Director General') {
+          alert('❌ Solo Finanzas puede cancelar la OF.');
+          return;
+        }
+        if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
+          alert('❌ No tienes permiso sobre esta empresa/departamento.');
+          return;
+        }
+        if (of.estado !== 'SOL_CANCELACION') {
+          alert('La OF debe tener una solicitud de cancelación pendiente.');
+          return;
+        }
+
+        if (!confirm('¿Confirmar la cancelación de la OF ' + of.folio + '?')) return;
+
+        var updates = { estado: 'CANCELADO', cancelado_por: actual.u, fecha_cancelacion: new Date().toISOString() };
+        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
+        if (error) { alert('Error al cancelar la OF: ' + error.message); return; }
+
         Object.assign(of, updates);
         window.renderOF();
         alert('❌ OF ' + of.folio + ' cancelada por ' + actual.u + '.');
@@ -4653,14 +5114,6 @@
           if (valorFiltro && deptosList.indexOf(valorFiltro) !== -1) filtroDepto.value = valorFiltro;
         }
 
-        // Poblar sugerencias de OC (datalist)
-        var listaOC = document.getElementById('listaOC');
-        if (listaOC) {
-          listaOC.innerHTML = ordenes.map(function(o) { 
-            return '<option value="' + o.codigo + '">'; 
-          }).join('');
-        }
-
         // **FILTRAR OF POR PERMISOS DEL USUARIO**
         var visibles = ordenesFacturacion.filter(function(o) {
           return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
@@ -4682,45 +5135,68 @@
 
         visibles = visibles.slice().reverse();
 
+        // **RESUMEN RÁPIDO PARA CXF: PAGADAS VS PENDIENTES**
+        var resumenDiv = document.getElementById('ofResumenCXF');
+        if (resumenDiv) {
+          var totalPagado = 0, totalPendiente = 0, numPagado = 0, numPendiente = 0;
+          var baseResumen = ordenesFacturacion.filter(function(o) { return usuarioPuedeAccederOF(actual, o.empresa, o.departamento); });
+          baseResumen.forEach(function(o) {
+            var monto = o.monto || o.suma || 0;
+            if (o.estado === 'PAGADO') { totalPagado += monto; numPagado++; }
+            else if (o.estado === 'PENDIENTE' || o.estado === 'FACTURADA' || o.estado === 'SOL_CANCELACION') { totalPendiente += monto; numPendiente++; }
+          });
+          resumenDiv.innerHTML =
+            '<span class="badge badge-autorizada-pagada" style="margin-right:8px;">💚 Pagadas: ' + numPagado + ' (' + formatoMoneda(totalPagado, 'MXN') + ')</span>' +
+            '<span class="badge badge-pendiente">⏳ Pendientes: ' + numPendiente + ' (' + formatoMoneda(totalPendiente, 'MXN') + ')</span>';
+        }
+
         if (visibles.length === 0) {
           tbody.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay órdenes de facturación disponibles para tus empresas/departamentos</td></tr>';
           return;
         }
 
-        // Determinar si el usuario puede autorizar
-        var rolesAutorizados = ['Jefe Departamento', 'Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
-        var puedeAutorizar = actual && rolesAutorizados.indexOf(actual.rol) !== -1;
+        var esFinanzas = actual && (actual.rol === 'Finanzas' || actual.rol === 'Administrador' || actual.rol === 'Director General');
 
         tbody.innerHTML = visibles.map(function(o) {
           var idxOriginal = ordenesFacturacion.indexOf(o);
-          var badgeClass = o.estado === 'AUTORIZADA' ? 'badge-autorizada-pagada' : 
-                           (o.estado === 'CANCELADA' ? 'badge-vencida' : 'badge-creada');
-          
+          var badgeClass = 'badge-creada';
+          var filaEstilo = '';
+          if (o.estado === 'PAGADO') { badgeClass = 'badge-autorizada-pagada'; filaEstilo = 'background:#dcfce7;'; }
+          else if (o.estado === 'PENDIENTE') { badgeClass = 'badge-pendiente'; }
+          else if (o.estado === 'FACTURADA') { badgeClass = 'badge-creada'; }
+          else if (o.estado === 'SOL_CANCELACION') { badgeClass = 'badge-pausada'; filaEstilo = 'background:#ffedd5;'; }
+          else if (o.estado === 'CANCELADO') { badgeClass = 'badge-cancelada'; }
+
           var acciones = '';
-          
-          // Mostrar botón de autorizar SOLO si:
-          // 1. El usuario tiene rol autorizado
-          // 2. La OF está en estado CREADA
-          // 3. El usuario pertenece a la empresa/departamento de la OF
-          if (o.estado === 'CREADA' && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
-            acciones += '<button class="success" onclick="window.autorizarOF(' + idxOriginal + ')">✅ Autorizar</button>';
-            acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
+          var esResponsable = actual && o.responsable && o.responsable === actual.usuario;
+          var esOverride = actual && (actual.rol === 'Administrador' || actual.rol === 'Director General');
+
+          // **FINANZAS: IMPRIMIR / APROBAR / CANCELAR**
+          if (esFinanzas && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
+            acciones += '<button class="btn-imprimir" onclick="window.imprimirOF(' + idxOriginal + ')">🖨️ Imprimir</button>';
+            if (o.estado === 'PENDIENTE' || o.estado === 'CREADA') {
+              acciones += '<button class="success" onclick="window.aprobarOF(' + idxOriginal + ')">✅ Aprobar</button>';
+            }
+            if (o.estado === 'SOL_CANCELACION') {
+              acciones += '<button class="danger" onclick="window.cancelarOFFinanzas(' + idxOriginal + ')">✖️ Cancelar</button>';
+            }
           }
-          
-          // Mostrar acción de cancelar también para usuarios autorizados en OF ya autorizadas (pero no canceladas)
-          if (o.estado === 'AUTORIZADA' && puedeAutorizar && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
-            acciones += '<button class="danger" onclick="window.cancelarOF(' + idxOriginal + ')">✖️ Cancelar</button>';
+
+          // **RESPONSABLE: PAGADA / SOL. CANCELACIÓN**
+          if ((esResponsable || esOverride) && o.estado === 'FACTURADA') {
+            acciones += '<button class="success" onclick="window.marcarPagadaOF(' + idxOriginal + ')">💰 Pagada</button>';
+            acciones += '<button class="warning" onclick="window.solicitarCancelacionOF(' + idxOriginal + ')">⚠️ Sol. Cancelación</button>';
           }
 
           if (!acciones) acciones = '—';
 
-          return '<tr>' +
+          return '<tr style="' + filaEstilo + '">' +
             '<td data-label="Folio"><code>' + o.folio + '</code></td>' +
             '<td data-label="Fecha">' + (o.fecha || '') + '</td>' +
             '<td data-label="Empresa">' + (o.empresa || '') + '</td>' +
             '<td data-label="Depto">' + o.departamento + '</td>' +
             '<td data-label="Razón Social">' + o.razon_social + '</td>' +
-            '<td data-label="OC No.">' + (o.oc_numero || '-') + '</td>' +
+            '<td data-label="Responsable">' + (o.responsable || '-') + '</td>' +
             '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
             '<td data-label="Moneda">' + o.moneda + '</td>' +
             '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + o.estado + '</span></td>' +
@@ -4897,8 +5373,76 @@
         reportePreviewPDF = null;
       };
 
-      window.previsualizarReporteOF = function() {
-        // Función existente
+      // ============================================================
+      // REPORTE CXF: OF PAGADAS VS PENDIENTES (POR PERMISOS DEL USUARIO)
+      // ============================================================
+      function generarPDFReporteCXF(ofs) {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('l', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 30;
+        var y = 40;
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORTE DE CUENTAS POR FACTURAR (CXF)', pageWidth / 2, y, { align: 'center' });
+        y += 16;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generado: ' + new Date().toLocaleString(), pageWidth / 2, y, { align: 'center' });
+        y += 20;
+        doc.setTextColor(0, 0, 0);
+
+        var totalPagado = 0, totalPendiente = 0, totalCancelado = 0;
+        var numPagado = 0, numPendiente = 0, numCancelado = 0;
+        ofs.forEach(function(o) {
+          var monto = o.monto || o.suma || 0;
+          if (o.estado === 'PAGADO') { totalPagado += monto; numPagado++; }
+          else if (o.estado === 'CANCELADO') { totalCancelado += monto; numCancelado++; }
+          else { totalPendiente += monto; numPendiente++; } // PENDIENTE, FACTURADA, SOL_CANCELACION, CREADA
+        });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Pagadas (' + numPagado + '): ' + formatoMoneda(totalPagado, 'MXN'), margin, y);
+        doc.text('Pendientes (' + numPendiente + '): ' + formatoMoneda(totalPendiente, 'MXN'), margin + 220, y);
+        doc.text('Canceladas (' + numCancelado + '): ' + formatoMoneda(totalCancelado, 'MXN'), margin + 440, y);
+        doc.text('Total registros: ' + ofs.length, margin + 660, y);
+        y += 20;
+
+        var headers = ['Folio', 'Fecha', 'Empresa', 'Depto', 'Razón Social', 'Responsable', 'Folio Factura', 'Moneda', 'Monto', 'Estado'];
+        var rows = ofs.map(function(o) {
+          return [
+            o.folio, o.fecha || '', o.empresa || '', o.departamento, o.razon_social,
+            o.responsable || '-', o.folio_factura || '-', o.moneda,
+            formatoMoneda(o.monto || o.suma || 0, o.moneda || 'MXN'), o.estado
+          ];
+        });
+        doc.autoTable({
+          head: [headers], body: rows, startY: y,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+          headStyles: { fillColor: [11, 26, 51] }
+        });
+
+        return doc;
+      }
+
+      window.previsualizarReporteCXF = function() {
+        try {
+          var ofsVisibles = ordenesFacturacion.filter(function(o) {
+            return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+          });
+          var doc = generarPDFReporteCXF(ofsVisibles);
+          reportePreviewPDF = doc;
+          reportePreviewNombre = 'Reporte_CXF_' + new Date().toISOString().split('T')[0] + '.pdf';
+          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
+          document.getElementById('cxpPreviewModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al generar reporte CXF:', error);
+          alert('Error al generar el reporte: ' + error.message);
+        }
       };
 
       window.mostrarDashboard = function(index) {
