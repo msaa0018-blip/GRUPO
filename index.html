@@ -322,12 +322,6 @@
   button.btn-editar:hover {
     background: #0284c7;
   }
-  button.btn-duplicar {
-    background: #8b5cf6;
-  }
-  button.btn-duplicar:hover {
-    background: #7c3aed;
-  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -388,13 +382,13 @@
     background: var(--gray-100);
   }
   
-  /* ===== CONTENEDOR DE BOTONES - SIN SCROLL ===== */
+  /* ===== CONTENEDOR DE BOTONES - DISTRIBUCIÓN HORIZONTAL UNIFORME ===== */
   .oc-acciones-container {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-wrap: nowrap;
+    gap: 5px;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     overflow: visible !important;
     padding: 2px 0;
     min-height: 34px;
@@ -402,18 +396,23 @@
   }
   .oc-acciones-container button {
     font-size: 11px;
-    padding: 4px 10px;
-    min-height: 28px;
-    min-width: 28px;
-    flex: 0 1 auto;
+    padding: 4px 6px;
+    min-height: 30px;
+    min-width: 0;
+    flex: 1 1 0;
     white-space: nowrap;
     border-radius: 6px;
-    height: 30px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 3px;
-    margin: 1px;
+    margin: 0;
+    text-align: center;
+    width: auto;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .oc-acciones-container .btn-visualizar { background: #0891b2; color: white; }
   .oc-acciones-container .btn-visualizar:hover { background: #0e7490; }
@@ -421,8 +420,6 @@
   .oc-acciones-container .btn-imprimir:hover { background: #4b5563; }
   .oc-acciones-container .btn-editar { background: #0ea5e9; color: white; }
   .oc-acciones-container .btn-editar:hover { background: #0284c7; }
-  .oc-acciones-container .btn-duplicar { background: #8b5cf6; color: white; }
-  .oc-acciones-container .btn-duplicar:hover { background: #7c3aed; }
   .oc-acciones-container .btn-success { background: var(--success); color: white; }
   .oc-acciones-container .btn-success:hover { background: var(--success-hover); }
   .oc-acciones-container .btn-warning { background: var(--warning); color: #1a1a1a; }
@@ -439,6 +436,16 @@
   .oc-acciones-container .btn-aura-orange-gold:hover {
     background: #e6b300 !important;
     transform: scale(1.05) !important;
+  }
+  
+  /* ===== SEPARADORES VISUALES ENTRE BOTONES ===== */
+  .oc-acciones-container .btn-separator {
+    color: var(--gray-400);
+    font-weight: 300;
+    font-size: 14px;
+    padding: 0 2px;
+    user-select: none;
+    flex: 0 0 auto;
   }
   
   /* Ocultar la columna de acciones en el encabezado */
@@ -834,9 +841,9 @@
     }
     .oc-acciones-container button {
       font-size: 10px !important;
-      padding: 3px 7px !important;
-      min-height: 24px !important;
-      height: 26px !important;
+      padding: 3px 5px !important;
+      min-height: 26px !important;
+      height: 28px !important;
     }
     .productos-tabla table {
       min-width: 700px;
@@ -967,7 +974,7 @@
     }
     .oc-acciones-container button {
       font-size: 9px !important;
-      padding: 2px 6px !important;
+      padding: 2px 4px !important;
       min-height: 22px !important;
       height: 24px !important;
     }
@@ -5893,11 +5900,6 @@
               var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
               if (puedeImprimir) {
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
-              }
-
-              // Botón Editar (solo para OC en estado CREADA)
-              if (o.estado === 'CREADA' && (rol === 'Elaborador' || rol === 'Administrador')) {
-                acciones += '<button class="btn-editar" onclick="window.editarOC(' + idxOriginal + ')">✏️ Editar</button>';
               }
 
               // Botones de aprobación según rol
