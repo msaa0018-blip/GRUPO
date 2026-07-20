@@ -111,6 +111,46 @@
     text-align: right;
     flex-shrink: 0
   }
+  
+  /* ===== HEADER ACTIONS - BOTONES VOLVER Y CERRAR SESIÓN ===== */
+  .header-actions { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+  
+  .header-actions .btn-volver-menu {
+    background: var(--gray-600);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    min-height: 36px;
+    white-space: nowrap;
+  }
+  .header-actions .btn-volver-menu:hover { background: var(--gray-700) }
+
+  .header-actions .btn-cerrar-sesion-header {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    min-height: 36px;
+    white-space: nowrap;
+  }
+  .header-actions .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
+
   .container {
     max-width: 1280px;
     margin: 0 auto;
@@ -346,28 +386,44 @@
   .text-muted { color: var(--gray-500); font-size: 13px }
   .mt-10 { margin-top: 10px }
   .hidden { display: none !important }
+  
+  /* ===== ACCIONES EN HORIZONTAL CON SEPARACIÓN DE 5px ===== */
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    align-items: center
+    gap: 5px;
+    align-items: center;
   }
   .actions button {
     font-size: 12px;
     padding: 6px 12px;
     min-height: 32px;
-    min-width: 32px
+    min-width: 32px;
+    flex: 0 1 auto;
   }
+  
+  /* ===== FILA DE ACCIONES CON LÍNEA DE SEPARACIÓN MÁS MARCADA ===== */
   .fila-acciones-oc td {
-    border-bottom: 2px solid var(--gray-300);
+    border-bottom: 3px solid var(--gray-400) !important;
     background: var(--gray-100);
     padding: 8px 12px;
   }
   .fila-acciones-oc:hover td { background: var(--gray-100); }
+  
+  /* ===== LÍNEA DE SEPARACIÓN ENTRE OC ===== */
+  tr.fila-acciones-oc {
+    border-bottom: 3px solid #94a3b8 !important;
+  }
+  tr[data-oc-id] td {
+    border-bottom: none;
+  }
+  tr[data-oc-id] {
+    border-bottom: 1px solid var(--gray-300);
+  }
   .actions-bottom {
     justify-content: flex-start;
   }
-  tr[data-oc-id] td { border-bottom: none; }
+  
   .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
     width: 100%;
     min-width: 50px;
@@ -999,6 +1055,7 @@
   #contenidoApp { display: none !important }
   #contenidoApp.visible { display: block !important }
 
+  /* ===== BOTONES DEL HEADER ===== */
   .btn-volver-menu {
     background: var(--gray-600);
     color: white;
@@ -1009,7 +1066,7 @@
     cursor: pointer;
     font-size: 13px;
     transition: background 0.2s;
-    margin: 0 auto;
+    min-height: 36px;
   }
   .btn-volver-menu:hover { background: var(--gray-700) }
 
@@ -1023,16 +1080,9 @@
     cursor: pointer;
     font-size: 13px;
     transition: background 0.2s;
+    min-height: 36px;
   }
   .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
-
-  .header-actions { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    flex-wrap: wrap;
-    justify-content: center;
-  }
 
   .btn-pendientes-pagar {
     background: var(--warning);
@@ -1626,7 +1676,7 @@
           <div class="flex">
             <label style="font-weight:500;flex:0.15;min-width:60px;" class="campo-obligatorio">Banco:</label><input id="banco" placeholder="Nombre del banco" style="flex:1.5;">
             <label style="font-weight:500;flex:0.15;min-width:60px;">Cuenta:</label><input id="cuenta" placeholder="Número de cuenta" style="flex:1.2;">
-            <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label><input id="clabe" placeholder="CLABE interbancaria" style="flex:1.5;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label><input id="clabe" placeholder="CLABE interbancaria (18 dígitos)" style="flex:1.5;">
           </div>
         </div>
         <div class="grupo-formulario">
@@ -2828,6 +2878,27 @@
         document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
       };
 
+      // ============================================================
+      // VALIDACIÓN DE CLABE (18 DÍGITOS NUMÉRICOS)
+      // ============================================================
+      function validarClabe(clabe) {
+        if (!clabe || clabe === '') return { valido: false, mensaje: 'La CLABE es obligatoria.' };
+        // Eliminar espacios en blanco
+        clabe = clabe.replace(/\s/g, '');
+        // Verificar que sean solo números
+        if (!/^\d+$/.test(clabe)) {
+          return { valido: false, mensaje: 'La CLABE debe contener solo números.' };
+        }
+        // Verificar longitud exacta de 18 dígitos
+        if (clabe.length !== 18) {
+          return { valido: false, mensaje: 'La CLABE debe tener exactamente 18 dígitos. Actualmente tiene ' + clabe.length + ' dígitos.' };
+        }
+        return { valido: true, mensaje: 'CLABE válida.' };
+      }
+
+      // ============================================================
+      // RECOPILAR DATOS OC CON VALIDACIÓN DE CLABE
+      // ============================================================
       function recopilarDatosOC() {
         var selectProyecto = document.getElementById('selectProyecto');
         var selectedId = parseInt(selectProyecto.value);
@@ -2910,10 +2981,19 @@
         var responsable = solicitante;
         var banco = document.getElementById('banco').value.trim().toUpperCase();
         var cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
-        var clabe = document.getElementById('clabe').value.trim().toUpperCase();
+        var clabe = document.getElementById('clabe').value.trim();
         var swift = document.getElementById('swift').value.trim().toUpperCase();
         var cie = document.getElementById('cie').value.trim().toUpperCase();
         var referencia = document.getElementById('referencia').value.trim().toUpperCase();
+
+        // ========== VALIDACIÓN DE CLABE ==========
+        if (clabe) {
+          var validacionClabe = validarClabe(clabe);
+          if (!validacionClabe.valido) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ ' + validacionClabe.mensaje + '</div>';
+            return null;
+          }
+        }
 
         if (!banco) { msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>'; return null; }
         if (!cuenta && !clabe) { msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>'; return null; }
