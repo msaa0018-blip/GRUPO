@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-<title>Workflow OC ERP</title>
+<title>Workflow OC ERP v58</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js">
@@ -66,12 +66,14 @@
     max-width: 100%;
     height: auto
   }
+  
+  /* ===== HEADER - SIEMPRE ALINEADO A LA DERECHA ===== */
   header {
     background: var(--primary);
     color: white;
     padding: 12px 16px;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
@@ -80,37 +82,86 @@
     z-index: 100;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
     flex-shrink: 0;
+    min-height: 60px;
   }
+  
   header .logo {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap
+    flex-wrap: nowrap;
+    flex: 0 1 auto;
+    min-width: 0;
   }
+  
   header .logo img {
     height: 36px;
     width: auto;
-    max-height: 40px
+    max-height: 40px;
+    flex-shrink: 0;
   }
+  
   header .logo .company .name {
     font-size: 18px;
     font-weight: 600;
     letter-spacing: .5px;
     display: block;
-    line-height: 1.2
+    line-height: 1.2;
+    white-space: nowrap;
   }
+  
   header .logo .company .sub {
     font-size: 10px;
     opacity: .75;
     font-weight: 300;
-    display: block
+    display: block;
+    white-space: nowrap;
   }
-  header small {
-    font-size: 11px;
-    opacity: .8;
-    text-align: right;
-    flex-shrink: 0
+  
+  /* ===== HEADER ACTIONS - SIEMPRE A LA DERECHA ===== */
+  .header-actions { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    margin-left: auto;
+    flex: 0 1 auto;
+    min-width: 0;
   }
+  
+  .header-actions .btn-volver-menu {
+    background: var(--gray-600);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    min-height: 36px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .header-actions .btn-volver-menu:hover { background: var(--gray-700) }
+
+  .header-actions .btn-cerrar-sesion-header {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    min-height: 36px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .header-actions .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
+
   .container {
     max-width: 1280px;
     margin: 0 auto;
@@ -265,6 +316,18 @@
   button.btn-of:hover {
     background: #92400e;
   }
+  button.btn-editar {
+    background: #0ea5e9;
+  }
+  button.btn-editar:hover {
+    background: #0284c7;
+  }
+  button.btn-duplicar {
+    background: #8b5cf6;
+  }
+  button.btn-duplicar:hover {
+    background: #7c3aed;
+  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -303,6 +366,86 @@
   tr:hover {
     background: var(--gray-50)
   }
+  
+  /* ===== ESTILO PARA FILAS DE OC - DOS FILAS POR OC ===== */
+  /* Fila de información de la OC */
+  tr.fila-oc-info td {
+    border-bottom: none;
+    padding-bottom: 4px;
+    background: white;
+  }
+  tr.fila-oc-info:hover td {
+    background: var(--gray-50);
+  }
+  
+  /* Fila de botones de acción - debajo de cada OC */
+  tr.fila-oc-acciones td {
+    border-bottom: 3px solid var(--gray-400) !important;
+    background: var(--gray-100);
+    padding: 6px 12px;
+  }
+  tr.fila-oc-acciones:hover td {
+    background: var(--gray-100);
+  }
+  
+  /* ===== CONTENEDOR DE BOTONES - SIN SCROLL ===== */
+  .oc-acciones-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: visible !important;
+    padding: 2px 0;
+    min-height: 34px;
+    width: 100%;
+  }
+  .oc-acciones-container button {
+    font-size: 11px;
+    padding: 4px 10px;
+    min-height: 28px;
+    min-width: 28px;
+    flex: 0 1 auto;
+    white-space: nowrap;
+    border-radius: 6px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin: 1px;
+  }
+  .oc-acciones-container .btn-visualizar { background: #0891b2; color: white; }
+  .oc-acciones-container .btn-visualizar:hover { background: #0e7490; }
+  .oc-acciones-container .btn-imprimir { background: #6b7280; color: white; }
+  .oc-acciones-container .btn-imprimir:hover { background: #4b5563; }
+  .oc-acciones-container .btn-editar { background: #0ea5e9; color: white; }
+  .oc-acciones-container .btn-editar:hover { background: #0284c7; }
+  .oc-acciones-container .btn-duplicar { background: #8b5cf6; color: white; }
+  .oc-acciones-container .btn-duplicar:hover { background: #7c3aed; }
+  .oc-acciones-container .btn-success { background: var(--success); color: white; }
+  .oc-acciones-container .btn-success:hover { background: var(--success-hover); }
+  .oc-acciones-container .btn-warning { background: var(--warning); color: #1a1a1a; }
+  .oc-acciones-container .btn-warning:hover { background: var(--warning-hover); }
+  .oc-acciones-container .btn-danger { background: var(--danger); color: white; }
+  .oc-acciones-container .btn-danger:hover { background: var(--danger-hover); }
+  .oc-acciones-container .btn-aura-orange-gold {
+    background: #FFC700 !important;
+    color: #0b1a33 !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 20px rgba(255, 199, 0, 0.6) !important;
+    animation: pulse-aura 2s infinite !important;
+  }
+  .oc-acciones-container .btn-aura-orange-gold:hover {
+    background: #e6b300 !important;
+    transform: scale(1.05) !important;
+  }
+  
+  /* Ocultar la columna de acciones en el encabezado */
+  th.acciones-header {
+    min-width: 60px;
+  }
+  
   .badge {
     display: inline-block;
     padding: 3px 12px;
@@ -327,6 +470,68 @@
   .badge-cxc-pagado { background: #dcfce7; color: #166534 }
   .badge-cxc-pendiente { background: #fef9c3; color: #854d0e }
   .badge-cxc-vencido { background: #fee2e2; color: #991b1b }
+  
+  .badge-pendiente-director {
+    background: #fef3c7;
+    color: #92400e;
+    border: 2px solid #f59e0b;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-badge {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  }
+  
+  /* ===== ESTILO PARA OC NOTIFICADA - AURA DORADA + PARPADEO ===== */
+  .pendiente-director-notificada {
+    background: #FFC700 !important;
+    border-left: 6px solid #FF8C00 !important;
+    transition: background 0.3s ease;
+    animation: pulse-gold 1.5s ease-in-out infinite !important;
+    box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3) !important;
+    position: relative;
+    z-index: 10;
+  }
+  .pendiente-director-notificada:hover {
+    background: #FFD700 !important;
+    box-shadow: 0 0 50px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4) !important;
+  }
+  .pendiente-director-notificada td {
+    color: #1a1a1a !important;
+    font-weight: 600 !important;
+  }
+  .pendiente-director-notificada td code {
+    color: #1a1a1a !important;
+    font-weight: 700 !important;
+  }
+  .pendiente-director-notificada td .badge {
+    border: 2px solid #1a1a1a !important;
+    font-weight: 700 !important;
+  }
+  
+  @keyframes pulse-gold {
+    0% { 
+      background: #FFC700; 
+      box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3); 
+    }
+    50% { 
+      background: #FFD740; 
+      box-shadow: 0 0 50px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4); 
+    }
+    100% { 
+      background: #FFC700; 
+      box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3); 
+    }
+  }
+  
+  @keyframes pulse-aura {
+    0% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
+    50% { box-shadow: 0 0 40px rgba(255, 199, 0, 0.9), 0 0 60px rgba(255, 199, 0, 0.3); }
+    100% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
+  }
+
   .alert {
     background: #fef2f2;
     border-left: 5px solid var(--danger);
@@ -346,18 +551,7 @@
   .text-muted { color: var(--gray-500); font-size: 13px }
   .mt-10 { margin-top: 10px }
   .hidden { display: none !important }
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center
-  }
-  .actions button {
-    font-size: 12px;
-    padding: 6px 12px;
-    min-height: 32px;
-    min-width: 32px
-  }
+  
   .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
     width: 100%;
     min-width: 50px;
@@ -638,11 +832,11 @@
       padding: 8px 10px;
       font-size: 12px;
     }
-    .table-wrapper .actions button {
-      font-size: 10px;
-      padding: 4px 8px;
-      min-height: 24px;
-      min-width: 24px;
+    .oc-acciones-container button {
+      font-size: 10px !important;
+      padding: 3px 7px !important;
+      min-height: 24px !important;
+      height: 26px !important;
     }
     .productos-tabla table {
       min-width: 700px;
@@ -683,6 +877,27 @@
     }
     #ofTabla .table-wrapper table {
       min-width: 700px;
+    }
+    
+    /* ===== HEADER RESPONSIVE ===== */
+    header {
+      flex-wrap: nowrap;
+      padding: 8px 12px;
+    }
+    header .logo .company .name {
+      font-size: 14px;
+    }
+    header .logo .company .sub {
+      font-size: 8px;
+    }
+    .header-actions {
+      gap: 4px;
+    }
+    .header-actions .btn-volver-menu,
+    .header-actions .btn-cerrar-sesion-header {
+      font-size: 11px;
+      padding: 4px 10px;
+      min-height: 30px;
     }
   }
 
@@ -732,6 +947,29 @@
     }
     #bandejaOCCard .table-wrapper table {
       min-width: 1000px;
+    }
+    
+    /* ===== HEADER RESPONSIVE ===== */
+    header .logo .company .name {
+      font-size: 12px;
+    }
+    header .logo .company .sub {
+      font-size: 7px;
+    }
+    header .logo img {
+      height: 28px;
+    }
+    .header-actions .btn-volver-menu,
+    .header-actions .btn-cerrar-sesion-header {
+      font-size: 10px;
+      padding: 4px 8px;
+      min-height: 26px;
+    }
+    .oc-acciones-container button {
+      font-size: 9px !important;
+      padding: 2px 6px !important;
+      min-height: 22px !important;
+      height: 24px !important;
     }
   }
 
@@ -934,7 +1172,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 20px;
-    max-width: 600px;
+    max-width: 800px;
     width: 100%;
     margin: 0 auto;
     justify-items: center;
@@ -978,6 +1216,7 @@
   }
   .modulo-item .modulo-leyenda { margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--gray-700); text-align: center }
   .modulo-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
+  .modulo-item .modulo-leyenda.admin-only { color: var(--secondary); font-weight: 600; font-size: 10px }
 
   @media (max-width: 600px) {
     .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 100% }
@@ -988,28 +1227,6 @@
 
   #contenidoApp { display: none !important }
   #contenidoApp.visible { display: block !important }
-
-  .btn-volver-menu {
-    background: var(--gray-600);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 13px;
-    transition: background 0.2s;
-    margin: 0 auto;
-  }
-  .btn-volver-menu:hover { background: var(--gray-700) }
-
-  .header-actions { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    flex-wrap: wrap;
-    justify-content: center;
-  }
 
   .btn-pendientes-pagar {
     background: var(--warning);
@@ -1148,141 +1365,6 @@
   .cxc-form-row>* { flex: 1 1 auto; min-width: 140px; }
   .cxc-form-row input, .cxc-form-row select { min-height: 40px; }
 
-  @media (max-width: 768px) {
-    .table-wrapper {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      display: block;
-      width: 100%;
-    }
-    .table-wrapper table {
-      display: table;
-      min-width: 900px;
-      width: auto;
-    }
-    .table-wrapper table thead {
-      display: table-header-group;
-    }
-    .table-wrapper table tbody {
-      display: table-row-group;
-    }
-    .table-wrapper table tr {
-      display: table-row;
-      border: none;
-      box-shadow: none;
-      padding: 0;
-      margin: 0;
-      background: transparent;
-    }
-    .table-wrapper table td {
-      display: table-cell;
-      border-bottom: 1px solid var(--gray-200);
-      padding: 8px 10px;
-      white-space: nowrap;
-    }
-    .table-wrapper table td::before {
-      content: none;
-    }
-    .table-wrapper table th {
-      display: table-cell;
-      padding: 8px 10px;
-      white-space: nowrap;
-    }
-    
-    .resumen-totales {
-      font-size: 12px;
-      gap: 8px 16px;
-      padding: 10px 14px;
-      flex-wrap: wrap;
-    }
-    .resumen-totales strong { font-size: 13px; }
-    
-    .productos-tabla table {
-      min-width: 700px;
-    }
-    .productos-tabla td {
-      padding: 4px 6px;
-      white-space: nowrap;
-    }
-    .productos-tabla input,
-    .productos-tabla textarea,
-    .productos-tabla select {
-      font-size: 11px !important;
-      padding: 4px 6px !important;
-      min-height: 28px !important;
-    }
-    .productos-tabla textarea.desc {
-      min-width: 80px;
-      height: 28px;
-    }
-    .productos-tabla input.importe {
-      min-width: 140px !important;
-      width: 150px !important;
-      font-size: 18px !important;
-    }
-    .productos-tabla input.precio {
-      min-width: 70px !important;
-      width: 80px !important;
-    }
-    
-    .flex { gap: 8px; }
-    .flex>* { min-width: 100%; }
-    .fila-cfdi-entrega { flex-direction: column; gap: 6px; }
-    .fila-cfdi-entrega>* { min-width: 100%; }
-    
-    .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .modulo-item { width: 60px; }
-    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px; }
-    .modulo-item .modulo-leyenda { font-size: 10px; }
-    
-    header .logo .company .name { font-size: 14px; }
-    header .logo .company .sub { font-size: 8px; }
-    header small { font-size: 9px; }
-    
-    .btn-volver-menu { font-size: 11px; padding: 4px 10px; min-height: 28px; }
-    .card { padding: 12px 14px; overflow-x: auto; }
-    .card h2 { font-size: 1.1rem; }
-    .card h3, .card h4 { font-size: 1rem; }
-    
-    .filtros-container { flex-direction: column; align-items: stretch; gap: 8px; }
-    .filtros-container .filtro-item { flex-direction: column; align-items: stretch; }
-    .filtros-container .filtro-item label { font-size: 12px; }
-    .filtros-container .filtro-item select { min-width: 100%; font-size: 13px; padding: 6px 10px; min-height: 36px; }
-    
-    .btn-pendientes-pagar { font-size: 12px; padding: 6px 12px; min-height: 36px; }
-    .cxp-resumen { grid-template-columns: 1fr 1fr; }
-    .cxp-filtros { flex-direction: column; align-items: stretch; }
-    .cxp-filtros select, .cxp-filtros input { min-width: 100%; }
-    .cxp-filtros .filtro-fecha { flex-wrap: wrap; }
-    .cxp-filtros .filtro-fecha input[type="date"] { min-width: 100%; width: 100%; }
-    .cxc-resumen { grid-template-columns: 1fr 1fr; }
-    .cxc-form-row { flex-direction: column; }
-    .cxc-form-row>* { min-width: 100%; }
-    
-    #visualizarModal .modal-body iframe { height: 300px; }
-    #pdfPreviewModal .modal-body iframe { height: 300px; }
-    #ofDocModal .modal-body iframe { height: 300px; }
-    
-    #tablaProyectosCard .table-wrapper table { min-width: 700px; }
-    #bandejaOCCard .table-wrapper table { min-width: 1100px; }
-    #cxpTablaProyectos .table-wrapper table { min-width: 800px; }
-    #cxpTablaOC .table-wrapper table { min-width: 900px; }
-    #cxcTabla .table-wrapper table { min-width: 900px; }
-    #ofTabla .table-wrapper table { min-width: 700px; }
-  }
-
-  @media (max-width: 480px) {
-    .modulos-grid { grid-template-columns: repeat(3, 1fr); }
-    .modulo-item { width: 70px; }
-    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px; }
-    #visualizarModal .modal-body iframe { height: 250px; }
-    #pdfPreviewModal .modal-body iframe { height: 250px; }
-    #ofDocModal .modal-body iframe { height: 250px; }
-    .cxc-resumen { grid-template-columns: 1fr; }
-    .table-wrapper table { min-width: 800px; }
-    #bandejaOCCard .table-wrapper table { min-width: 1000px; }
-  }
-
   #cxpPreviewModal {
     position: fixed;
     top: 0;
@@ -1359,65 +1441,6 @@
     accent-color: var(--primary);
   }
 
-  /* ===== ESTILO PARA OC NOTIFICADA - AURA DORADA + PARPADEO ===== */
-  .pendiente-director-notificada {
-    background: #FFC700 !important;
-    border-left: 6px solid #FF8C00 !important;
-    transition: background 0.3s ease;
-    animation: pulse-gold 1.5s ease-in-out infinite !important;
-    box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3) !important;
-    position: relative;
-    z-index: 10;
-  }
-  .pendiente-director-notificada:hover {
-    background: #FFD700 !important;
-    box-shadow: 0 0 50px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4) !important;
-  }
-  .pendiente-director-notificada td {
-    color: #1a1a1a !important;
-    font-weight: 600 !important;
-  }
-  .pendiente-director-notificada td code {
-    color: #1a1a1a !important;
-    font-weight: 700 !important;
-  }
-  .pendiente-director-notificada td .badge {
-    border: 2px solid #1a1a1a !important;
-    font-weight: 700 !important;
-  }
-  
-  @keyframes pulse-gold {
-    0% { 
-      background: #FFC700; 
-      box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3); 
-    }
-    50% { 
-      background: #FFD740; 
-      box-shadow: 0 0 50px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4); 
-    }
-    100% { 
-      background: #FFC700; 
-      box-shadow: 0 0 30px rgba(255, 199, 0, 0.7), 0 0 60px rgba(255, 199, 0, 0.3); 
-    }
-  }
-
-  .btn-aura-orange-gold {
-    background: #FFC700 !important;
-    color: #0b1a33 !important;
-    font-weight: bold !important;
-    box-shadow: 0 0 20px rgba(255, 199, 0, 0.6) !important;
-    animation: pulse-aura 2s infinite !important;
-  }
-  .btn-aura-orange-gold:hover {
-    background: #e6b300 !important;
-    transform: scale(1.05) !important;
-  }
-  @keyframes pulse-aura {
-    0% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
-    50% { box-shadow: 0 0 40px rgba(255, 199, 0, 0.9), 0 0 60px rgba(255, 199, 0, 0.3); }
-    100% { box-shadow: 0 0 20px rgba(255, 199, 0, 0.6); }
-  }
-
   /* ===== ESTILO PARA EL BANNER DE LOCALIZACIÓN DE OC ===== */
   .oc-location-banner {
     background: linear-gradient(135deg, #FFC700, #FFD740);
@@ -1483,11 +1506,12 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v57</span>
+        <span class="sub">Workflow OC ERP v58</span>
       </div>
     </div>
     <div class="header-actions">
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">⬅ Volver</button>
+      <button class="btn-cerrar-sesion-header hidden" id="btnCerrarSesionHeader" onclick="window.salir()">🚪 Cerrar sesión</button>
     </div>
   </header>
 
@@ -1509,25 +1533,23 @@
     </div>
 
     <div id="menuPrincipal" class="hidden">
-      <div style="display:flex; justify-content:flex-end; width:100%; max-width:600px; margin:0 auto 20px auto;">
-        <button onclick="window.salir()" class="danger" style="padding:8px 20px; font-size:14px;">🚪 Cerrar sesión</button>
-      </div>
       <div class="modulos-grid" id="modulosGrid">
         <div class="modulo-item" data-modulo="oc"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OC</span></div>
         <div class="modulo-item" data-modulo="proyectos"><div class="modulo-cuadro funcional">📊</div><span class="modulo-leyenda">Proyectos</span></div>
         <div class="modulo-item" data-modulo="cxp"><div class="modulo-cuadro funcional">💰</div><span class="modulo-leyenda">CXP</span></div>
         <div class="modulo-item" data-modulo="cxc"><div class="modulo-cuadro funcional">💳</div><span class="modulo-leyenda">CXC</span></div>
         <div class="modulo-item" data-modulo="of"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OF</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
+        <div class="modulo-item" data-modulo="proveedores" id="moduloProveedores"><div class="modulo-cuadro en-construccion">🏢</div><span class="modulo-leyenda construccion">Proveedores</span><span class="modulo-leyenda admin-only">(Admin)</span></div>
+        <div class="modulo-item" data-modulo="productos" id="moduloProductos"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Productos</span><span class="modulo-leyenda admin-only">(Admin)</span></div>
+        <div class="modulo-item" data-modulo="inventario"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
+        <div class="modulo-item" data-modulo="ventas"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
+        <div class="modulo-item" data-modulo="reportes"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
       </div>
     </div>
 
     <div id="contenidoApp" class="hidden">
       <div class="card flex" style="justify-content:space-between">
         <span id="sesion" style="font-weight:600"></span>
-        <button onclick="window.salir()" class="danger">Cerrar sesión</button>
       </div>
 
       <div id="panelProyecto" class="card hidden">
@@ -1605,7 +1627,7 @@
           <div class="flex">
             <label style="font-weight:500;flex:0.15;min-width:60px;" class="campo-obligatorio">Banco:</label><input id="banco" placeholder="Nombre del banco" style="flex:1.5;">
             <label style="font-weight:500;flex:0.15;min-width:60px;">Cuenta:</label><input id="cuenta" placeholder="Número de cuenta" style="flex:1.2;">
-            <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label><input id="clabe" placeholder="CLABE interbancaria" style="flex:1.5;">
+            <label style="font-weight:500;flex:0.15;min-width:60px;">CLABE:</label><input id="clabe" placeholder="CLABE interbancaria (18 dígitos)" style="flex:1.5;">
           </div>
         </div>
         <div class="grupo-formulario">
@@ -1883,6 +1905,7 @@
         </div>
       </div>
 
+      <!-- ===== BANDEJA DE OC - NUEVO DISEÑO DE DOS FILAS ===== -->
       <div class="card" id="bandejaOCCard">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
         <div id="ocLocationBanner" class="oc-location-banner hidden">
@@ -1904,9 +1927,22 @@
           <table>
             <thead>
               <tr>
-                <th>Código</th><th>Proyecto</th><th>Depto</th><th>Cliente</th><th>Proveedor</th>
-                <th>RFC</th><th>Dirección entrega</th><th>CP</th><th>Moneda</th><th>Total</th>
-                <th>Equiv. MXN</th><th>F.Pago</th><th>F.Entrega</th><th>UUID</th><th>Estado</th><th>Acciones</th>
+                <th>Código</th>
+                <th>Proyecto</th>
+                <th>Depto</th>
+                <th>Cliente</th>
+                <th>Proveedor</th>
+                <th>RFC</th>
+                <th>Dirección entrega</th>
+                <th>CP</th>
+                <th>Moneda</th>
+                <th>Total</th>
+                <th>Equiv. MXN</th>
+                <th>F.Pago</th>
+                <th>F.Entrega</th>
+                <th>UUID</th>
+                <th>Estado</th>
+                <th class="acciones-header">Acciones</th>
               </tr>
             </thead>
             <tbody id="tablaOC"></tbody>
@@ -2039,6 +2075,24 @@
         return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
       }
 
+      // ============================================================
+      // REGLAS ESPECIALES DE APROBACIÓN POR DEPARTAMENTO
+      // ============================================================
+      function esDepartamentoInmobienes(departamento) {
+        if (!departamento) return false;
+        return departamento.trim().toUpperCase().includes('INMOBIENES');
+      }
+
+      function esDepartamentoSuministros(departamento) {
+        if (!departamento) return false;
+        return departamento.trim().toUpperCase().includes('SUMINISERVICES');
+      }
+
+      function ocEsInmobienes(oc) {
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        return proyecto ? esDepartamentoInmobienes(proyecto.departamento) : false;
+      }
+
       function formatoMoneda(monto, moneda) {
         moneda = moneda || 'MXN';
         var simbolo = moneda === 'USD' ? 'USD ' : '$';
@@ -2065,7 +2119,6 @@
       // ============================================================
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        // Director General, Administrador, Finanzas y Contabilidad tienen acceso total
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
@@ -2080,11 +2133,9 @@
       // ============================================================
       function obtenerEmpresaDeptoDefault(usuario) {
         if (!usuario) return { empresa: '', departamento: '' };
-        // Roles con acceso total pueden elegir libremente
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
           return { empresa: '', departamento: '', libre: true };
         }
-        // Para otros roles, tomar el primer permiso
         if (usuario.permisos && usuario.permisos.length > 0) {
           return { 
             empresa: usuario.permisos[0].empresa || '', 
@@ -2249,7 +2300,7 @@
         console.log('🔍 Buscando OC con ID:', ocId);
         
         function intentarScroll() {
-          var row = document.querySelector('tr[data-oc-id="' + ocId + '"]');
+          var row = document.querySelector('tr.fila-oc-info[data-oc-id="' + ocId + '"]');
           if (row) {
             console.log('✅ OC encontrada, haciendo scroll...');
             
@@ -2264,17 +2315,31 @@
             row.style.boxShadow = '0 0 40px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4)';
             row.style.border = '3px solid #FF8C00';
             
+            var accionesRow = document.querySelector('tr.fila-oc-acciones[data-oc-id="' + ocId + '"]');
+            if (accionesRow) {
+              accionesRow.style.background = '#FFD740';
+              accionesRow.style.boxShadow = '0 0 40px rgba(255, 199, 0, 0.9), 0 0 80px rgba(255, 199, 0, 0.4)';
+            }
+            
             mostrarBannerLocalizacion(ocId);
             
             setTimeout(function() {
               row.style.background = '#FFC700';
               row.style.boxShadow = '0 0 20px rgba(255, 199, 0, 0.5)';
+              if (accionesRow) {
+                accionesRow.style.background = '#FFC700';
+                accionesRow.style.boxShadow = '0 0 20px rgba(255, 199, 0, 0.5)';
+              }
             }, 1000);
             
             setTimeout(function() {
               row.style.background = '';
               row.style.boxShadow = '';
               row.style.border = '';
+              if (accionesRow) {
+                accionesRow.style.background = '';
+                accionesRow.style.boxShadow = '';
+              }
             }, 6000);
             
             console.log('🟡 OC resaltada y visible');
@@ -2414,6 +2479,7 @@
         document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
+        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
         moduloActual = null;
         filtroPendientesActivo = false;
         ocNotificadaId = null;
@@ -2439,7 +2505,11 @@
           else if (modulo === 'cxp') window.mostrarModulo('cxp');
           else if (modulo === 'cxc') window.mostrarModulo('cxc');
           else if (modulo === 'of') window.mostrarModulo('of');
-          else mostrarConstruccion();
+          else if (modulo === 'proveedores' || modulo === 'productos') {
+            mostrarConstruccion();
+          } else {
+            mostrarConstruccion();
+          }
         });
         modulosConfigurados = true;
       }
@@ -2458,8 +2528,8 @@
         var panelCXC = document.getElementById('panelCXC');
         var panelOF = document.getElementById('panelOF');
         var bandejaOCCard = document.getElementById('bandejaOCCard');
-        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
-        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador');
+        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador');
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerOF = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
@@ -2791,6 +2861,24 @@
         document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
       };
 
+      // ============================================================
+      // VALIDACIÓN DE CLABE (18 DÍGITOS NUMÉRICOS)
+      // ============================================================
+      function validarClabe(clabe) {
+        if (!clabe || clabe === '') return { valido: false, mensaje: 'La CLABE es obligatoria.' };
+        clabe = clabe.replace(/\s/g, '');
+        if (!/^\d+$/.test(clabe)) {
+          return { valido: false, mensaje: 'La CLABE debe contener solo números.' };
+        }
+        if (clabe.length !== 18) {
+          return { valido: false, mensaje: 'La CLABE debe tener exactamente 18 dígitos. Actualmente tiene ' + clabe.length + ' dígitos.' };
+        }
+        return { valido: true, mensaje: 'CLABE válida.' };
+      }
+
+      // ============================================================
+      // RECOPILAR DATOS OC CON VALIDACIÓN DE CLABE
+      // ============================================================
       function recopilarDatosOC() {
         var selectProyecto = document.getElementById('selectProyecto');
         var selectedId = parseInt(selectProyecto.value);
@@ -2873,10 +2961,19 @@
         var responsable = solicitante;
         var banco = document.getElementById('banco').value.trim().toUpperCase();
         var cuenta = document.getElementById('cuenta').value.trim().toUpperCase();
-        var clabe = document.getElementById('clabe').value.trim().toUpperCase();
+        var clabe = document.getElementById('clabe').value.trim();
         var swift = document.getElementById('swift').value.trim().toUpperCase();
         var cie = document.getElementById('cie').value.trim().toUpperCase();
         var referencia = document.getElementById('referencia').value.trim().toUpperCase();
+
+        // ========== VALIDACIÓN DE CLABE ==========
+        if (clabe) {
+          var validacionClabe = validarClabe(clabe);
+          if (!validacionClabe.valido) {
+            msgDiv.innerHTML = '<div class="alert">⚠️ ' + validacionClabe.mensaje + '</div>';
+            return null;
+          }
+        }
 
         if (!banco) { msgDiv.innerHTML = '<div class="alert">⚠️ EL CAMPO "BANCO" ES OBLIGATORIO.</div>'; return null; }
         if (!cuenta && !clabe) { msgDiv.innerHTML = '<div class="alert">⚠️ DEBE INGRESAR AL MENOS UNO: "CUENTA" O "CLABE".</div>'; return null; }
@@ -3502,19 +3599,124 @@
       // ============================================================
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('Solo el Solicitante/Responsable designado puede aprobar.');
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
-        
+
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        if (!proyecto) return alert('Proyecto no encontrado');
+
+        var esInmobienesOC = esDepartamentoInmobienes(proyecto.departamento);
+        var rolValidoSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador' ||
+          (esInmobienesOC && actual.rol === 'Jefe Departamento');
+        if (!rolValidoSolicitante) return alert('Solo el Solicitante/Responsable designado puede aprobar.');
+
         if (actual.u !== oc.solicitante) {
           return alert('❌ Solo el solicitante designado (' + oc.solicitante + ') puede aprobar esta OC.');
         }
-        
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
-        if (!proyecto) return alert('Proyecto no encontrado');
+
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-        
+
+        if (esDepartamentoSuministros(proyecto.departamento)) {
+          var montoEnMonedaProyectoSS = oc.montomxn || 0;
+          if (proyecto.moneda === 'USD') {
+            if (oc.paridadinicial) montoEnMonedaProyectoSS = oc.montomxn / oc.paridadinicial;
+            else montoEnMonedaProyectoSS = oc.montomxn / 20;
+          }
+
+          if (oc.moneda === 'USD' && !oc.tipocambio) {
+            var updatesSSpar = {
+              estado: 'PENDIENTE_PARIDAD',
+              fechaaprobacionsolicitante: new Date().toISOString(),
+              nombresolicitante: actual.u
+            };
+            var errSSpar = (await supabase.from('ordenes').update(updatesSSpar).eq('id', oc.id)).error;
+            if (errSSpar) return alert('Error al actualizar OC');
+            Object.assign(oc, updatesSSpar);
+            render();
+            alert('⏳ OC en USD. Requiere paridad final.');
+            return;
+          }
+
+          var comprometidoPrevioSS = gastoProyectoMoneda(proyecto.nombre);
+          var excedePorSiSolaSS = montoEnMonedaProyectoSS > proyecto.limite;
+          var excedeAcumuladoSS = (comprometidoPrevioSS + montoEnMonedaProyectoSS) >= proyecto.limite;
+
+          if (!excedePorSiSolaSS && !excedeAcumuladoSS) {
+            var updatesSSauto = {
+              estado: 'AUTORIZADA',
+              fechaaprobacionsolicitante: new Date().toISOString(),
+              nombresolicitante: actual.u,
+              fechaaprobacionjefe: new Date().toISOString(),
+              nombrejefe: actual.u,
+              fechaaprobaciondirector: new Date().toISOString(),
+              nombredirector: actual.u,
+              estadopago: null,
+              notificacion_enviada: false
+            };
+            var errSSauto = (await supabase.from('ordenes').update(updatesSSauto).eq('id', oc.id)).error;
+            if (errSSauto) return alert('Error al actualizar OC');
+            Object.assign(oc, updatesSSauto);
+            render();
+            alert('✅ OC autorizada automáticamente (dentro del 60%).');
+            return;
+          }
+
+          var updatesSSdir = {
+            estado: 'PENDIENTE_DIRECTOR',
+            fechaaprobacionsolicitante: new Date().toISOString(),
+            nombresolicitante: actual.u
+          };
+          var errSSdir = (await supabase.from('ordenes').update(updatesSSdir).eq('id', oc.id)).error;
+          if (errSSdir) return alert('Error al actualizar OC');
+          Object.assign(oc, updatesSSdir);
+
+          try {
+            var productosSS = oc.productos || [];
+            if (typeof productosSS === 'string') {
+              try { productosSS = JSON.parse(productosSS); } catch (e) { productosSS = []; }
+            }
+            if (!Array.isArray(productosSS)) productosSS = [];
+
+            var datosOCSS = {
+              codigo: oc.codigo,
+              proyectonombre: oc.proyecto,
+              empresa: proyecto.empresa,
+              departamento: proyecto.departamento,
+              cliente: oc.cliente || proyecto.cliente || 'No especificado',
+              proveedor: oc.proveedor,
+              rfc: oc.rfc || 'No especificado',
+              responsable: oc.responsable,
+              solicitante: oc.solicitante || 'No especificado',
+              elaborador: oc.elaborador || 'Desconocido',
+              moneda: oc.moneda || 'MXN',
+              montototal: oc.montototal || 0,
+              montomxn: oc.montomxn || 0,
+              fechapago: oc.fechapago || new Date().toISOString(),
+              fechaentrega: oc.fechaentrega || new Date().toISOString(),
+              productos: productosSS
+            };
+
+            var motivoExcesoSS = excedePorSiSolaSS
+              ? 'Esta OC por sí sola excede el 60% del presupuesto del proyecto.'
+              : 'La suma de lo ya pagado en el proyecto más esta OC alcanza o supera el 60% del presupuesto.';
+
+            var mensajeTelegramSS = formatearMensajeOC(datosOCSS, proyecto, oc.id, motivoExcesoSS);
+            var enviadoSS = await enviarNotificacionTelegram(mensajeTelegramSS);
+            if (enviadoSS) {
+              await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+              oc.notificacion_enviada = true;
+              ocNotificadaId = oc.id;
+            }
+          } catch (error) {
+            console.error('❌ Error al enviar notificación:', error);
+          }
+
+          render();
+          alert('⏳ OC supera el 60%. Enviada a Director para autorización.');
+          return;
+        }
+
         var updates = { 
           estado: 'APROBADA_SOLICITANTE', 
           fechaaprobacionsolicitante: new Date().toISOString(), 
@@ -3634,8 +3836,10 @@
       };
 
       window.autorizarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         var oc = ordenes[index];
+        var esInmobienesOC = actual && oc ? ocEsInmobienes(oc) : false;
+        var puedeAutorizar = actual && (actual.rol === 'Director General' || (esInmobienesOC && actual.rol === 'Jefe Departamento'));
+        if (!puedeAutorizar) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
 
@@ -3664,8 +3868,10 @@
       };
 
       window.cancelarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         var oc = ordenes[index];
+        var esInmobienesOC = actual && oc ? ocEsInmobienes(oc) : false;
+        var puedeCancelar = actual && (actual.rol === 'Director General' || (esInmobienesOC && actual.rol === 'Jefe Departamento'));
+        if (!puedeCancelar) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
         
@@ -3952,6 +4158,18 @@
         return { proyectos: proyectosVisibles, oc: ocVisibles };
       }
 
+      // ============================================================
+      // FUNCIÓN DASHBOARD PARA CXP - CORREGIDA
+      // ============================================================
+      window.verDashboardProyectoCXP = function(nombreProyecto) {
+        var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
+        if (!proyecto) {
+          alert('Proyecto no encontrado');
+          return;
+        }
+        window.mostrarDashboard(proyectos.indexOf(proyecto));
+      };
+
       window.renderCXP = function() {
         var datos = obtenerDatosCXP();
         var proys = datos.proyectos;
@@ -4079,10 +4297,6 @@
               '</tr>';
           });
         }
-      };
-
-      window.verDashboardProyectoCXP = function(nombreProyecto) {
-        // Función de dashboard
       };
 
       function obtenerInfoProyectoCXC(cxc) {
@@ -4382,7 +4596,6 @@
         var esAccesoTotal = defaultData.libre === true;
         
         if (esAccesoTotal) {
-          // Director General, Administrador, Finanzas, Contabilidad - pueden elegir libremente
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
           empresaInput.placeholder = 'Escribe la empresa';
@@ -4392,7 +4605,6 @@
           deptoSelect.style.background = 'white';
           deptoSelect.innerHTML = '<option value="">Departamento *</option>';
           
-          // Poblar con todos los departamentos disponibles
           var todosDeptos = new Set();
           proyectos.forEach(function(p) { if (p.departamento) todosDeptos.add(p.departamento); });
           ordenesFacturacion.forEach(function(o) { if (o.departamento) todosDeptos.add(o.departamento); });
@@ -4406,7 +4618,6 @@
           
           deptoSelect.onchange = window.actualizarFolioOF;
         } else {
-          // Solicitante, Elaborador, Jefe Departamento - campos fijos según sus permisos
           if (defaultData.empresa && defaultData.departamento) {
             empresaInput.value = defaultData.empresa;
             empresaInput.disabled = true;
@@ -4416,7 +4627,6 @@
             deptoSelect.disabled = true;
             deptoSelect.style.background = 'var(--gray-200)';
             
-            // Generar folio automáticamente
             folioInput.value = generarFolioOF(defaultData.departamento);
             window.actualizarResponsablesOF();
           } else {
@@ -4806,7 +5016,6 @@
           return;
         }
 
-        // **VALIDACIÓN DE PERMISOS: EL USUARIO DEBE PERTENECER A LA EMPRESA/DEPARTAMENTO**
         if (!usuarioPuedeAccederOF(actual, empresa, departamento)) {
           msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR ÓRDENES DE FACTURACIÓN EN ESTA EMPRESA/DEPARTAMENTO.</div>';
           return;
@@ -4821,7 +5030,6 @@
         var suma = window.recalcularSumaOF();
         var folio = generarFolioOF(departamento);
 
-        // Estatus según método de pago: PPD -> PENDIENTE, PUE -> PAGADO
         var estadoOF = metodoPago === 'PPD' ? 'PENDIENTE' : (metodoPago === 'PUE' ? 'PAGADO' : 'CREADA');
 
         var nuevaOF = {
@@ -5048,18 +5256,15 @@
         var tbody = document.getElementById('ofCuerpo');
         if (!tbody) return;
 
-        // Obtener todos los departamentos de proyectos + OF para los selects
         var deptosSet = new Set();
         var empresasSet = new Set();
         
-        // Solo agregar departamentos a los que el usuario tiene acceso
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
         proyectosVisibles.forEach(function(p) { 
           if (p.departamento) deptosSet.add(p.departamento);
           if (p.empresa) empresasSet.add(p.empresa);
         });
         
-        // También agregar departamentos de OF existentes que el usuario pueda ver
         var ofVisibles = ordenesFacturacion.filter(function(o) {
           return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
         });
@@ -5070,7 +5275,6 @@
 
         var deptosList = Array.from(deptosSet).sort();
 
-        // Poblar select de departamento para nueva OF (respetando permisos)
         var selectDepto = document.getElementById('ofDepartamento');
         var empresaInput = document.getElementById('ofEmpresa');
         var defaultData = obtenerEmpresaDeptoDefault(actual);
@@ -5078,7 +5282,6 @@
         
         if (selectDepto) {
           if (!esAccesoTotal && defaultData.departamento) {
-            // Usuario con permisos limitados - solo ve su departamento
             selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
             selectDepto.disabled = true;
             selectDepto.style.background = 'var(--gray-200)';
@@ -5089,7 +5292,6 @@
               empresaInput.style.background = 'var(--gray-200)';
             }
           } else {
-            // Acceso total - puede elegir cualquier departamento
             selectDepto.disabled = false;
             selectDepto.style.background = 'white';
             selectDepto.innerHTML = '<option value="">Departamento *</option>' + 
@@ -5105,7 +5307,6 @@
           selectDepto.onchange = window.actualizarFolioOF;
         }
 
-        // Poblar filtro de departamento (solo con departamentos a los que el usuario tiene acceso)
         var filtroDepto = document.getElementById('ofFiltroDepto');
         if (filtroDepto) {
           var valorFiltro = filtroDepto.value;
@@ -5114,12 +5315,10 @@
           if (valorFiltro && deptosList.indexOf(valorFiltro) !== -1) filtroDepto.value = valorFiltro;
         }
 
-        // **FILTRAR OF POR PERMISOS DEL USUARIO**
         var visibles = ordenesFacturacion.filter(function(o) {
           return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
         });
 
-        // Aplicar filtros adicionales
         if (filtroDepto && filtroDepto.value) {
           visibles = visibles.filter(function(o) { 
             return o.departamento === filtroDepto.value; 
@@ -5135,7 +5334,6 @@
 
         visibles = visibles.slice().reverse();
 
-        // **RESUMEN RÁPIDO PARA CXF: PAGADAS VS PENDIENTES**
         var resumenDiv = document.getElementById('ofResumenCXF');
         if (resumenDiv) {
           var totalPagado = 0, totalPendiente = 0, numPagado = 0, numPendiente = 0;
@@ -5171,7 +5369,6 @@
           var esResponsable = actual && o.responsable && o.responsable === actual.usuario;
           var esOverride = actual && (actual.rol === 'Administrador' || actual.rol === 'Director General');
 
-          // **FINANZAS: IMPRIMIR / APROBAR / CANCELAR**
           if (esFinanzas && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="btn-imprimir" onclick="window.imprimirOF(' + idxOriginal + ')">🖨️ Imprimir</button>';
             if (o.estado === 'PENDIENTE' || o.estado === 'CREADA') {
@@ -5182,7 +5379,6 @@
             }
           }
 
-          // **RESPONSABLE: PAGADA / SOL. CANCELACIÓN**
           if ((esResponsable || esOverride) && o.estado === 'FACTURADA') {
             acciones += '<button class="success" onclick="window.marcarPagadaOF(' + idxOriginal + ')">💰 Pagada</button>';
             acciones += '<button class="warning" onclick="window.solicitarCancelacionOF(' + idxOriginal + ')">⚠️ Sol. Cancelación</button>';
@@ -5400,7 +5596,7 @@
           var monto = o.monto || o.suma || 0;
           if (o.estado === 'PAGADO') { totalPagado += monto; numPagado++; }
           else if (o.estado === 'CANCELADO') { totalCancelado += monto; numCancelado++; }
-          else { totalPendiente += monto; numPendiente++; } // PENDIENTE, FACTURADA, SOL_CANCELACION, CREADA
+          else { totalPendiente += monto; numPendiente++; }
         });
 
         doc.setFontSize(10);
@@ -5526,7 +5722,7 @@
       };
 
       // ============================================================
-      // FUNCIONES DE RENDER PRINCIPAL
+      // FUNCIONES DE RENDER PRINCIPAL - CON DISEÑO DE DOS FILAS
       // ============================================================
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
@@ -5568,11 +5764,13 @@
             var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
             var esAdmin = actual && actual.rol === 'Administrador';
             var esFinanzas = actual && actual.rol === 'Finanzas';
+            var esDirectorProyecto = actual && actual.rol === 'Director General';
             var deptoColor = getColorByEmpresa(p.empresa);
 
             var botones = '';
             if (!esFinanzas) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
-            if (esAdmin) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
+            if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
+            if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
             tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + p.departamento + '</span></td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? '#b91c1c' : '#166534') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? '#dc2626' : '#22c55e') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
@@ -5593,6 +5791,7 @@
           window.actualizarDatosOC();
         }
 
+        // Invertir para mostrar las más recientes primero
         ocVisibles.reverse();
 
         tablaOC.innerHTML = '';
@@ -5601,11 +5800,13 @@
           tablaOC.innerHTML = '<tr><td colspan="16" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
           resumenTotales.innerHTML = '';
         } else {
+          // Calcular totales
           var totalMXN = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
           var totalUSD = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
           var totalMXNEquiv = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
           resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>';
 
+          // Generar filas de OC - DOS FILAS POR OC
           ocVisibles.forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
             var badgeClass = '';
@@ -5613,7 +5814,8 @@
             var rowClass = '';
             var botonAura = '';
 
-            if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
+            // Determinar estado y clases
+            if (o.estado === 'PENDIENTE_DIRECTOR' && actual && (actual.rol === 'Director General' || (actual.rol === 'Jefe Departamento' && ocEsInmobienes(o)))) {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
                 botonAura = 'btn-aura-orange-gold';
@@ -5646,78 +5848,138 @@
             } else if (o.estado === 'CONCLUIDA') {
               badgeClass = 'badge-concluida';
               estadoMostrado = '✅ CONCLUIDA';
+            } else if (o.estado === 'PENDIENTE_DIRECTOR') {
+              badgeClass = 'badge-pendiente';
+              estadoMostrado = '⏳ PENDIENTE DIRECTOR';
             } else {
               var classes = {
                 'CREADA': 'badge-creada', 'APROBADA_SOLICITANTE': 'badge-solicitante',
-                'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_DIRECTOR': 'badge-pendiente',
-                'PENDIENTE_PARIDAD': 'badge-paridad', 'CANCELADA': 'badge-cancelada'
+                'APROBADA_JEFE': 'badge-jefe', 'PENDIENTE_PARIDAD': 'badge-paridad', 
+                'CANCELADA': 'badge-cancelada'
               };
               badgeClass = classes[o.estado] || '';
-              estadoMostrado = o.estado;
+              estadoMostrado = o.estado || '—';
             }
 
+            // ===== CONSTRUIR BOTONES DE ACCIÓN =====
             var acciones = '';
             var rol = actual ? actual.rol : '';
 
-            acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar OC</button>';
-            
-            var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
-            if (puedeImprimir) {
-              acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ Imprimir</button>';
-            }
+            // --- BOTONES PARA DIRECTOR GENERAL ---
+            if (rol === 'Director General') {
+              // Solo Visualizar, Autorizar y Cancelar
+              acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
+              
+              if (!o.pausada && o.estado === 'PENDIENTE_DIRECTOR') {
+                acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
+                acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
+              }
+              
+              // Si la OC está autorizada, mostrar también PDF
+              if (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA') {
+                acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
+              }
+              
+              // Si no hay acciones, mostrar mensaje
+              if (!acciones) acciones = '—';
+              
+            } else {
+              // --- BOTONES PARA OTROS ROLES ---
+              
+              // Botón Visualizar (siempre visible)
+              acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
+              
+              // Botón Imprimir (si está autorizada o concluida)
+              var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
+              if (puedeImprimir) {
+                acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
+              }
 
-            if (rol === 'Finanzas') {
-              if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
-                if (o.estadopago === 'PAGADA') {
-                  acciones += '<button class="warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
-                } else {
-                  acciones += '<button class="success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagada</button>';
+              // Botón Editar (solo para OC en estado CREADA)
+              if (o.estado === 'CREADA' && (rol === 'Elaborador' || rol === 'Administrador')) {
+                acciones += '<button class="btn-editar" onclick="window.editarOC(' + idxOriginal + ')">✏️ Editar</button>';
+              }
+
+              // Botones de aprobación según rol
+              if (!o.pausada) {
+                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA' && o.solicitante === actual.u) {
+                  acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
+                }
+                if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
+                  acciones += '<button class="btn-warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar Jefe</button>';
+                }
+                // Para Jefe Departamento en Inmobienes que actúa como Director
+                if (rol === 'Jefe Departamento' && ocEsInmobienes(o) && o.estado === 'PENDIENTE_DIRECTOR') {
+                  acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
+                  acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
+                }
+                if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
+                  acciones += '<button class="btn-warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Paridad</button>';
+                }
+                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                  acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
-            } else {
-              if (rol === 'Administrador') {
-                var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
-                acciones += '<button class="warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
-                acciones += '<button class="danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
+
+              // Botones de Finanzas
+              if (rol === 'Finanzas' || rol === 'Administrador') {
                 if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                   if (o.estadopago === 'PAGADA') {
-                    acciones += '<button class="warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
+                    acciones += '<button class="btn-warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
                   } else {
-                    acciones += '<button class="success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagada</button>';
+                    acciones += '<button class="btn-success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagar</button>';
                   }
                 }
                 if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                  acciones += '<button class="success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
-                }
-              } else {
-                if (!o.pausada) {
-                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA' && o.solicitante === actual.u) {
-                    acciones += '<button class="success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar (Solicitante)</button>';
-                  }
-                  if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
-                    acciones += '<button class="warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar (Jefe Depto)</button>';
-                  }
-                  if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
-                    acciones += '<button class="success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button><button class="danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar OC</button>';
-                  }
-                  if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
-                    acciones += '<button class="warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Ingresar Paridad Final</button>';
-                  }
-                  if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                    acciones += '<button class="success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
-                  }
-                } else {
-                  acciones = '⏸️ Pausada';
+                  acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
-            }
-            if (!acciones) acciones = '—';
 
+              // Botón Eliminar (solo Administrador)
+              if (rol === 'Administrador') {
+                var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
+                acciones += '<button class="btn-warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
+                acciones += '<button class="btn-danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
+              }
+
+              if (!acciones) acciones = '—';
+            }
+
+            // Obtener datos del proyecto
             var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
             var cliente = proyecto ? proyecto.cliente : '—';
             var deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
+            var fechaPago = o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—';
+            var fechaEntrega = o.fechaentrega ? new Date(o.fechaentrega).toLocaleDateString() : '—';
 
-            tablaOC.innerHTML += '<tr class="' + rowClass + '" data-oc-id="' + o.id + '"><td data-label="Código"><code>' + o.codigo + '</code></td><td data-label="Proyecto">' + o.proyecto + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + (proyecto ? proyecto.departamento : '—') + '</span></td><td data-label="Cliente">' + cliente + '</td><td data-label="Proveedor">' + o.proveedor + '</td><td data-label="RFC">' + o.rfc + '</td><td data-label="Dirección entrega">' + (o.direccionentrega || '—') + '</td><td data-label="CP">' + (o.cp || '—') + '</td><td data-label="Moneda">' + o.moneda + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td><td data-label="F.Entrega">' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td data-label="UUID">' + (o.uuidfactura || '—') + '</td><td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td><td data-label="Acciones"><div class="actions">' + acciones + '</div></td></tr>';
+            // ===== FILA 1: INFORMACIÓN DE LA OC =====
+            tablaOC.innerHTML += 
+              '<tr class="fila-oc-info ' + rowClass + '" data-oc-id="' + o.id + '">' +
+                '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
+                '<td data-label="Proyecto">' + o.proyecto + '</td>' +
+                '<td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + (proyecto ? proyecto.departamento : '—') + '</span></td>' +
+                '<td data-label="Cliente">' + cliente + '</td>' +
+                '<td data-label="Proveedor">' + o.proveedor + '</td>' +
+                '<td data-label="RFC">' + (o.rfc || '—') + '</td>' +
+                '<td data-label="Dirección entrega">' + (o.direccionentrega || '—') + '</td>' +
+                '<td data-label="CP">' + (o.cp || '—') + '</td>' +
+                '<td data-label="Moneda">' + o.moneda + '</td>' +
+                '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
+                '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
+                '<td data-label="F.Pago">' + fechaPago + '</td>' +
+                '<td data-label="F.Entrega">' + fechaEntrega + '</td>' +
+                '<td data-label="UUID">' + (o.uuidfactura || '—') + '</td>' +
+                '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td>' +
+                '<td data-label="Acciones" class="acciones-header">—</td>' +
+              '</tr>';
+
+            // ===== FILA 2: BOTONES DE ACCIÓN (con colspan de todas las columnas) =====
+            tablaOC.innerHTML += 
+              '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
+                '<td colspan="16">' +
+                  '<div class="oc-acciones-container">' + acciones + '</div>' +
+                '</td>' +
+              '</tr>';
           });
         }
 
@@ -5727,6 +5989,7 @@
           window.agregarFilaProducto();
         }
 
+        // Actualizar filtros
         var filtroProyectoSelect = document.getElementById('filtroProyecto');
         if (filtroProyectoSelect) {
           var currentVal = filtroProyectoSelect.value;
@@ -5753,6 +6016,7 @@
           });
         }
 
+        // Renderizar otros paneles
         var panelCXP = document.getElementById('panelCXP');
         if (!panelCXP.classList.contains('hidden')) {
           window.renderCXP();
@@ -5773,6 +6037,15 @@
           }, 600);
         }
       }
+
+      // ============================================================
+      // FUNCIONES ADICIONALES PARA BOTONES DE ACCIÓN
+      // ============================================================
+      window.editarOC = function(index) {
+        var oc = ordenes[index];
+        if (!oc) return alert('OC no encontrada');
+        alert('✏️ Editar OC: ' + oc.codigo + ' (Función en desarrollo)');
+      };
 
       // ============================================================
       // FUNCIÓN DE LOGIN
@@ -5882,7 +6155,7 @@
           var panelCXC = document.getElementById('panelCXC');
           var panelOF = document.getElementById('panelOF');
           var bandejaOCCard = document.getElementById('bandejaOCCard');
-          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador');
           
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
@@ -6009,7 +6282,6 @@
           render();
         };
 
-        // Configurar campos por defecto para OF después del login
         setTimeout(function() {
           configurarCamposDefaultOF();
         }, 100);
@@ -6091,13 +6363,34 @@
       };
 
       window.eliminarProyecto = async function(index) {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso. Solo el Director puede eliminar el saldo de un proyecto.');
         var proyecto = proyectos[index];
         if (!confirm('¿Eliminar proyecto "' + proyecto.nombre + '" y todas sus OC asociadas?')) return;
         await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
         await supabase.from('proyectos').delete().eq('id', proyecto.id);
         proyectos.splice(index, 1);
         render();
+      };
+
+      window.aumentarSaldoProyecto = async function(index) {
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso. Solo el Director puede aumentar el saldo de un proyecto.');
+        var proyecto = proyectos[index];
+        if (!proyecto) return alert('Proyecto no encontrado');
+
+        var montoStr = prompt('Monto a AGREGAR al presupuesto de "' + proyecto.nombre + '" (' + proyecto.moneda + '). Presupuesto actual: ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda));
+        if (montoStr === null) return;
+        var monto = parseFloat(montoStr);
+        if (!monto || monto <= 0) { alert('Monto inválido.'); return; }
+
+        var nuevoPresupuesto = proyecto.presupuesto + monto;
+        var nuevoLimite = nuevoPresupuesto * 0.60;
+
+        var updates = { presupuesto: nuevoPresupuesto, limite: nuevoLimite };
+        var { error } = await supabase.from('proyectos').update(updates).eq('id', proyecto.id);
+        if (error) return alert('Error al actualizar el proyecto');
+        Object.assign(proyecto, updates);
+        render();
+        alert('✅ Saldo aumentado. Nuevo presupuesto: ' + formatoMoneda(nuevoPresupuesto, proyecto.moneda));
       };
 
       // ============================================================
