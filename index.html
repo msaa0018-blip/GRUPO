@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-<title>Workflow OC ERP</title>
+<title>Workflow OC ERP v58</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js">
@@ -1507,7 +1507,7 @@
       <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
-        <span class="sub">Workflow OC ERP v57</span>
+        <span class="sub">Workflow OC ERP v58</span>
       </div>
     </div>
     <div class="header-actions">
@@ -1540,9 +1540,9 @@
         <div class="modulo-item" data-modulo="cxp"><div class="modulo-cuadro funcional">💰</div><span class="modulo-leyenda">CXP</span></div>
         <div class="modulo-item" data-modulo="cxc"><div class="modulo-cuadro funcional">💳</div><span class="modulo-leyenda">CXC</span></div>
         <div class="modulo-item" data-modulo="of"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OF</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
-        <div class="modulo-item" data-modulo="construccion"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
+        <div class="modulo-item" data-modulo="inventario"><div class="modulo-cuadro en-construccion" id="moduloInventario">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
+        <div class="modulo-item" data-modulo="ventas"><div class="modulo-cuadro en-construccion" id="moduloVentas">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
+        <div class="modulo-item" data-modulo="reportes"><div class="modulo-cuadro en-construccion" id="moduloReportes">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
       </div>
     </div>
 
@@ -2065,12 +2065,12 @@
       // ============================================================
       function esDepartamentoInmobienes(departamento) {
         if (!departamento) return false;
-        return departamento.trim().toUpperCase().indexOf('INMOBIENES') !== -1;
+        return departamento.trim().toUpperCase().includes('INMOBIENES');
       }
 
       function esDepartamentoSuministros(departamento) {
         if (!departamento) return false;
-        return departamento.trim().toUpperCase().indexOf('SUMINISERVICES') !== -1;
+        return departamento.trim().toUpperCase().includes('SUMINISERVICES');
       }
 
       function ocEsInmobienes(oc) {
@@ -2104,7 +2104,6 @@
       // ============================================================
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        // Director General, Administrador, Finanzas y Contabilidad tienen acceso total
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
@@ -2119,11 +2118,9 @@
       // ============================================================
       function obtenerEmpresaDeptoDefault(usuario) {
         if (!usuario) return { empresa: '', departamento: '' };
-        // Roles con acceso total pueden elegir libremente
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
           return { empresa: '', departamento: '', libre: true };
         }
-        // Para otros roles, tomar el primer permiso
         if (usuario.permisos && usuario.permisos.length > 0) {
           return { 
             empresa: usuario.permisos[0].empresa || '', 
@@ -3549,8 +3546,6 @@
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
 
-        // Inmobienes: el mismo usuario concentra las 3 aprobaciones, por lo que
-        // el rol "Jefe Departamento" también puede firmar como Solicitante.
         var esInmobienesOC = esDepartamentoInmobienes(proyecto.departamento);
         var rolValidoSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador' ||
           (esInmobienesOC && actual.rol === 'Jefe Departamento');
@@ -3562,8 +3557,6 @@
 
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
-        // SUMINISERVICES: no requiere Jefe de Departamento. Al firmar el Solicitante,
-        // la OC procede directo a autorizada (o a Director si excede el 60%). Solo 2 pasos.
         if (esDepartamentoSuministros(proyecto.departamento)) {
           var montoEnMonedaProyectoSS = oc.montomxn || 0;
           if (proyecto.moneda === 'USD') {
@@ -4535,7 +4528,6 @@
         var esAccesoTotal = defaultData.libre === true;
         
         if (esAccesoTotal) {
-          // Director General, Administrador, Finanzas, Contabilidad - pueden elegir libremente
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
           empresaInput.placeholder = 'Escribe la empresa';
@@ -4545,7 +4537,6 @@
           deptoSelect.style.background = 'white';
           deptoSelect.innerHTML = '<option value="">Departamento *</option>';
           
-          // Poblar con todos los departamentos disponibles
           var todosDeptos = new Set();
           proyectos.forEach(function(p) { if (p.departamento) todosDeptos.add(p.departamento); });
           ordenesFacturacion.forEach(function(o) { if (o.departamento) todosDeptos.add(o.departamento); });
@@ -4559,7 +4550,6 @@
           
           deptoSelect.onchange = window.actualizarFolioOF;
         } else {
-          // Solicitante, Elaborador, Jefe Departamento - campos fijos según sus permisos
           if (defaultData.empresa && defaultData.departamento) {
             empresaInput.value = defaultData.empresa;
             empresaInput.disabled = true;
@@ -4569,7 +4559,6 @@
             deptoSelect.disabled = true;
             deptoSelect.style.background = 'var(--gray-200)';
             
-            // Generar folio automáticamente
             folioInput.value = generarFolioOF(defaultData.departamento);
             window.actualizarResponsablesOF();
           } else {
@@ -4959,7 +4948,6 @@
           return;
         }
 
-        // **VALIDACIÓN DE PERMISOS: EL USUARIO DEBE PERTENECER A LA EMPRESA/DEPARTAMENTO**
         if (!usuarioPuedeAccederOF(actual, empresa, departamento)) {
           msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR ÓRDENES DE FACTURACIÓN EN ESTA EMPRESA/DEPARTAMENTO.</div>';
           return;
@@ -4974,7 +4962,6 @@
         var suma = window.recalcularSumaOF();
         var folio = generarFolioOF(departamento);
 
-        // Estatus según método de pago: PPD -> PENDIENTE, PUE -> PAGADO
         var estadoOF = metodoPago === 'PPD' ? 'PENDIENTE' : (metodoPago === 'PUE' ? 'PAGADO' : 'CREADA');
 
         var nuevaOF = {
@@ -5201,18 +5188,15 @@
         var tbody = document.getElementById('ofCuerpo');
         if (!tbody) return;
 
-        // Obtener todos los departamentos de proyectos + OF para los selects
         var deptosSet = new Set();
         var empresasSet = new Set();
         
-        // Solo agregar departamentos a los que el usuario tiene acceso
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
         proyectosVisibles.forEach(function(p) { 
           if (p.departamento) deptosSet.add(p.departamento);
           if (p.empresa) empresasSet.add(p.empresa);
         });
         
-        // También agregar departamentos de OF existentes que el usuario pueda ver
         var ofVisibles = ordenesFacturacion.filter(function(o) {
           return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
         });
@@ -5223,7 +5207,6 @@
 
         var deptosList = Array.from(deptosSet).sort();
 
-        // Poblar select de departamento para nueva OF (respetando permisos)
         var selectDepto = document.getElementById('ofDepartamento');
         var empresaInput = document.getElementById('ofEmpresa');
         var defaultData = obtenerEmpresaDeptoDefault(actual);
@@ -5231,7 +5214,6 @@
         
         if (selectDepto) {
           if (!esAccesoTotal && defaultData.departamento) {
-            // Usuario con permisos limitados - solo ve su departamento
             selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
             selectDepto.disabled = true;
             selectDepto.style.background = 'var(--gray-200)';
@@ -5242,7 +5224,6 @@
               empresaInput.style.background = 'var(--gray-200)';
             }
           } else {
-            // Acceso total - puede elegir cualquier departamento
             selectDepto.disabled = false;
             selectDepto.style.background = 'white';
             selectDepto.innerHTML = '<option value="">Departamento *</option>' + 
@@ -5258,7 +5239,6 @@
           selectDepto.onchange = window.actualizarFolioOF;
         }
 
-        // Poblar filtro de departamento (solo con departamentos a los que el usuario tiene acceso)
         var filtroDepto = document.getElementById('ofFiltroDepto');
         if (filtroDepto) {
           var valorFiltro = filtroDepto.value;
@@ -5267,12 +5247,10 @@
           if (valorFiltro && deptosList.indexOf(valorFiltro) !== -1) filtroDepto.value = valorFiltro;
         }
 
-        // **FILTRAR OF POR PERMISOS DEL USUARIO**
         var visibles = ordenesFacturacion.filter(function(o) {
           return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
         });
 
-        // Aplicar filtros adicionales
         if (filtroDepto && filtroDepto.value) {
           visibles = visibles.filter(function(o) { 
             return o.departamento === filtroDepto.value; 
@@ -5288,7 +5266,6 @@
 
         visibles = visibles.slice().reverse();
 
-        // **RESUMEN RÁPIDO PARA CXF: PAGADAS VS PENDIENTES**
         var resumenDiv = document.getElementById('ofResumenCXF');
         if (resumenDiv) {
           var totalPagado = 0, totalPendiente = 0, numPagado = 0, numPendiente = 0;
@@ -5324,7 +5301,6 @@
           var esResponsable = actual && o.responsable && o.responsable === actual.usuario;
           var esOverride = actual && (actual.rol === 'Administrador' || actual.rol === 'Director General');
 
-          // **FINANZAS: IMPRIMIR / APROBAR / CANCELAR**
           if (esFinanzas && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="btn-imprimir" onclick="window.imprimirOF(' + idxOriginal + ')">🖨️ Imprimir</button>';
             if (o.estado === 'PENDIENTE' || o.estado === 'CREADA') {
@@ -5335,7 +5311,6 @@
             }
           }
 
-          // **RESPONSABLE: PAGADA / SOL. CANCELACIÓN**
           if ((esResponsable || esOverride) && o.estado === 'FACTURADA') {
             acciones += '<button class="success" onclick="window.marcarPagadaOF(' + idxOriginal + ')">💰 Pagada</button>';
             acciones += '<button class="warning" onclick="window.solicitarCancelacionOF(' + idxOriginal + ')">⚠️ Sol. Cancelación</button>';
@@ -5553,7 +5528,7 @@
           var monto = o.monto || o.suma || 0;
           if (o.estado === 'PAGADO') { totalPagado += monto; numPagado++; }
           else if (o.estado === 'CANCELADO') { totalCancelado += monto; numCancelado++; }
-          else { totalPendiente += monto; numPendiente++; } // PENDIENTE, FACTURADA, SOL_CANCELACION, CREADA
+          else { totalPendiente += monto; numPendiente++; }
         });
 
         doc.setFontSize(10);
@@ -6165,7 +6140,6 @@
           render();
         };
 
-        // Configurar campos por defecto para OF después del login
         setTimeout(function() {
           configurarCamposDefaultOF();
         }, 100);
