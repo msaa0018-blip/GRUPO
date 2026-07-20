@@ -305,6 +305,18 @@
   button.btn-of:hover {
     background: #92400e;
   }
+  button.btn-proveedores {
+    background: #8b5cf6;
+  }
+  button.btn-proveedores:hover {
+    background: #7c3aed;
+  }
+  button.btn-productos {
+    background: #0ea5e9;
+  }
+  button.btn-productos:hover {
+    background: #0284c7;
+  }
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -393,6 +405,7 @@
     flex-wrap: wrap;
     gap: 5px;
     align-items: center;
+    justify-content: flex-start;
   }
   .actions button {
     font-size: 12px;
@@ -422,6 +435,13 @@
   }
   .actions-bottom {
     justify-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+  }
+  .actions-bottom button {
+    flex: 0 1 auto;
   }
   
   .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
@@ -1000,7 +1020,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 20px;
-    max-width: 600px;
+    max-width: 800px;
     width: 100%;
     margin: 0 auto;
     justify-items: center;
@@ -1044,6 +1064,7 @@
   }
   .modulo-item .modulo-leyenda { margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--gray-700); text-align: center }
   .modulo-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
+  .modulo-item .modulo-leyenda.admin-only { color: var(--secondary); font-weight: 600; font-size: 10px }
 
   @media (max-width: 600px) {
     .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 100% }
@@ -1590,9 +1611,11 @@
         <div class="modulo-item" data-modulo="cxp"><div class="modulo-cuadro funcional">💰</div><span class="modulo-leyenda">CXP</span></div>
         <div class="modulo-item" data-modulo="cxc"><div class="modulo-cuadro funcional">💳</div><span class="modulo-leyenda">CXC</span></div>
         <div class="modulo-item" data-modulo="of"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OF</span></div>
-        <div class="modulo-item" data-modulo="inventario"><div class="modulo-cuadro en-construccion" id="moduloInventario">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
-        <div class="modulo-item" data-modulo="ventas"><div class="modulo-cuadro en-construccion" id="moduloVentas">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
-        <div class="modulo-item" data-modulo="reportes"><div class="modulo-cuadro en-construccion" id="moduloReportes">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
+        <div class="modulo-item" data-modulo="proveedores" id="moduloProveedores"><div class="modulo-cuadro en-construccion">🏢</div><span class="modulo-leyenda construccion">Proveedores</span><span class="modulo-leyenda admin-only">(Admin)</span></div>
+        <div class="modulo-item" data-modulo="productos" id="moduloProductos"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Productos</span><span class="modulo-leyenda admin-only">(Admin)</span></div>
+        <div class="modulo-item" data-modulo="inventario"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
+        <div class="modulo-item" data-modulo="ventas"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
+        <div class="modulo-item" data-modulo="reportes"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
       </div>
     </div>
 
@@ -2526,7 +2549,11 @@
           else if (modulo === 'cxp') window.mostrarModulo('cxp');
           else if (modulo === 'cxc') window.mostrarModulo('cxc');
           else if (modulo === 'of') window.mostrarModulo('of');
-          else mostrarConstruccion();
+          else if (modulo === 'proveedores' || modulo === 'productos') {
+            mostrarConstruccion();
+          } else {
+            mostrarConstruccion();
+          }
         });
         modulosConfigurados = true;
       }
@@ -2883,13 +2910,10 @@
       // ============================================================
       function validarClabe(clabe) {
         if (!clabe || clabe === '') return { valido: false, mensaje: 'La CLABE es obligatoria.' };
-        // Eliminar espacios en blanco
         clabe = clabe.replace(/\s/g, '');
-        // Verificar que sean solo números
         if (!/^\d+$/.test(clabe)) {
           return { valido: false, mensaje: 'La CLABE debe contener solo números.' };
         }
-        // Verificar longitud exacta de 18 dígitos
         if (clabe.length !== 18) {
           return { valido: false, mensaje: 'La CLABE debe tener exactamente 18 dígitos. Actualmente tiene ' + clabe.length + ' dígitos.' };
         }
@@ -4178,6 +4202,18 @@
         return { proyectos: proyectosVisibles, oc: ocVisibles };
       }
 
+      // ============================================================
+      // FUNCIÓN DASHBOARD PARA CXP - CORREGIDA
+      // ============================================================
+      window.verDashboardProyectoCXP = function(nombreProyecto) {
+        var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
+        if (!proyecto) {
+          alert('Proyecto no encontrado');
+          return;
+        }
+        window.mostrarDashboard(proyectos.indexOf(proyecto));
+      };
+
       window.renderCXP = function() {
         var datos = obtenerDatosCXP();
         var proys = datos.proyectos;
@@ -4305,10 +4341,6 @@
               '</tr>';
           });
         }
-      };
-
-      window.verDashboardProyectoCXP = function(nombreProyecto) {
-        // Función de dashboard
       };
 
       function obtenerInfoProyectoCXC(cxc) {
