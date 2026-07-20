@@ -388,50 +388,46 @@
     background: var(--gray-100);
   }
   
-  /* Contenedor de botones - todos en una sola línea horizontal */
+  /* ===== CONTENEDOR DE BOTONES - SIN SCROLL ===== */
   .oc-acciones-container {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
     align-items: center;
     justify-content: flex-start;
-    overflow-x: auto;
+    overflow: visible !important;
     padding: 2px 0;
-    min-height: 40px;
+    min-height: 34px;
+    width: 100%;
   }
   .oc-acciones-container button {
     font-size: 11px;
-    padding: 5px 10px;
-    min-height: 30px;
-    min-width: 30px;
-    flex: 0 0 auto;
+    padding: 4px 10px;
+    min-height: 28px;
+    min-width: 28px;
+    flex: 0 1 auto;
     white-space: nowrap;
     border-radius: 6px;
-    height: 32px;
+    height: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
+    margin: 1px;
   }
-  .oc-acciones-container .btn-visualizar { background: #0891b2; }
+  .oc-acciones-container .btn-visualizar { background: #0891b2; color: white; }
   .oc-acciones-container .btn-visualizar:hover { background: #0e7490; }
-  .oc-acciones-container .btn-imprimir { background: #6b7280; }
+  .oc-acciones-container .btn-imprimir { background: #6b7280; color: white; }
   .oc-acciones-container .btn-imprimir:hover { background: #4b5563; }
-  .oc-acciones-container .btn-editar { background: #0ea5e9; }
+  .oc-acciones-container .btn-editar { background: #0ea5e9; color: white; }
   .oc-acciones-container .btn-editar:hover { background: #0284c7; }
-  .oc-acciones-container .btn-duplicar { background: #8b5cf6; }
+  .oc-acciones-container .btn-duplicar { background: #8b5cf6; color: white; }
   .oc-acciones-container .btn-duplicar:hover { background: #7c3aed; }
-  .oc-acciones-container .btn-cxp { background: #7c3aed; }
-  .oc-acciones-container .btn-cxp:hover { background: #6d28d9; }
-  .oc-acciones-container .btn-cxc { background: #0d9488; }
-  .oc-acciones-container .btn-cxc:hover { background: #0f766e; }
-  .oc-acciones-container .btn-of { background: #b45309; }
-  .oc-acciones-container .btn-of:hover { background: #92400e; }
-  .oc-acciones-container .btn-success { background: var(--success); }
+  .oc-acciones-container .btn-success { background: var(--success); color: white; }
   .oc-acciones-container .btn-success:hover { background: var(--success-hover); }
-  .oc-acciones-container .btn-warning { background: var(--warning); }
+  .oc-acciones-container .btn-warning { background: var(--warning); color: #1a1a1a; }
   .oc-acciones-container .btn-warning:hover { background: var(--warning-hover); }
-  .oc-acciones-container .btn-danger { background: var(--danger); }
+  .oc-acciones-container .btn-danger { background: var(--danger); color: white; }
   .oc-acciones-container .btn-danger:hover { background: var(--danger-hover); }
   .oc-acciones-container .btn-aura-orange-gold {
     background: #FFC700 !important;
@@ -447,10 +443,9 @@
   
   /* Ocultar la columna de acciones en el encabezado */
   th.acciones-header {
-    min-width: 80px;
+    min-width: 60px;
   }
   
-  /* Badge de estado */
   .badge {
     display: inline-block;
     padding: 3px 12px;
@@ -839,9 +834,9 @@
     }
     .oc-acciones-container button {
       font-size: 10px !important;
-      padding: 4px 8px !important;
-      min-height: 26px !important;
-      height: 28px !important;
+      padding: 3px 7px !important;
+      min-height: 24px !important;
+      height: 26px !important;
     }
     .productos-tabla table {
       min-width: 700px;
@@ -972,8 +967,8 @@
     }
     .oc-acciones-container button {
       font-size: 9px !important;
-      padding: 3px 6px !important;
-      min-height: 24px !important;
+      padding: 2px 6px !important;
+      min-height: 22px !important;
       height: 24px !important;
     }
   }
@@ -5866,78 +5861,89 @@
               estadoMostrado = o.estado || '—';
             }
 
-            // Construir botones de acción - TODOS EN UNA SOLA LÍNEA
+            // ===== CONSTRUIR BOTONES DE ACCIÓN =====
             var acciones = '';
             var rol = actual ? actual.rol : '';
 
-            // Botón Visualizar (siempre visible)
-            acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
-            
-            // Botón Imprimir (si está autorizada o concluida)
-            var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
-            if (puedeImprimir) {
-              acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
-            }
-
-            // Botón Editar (solo para OC en estado CREADA)
-            if (o.estado === 'CREADA' && (rol === 'Elaborador' || rol === 'Administrador')) {
-              acciones += '<button class="btn-editar" onclick="window.editarOC(' + idxOriginal + ')">✏️ Editar</button>';
-            }
-
-            // Botón Duplicar
-            acciones += '<button class="btn-duplicar" onclick="window.duplicarOC(' + idxOriginal + ')">📋 Duplicar</button>';
-
-            // Botón CXP (Cuentas por Pagar)
-            acciones += '<button class="btn-cxp" onclick="window.verCXPOC(' + idxOriginal + ')">💰 CXP</button>';
-
-            // Botón CXC (Cuentas por Cobrar)
-            acciones += '<button class="btn-cxc" onclick="window.verCXCOC(' + idxOriginal + ')">💳 CXC</button>';
-
-            // Botón OF (Orden de Facturación)
-            acciones += '<button class="btn-of" onclick="window.verOFOC(' + idxOriginal + ')">📄 OF</button>';
-
-            // Botones de aprobación según rol
-            if (!o.pausada) {
-              if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA' && o.solicitante === actual.u) {
-                acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
-              }
-              if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
-                acciones += '<button class="btn-warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar Jefe</button>';
-              }
-              if ((rol === 'Director General' || (rol === 'Jefe Departamento' && ocEsInmobienes(o))) && o.estado === 'PENDIENTE_DIRECTOR') {
+            // --- BOTONES PARA DIRECTOR GENERAL ---
+            if (rol === 'Director General') {
+              // Solo Visualizar, Autorizar y Cancelar
+              acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
+              
+              if (!o.pausada && o.estado === 'PENDIENTE_DIRECTOR') {
                 acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
                 acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
               }
-              if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
-                acciones += '<button class="btn-warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Paridad</button>';
+              
+              // Si la OC está autorizada, mostrar también PDF
+              if (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA') {
+                acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
-              if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
+              
+              // Si no hay acciones, mostrar mensaje
+              if (!acciones) acciones = '—';
+              
+            } else {
+              // --- BOTONES PARA OTROS ROLES ---
+              
+              // Botón Visualizar (siempre visible)
+              acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
+              
+              // Botón Imprimir (si está autorizada o concluida)
+              var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
+              if (puedeImprimir) {
+                acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
-            }
 
-            // Botones de Finanzas
-            if (rol === 'Finanzas' || rol === 'Administrador') {
-              if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
-                if (o.estadopago === 'PAGADA') {
-                  acciones += '<button class="btn-warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
-                } else {
-                  acciones += '<button class="btn-success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagar</button>';
+              // Botón Editar (solo para OC en estado CREADA)
+              if (o.estado === 'CREADA' && (rol === 'Elaborador' || rol === 'Administrador')) {
+                acciones += '<button class="btn-editar" onclick="window.editarOC(' + idxOriginal + ')">✏️ Editar</button>';
+              }
+
+              // Botones de aprobación según rol
+              if (!o.pausada) {
+                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA' && o.solicitante === actual.u) {
+                  acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
+                }
+                if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
+                  acciones += '<button class="btn-warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar Jefe</button>';
+                }
+                // Para Jefe Departamento en Inmobienes que actúa como Director
+                if (rol === 'Jefe Departamento' && ocEsInmobienes(o) && o.estado === 'PENDIENTE_DIRECTOR') {
+                  acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
+                  acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
+                }
+                if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
+                  acciones += '<button class="btn-warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Paridad</button>';
+                }
+                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                  acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
-              if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
-                acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
+
+              // Botones de Finanzas
+              if (rol === 'Finanzas' || rol === 'Administrador') {
+                if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
+                  if (o.estadopago === 'PAGADA') {
+                    acciones += '<button class="btn-warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
+                  } else {
+                    acciones += '<button class="btn-success" onclick="window.marcarPagada(' + idxOriginal + ')">💰 Pagar</button>';
+                  }
+                }
+                if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                  acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
+                }
               }
-            }
 
-            // Botón Eliminar (solo Administrador)
-            if (rol === 'Administrador') {
-              var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
-              acciones += '<button class="btn-warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
-              acciones += '<button class="btn-danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
-            }
+              // Botón Eliminar (solo Administrador)
+              if (rol === 'Administrador') {
+                var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
+                acciones += '<button class="btn-warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
+                acciones += '<button class="btn-danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
+              }
 
-            if (!acciones) acciones = '—';
+              if (!acciones) acciones = '—';
+            }
 
             // Obtener datos del proyecto
             var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
@@ -6039,45 +6045,6 @@
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
         alert('✏️ Editar OC: ' + oc.codigo + ' (Función en desarrollo)');
-      };
-
-      window.duplicarOC = function(index) {
-        var oc = ordenes[index];
-        if (!oc) return alert('OC no encontrada');
-        alert('📋 Duplicar OC: ' + oc.codigo + ' (Función en desarrollo)');
-      };
-
-      window.verCXPOC = function(index) {
-        var oc = ordenes[index];
-        if (!oc) return alert('OC no encontrada');
-        window.mostrarModulo('cxp');
-        setTimeout(function() {
-          document.getElementById('cxpFiltroProyecto').value = oc.proyecto;
-          window.renderCXP();
-        }, 300);
-      };
-
-      window.verCXCOC = function(index) {
-        var oc = ordenes[index];
-        if (!oc) return alert('OC no encontrada');
-        window.mostrarModulo('cxc');
-        setTimeout(function() {
-          document.getElementById('cxcFiltroCliente').value = oc.cliente || '';
-          window.renderCXC();
-        }, 300);
-      };
-
-      window.verOFOC = function(index) {
-        var oc = ordenes[index];
-        if (!oc) return alert('OC no encontrada');
-        window.mostrarModulo('of');
-        setTimeout(function() {
-          var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
-          if (proyecto) {
-            document.getElementById('ofFiltroDepto').value = proyecto.departamento || '';
-            window.renderOF();
-          }
-        }, 300);
       };
 
       // ============================================================
