@@ -358,6 +358,16 @@
     min-height: 32px;
     min-width: 32px
   }
+  .fila-acciones-oc td {
+    border-bottom: 2px solid var(--gray-300);
+    background: var(--gray-100);
+    padding: 8px 12px;
+  }
+  .fila-acciones-oc:hover td { background: var(--gray-100); }
+  .actions-bottom {
+    justify-content: flex-start;
+  }
+  tr[data-oc-id] td { border-bottom: none; }
   .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
     width: 100%;
     min-width: 50px;
@@ -1003,6 +1013,19 @@
   }
   .btn-volver-menu:hover { background: var(--gray-700) }
 
+  .btn-cerrar-sesion-header {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
+
   .header-actions { 
     display: flex; 
     align-items: center; 
@@ -1240,6 +1263,7 @@
     header small { font-size: 9px; }
     
     .btn-volver-menu { font-size: 11px; padding: 4px 10px; min-height: 28px; }
+    .btn-cerrar-sesion-header { font-size: 11px; padding: 4px 10px; min-height: 28px; }
     .card { padding: 12px 14px; overflow-x: auto; }
     .card h2 { font-size: 1.1rem; }
     .card h3, .card h4 { font-size: 1rem; }
@@ -1488,6 +1512,7 @@
     </div>
     <div class="header-actions">
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">⬅ Volver</button>
+      <button class="btn-cerrar-sesion-header hidden" id="btnCerrarSesionHeader" onclick="window.salir()">🚪 Cerrar sesión</button>
     </div>
   </header>
 
@@ -1509,9 +1534,6 @@
     </div>
 
     <div id="menuPrincipal" class="hidden">
-      <div style="display:flex; justify-content:flex-end; width:100%; max-width:600px; margin:0 auto 20px auto;">
-        <button onclick="window.salir()" class="danger" style="padding:8px 20px; font-size:14px;">🚪 Cerrar sesión</button>
-      </div>
       <div class="modulos-grid" id="modulosGrid">
         <div class="modulo-item" data-modulo="oc"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OC</span></div>
         <div class="modulo-item" data-modulo="proyectos"><div class="modulo-cuadro funcional">📊</div><span class="modulo-leyenda">Proyectos</span></div>
@@ -1527,7 +1549,6 @@
     <div id="contenidoApp" class="hidden">
       <div class="card flex" style="justify-content:space-between">
         <span id="sesion" style="font-weight:600"></span>
-        <button onclick="window.salir()" class="danger">Cerrar sesión</button>
       </div>
 
       <div id="panelProyecto" class="card hidden">
@@ -2039,6 +2060,24 @@
         return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
       }
 
+      // ============================================================
+      // REGLAS ESPECIALES DE APROBACIÓN POR DEPARTAMENTO
+      // ============================================================
+      function esDepartamentoInmobienes(departamento) {
+        if (!departamento) return false;
+        return departamento.trim().toUpperCase().indexOf('INMOBIENES') !== -1;
+      }
+
+      function esDepartamentoSuministros(departamento) {
+        if (!departamento) return false;
+        return departamento.trim().toUpperCase().indexOf('SUMINISERVICES') !== -1;
+      }
+
+      function ocEsInmobienes(oc) {
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        return proyecto ? esDepartamentoInmobienes(proyecto.departamento) : false;
+      }
+
       function formatoMoneda(monto, moneda) {
         moneda = moneda || 'MXN';
         var simbolo = moneda === 'USD' ? 'USD ' : '$';
@@ -2414,6 +2453,7 @@
         document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
+        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
         moduloActual = null;
         filtroPendientesActivo = false;
         ocNotificadaId = null;
@@ -2458,8 +2498,8 @@
         var panelCXC = document.getElementById('panelCXC');
         var panelOF = document.getElementById('panelOF');
         var bandejaOCCard = document.getElementById('bandejaOCCard');
-        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
-        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador');
+        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador');
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerOF = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
@@ -3502,19 +3542,128 @@
       // ============================================================
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Solicitante' && actual.rol !== 'Elaborador') return alert('Solo el Solicitante/Responsable designado puede aprobar.');
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
-        
+
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        if (!proyecto) return alert('Proyecto no encontrado');
+
+        // Inmobienes: el mismo usuario concentra las 3 aprobaciones, por lo que
+        // el rol "Jefe Departamento" también puede firmar como Solicitante.
+        var esInmobienesOC = esDepartamentoInmobienes(proyecto.departamento);
+        var rolValidoSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador' ||
+          (esInmobienesOC && actual.rol === 'Jefe Departamento');
+        if (!rolValidoSolicitante) return alert('Solo el Solicitante/Responsable designado puede aprobar.');
+
         if (actual.u !== oc.solicitante) {
           return alert('❌ Solo el solicitante designado (' + oc.solicitante + ') puede aprobar esta OC.');
         }
-        
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
-        if (!proyecto) return alert('Proyecto no encontrado');
+
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
-        
+
+        // SUMINISERVICES: no requiere Jefe de Departamento. Al firmar el Solicitante,
+        // la OC procede directo a autorizada (o a Director si excede el 60%). Solo 2 pasos.
+        if (esDepartamentoSuministros(proyecto.departamento)) {
+          var montoEnMonedaProyectoSS = oc.montomxn || 0;
+          if (proyecto.moneda === 'USD') {
+            if (oc.paridadinicial) montoEnMonedaProyectoSS = oc.montomxn / oc.paridadinicial;
+            else montoEnMonedaProyectoSS = oc.montomxn / 20;
+          }
+
+          if (oc.moneda === 'USD' && !oc.tipocambio) {
+            var updatesSSpar = {
+              estado: 'PENDIENTE_PARIDAD',
+              fechaaprobacionsolicitante: new Date().toISOString(),
+              nombresolicitante: actual.u
+            };
+            var errSSpar = (await supabase.from('ordenes').update(updatesSSpar).eq('id', oc.id)).error;
+            if (errSSpar) return alert('Error al actualizar OC');
+            Object.assign(oc, updatesSSpar);
+            render();
+            alert('⏳ OC en USD. Requiere paridad final.');
+            return;
+          }
+
+          var comprometidoPrevioSS = gastoProyectoMoneda(proyecto.nombre);
+          var excedePorSiSolaSS = montoEnMonedaProyectoSS > proyecto.limite;
+          var excedeAcumuladoSS = (comprometidoPrevioSS + montoEnMonedaProyectoSS) >= proyecto.limite;
+
+          if (!excedePorSiSolaSS && !excedeAcumuladoSS) {
+            var updatesSSauto = {
+              estado: 'AUTORIZADA',
+              fechaaprobacionsolicitante: new Date().toISOString(),
+              nombresolicitante: actual.u,
+              fechaaprobacionjefe: new Date().toISOString(),
+              nombrejefe: actual.u,
+              fechaaprobaciondirector: new Date().toISOString(),
+              nombredirector: actual.u,
+              estadopago: null,
+              notificacion_enviada: false
+            };
+            var errSSauto = (await supabase.from('ordenes').update(updatesSSauto).eq('id', oc.id)).error;
+            if (errSSauto) return alert('Error al actualizar OC');
+            Object.assign(oc, updatesSSauto);
+            render();
+            alert('✅ OC autorizada automáticamente (dentro del 60%).');
+            return;
+          }
+
+          var updatesSSdir = {
+            estado: 'PENDIENTE_DIRECTOR',
+            fechaaprobacionsolicitante: new Date().toISOString(),
+            nombresolicitante: actual.u
+          };
+          var errSSdir = (await supabase.from('ordenes').update(updatesSSdir).eq('id', oc.id)).error;
+          if (errSSdir) return alert('Error al actualizar OC');
+          Object.assign(oc, updatesSSdir);
+
+          try {
+            var productosSS = oc.productos || [];
+            if (typeof productosSS === 'string') {
+              try { productosSS = JSON.parse(productosSS); } catch (e) { productosSS = []; }
+            }
+            if (!Array.isArray(productosSS)) productosSS = [];
+
+            var datosOCSS = {
+              codigo: oc.codigo,
+              proyectonombre: oc.proyecto,
+              empresa: proyecto.empresa,
+              departamento: proyecto.departamento,
+              cliente: oc.cliente || proyecto.cliente || 'No especificado',
+              proveedor: oc.proveedor,
+              rfc: oc.rfc || 'No especificado',
+              responsable: oc.responsable,
+              solicitante: oc.solicitante || 'No especificado',
+              elaborador: oc.elaborador || 'Desconocido',
+              moneda: oc.moneda || 'MXN',
+              montototal: oc.montototal || 0,
+              montomxn: oc.montomxn || 0,
+              fechapago: oc.fechapago || new Date().toISOString(),
+              fechaentrega: oc.fechaentrega || new Date().toISOString(),
+              productos: productosSS
+            };
+
+            var motivoExcesoSS = excedePorSiSolaSS
+              ? 'Esta OC por sí sola excede el 60% del presupuesto del proyecto.'
+              : 'La suma de lo ya pagado en el proyecto más esta OC alcanza o supera el 60% del presupuesto.';
+
+            var mensajeTelegramSS = formatearMensajeOC(datosOCSS, proyecto, oc.id, motivoExcesoSS);
+            var enviadoSS = await enviarNotificacionTelegram(mensajeTelegramSS);
+            if (enviadoSS) {
+              await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+              oc.notificacion_enviada = true;
+              ocNotificadaId = oc.id;
+            }
+          } catch (error) {
+            console.error('❌ Error al enviar notificación:', error);
+          }
+
+          render();
+          alert('⏳ OC supera el 60%. Enviada a Director para autorización.');
+          return;
+        }
+
         var updates = { 
           estado: 'APROBADA_SOLICITANTE', 
           fechaaprobacionsolicitante: new Date().toISOString(), 
@@ -3634,8 +3783,10 @@
       };
 
       window.autorizarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         var oc = ordenes[index];
+        var esInmobienesOC = actual && oc ? ocEsInmobienes(oc) : false;
+        var puedeAutorizar = actual && (actual.rol === 'Director General' || (esInmobienesOC && actual.rol === 'Jefe Departamento'));
+        if (!puedeAutorizar) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
 
@@ -3664,8 +3815,10 @@
       };
 
       window.cancelarDirector = async function(index) {
-        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso');
         var oc = ordenes[index];
+        var esInmobienesOC = actual && oc ? ocEsInmobienes(oc) : false;
+        var puedeCancelar = actual && (actual.rol === 'Director General' || (esInmobienesOC && actual.rol === 'Jefe Departamento'));
+        if (!puedeCancelar) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
         
@@ -5568,11 +5721,13 @@
             var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
             var esAdmin = actual && actual.rol === 'Administrador';
             var esFinanzas = actual && actual.rol === 'Finanzas';
+            var esDirectorProyecto = actual && actual.rol === 'Director General';
             var deptoColor = getColorByEmpresa(p.empresa);
 
             var botones = '';
             if (!esFinanzas) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
-            if (esAdmin) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
+            if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
+            if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
             tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + p.departamento + '</span></td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? '#b91c1c' : '#166534') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? '#dc2626' : '#22c55e') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
@@ -5613,7 +5768,7 @@
             var rowClass = '';
             var botonAura = '';
 
-            if (o.estado === 'PENDIENTE_DIRECTOR' && actual && actual.rol === 'Director General') {
+            if (o.estado === 'PENDIENTE_DIRECTOR' && actual && (actual.rol === 'Director General' || (actual.rol === 'Jefe Departamento' && ocEsInmobienes(o)))) {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
                 botonAura = 'btn-aura-orange-gold';
@@ -5697,7 +5852,7 @@
                   if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
                     acciones += '<button class="warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar (Jefe Depto)</button>';
                   }
-                  if (rol === 'Director General' && o.estado === 'PENDIENTE_DIRECTOR') {
+                  if ((rol === 'Director General' || (rol === 'Jefe Departamento' && ocEsInmobienes(o))) && o.estado === 'PENDIENTE_DIRECTOR') {
                     acciones += '<button class="success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button><button class="danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar OC</button>';
                   }
                   if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
@@ -5717,7 +5872,8 @@
             var cliente = proyecto ? proyecto.cliente : '—';
             var deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
 
-            tablaOC.innerHTML += '<tr class="' + rowClass + '" data-oc-id="' + o.id + '"><td data-label="Código"><code>' + o.codigo + '</code></td><td data-label="Proyecto">' + o.proyecto + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + (proyecto ? proyecto.departamento : '—') + '</span></td><td data-label="Cliente">' + cliente + '</td><td data-label="Proveedor">' + o.proveedor + '</td><td data-label="RFC">' + o.rfc + '</td><td data-label="Dirección entrega">' + (o.direccionentrega || '—') + '</td><td data-label="CP">' + (o.cp || '—') + '</td><td data-label="Moneda">' + o.moneda + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td><td data-label="F.Entrega">' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td data-label="UUID">' + (o.uuidfactura || '—') + '</td><td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td><td data-label="Acciones"><div class="actions">' + acciones + '</div></td></tr>';
+            tablaOC.innerHTML += '<tr class="' + rowClass + '" data-oc-id="' + o.id + '"><td data-label="Código"><code>' + o.codigo + '</code></td><td data-label="Proyecto">' + o.proyecto + '</td><td data-label="Depto"><span class="depto-color" style="background-color:' + deptoColor + '">' + (proyecto ? proyecto.departamento : '—') + '</span></td><td data-label="Cliente">' + cliente + '</td><td data-label="Proveedor">' + o.proveedor + '</td><td data-label="RFC">' + o.rfc + '</td><td data-label="Dirección entrega">' + (o.direccionentrega || '—') + '</td><td data-label="CP">' + (o.cp || '—') + '</td><td data-label="Moneda">' + o.moneda + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td><td data-label="F.Entrega">' + new Date(o.fechaentrega).toLocaleDateString() + '</td><td data-label="UUID">' + (o.uuidfactura || '—') + '</td><td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td><td data-label="Acciones"></td></tr>' +
+              '<tr class="fila-acciones-oc ' + rowClass + '" data-oc-acciones-id="' + o.id + '"><td colspan="16"><div class="actions actions-bottom">' + acciones + '</div></td></tr>';
           });
         }
 
@@ -5882,7 +6038,7 @@
           var panelCXC = document.getElementById('panelCXC');
           var panelOF = document.getElementById('panelOF');
           var bandejaOCCard = document.getElementById('bandejaOCCard');
-          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador');
           
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
@@ -6091,13 +6247,34 @@
       };
 
       window.eliminarProyecto = async function(index) {
-        if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso. Solo el Director puede eliminar el saldo de un proyecto.');
         var proyecto = proyectos[index];
         if (!confirm('¿Eliminar proyecto "' + proyecto.nombre + '" y todas sus OC asociadas?')) return;
         await supabase.from('ordenes').delete().eq('proyecto', proyecto.nombre);
         await supabase.from('proyectos').delete().eq('id', proyecto.id);
         proyectos.splice(index, 1);
         render();
+      };
+
+      window.aumentarSaldoProyecto = async function(index) {
+        if (!actual || actual.rol !== 'Director General') return alert('No tienes permiso. Solo el Director puede aumentar el saldo de un proyecto.');
+        var proyecto = proyectos[index];
+        if (!proyecto) return alert('Proyecto no encontrado');
+
+        var montoStr = prompt('Monto a AGREGAR al presupuesto de "' + proyecto.nombre + '" (' + proyecto.moneda + '). Presupuesto actual: ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda));
+        if (montoStr === null) return;
+        var monto = parseFloat(montoStr);
+        if (!monto || monto <= 0) { alert('Monto inválido.'); return; }
+
+        var nuevoPresupuesto = proyecto.presupuesto + monto;
+        var nuevoLimite = nuevoPresupuesto * 0.60;
+
+        var updates = { presupuesto: nuevoPresupuesto, limite: nuevoLimite };
+        var { error } = await supabase.from('proyectos').update(updates).eq('id', proyecto.id);
+        if (error) return alert('Error al actualizar el proyecto');
+        Object.assign(proyecto, updates);
+        render();
+        alert('✅ Saldo aumentado. Nuevo presupuesto: ' + formatoMoneda(nuevoPresupuesto, proyecto.moneda));
       };
 
       // ============================================================
