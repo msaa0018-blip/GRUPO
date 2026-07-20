@@ -1505,6 +1505,35 @@
     50% { box-shadow: 0 4px 30px rgba(255, 199, 0, 0.6), 0 0 40px rgba(255, 199, 0, 0.2); }
     100% { box-shadow: 0 4px 20px rgba(255, 199, 0, 0.3); }
   }
+
+  /* ===== LOGO POR DEPARTAMENTO - CENTRADO EN LA BANDEJA DE OC ===== */
+  .depto-logo-container {
+    text-align: center;
+    padding: 10px 0 5px 0;
+    margin-bottom: 8px;
+    border-bottom: 2px solid var(--gray-200);
+  }
+  .depto-logo-container img {
+    max-height: 60px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  .depto-logo-container .depto-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-700);
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* ===== BANDEJA DE OC - CONTENEDOR PRINCIPAL CON MÁRGENES LATERALES DE 10PX ===== */
+  #bandejaOCCard {
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+    max-width: none !important;
+    width: auto !important;
+  }
 </style>
 </head>
 <body>
@@ -1915,6 +1944,13 @@
       <!-- ===== BANDEJA DE OC - NUEVO DISEÑO DE DOS FILAS ===== -->
       <div class="card" id="bandejaOCCard">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
+        
+        <!-- ===== LOGO POR DEPARTAMENTO ===== -->
+        <div id="deptoLogoContainer" class="depto-logo-container hidden">
+          <img id="deptoLogoImg" src="" alt="Logo del departamento" style="display:none;">
+          <span id="deptoNameDisplay" class="depto-name"></span>
+        </div>
+        
         <div id="ocLocationBanner" class="oc-location-banner hidden">
           <span class="banner-icon">🔍</span>
           <div class="banner-text">
@@ -1923,9 +1959,34 @@
           </div>
           <button class="banner-close" onclick="window.ocultarBannerLocalizacion()">✕</button>
         </div>
+        
         <div class="filtros-container">
-          <div id="filtroProyectoContainer" class="filtro-item hidden"><label>Proyecto:</label><select id="filtroProyecto"><option value="">Todos</option></select></div>
-          <div id="filtroDeptoContainer" class="filtro-item hidden"><label>Departamento:</label><select id="filtroDepto"><option value="">Todos</option></select></div>
+          <!-- ===== FILTRO DE DEPARTAMENTO (PRIMERO) ===== -->
+          <div id="filtroDeptoContainer" class="filtro-item hidden">
+            <label>Departamento:</label>
+            <select id="filtroDepto"><option value="">Todos</option></select>
+          </div>
+          <!-- ===== FILTRO DE PROYECTO (SEGUNDO, DEPENDIENTE DE DEPARTAMENTO) ===== -->
+          <div id="filtroProyectoContainer" class="filtro-item hidden">
+            <label>Proyecto:</label>
+            <select id="filtroProyecto"><option value="">Todos</option></select>
+          </div>
+          <!-- ===== FILTRO DE ESTADO (NUEVO) ===== -->
+          <div id="filtroEstadoContainer" class="filtro-item hidden">
+            <label>Estado:</label>
+            <select id="filtroEstado">
+              <option value="">Todos</option>
+              <option value="CREADA">CREADA</option>
+              <option value="APROBADA_SOLICITANTE">APROBADA SOLICITANTE</option>
+              <option value="AUTORIZADA">AUTORIZADA</option>
+              <option value="PENDIENTE_DIRECTOR">PENDIENTE DIRECTOR</option>
+              <option value="PAGADA">PAGADA</option>
+              <option value="CONCLUIDA">CONCLUIDA</option>
+              <option value="PAUSADA">PAUSADA</option>
+              <option value="CANCELADA">CANCELADA</option>
+              <option value="PENDIENTE_PARIDAD">PENDIENTE PARIDAD</option>
+            </select>
+          </div>
           <button id="btnPendientesPagar" class="btn-pendientes-pagar hidden" onclick="window.filtrarPendientesPagar()">💰 Pendientes por Pagar</button>
           <button id="btnLimpiarFiltros" class="btn-pendientes-pagar hidden" onclick="window.limpiarFiltros()" style="background:var(--gray-500);">🗑️ Limpiar Filtros</button>
         </div>
@@ -2126,7 +2187,8 @@
       // ============================================================
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
+        if (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
+        if (usuario.rol === 'Director General') return false; // Director NO puede generar OF
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
         var deptoNorm = normalizar(departamento);
@@ -2140,8 +2202,11 @@
       // ============================================================
       function obtenerEmpresaDeptoDefault(usuario) {
         if (!usuario) return { empresa: '', departamento: '' };
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
+        if (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
           return { empresa: '', departamento: '', libre: true };
+        }
+        if (usuario.rol === 'Director General') {
+          return { empresa: '', departamento: '', libre: true, esDirector: true };
         }
         if (usuario.permisos && usuario.permisos.length > 0) {
           return { 
@@ -2539,7 +2604,7 @@
         var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador');
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var puedeVerOF = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+        var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
 
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
@@ -2746,25 +2811,35 @@
       };
 
       window.limpiarFiltros = function() {
-        document.getElementById('filtroProyecto').value = '';
         document.getElementById('filtroDepto').value = '';
+        document.getElementById('filtroProyecto').value = '';
+        document.getElementById('filtroEstado').value = '';
         filtroPendientesActivo = false;
         var btn = document.getElementById('btnPendientesPagar');
         btn.style.background = 'var(--warning)';
         var pendientes = contarPendientesPagar();
         btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
+        actualizarFiltroProyectos();
         render();
       };
 
       function contarPendientesPagar() {
         var ocVisibles = filtrarOCSegunUsuario(actual);
-        var filtroProyecto = document.getElementById('filtroProyecto');
-        if (filtroProyecto && filtroProyecto.value) ocVisibles = ocVisibles.filter(function(o) { return o.proyecto === filtroProyecto.value; });
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
           ocVisibles = ocVisibles.filter(function(o) {
             var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
             return p && p.departamento === filtroDepto.value;
+          });
+        }
+        var filtroProyecto = document.getElementById('filtroProyecto');
+        if (filtroProyecto && filtroProyecto.value) ocVisibles = ocVisibles.filter(function(o) { return o.proyecto === filtroProyecto.value; });
+        var filtroEstado = document.getElementById('filtroEstado');
+        if (filtroEstado && filtroEstado.value) {
+          ocVisibles = ocVisibles.filter(function(o) { 
+            var estado = o.estado;
+            if (o.pausada) estado = 'PAUSADA';
+            return estado === filtroEstado.value;
           });
         }
         return ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; }).length;
@@ -4601,6 +4676,42 @@
         
         var defaultData = obtenerEmpresaDeptoDefault(actual);
         var esAccesoTotal = defaultData.libre === true;
+        var esDirector = defaultData.esDirector === true;
+        
+        if (esDirector) {
+          empresaInput.disabled = true;
+          empresaInput.style.background = 'var(--gray-200)';
+          empresaInput.placeholder = 'Director - Sin acceso';
+          empresaInput.value = '';
+          
+          deptoSelect.disabled = true;
+          deptoSelect.style.background = 'var(--gray-200)';
+          deptoSelect.innerHTML = '<option value="">Director - Sin acceso</option>';
+          
+          folioInput.value = '';
+          
+          var selectResp = document.getElementById('ofResponsable');
+          selectResp.innerHTML = '<option value="">Director - Sin acceso</option>';
+          selectResp.disabled = true;
+          selectResp.style.background = 'var(--gray-200)';
+          
+          document.getElementById('ofRazonSocial').disabled = true;
+          document.getElementById('ofRFC').disabled = true;
+          document.getElementById('ofDireccion').disabled = true;
+          document.getElementById('ofCP').disabled = true;
+          document.getElementById('ofODCContrato').disabled = true;
+          document.getElementById('ofBanco').disabled = true;
+          document.getElementById('ofCuenta').disabled = true;
+          document.getElementById('ofCfdi').disabled = true;
+          document.getElementById('ofFormaPago').disabled = true;
+          document.getElementById('ofMetodoPago').disabled = true;
+          document.getElementById('ofMoneda').disabled = true;
+          
+          document.querySelector('#panelOF .btn-success').disabled = true;
+          document.querySelector('#panelOF .btn-warning').disabled = true;
+          
+          return;
+        }
         
         if (esAccesoTotal) {
           empresaInput.disabled = false;
@@ -5094,7 +5205,7 @@
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
         if (!of) return;
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador' && actual.rol !== 'Director General') {
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') {
           alert('❌ Solo Finanzas puede imprimir la OF.');
           return;
         }
@@ -5129,7 +5240,7 @@
         var of = ordenesFacturacion[index];
         if (!of) return;
 
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador' && actual.rol !== 'Director General') {
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') {
           alert('❌ Solo Finanzas puede aprobar la OF.');
           return;
         }
@@ -5171,7 +5282,7 @@
         if (!of) return;
 
         var esResponsable = of.responsable && of.responsable === actual.usuario;
-        var esOverride = actual.rol === 'Administrador' || actual.rol === 'Director General';
+        var esOverride = actual.rol === 'Administrador';
         if (!esResponsable && !esOverride) {
           alert('❌ Solo el responsable asignado a esta OF puede marcarla como pagada.');
           return;
@@ -5201,7 +5312,7 @@
         if (!of) return;
 
         var esResponsable = of.responsable && of.responsable === actual.usuario;
-        var esOverride = actual.rol === 'Administrador' || actual.rol === 'Director General';
+        var esOverride = actual.rol === 'Administrador';
         if (!esResponsable && !esOverride) {
           alert('❌ Solo el responsable asignado a esta OF puede solicitar su cancelación.');
           return;
@@ -5232,7 +5343,7 @@
         var of = ordenesFacturacion[index];
         if (!of) return;
 
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador' && actual.rol !== 'Director General') {
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') {
           alert('❌ Solo Finanzas puede cancelar la OF.');
           return;
         }
@@ -5286,9 +5397,19 @@
         var empresaInput = document.getElementById('ofEmpresa');
         var defaultData = obtenerEmpresaDeptoDefault(actual);
         var esAccesoTotal = defaultData.libre === true;
+        var esDirector = defaultData.esDirector === true;
         
         if (selectDepto) {
-          if (!esAccesoTotal && defaultData.departamento) {
+          if (esDirector) {
+            selectDepto.disabled = true;
+            selectDepto.style.background = 'var(--gray-200)';
+            selectDepto.innerHTML = '<option value="">Director - Sin acceso</option>';
+            if (empresaInput) {
+              empresaInput.disabled = true;
+              empresaInput.style.background = 'var(--gray-200)';
+              empresaInput.value = 'Director - Sin acceso';
+            }
+          } else if (!esAccesoTotal && defaultData.departamento) {
             selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
             selectDepto.disabled = true;
             selectDepto.style.background = 'var(--gray-200)';
@@ -5360,7 +5481,7 @@
           return;
         }
 
-        var esFinanzas = actual && (actual.rol === 'Finanzas' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var esFinanzas = actual && (actual.rol === 'Finanzas' || actual.rol === 'Administrador');
 
         tbody.innerHTML = visibles.map(function(o) {
           var idxOriginal = ordenesFacturacion.indexOf(o);
@@ -5374,7 +5495,7 @@
 
           var acciones = '';
           var esResponsable = actual && o.responsable && o.responsable === actual.usuario;
-          var esOverride = actual && (actual.rol === 'Administrador' || actual.rol === 'Director General');
+          var esOverride = actual && actual.rol === 'Administrador';
 
           if (esFinanzas && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="btn-imprimir" onclick="window.imprimirOF(' + idxOriginal + ')">🖨️ Imprimir</button>';
@@ -5729,6 +5850,93 @@
       };
 
       // ============================================================
+      // FUNCIÓN PARA ACTUALIZAR FILTRO DE PROYECTOS DEPENDIENTE DE DEPARTAMENTO
+      // ============================================================
+      function actualizarFiltroProyectos() {
+        var deptoSelect = document.getElementById('filtroDepto');
+        var proyectoSelect = document.getElementById('filtroProyecto');
+        if (!deptoSelect || !proyectoSelect) return;
+
+        var deptoSeleccionado = deptoSelect.value;
+        var valorActualProyecto = proyectoSelect.value;
+
+        proyectoSelect.innerHTML = '<option value="">Todos</option>';
+
+        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+
+        var proyectosFiltrados = proyectosVisibles;
+        if (deptoSeleccionado) {
+          proyectosFiltrados = proyectosFiltrados.filter(function(p) {
+            return p.departamento === deptoSeleccionado;
+          });
+        }
+
+        proyectosFiltrados.forEach(function(p) {
+          var opt = document.createElement('option');
+          opt.value = p.nombre;
+          opt.textContent = p.nombre;
+          if (p.nombre === valorActualProyecto) opt.selected = true;
+          proyectoSelect.appendChild(opt);
+        });
+
+        render();
+      }
+
+      // ============================================================
+      // FUNCIÓN PARA MOSTRAR LOGO POR DEPARTAMENTO
+      // ============================================================
+      function mostrarLogoDepartamento() {
+        var container = document.getElementById('deptoLogoContainer');
+        var img = document.getElementById('deptoLogoImg');
+        var nameDisplay = document.getElementById('deptoNameDisplay');
+        
+        if (!container || !img || !nameDisplay) return;
+        
+        if (!actual) {
+          container.classList.add('hidden');
+          return;
+        }
+        
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var depto = defaultData.departamento || '';
+        var empresa = defaultData.empresa || '';
+        
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          container.classList.add('hidden');
+          return;
+        }
+        
+        if (!depto) {
+          container.classList.add('hidden');
+          return;
+        }
+        
+        var deptoUpper = depto.toUpperCase().trim();
+        var logoUrl = '';
+        var nombreMostrar = depto;
+        
+        if (deptoUpper.includes('INMOBIENES')) {
+          logoUrl = 'LOGO INMOBIENES.png';
+          nombreMostrar = 'INMOBIENES';
+        } else if (deptoUpper.includes('SUMINISERVICES')) {
+          logoUrl = 'LOGO SUMINISERVICES.jpeg';
+          nombreMostrar = 'SUMINISERVICES';
+        } else {
+          container.classList.add('hidden');
+          return;
+        }
+        
+        img.src = logoUrl;
+        img.style.display = 'block';
+        img.onerror = function() {
+          img.style.display = 'none';
+          nameDisplay.textContent = nombreMostrar;
+        };
+        nameDisplay.textContent = nombreMostrar;
+        container.classList.remove('hidden');
+      }
+
+      // ============================================================
       // FUNCIONES DE RENDER PRINCIPAL - CON DISEÑO DE DOS FILAS
       // ============================================================
       function render() {
@@ -5742,15 +5950,26 @@
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
         var ocVisibles = filtrarOCSegunUsuario(actual);
 
-        var filtroProyecto = document.getElementById('filtroProyecto');
-        if (filtroProyecto && filtroProyecto.value) {
-          ocVisibles = ocVisibles.filter(function(o) { return o.proyecto === filtroProyecto.value; });
-        }
+        // ==== FILTROS: DEPARTAMENTO, PROYECTO, ESTADO ====
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
           ocVisibles = ocVisibles.filter(function(o) {
             var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
             return p && p.departamento === filtroDepto.value;
+          });
+        }
+
+        var filtroProyecto = document.getElementById('filtroProyecto');
+        if (filtroProyecto && filtroProyecto.value) {
+          ocVisibles = ocVisibles.filter(function(o) { return o.proyecto === filtroProyecto.value; });
+        }
+
+        var filtroEstado = document.getElementById('filtroEstado');
+        if (filtroEstado && filtroEstado.value) {
+          ocVisibles = ocVisibles.filter(function(o) { 
+            var estado = o.estado;
+            if (o.pausada) estado = 'PAUSADA';
+            return estado === filtroEstado.value;
           });
         }
 
@@ -5992,29 +6211,35 @@
         }
 
         // Actualizar filtros
-        var filtroProyectoSelect = document.getElementById('filtroProyecto');
-        if (filtroProyectoSelect) {
-          var currentVal = filtroProyectoSelect.value;
-          filtroProyectoSelect.innerHTML = '<option value="">Todos los proyectos</option>';
-          proyectosVisibles.forEach(function(p) {
-            var opt = document.createElement('option');
-            opt.value = p.nombre;
-            opt.textContent = p.nombre;
-            if (p.nombre === currentVal) opt.selected = true;
-            filtroProyectoSelect.appendChild(opt);
-          });
-        }
         var filtroDeptoSelect = document.getElementById('filtroDepto');
         if (filtroDeptoSelect) {
-          var currentVal = filtroDeptoSelect.value;
+          var currentDepto = filtroDeptoSelect.value;
           filtroDeptoSelect.innerHTML = '<option value="">Todos los departamentos</option>';
           var deptos = [...new Set(proyectosVisibles.map(function(p) { return p.departamento; }))];
           deptos.forEach(function(d) {
             var opt = document.createElement('option');
             opt.value = d;
             opt.textContent = d;
-            if (d === currentVal) opt.selected = true;
+            if (d === currentDepto) opt.selected = true;
             filtroDeptoSelect.appendChild(opt);
+          });
+        }
+
+        var filtroProyectoSelect = document.getElementById('filtroProyecto');
+        if (filtroProyectoSelect) {
+          var currentProyecto = filtroProyectoSelect.value;
+          var deptoSeleccionado = document.getElementById('filtroDepto').value;
+          filtroProyectoSelect.innerHTML = '<option value="">Todos los proyectos</option>';
+          var proyectosFiltrados = proyectosVisibles;
+          if (deptoSeleccionado) {
+            proyectosFiltrados = proyectosFiltrados.filter(function(p) { return p.departamento === deptoSeleccionado; });
+          }
+          proyectosFiltrados.forEach(function(p) {
+            var opt = document.createElement('option');
+            opt.value = p.nombre;
+            opt.textContent = p.nombre;
+            if (p.nombre === currentProyecto) opt.selected = true;
+            filtroProyectoSelect.appendChild(opt);
           });
         }
 
@@ -6038,6 +6263,9 @@
             irDirectoALaOC(pendingOcId);
           }, 600);
         }
+
+        // Mostrar logo por departamento
+        mostrarLogoDepartamento();
       }
 
       // ============================================================
@@ -6225,14 +6453,16 @@
         document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
         document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
 
-        var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
         var filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
+        var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
+        var filtroEstadoContainer = document.getElementById('filtroEstadoContainer');
         var btnPendientes = document.getElementById('btnPendientesPagar');
         var btnLimpiar = document.getElementById('btnLimpiarFiltros');
 
         var puedeFiltrar = esDirector || esAdmin || esFinanzas;
-        filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
         filtroDeptoContainer.classList.toggle('hidden', !puedeFiltrar);
+        filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
+        filtroEstadoContainer.classList.toggle('hidden', !puedeFiltrar);
 
         if (esFinanzas) {
           btnPendientes.classList.remove('hidden');
@@ -6246,6 +6476,26 @@
 
         var selectProyecto = document.getElementById('selectProyecto');
         selectProyecto.onchange = window.actualizarDatosOC;
+
+        var filtroDepto = document.getElementById('filtroDepto');
+        filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
+        var deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
+        deptos.forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          filtroDepto.appendChild(opt);
+        });
+        filtroDepto.onchange = function() {
+          actualizarFiltroProyectos();
+          if (actual.rol === 'Finanzas') {
+            var pendientes = contarPendientesPagar();
+            var btn = document.getElementById('btnPendientesPagar');
+            btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
+            if (!filtroPendientesActivo) btn.style.background = 'var(--warning)';
+          }
+          render();
+        };
 
         var filtroProyecto = document.getElementById('filtroProyecto');
         filtroProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
@@ -6265,16 +6515,8 @@
           render();
         };
 
-        var filtroDepto = document.getElementById('filtroDepto');
-        filtroDepto.innerHTML = '<option value="">Todos los departamentos</option>';
-        var deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
-        deptos.forEach(function(d) {
-          var opt = document.createElement('option');
-          opt.value = d;
-          opt.textContent = d;
-          filtroDepto.appendChild(opt);
-        });
-        filtroDepto.onchange = function() {
+        var filtroEstado = document.getElementById('filtroEstado');
+        filtroEstado.onchange = function() {
           if (actual.rol === 'Finanzas') {
             var pendientes = contarPendientesPagar();
             var btn = document.getElementById('btnPendientesPagar');
@@ -6435,6 +6677,7 @@
       });
 
       window.irDirectoALaOC = irDirectoALaOC;
+      window.actualizarFiltroProyectos = actualizarFiltroProyectos;
 
     })();
   </script>
