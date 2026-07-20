@@ -66,6 +66,8 @@
     max-width: 100%;
     height: auto
   }
+  
+  /* ===== HEADER - SIEMPRE ALINEADO A LA DERECHA ===== */
   header {
     background: var(--primary);
     color: white;
@@ -81,17 +83,21 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
     flex-shrink: 0;
   }
+  
   header .logo {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap
+    flex-wrap: wrap;
+    flex: 0 1 auto;
   }
+  
   header .logo img {
     height: 36px;
     width: auto;
     max-height: 40px
   }
+  
   header .logo .company .name {
     font-size: 18px;
     font-weight: 600;
@@ -99,12 +105,14 @@
     display: block;
     line-height: 1.2
   }
+  
   header .logo .company .sub {
     font-size: 10px;
     opacity: .75;
     font-weight: 300;
     display: block
   }
+  
   header small {
     font-size: 11px;
     opacity: .8;
@@ -112,13 +120,15 @@
     flex-shrink: 0
   }
   
-  /* ===== HEADER ACTIONS - BOTONES VOLVER Y CERRAR SESIÓN ===== */
+  /* ===== HEADER ACTIONS - SIEMPRE A LA DERECHA ===== */
   .header-actions { 
     display: flex; 
     align-items: center; 
     gap: 8px; 
     flex-wrap: nowrap;
     justify-content: flex-end;
+    margin-left: auto;
+    flex: 0 1 auto;
   }
   
   .header-actions .btn-volver-menu {
@@ -399,13 +409,14 @@
   .mt-10 { margin-top: 10px }
   .hidden { display: none !important }
   
-  /* ===== ACCIONES EN HORIZONTAL CON SEPARACIÓN DE 5px ===== */
+  /* ===== ACCIONES EN HORIZONTAL CON SEPARACIÓN DE 5px - COMO COLUMNAS DE TABLA ===== */
   .actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 5px;
     align-items: center;
     justify-content: flex-start;
+    overflow-x: auto;
   }
   .actions button {
     font-size: 12px;
@@ -413,6 +424,7 @@
     min-height: 32px;
     min-width: 32px;
     flex: 0 1 auto;
+    white-space: nowrap;
   }
   
   /* ===== FILA DE ACCIONES CON LÍNEA DE SEPARACIÓN MÁS MARCADA ===== */
@@ -436,12 +448,14 @@
   .actions-bottom {
     justify-content: flex-start;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 5px;
     align-items: center;
+    overflow-x: auto;
   }
   .actions-bottom button {
     flex: 0 1 auto;
+    white-space: nowrap;
   }
   
   .productos-tabla input, .productos-tabla textarea, .productos-tabla select {
@@ -770,6 +784,22 @@
     #ofTabla .table-wrapper table {
       min-width: 700px;
     }
+    
+    /* ===== HEADER RESPONSIVE ===== */
+    header {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .header-actions {
+      margin-left: auto;
+      flex: 0 1 auto;
+    }
+    .header-actions .btn-volver-menu,
+    .header-actions .btn-cerrar-sesion-header {
+      font-size: 11px;
+      padding: 4px 10px;
+      min-height: 28px;
+    }
   }
 
   @media (max-width: 480px) {
@@ -818,6 +848,20 @@
     }
     #bandejaOCCard .table-wrapper table {
       min-width: 1000px;
+    }
+    
+    /* ===== HEADER RESPONSIVE ===== */
+    header .logo .company .name {
+      font-size: 14px;
+    }
+    header .logo .company .sub {
+      font-size: 8px;
+    }
+    .header-actions .btn-volver-menu,
+    .header-actions .btn-cerrar-sesion-header {
+      font-size: 10px;
+      padding: 4px 8px;
+      min-height: 26px;
     }
   }
 
