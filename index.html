@@ -1165,6 +1165,7 @@
   .grupo-formulario:last-child { margin-bottom: 0 }
   .campo-obligatorio::after { content: " *"; color: var(--danger); font-weight: bold }
 
+  /* ===== MENÚ PRINCIPAL CON SOLO CXC Y CXP ===== */
   #menuPrincipal {
     background: var(--gray-100);
     padding: 30px 20px;
@@ -1177,9 +1178,9 @@
   }
   .modulos-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
-    max-width: 800px;
+    max-width: 400px;
     width: 100%;
     margin: 0 auto;
     justify-items: center;
@@ -1190,18 +1191,18 @@
     align-items: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    width: 80px;
+    width: 120px;
   }
   .modulo-item .modulo-cuadro {
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
+    width: 120px;
+    height: 120px;
+    border-radius: 16px;
     background: white;
     border: 2px solid var(--gray-200);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 48px;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
@@ -1221,15 +1222,68 @@
     border-color: var(--gray-300);
     box-shadow: none;
   }
-  .modulo-item .modulo-leyenda { margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--gray-700); text-align: center }
+  .modulo-item .modulo-leyenda { margin-top: 8px; font-size: 16px; font-weight: 500; color: var(--gray-700); text-align: center }
   .modulo-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
   .modulo-item .modulo-leyenda.admin-only { color: var(--secondary); font-weight: 600; font-size: 10px }
 
+  /* ===== MENÚ INTERNO (TODOS LOS MÓDULOS) ===== */
+  #menuInterno {
+    background: var(--gray-100);
+    padding: 20px;
+    text-align: center;
+    min-height: 30vh;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #menuInterno.visible { display: flex }
+  .modulos-interno-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto;
+    justify-items: center;
+  }
+  .modulo-interno-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 80px;
+  }
+  .modulo-interno-item .modulo-cuadro {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    background: white;
+    border: 2px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  .modulo-interno-item .modulo-cuadro:hover {
+    transform: scale(1.05);
+    border-color: var(--secondary);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15);
+  }
+  .modulo-interno-item .modulo-leyenda { margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--gray-700); text-align: center }
+
   @media (max-width: 600px) {
-    .modulos-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 100% }
-    .modulo-item { width: 60px }
-    .modulo-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
-    .modulo-item .modulo-leyenda { font-size: 11px }
+    .modulos-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 100% }
+    .modulo-item { width: 100px }
+    .modulo-item .modulo-cuadro { width: 100px; height: 100px; font-size: 36px }
+    .modulo-item .modulo-leyenda { font-size: 13px }
+    .modulos-interno-grid { grid-template-columns: repeat(3, 1fr); gap: 10px }
+    .modulo-interno-item { width: 60px }
+    .modulo-interno-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
+    .modulo-interno-item .modulo-leyenda { font-size: 10px }
   }
 
   #contenidoApp { display: none !important }
@@ -1605,18 +1659,45 @@
       </div>
     </div>
 
+    <!-- ===== MENÚ PRINCIPAL - SOLO CXC Y CXP ===== -->
     <div id="menuPrincipal" class="hidden">
+      <h2 style="margin-bottom:20px; color:var(--gray-700);">📊 Selecciona un Módulo</h2>
       <div class="modulos-grid" id="modulosGrid">
-        <div class="modulo-item" data-modulo="oc"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OC</span></div>
-        <div class="modulo-item" data-modulo="proyectos"><div class="modulo-cuadro funcional">📊</div><span class="modulo-leyenda">Proyectos</span></div>
-        <div class="modulo-item" data-modulo="cxp"><div class="modulo-cuadro funcional">💰</div><span class="modulo-leyenda">CXP</span></div>
-        <div class="modulo-item" data-modulo="cxc"><div class="modulo-cuadro funcional">💳</div><span class="modulo-leyenda">CXC</span></div>
-        <div class="modulo-item" data-modulo="of"><div class="modulo-cuadro funcional">📄</div><span class="modulo-leyenda">OF</span></div>
-        <div class="modulo-item" data-modulo="proveedores" id="moduloProveedores"><div class="modulo-cuadro en-construccion">🏢</div><span class="modulo-leyenda construccion">Proveedores</span><span class="modulo-leyenda admin-only">(Admin)</span></div>
-        <div class="modulo-item" data-modulo="productos" id="moduloProductos"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Productos</span><span class="modulo-leyenda admin-only">(Admin)</span></div>
-        <div class="modulo-item" data-modulo="inventario"><div class="modulo-cuadro en-construccion">🏭</div><span class="modulo-leyenda construccion">Inventario</span></div>
-        <div class="modulo-item" data-modulo="ventas"><div class="modulo-cuadro en-construccion">📦</div><span class="modulo-leyenda construccion">Ventas</span></div>
-        <div class="modulo-item" data-modulo="reportes"><div class="modulo-cuadro en-construccion">📋</div><span class="modulo-leyenda construccion">Reportes</span></div>
+        <div class="modulo-item" data-modulo="cxp">
+          <div class="modulo-cuadro funcional">💰</div>
+          <span class="modulo-leyenda">CXP</span>
+        </div>
+        <div class="modulo-item" data-modulo="cxc">
+          <div class="modulo-cuadro funcional">💳</div>
+          <span class="modulo-leyenda">CXC</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MENÚ INTERNO - TODOS LOS MÓDULOS ===== -->
+    <div id="menuInterno">
+      <h3 style="margin-bottom:15px; color:var(--gray-700);">📋 Selecciona un Módulo Interno</h3>
+      <div class="modulos-interno-grid" id="modulosInternoGrid">
+        <div class="modulo-interno-item" data-modulo="oc">
+          <div class="modulo-cuadro funcional">📄</div>
+          <span class="modulo-leyenda">OC</span>
+        </div>
+        <div class="modulo-interno-item" data-modulo="proyectos">
+          <div class="modulo-cuadro funcional">📊</div>
+          <span class="modulo-leyenda">Proyectos</span>
+        </div>
+        <div class="modulo-interno-item" data-modulo="cxp">
+          <div class="modulo-cuadro funcional">💰</div>
+          <span class="modulo-leyenda">CXP</span>
+        </div>
+        <div class="modulo-interno-item" data-modulo="cxc">
+          <div class="modulo-cuadro funcional">💳</div>
+          <span class="modulo-leyenda">CXC</span>
+        </div>
+        <div class="modulo-interno-item" data-modulo="of">
+          <div class="modulo-cuadro funcional">📄</div>
+          <span class="modulo-leyenda">OF</span>
+        </div>
       </div>
     </div>
 
@@ -1641,7 +1722,6 @@
         <div id="msgProyecto"></div>
       </div>
 
-      <!-- ===== TABLA DE CONTROL DE PROYECTOS - ANCHO COMPLETO ===== -->
       <div class="card" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important;">
         <h2 style="padding-left:18px; padding-right:18px;">📊 Control por Proyecto</h2>
         <div id="adminActions" class="hidden" style="margin-bottom:10px; padding-left:18px; padding-right:18px;">
@@ -1776,7 +1856,6 @@
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
         <h3>📋 Detalle por Proyecto</h3>
-        <!-- ===== TABLA DETALLE POR PROYECTO CXP - ANCHO COMPLETO ===== -->
         <div id="cxpTablaProyectos" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
             <table style="min-width:100% !important; width:100% !important;">
@@ -1786,7 +1865,6 @@
           </div>
         </div>
         <h3>📄 Órdenes de Compra</h3>
-        <!-- ===== TABLA OC CXP - ANCHO COMPLETO ===== -->
         <div id="cxpTablaOC" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
             <table style="min-width:100% !important; width:100% !important;">
@@ -1848,7 +1926,6 @@
           <div id="cxcSaldoContent"></div>
         </div>
         <h3>📋 Cuentas por Cobrar</h3>
-        <!-- ===== TABLA CXC - ANCHO COMPLETO ===== -->
         <div id="cxcTabla" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
             <table style="min-width:100% !important; width:100% !important;">
@@ -1876,7 +1953,6 @@
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXF()">🖨️ Reporte CXF</button>
         </div>
         <div id="ofResumenCXF" style="margin:10px 0;"></div>
-
 
         <div class="card" style="margin:12px 0; padding:14px 16px;">
           <h4>➕ Nueva Orden de Facturación</h4>
@@ -1988,11 +2064,10 @@
         </div>
       </div>
 
-      <!-- ===== BANDEJA DE OC - NUEVO DISEÑO DE DOS FILAS ===== -->
+      <!-- ===== BANDEJA DE OC ===== -->
       <div class="card" id="bandejaOCCard">
         <h2>📬 Bandeja de Órdenes de Compra</h2>
         
-        <!-- ===== LOGO POR DEPARTAMENTO ===== -->
         <div id="deptoLogoContainer" class="depto-logo-container hidden">
           <img id="deptoLogoImg" src="" alt="Logo del departamento" style="display:none;">
           <span id="deptoNameDisplay" class="depto-name"></span>
@@ -2008,17 +2083,14 @@
         </div>
         
         <div class="filtros-container">
-          <!-- ===== FILTRO DE DEPARTAMENTO (PRIMERO) ===== -->
           <div id="filtroDeptoContainer" class="filtro-item hidden">
             <label>Departamento:</label>
             <select id="filtroDepto"><option value="">Todos</option></select>
           </div>
-          <!-- ===== FILTRO DE PROYECTO (SEGUNDO, DEPENDIENTE DE DEPARTAMENTO) ===== -->
           <div id="filtroProyectoContainer" class="filtro-item hidden">
             <label>Proyecto:</label>
             <select id="filtroProyecto"><option value="">Todos</option></select>
           </div>
-          <!-- ===== FILTRO DE ESTADO (NUEVO) ===== -->
           <div id="filtroEstadoContainer" class="filtro-item hidden">
             <label>Estado:</label>
             <select id="filtroEstado">
@@ -2164,6 +2236,46 @@
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
       // ============================================================
+      // MAPEO DE EMPRESAS Y DEPARTAMENTOS
+      // ============================================================
+      var EMPRESAS_MAP = {
+        'GRUPO INDUSTRIAL EXTINGUE': 'GIE',
+        'VEXPAR OPERACIONES': 'VOP',
+        'SUMINISERVICES': 'SMV',
+        'INMOBIENES': 'ICE',
+        'ISCI': 'ISCI'
+      };
+
+      var DEPARTAMENTOS_MAP = {
+        'SERVICIOS': 'SERV',
+        'TALLER': 'TLLER',
+        'VENTAS CORPORATIVAS EXTINGUE': 'VC GIE',
+        'VENTAS CORPORATIVAS VEXPAR': 'VC VOP'
+      };
+
+      function getAbreviaturaEmpresa(empresa) {
+        if (!empresa) return empresa;
+        var emp = empresa.trim().toUpperCase();
+        for (var key in EMPRESAS_MAP) {
+          if (emp.indexOf(key) !== -1 || emp === key) {
+            return EMPRESAS_MAP[key];
+          }
+        }
+        return empresa;
+      }
+
+      function getAbreviaturaDepartamento(departamento) {
+        if (!departamento) return departamento;
+        var dep = departamento.trim().toUpperCase();
+        for (var key in DEPARTAMENTOS_MAP) {
+          if (dep.indexOf(key) !== -1 || dep === key) {
+            return DEPARTAMENTOS_MAP[key];
+          }
+        }
+        return departamento;
+      }
+
+      // ============================================================
       // FUNCIONES DE UTILIDAD
       // ============================================================
       function getColorByEmpresa(empresa) {
@@ -2171,6 +2283,8 @@
         var emp = empresa.trim().toUpperCase();
         if (emp.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) return '#FF0000';
         if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return '#0000FF';
+        if (emp.indexOf('INMOBIENES') !== -1) return '#FF8C00';
+        if (emp.indexOf('SUMINISERVICES') !== -1) return '#00A86B';
         return '#6b7280';
       }
 
@@ -2179,6 +2293,8 @@
         var emp = empresa.trim().toUpperCase();
         if (emp.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) return 'GRUPO INDUSTRIAL EXTINGUE';
         if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return 'VEXPAR OPERACIONES';
+        if (emp.indexOf('INMOBIENES') !== -1) return 'INMOBIENES';
+        if (emp.indexOf('SUMINISERVICES') !== -1) return 'SUMINISERVICES';
         return 'GRUPO INDUSTRIAL EXTINGUE';
       }
 
@@ -2187,6 +2303,8 @@
         var emp = empresa.trim().toUpperCase();
         if (emp.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
         if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return 'SUMINISTROS ESPECIALES INDUSTRIALES';
+        if (emp.indexOf('INMOBIENES') !== -1) return 'SOLUCIONES INMOBILIARIAS INTEGRALES';
+        if (emp.indexOf('SUMINISERVICES') !== -1) return 'SUMINISTROS Y SERVICIOS ESPECIALIZADOS';
         return 'GRACIAS POR CONFIARNOS TU SEGURIDAD';
       }
 
@@ -2227,6 +2345,13 @@
         var empNorm = normalizar(empresa);
         var deptoNorm = normalizar(depto);
         return usuario.permisos.some(function(p) { return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm; });
+      }
+
+      function usuarioPuedeCrearProyectos(usuario) {
+        if (!usuario) return false;
+        if (usuario.rol === 'Administrador') return true;
+        if (usuario.rol === 'Jefe Departamento') return true;
+        return false;
       }
 
       // ============================================================
@@ -2593,8 +2718,10 @@
       // ============================================================
       // FUNCIONES DE NAVEGACIÓN
       // ============================================================
-      window.mostrarMenu = function() {
+      window.mostrarMenuPrincipal = function() {
         document.getElementById('menuPrincipal').classList.remove('hidden');
+        document.getElementById('menuInterno').classList.remove('visible');
+        document.getElementById('menuInterno').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
@@ -2603,9 +2730,43 @@
         filtroPendientesActivo = false;
         ocNotificadaId = null;
         window.ocultarBannerLocalizacion();
+        
+        // Ocultar todos los paneles
+        document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
+          card.classList.add('hidden');
+        });
       };
 
-      window.volverAlMenu = function() { window.mostrarMenu(); };
+      window.volverAlMenu = function() {
+        // Si estamos en un módulo interno, volver al menú interno
+        if (moduloActual && moduloActual !== 'cxp' && moduloActual !== 'cxc') {
+          window.mostrarMenuInterno();
+        } else {
+          window.mostrarMenuPrincipal();
+        }
+      };
+
+      window.mostrarMenuInterno = function() {
+        document.getElementById('menuPrincipal').classList.add('hidden');
+        document.getElementById('menuInterno').classList.add('visible');
+        document.getElementById('menuInterno').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.remove('visible');
+        document.getElementById('contenidoApp').classList.add('hidden');
+        document.getElementById('btnVolverMenu').classList.remove('hidden');
+        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
+        
+        // Ocultar todos los paneles
+        document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
+          card.classList.add('hidden');
+        });
+        
+        // Ocultar el menú interno si no hay módulos visibles
+        var modulosVisibles = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item:not(.hidden)');
+        if (modulosVisibles.length === 0) {
+          document.getElementById('menuInterno').classList.remove('visible');
+          document.getElementById('menuInterno').classList.add('hidden');
+        }
+      };
 
       function mostrarConstruccion() { alert('🚧 Módulo en construcción'); }
 
@@ -2613,29 +2774,52 @@
 
       function configurarModulos() {
         if (modulosConfigurados) return;
+        
+        // Menú principal (CXC y CXP)
         var grid = document.getElementById('modulosGrid');
-        if (!grid) return;
-        grid.addEventListener('click', function(e) {
-          var item = e.target.closest('.modulo-item');
-          if (!item) return;
-          var modulo = item.dataset.modulo;
-          if (modulo === 'oc') window.mostrarModulo('oc');
-          else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
-          else if (modulo === 'cxp') window.mostrarModulo('cxp');
-          else if (modulo === 'cxc') window.mostrarModulo('cxc');
-          else if (modulo === 'of') window.mostrarModulo('of');
-          else if (modulo === 'proveedores' || modulo === 'productos') {
-            mostrarConstruccion();
-          } else {
-            mostrarConstruccion();
-          }
-        });
+        if (grid) {
+          grid.addEventListener('click', function(e) {
+            var item = e.target.closest('.modulo-item');
+            if (!item) return;
+            var modulo = item.dataset.modulo;
+            if (modulo === 'cxp') {
+              window.mostrarMenuInterno();
+              setTimeout(function() { window.mostrarModulo('cxp'); }, 100);
+            } else if (modulo === 'cxc') {
+              window.mostrarMenuInterno();
+              setTimeout(function() { window.mostrarModulo('cxc'); }, 100);
+            }
+          });
+        }
+        
+        // Menú interno (todos los módulos)
+        var gridInterno = document.getElementById('modulosInternoGrid');
+        if (gridInterno) {
+          gridInterno.addEventListener('click', function(e) {
+            var item = e.target.closest('.modulo-interno-item');
+            if (!item) return;
+            var modulo = item.dataset.modulo;
+            
+            // Verificar si el módulo está visible
+            if (item.classList.contains('hidden')) return;
+            
+            if (modulo === 'oc') window.mostrarModulo('oc');
+            else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
+            else if (modulo === 'cxp') window.mostrarModulo('cxp');
+            else if (modulo === 'cxc') window.mostrarModulo('cxc');
+            else if (modulo === 'of') window.mostrarModulo('of');
+            else mostrarConstruccion();
+          });
+        }
+        
         modulosConfigurados = true;
       }
 
       window.mostrarModulo = function(modulo) {
         moduloActual = modulo;
         document.getElementById('menuPrincipal').classList.add('hidden');
+        document.getElementById('menuInterno').classList.add('hidden');
+        document.getElementById('menuInterno').classList.remove('visible');
         document.getElementById('contenidoApp').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.add('visible');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
@@ -2647,63 +2831,57 @@
         var panelCXC = document.getElementById('panelCXC');
         var panelOF = document.getElementById('panelOF');
         var bandejaOCCard = document.getElementById('bandejaOCCard');
-        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
-        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+        
+        var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+        var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
+        var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
 
+        // Ocultar todos los paneles primero
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
         tablaProyectosCard.classList.add('hidden');
         panelCXP.classList.add('hidden');
         panelCXC.classList.add('hidden');
         panelOF.classList.add('hidden');
+        bandejaOCCard.classList.add('hidden');
 
+        // Mostrar según el módulo seleccionado
         if (modulo === 'oc') {
-          if (puedeCrear) panelOC.classList.remove('hidden');
+          if (puedeCrearOC) panelOC.classList.remove('hidden');
           bandejaOCCard.classList.remove('hidden');
+          tablaProyectosCard.classList.remove('hidden');
         } else if (modulo === 'proyectos') {
           if (puedeCrearProyecto) { 
             panelProyecto.classList.remove('hidden'); 
           }
           tablaProyectosCard.classList.remove('hidden');
-          bandejaOCCard.classList.add('hidden');
         } else if (modulo === 'cxp') {
           if (puedeVerCXP) {
             panelCXP.classList.remove('hidden');
             cargarFiltrosCXP();
             setTimeout(function() { window.renderCXP(); }, 100);
-          } else {
-            alert('⚠️ No tienes permiso para acceder a Cuentas por Pagar.');
-            window.mostrarMenu();
-            return;
           }
-          bandejaOCCard.classList.add('hidden');
+          bandejaOCCard.classList.remove('hidden');
         } else if (modulo === 'cxc') {
           if (puedeVerCXC) {
             panelCXC.classList.remove('hidden');
             cargarFiltrosCXC();
             setTimeout(function() { window.renderCXC(); }, 100);
-          } else {
-            alert('⚠️ No tienes permiso para acceder a Cuentas por Cobrar.');
-            window.mostrarMenu();
-            return;
           }
-          bandejaOCCard.classList.add('hidden');
         } else if (modulo === 'of') {
           if (puedeVerOF) {
             panelOF.classList.remove('hidden');
             setTimeout(function() { window.renderOF(); }, 100);
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
-            window.mostrarMenu();
+            window.mostrarMenuInterno();
             return;
           }
-          bandejaOCCard.classList.add('hidden');
         }
 
-        if (modulo === 'proyectos' || modulo === 'oc') {
+        if (modulo === 'proyectos' || modulo === 'oc' || modulo === 'cxp') {
           window.actualizarDatosOC();
           window.actualizarDatosProyecto();
         }
@@ -2736,7 +2914,7 @@
         
         if (!actual) return;
         
-        if (actual.rol === 'Director General') {
+        if (actual.rol === 'Director General' || actual.rol === 'Administrador') {
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
           empresaInput.placeholder = 'Escribe la empresa';
@@ -2773,7 +2951,7 @@
         var selectedId = parseInt(selectProyecto.value);
         
         if (!selectedId || isNaN(selectedId)) {
-          if (actual && actual.rol === 'Director General') {
+          if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
             empresaInput.disabled = false;
             empresaInput.style.background = 'white';
             empresaInput.placeholder = 'Escribe la empresa';
@@ -2803,7 +2981,7 @@
           return;
         }
         
-        if (actual && actual.rol === 'Director General') {
+        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
           empresaInput.value = proyecto.empresa;
@@ -3028,7 +3206,7 @@
         var deptoOC = document.getElementById('departamentoOC').value.trim().toUpperCase();
         
         if (!selectedId || isNaN(selectedId)) {
-          if (actual && actual.rol === 'Director General') {
+          if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
             if (!empresaOC || !deptoOC) {
               msgDiv.innerHTML = '<div class="alert">⚠️ INGRESA EMPRESA Y DEPARTAMENTO.</div>';
               return null;
@@ -3074,7 +3252,7 @@
           return null;
         }
         
-        if (actual.rol !== 'Director General') {
+        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador') {
           empresaOC = proyecto.empresa;
           deptoOC = proyecto.departamento;
           
@@ -3140,7 +3318,7 @@
           return null;
         }
         
-        if (actual.rol !== 'Director General') {
+        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador') {
           if (!usuarioPuedeAcceder(solicitanteUser, empresa, departamento)) {
             msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
             return null;
@@ -6019,7 +6197,7 @@
       }
 
       // ============================================================
-      // FUNCIONES DE RENDER PRINCIPAL - CON DISEÑO DE DOS FILAS
+      // FUNCIONES DE RENDER PRINCIPAL
       // ============================================================
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
@@ -6085,7 +6263,7 @@
           });
         }
 
-        if (actual && actual.rol === 'Director General') {
+        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
           var optionManual = document.createElement('option');
           optionManual.value = '';
           optionManual.textContent = '📝 Crear sin proyecto (manual)';
@@ -6175,7 +6353,6 @@
 
             // --- BOTONES PARA DIRECTOR GENERAL ---
             if (rol === 'Director General') {
-              // Solo Visualizar, Autorizar y Cancelar
               acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
               
               if (!o.pausada && o.estado === 'PENDIENTE_DIRECTOR') {
@@ -6183,27 +6360,20 @@
                 acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
               }
               
-              // Si la OC está autorizada, mostrar también PDF
               if (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA') {
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               
-              // Si no hay acciones, mostrar mensaje
               if (!acciones) acciones = '—';
               
             } else {
-              // --- BOTONES PARA OTROS ROLES ---
-              
-              // Botón Visualizar (siempre visible)
               acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
               
-              // Botón Imprimir (si está autorizada o concluida)
               var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
               if (puedeImprimir) {
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
 
-              // Botones de aprobación según rol
               if (!o.pausada) {
                 if ((rol === 'Solicitante' || rol === 'Elaborador' || rol === 'Jefe Departamento') && o.estado === 'CREADA' && (o.solicitante === actual.u || rol === 'Jefe Departamento')) {
                   acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
@@ -6211,7 +6381,6 @@
                 if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
                   acciones += '<button class="btn-warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar Jefe</button>';
                 }
-                // Para Jefe Departamento en Inmobienes que actúa como Director
                 if (rol === 'Jefe Departamento' && ocEsInmobienes(o) && o.estado === 'PENDIENTE_DIRECTOR') {
                   acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
                   acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
@@ -6224,7 +6393,6 @@
                 }
               }
 
-              // Botones de Finanzas
               if (rol === 'Finanzas' || rol === 'Administrador') {
                 if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                   if (o.estadopago === 'PAGADA') {
@@ -6238,7 +6406,6 @@
                 }
               }
 
-              // Botón Eliminar (solo Administrador)
               if (rol === 'Administrador') {
                 var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
                 acciones += '<button class="btn-warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
@@ -6248,14 +6415,12 @@
               if (!acciones) acciones = '—';
             }
 
-            // Obtener datos del proyecto
             var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
             var cliente = proyecto ? proyecto.cliente : '—';
             var deptoColor = proyecto ? getColorByEmpresa(proyecto.empresa) : '#6b7280';
             var fechaPago = o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—';
             var fechaEntrega = o.fechaentrega ? new Date(o.fechaentrega).toLocaleDateString() : '—';
 
-            // ===== FILA 1: INFORMACIÓN DE LA OC =====
             tablaOC.innerHTML += 
               '<tr class="fila-oc-info ' + rowClass + '" data-oc-id="' + o.id + '">' +
                 '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
@@ -6276,7 +6441,6 @@
                 '<td data-label="Acciones" class="acciones-header">—</td>' +
               '</tr>';
 
-            // ===== FILA 2: BOTONES DE ACCIÓN (con colspan de todas las columnas) =====
             tablaOC.innerHTML += 
               '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
                 '<td colspan="16">' +
@@ -6346,12 +6510,11 @@
           }, 600);
         }
 
-        // Mostrar logo por departamento
         mostrarLogoDepartamento();
       }
 
       // ============================================================
-      // FUNCIONES ADICIONALES PARA BOTONES DE ACCIÓN
+      // FUNCIONES ADICIONALES
       // ============================================================
       window.editarOC = function(index) {
         var oc = ordenes[index];
@@ -6460,23 +6623,37 @@
           document.getElementById('contenidoApp').classList.add('visible');
           document.getElementById('btnVolverMenu').classList.remove('hidden');
           
-          var panelOC = document.getElementById('panelOC');
-          var panelProyecto = document.getElementById('panelProyecto');
-          var tablaProyectosCard = document.getElementById('tablaProyectosCard');
-          var panelCXP = document.getElementById('panelCXP');
-          var panelCXC = document.getElementById('panelCXC');
-          var panelOF = document.getElementById('panelOF');
-          var bandejaOCCard = document.getElementById('bandejaOCCard');
-          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+          // Configurar qué módulos mostrar según el rol
+          var esAdmin = actual && actual.rol === 'Administrador';
+          var esFinanzas = actual && actual.rol === 'Finanzas';
+          var esJefe = actual && actual.rol === 'Jefe Departamento';
+          var esSolicitante = actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador');
           
-          panelProyecto.classList.add('hidden');
-          tablaProyectosCard.classList.add('hidden');
-          panelCXP.classList.add('hidden');
-          panelCXC.classList.add('hidden');
-          panelOF.classList.add('hidden');
-          if (puedeCrear) panelOC.classList.remove('hidden');
-          else panelOC.classList.add('hidden');
-          bandejaOCCard.classList.remove('hidden');
+          // Ocultar todos los paneles
+          document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
+            card.classList.add('hidden');
+          });
+          
+          var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+          var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+          var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+          var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
+          var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
+          
+          // Mostrar paneles según permisos
+          if (puedeCrearOC) document.getElementById('panelOC').classList.remove('hidden');
+          if (puedeCrearProyecto) document.getElementById('panelProyecto').classList.remove('hidden');
+          if (puedeVerCXP) document.getElementById('panelCXP').classList.remove('hidden');
+          if (puedeVerCXC) document.getElementById('panelCXC').classList.remove('hidden');
+          if (puedeVerOF) document.getElementById('panelOF').classList.remove('hidden');
+          
+          // Siempre mostrar bandeja de OC
+          document.getElementById('bandejaOCCard').classList.remove('hidden');
+          
+          // Mostrar tabla de proyectos si es admin o jefe
+          if (esAdmin || esJefe) {
+            document.getElementById('tablaProyectosCard').classList.remove('hidden');
+          }
           
           moduloActual = 'oc';
           
@@ -6486,7 +6663,7 @@
               window.actualizarDatosOC();
             }
             var cuerpo = document.getElementById('cuerpoProductos');
-            if (cuerpo && cuerpo.children.length === 0 && !panelOC.classList.contains('hidden')) {
+            if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
               window.agregarFilaProducto();
             }
             
@@ -6505,6 +6682,7 @@
           }, 300);
           
         } else {
+          // Mostrar menú principal con CXC y CXP
           document.getElementById('menuPrincipal').classList.remove('hidden');
           document.getElementById('contenidoApp').classList.add('hidden');
           configurarModulos();
@@ -6515,7 +6693,9 @@
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           infoSesion += ' - Acceso total';
         } else if (opciones.length === 1) {
-          infoSesion += ' - ' + opciones[0].empresa + ' / ' + opciones[0].depto;
+          var empresaAbr = getAbreviaturaEmpresa(opciones[0].empresa);
+          var deptoAbr = getAbreviaturaDepartamento(opciones[0].depto);
+          infoSesion += ' - ' + empresaAbr + ' / ' + deptoAbr;
         } else if (opciones.length > 1) {
           infoSesion += ' - ' + opciones.length + ' empresas/departamentos';
         }
@@ -6527,14 +6707,48 @@
           document.getElementById('adminActions').classList.add('hidden');
         }
 
-        var esElaborador = actual.rol === 'Elaborador';
-        var esDirector = actual.rol === 'Director General';
         var esAdmin = actual.rol === 'Administrador';
         var esFinanzas = actual.rol === 'Finanzas';
         var esJefe = actual.rol === 'Jefe Departamento';
+        var esSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador';
+        var esDirector = actual.rol === 'Director General';
 
-        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector && !esJefe);
-        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector && !esJefe);
+        // Configurar visibilidad del menú interno según el rol
+        var modulosInterno = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item');
+        modulosInterno.forEach(function(item) {
+          var modulo = item.dataset.modulo;
+          var visible = false;
+          
+          if (esAdmin || esFinanzas || esJefe) {
+            // Admin, Finanzas y Jefe ven todos los módulos
+            visible = true;
+          } else if (esDirector) {
+            // Director solo ve OC y Proyectos
+            visible = (modulo === 'oc' || modulo === 'proyectos');
+          } else if (esSolicitante) {
+            // Solicitante solo ve OC y Proyectos (solo lectura)
+            visible = (modulo === 'oc' || modulo === 'proyectos');
+          }
+          
+          if (!visible) {
+            item.classList.add('hidden');
+          } else {
+            item.classList.remove('hidden');
+          }
+        });
+
+        // Configurar visibilidad de paneles
+        var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+        var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
+        var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+        var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+        var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
+        
+        document.getElementById('panelProyecto').classList.toggle('hidden', !puedeCrearProyecto);
+        document.getElementById('panelOC').classList.toggle('hidden', !puedeCrearOC);
+        document.getElementById('panelCXP').classList.toggle('hidden', !puedeVerCXP);
+        document.getElementById('panelCXC').classList.toggle('hidden', !puedeVerCXC);
+        document.getElementById('panelOF').classList.toggle('hidden', !puedeVerOF);
 
         var filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
         var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
@@ -6630,7 +6844,7 @@
       window.crearProyecto = async function() {
         var empresa, departamento;
         
-        if (actual && actual.rol === 'Director General') {
+        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
           empresa = document.getElementById('empresaProyecto').value.trim().toUpperCase();
           departamento = document.getElementById('departamentoProyecto').value.trim().toUpperCase();
         } else {
@@ -6661,7 +6875,7 @@
           return;
         }
         
-        if (actual.rol !== 'Director General') {
+        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador') {
           if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
             msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
             return;
