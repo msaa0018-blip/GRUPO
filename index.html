@@ -2298,7 +2298,7 @@
       }
 
       function getPosiblesResponsables() {
-        return usuariosDB.filter(function(u) { return u.rol === 'Elaborador' || u.rol === 'Solicitante'; });
+        return usuariosDB.filter(function(u) { return u.rol === 'Elaborador' || u.rol === 'Solicitante' || u.rol === 'Jefe Departamento'; });
       }
 
       // ============================================================
@@ -3215,6 +3215,46 @@
       }
 
       // ============================================================
+      // FUNCIONES PARA OBTENER LOGO POR DEPARTAMENTO
+      // ============================================================
+      function getLogoPorDepartamento(empresa, departamento) {
+        var deptoUpper = (departamento || '').toUpperCase().trim();
+        var empUpper = (empresa || '').toUpperCase().trim();
+        
+        // Primero revisar por departamento específico
+        if (deptoUpper.includes('INMOBIENES')) {
+          return {
+            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png',
+            tipo: 'PNG'
+          };
+        }
+        
+        if (deptoUpper.includes('SUMINISERVICES')) {
+          return {
+            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg',
+            tipo: 'JPEG'
+          };
+        }
+        
+        // Si no hay departamento específico, usar logo por empresa
+        if (empUpper.includes('GRUPO INDUSTRIAL EXTINGUE')) {
+          return {
+            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png',
+            tipo: 'PNG'
+          };
+        }
+        
+        if (empUpper.includes('VEXPAR OPERACIONES')) {
+          return {
+            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg',
+            tipo: 'JPEG'
+          };
+        }
+        
+        return null;
+      }
+
+      // ============================================================
       // GENERAR PDF PARA OC
       // ============================================================
       async function generarPDFParaPreview(datos, ocExistente) {
@@ -3227,47 +3267,36 @@
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
-        var esExtingue = datos.empresa && datos.empresa.toUpperCase().indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1;
-        var esVexpar = datos.empresa && datos.empresa.toUpperCase().indexOf('VEXPAR OPERACIONES') !== -1;
+        
+        // Obtener logo por departamento o empresa
+        var logoInfo = getLogoPorDepartamento(datos.empresa, datos.departamento);
+        var logoUrl = logoInfo ? logoInfo.url : null;
+        var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
+
+        // Si no hay logo específico, usar el logo de Extingue como fallback
+        if (!logoUrl) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+          logoTipo = 'PNG';
+        }
 
         try {
-          if (esExtingue) {
-            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
-            var response = await fetch(imgUrl);
-            if (response.ok) {
-              var blob = await response.blob();
-              var imgData = await new Promise(function(resolve) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result); };
-                reader.readAsDataURL(blob);
-              });
-              var img = new Image();
-              img.src = imgData;
-              await new Promise(function(resolve) { img.onload = resolve; });
-              var imgWidth = 140;
-              var imgHeight = (img.height / img.width) * imgWidth;
-              doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-              y += imgHeight + 25;
-            } else throw new Error('No se pudo cargar la imagen');
-          } else if (esVexpar) {
-            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
-            var response = await fetch(imgUrl);
-            if (response.ok) {
-              var blob = await response.blob();
-              var imgData = await new Promise(function(resolve) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result); };
-                reader.readAsDataURL(blob);
-              });
-              var img = new Image();
-              img.src = imgData;
-              await new Promise(function(resolve) { img.onload = resolve; });
-              var imgWidth = 140;
-              var imgHeight = (img.height / img.width) * imgWidth;
-              doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-              y += imgHeight + 25;
-            } else throw new Error('No se pudo cargar la imagen');
+          var response = await fetch(logoUrl);
+          if (response.ok) {
+            var blob = await response.blob();
+            var imgData = await new Promise(function(resolve) {
+              var reader = new FileReader();
+              reader.onload = function(e) { resolve(e.target.result); };
+              reader.readAsDataURL(blob);
+            });
+            var img = new Image();
+            img.src = imgData;
+            await new Promise(function(resolve) { img.onload = resolve; });
+            var imgWidth = 140;
+            var imgHeight = (img.height / img.width) * imgWidth;
+            doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+            y += imgHeight + 25;
           } else {
+            // Fallback: texto simple
             doc.setFontSize(18);
             doc.setTextColor(11, 26, 51);
             doc.setFont('helvetica', 'bold');
@@ -3275,6 +3304,7 @@
             y += 60;
           }
         } catch (e) {
+          // Fallback: texto simple
           doc.setFontSize(18);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
@@ -4949,47 +4979,36 @@
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
-        var esExtingue = datos.empresa && datos.empresa.toUpperCase().indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1;
-        var esVexpar = datos.empresa && datos.empresa.toUpperCase().indexOf('VEXPAR OPERACIONES') !== -1;
+        
+        // Obtener logo por departamento o empresa
+        var logoInfo = getLogoPorDepartamento(datos.empresa, datos.departamento);
+        var logoUrl = logoInfo ? logoInfo.url : null;
+        var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
+
+        // Si no hay logo específico, usar el logo de Extingue como fallback
+        if (!logoUrl) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+          logoTipo = 'PNG';
+        }
 
         try {
-          if (esExtingue) {
-            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
-            var response = await fetch(imgUrl);
-            if (response.ok) {
-              var blob = await response.blob();
-              var imgData = await new Promise(function(resolve) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result); };
-                reader.readAsDataURL(blob);
-              });
-              var img = new Image();
-              img.src = imgData;
-              await new Promise(function(resolve) { img.onload = resolve; });
-              var imgWidth = 140;
-              var imgHeight = (img.height / img.width) * imgWidth;
-              doc.addImage(imgData, 'PNG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-              y += imgHeight + 25;
-            } else throw new Error('No se pudo cargar la imagen');
-          } else if (esVexpar) {
-            var imgUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg';
-            var response = await fetch(imgUrl);
-            if (response.ok) {
-              var blob = await response.blob();
-              var imgData = await new Promise(function(resolve) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result); };
-                reader.readAsDataURL(blob);
-              });
-              var img = new Image();
-              img.src = imgData;
-              await new Promise(function(resolve) { img.onload = resolve; });
-              var imgWidth = 140;
-              var imgHeight = (img.height / img.width) * imgWidth;
-              doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-              y += imgHeight + 25;
-            } else throw new Error('No se pudo cargar la imagen');
+          var response = await fetch(logoUrl);
+          if (response.ok) {
+            var blob = await response.blob();
+            var imgData = await new Promise(function(resolve) {
+              var reader = new FileReader();
+              reader.onload = function(e) { resolve(e.target.result); };
+              reader.readAsDataURL(blob);
+            });
+            var img = new Image();
+            img.src = imgData;
+            await new Promise(function(resolve) { img.onload = resolve; });
+            var imgWidth = 140;
+            var imgHeight = (img.height / img.width) * imgWidth;
+            doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+            y += imgHeight + 25;
           } else {
+            // Fallback: texto simple
             doc.setFontSize(18);
             doc.setTextColor(11, 26, 51);
             doc.setFont('helvetica', 'bold');
@@ -4997,6 +5016,7 @@
             y += 60;
           }
         } catch (e) {
+          // Fallback: texto simple
           doc.setFontSize(18);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
@@ -5978,10 +5998,10 @@
         var nombreMostrar = depto;
         
         if (deptoUpper.includes('INMOBIENES')) {
-          logoUrl = 'LOGO INMOBIENES.png';
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
           nombreMostrar = 'INMOBIENES';
         } else if (deptoUpper.includes('SUMINISERVICES')) {
-          logoUrl = 'LOGO SUMINISERVICES.jpeg';
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
           nombreMostrar = 'SUMINISERVICES';
         } else {
           container.classList.add('hidden');
