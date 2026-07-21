@@ -163,7 +163,7 @@
   .header-actions .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
 
   .container {
-    max-width: 1280px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 12px 16px;
     overflow-x: auto;
@@ -331,14 +331,14 @@
     white-space: nowrap;
   }
   .table-wrapper table {
-    min-width: 1000px;
-    width: auto;
+    min-width: 100%;
+    width: 100%;
   }
   table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
-    min-width: 800px;
+    min-width: 100%;
   }
   th {
     background: var(--gray-800);
@@ -1527,6 +1527,43 @@
     margin-top: 4px;
   }
 
+  /* ===== TABLAS CON ANCHO COMPLETO ===== */
+  #tablaProyectosCard .table-wrapper,
+  #cxpTablaProyectos .table-wrapper,
+  #cxpTablaOC .table-wrapper,
+  #cxcTabla .table-wrapper {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+  }
+  
+  #tablaProyectosCard .table-wrapper table,
+  #cxpTablaProyectos .table-wrapper table,
+  #cxpTablaOC .table-wrapper table,
+  #cxcTabla .table-wrapper table {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  #tablaProyectosCard,
+  #cxpTablaProyectos,
+  #cxpTablaOC,
+  #cxcTabla {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow-x: auto !important;
+  }
+  
+  #tablaProyectosCard .card,
+  #cxpTablaProyectos .card,
+  #cxpTablaOC .card,
+  #cxcTabla .card {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
   /* ===== BANDEJA DE OC - CONTENEDOR PRINCIPAL CON MÁRGENES LATERALES DE 10PX ===== */
   #bandejaOCCard {
     margin-left: 10px !important;
@@ -1604,13 +1641,14 @@
         <div id="msgProyecto"></div>
       </div>
 
-      <div class="card" id="tablaProyectosCard">
-        <h2>📊 Control por Proyecto</h2>
-        <div id="adminActions" class="hidden" style="margin-bottom:10px;">
+      <!-- ===== TABLA DE CONTROL DE PROYECTOS - ANCHO COMPLETO ===== -->
+      <div class="card" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important;">
+        <h2 style="padding-left:18px; padding-right:18px;">📊 Control por Proyecto</h2>
+        <div id="adminActions" class="hidden" style="margin-bottom:10px; padding-left:18px; padding-right:18px;">
           <button class="danger" onclick="window.eliminarTodosProyectos()">🗑️ Eliminar todos los proyectos y OC</button>
         </div>
-        <div class="table-wrapper">
-          <table>
+        <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
+          <table style="min-width:100% !important; width:100% !important;">
             <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>%</th><th>Acciones</th></tr></thead>
             <tbody id="tablaProyectos"></tbody>
           </table>
@@ -1738,18 +1776,24 @@
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
         <h3>📋 Detalle por Proyecto</h3>
-        <div class="table-wrapper">
-          <table id="cxpTablaProyectos">
-            <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Vencido</th><th>% Uso</th><th>Acciones</th></tr></thead>
-            <tbody id="cxpCuerpoProyectos"></tbody>
-          </table>
+        <!-- ===== TABLA DETALLE POR PROYECTO CXP - ANCHO COMPLETO ===== -->
+        <div id="cxpTablaProyectos" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
+          <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
+            <table style="min-width:100% !important; width:100% !important;">
+              <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Vencido</th><th>% Uso</th><th>Acciones</th></tr></thead>
+              <tbody id="cxpCuerpoProyectos"></tbody>
+            </table>
+          </div>
         </div>
         <h3>📄 Órdenes de Compra</h3>
-        <div class="table-wrapper">
-          <table id="cxpTablaOC">
-            <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Aprobación</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody id="cxpCuerpoOC"></tbody>
-          </table>
+        <!-- ===== TABLA OC CXP - ANCHO COMPLETO ===== -->
+        <div id="cxpTablaOC" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
+          <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
+            <table style="min-width:100% !important; width:100% !important;">
+              <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Aprobación</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="cxpCuerpoOC"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1804,11 +1848,14 @@
           <div id="cxcSaldoContent"></div>
         </div>
         <h3>📋 Cuentas por Cobrar</h3>
-        <div class="table-wrapper">
-          <table id="cxcTabla">
-            <thead><tr><th>Cliente</th><th>OC/Contrato</th><th>Concepto</th><th>Folio Factura</th><th>F.Emisión</th><th>F.Pago</th><th>Moneda</th><th>Importe</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody id="cxcCuerpo"></tbody>
-          </table>
+        <!-- ===== TABLA CXC - ANCHO COMPLETO ===== -->
+        <div id="cxcTabla" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
+          <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
+            <table style="min-width:100% !important; width:100% !important;">
+              <thead><tr><th>Cliente</th><th>OC/Contrato</th><th>Concepto</th><th>Folio Factura</th><th>F.Emisión</th><th>F.Pago</th><th>Moneda</th><th>Importe</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="cxcCuerpo"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -2188,7 +2235,7 @@
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
         if (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
-        if (usuario.rol === 'Director General') return false; // Director NO puede generar OF
+        if (usuario.rol === 'Director General') return false;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
         var deptoNorm = normalizar(departamento);
@@ -2600,8 +2647,8 @@
         var panelCXC = document.getElementById('panelCXC');
         var panelOF = document.getElementById('panelOF');
         var bandejaOCCard = document.getElementById('bandejaOCCard');
-        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador');
-        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador');
+        var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+        var puedeCrearProyecto = actual && (actual.rol === 'Elaborador' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
@@ -2663,7 +2710,7 @@
 
         setTimeout(function() {
           render();
-          if (modulo === 'oc' && actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
+          if (modulo === 'oc' && actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
             window.actualizarDatosOC();
           }
           var cuerpo = document.getElementById('cuerpoProductos');
@@ -2778,6 +2825,17 @@
           return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento);
         });
         
+        // Si el usuario es Jefe Departamento, también puede ser solicitante
+        if (actual && actual.rol === 'Jefe Departamento') {
+          var jefeUsuario = usuariosDB.find(function(u) { return u.usuario === actual.usuario && u.rol === 'Jefe Departamento'; });
+          if (jefeUsuario && usuarioPuedeAcceder(jefeUsuario, proyecto.empresa, proyecto.departamento)) {
+            var yaExiste = posiblesSolicitantes.some(function(u) { return u.usuario === jefeUsuario.usuario; });
+            if (!yaExiste) {
+              posiblesSolicitantes.push(jefeUsuario);
+            }
+          }
+        }
+        
         selectSol.innerHTML = '';
         if (posiblesSolicitantes.length === 0) {
           selectSol.innerHTML = '<option value="">No hay solicitantes disponibles</option>';
@@ -2786,7 +2844,7 @@
             var opt = document.createElement('option');
             opt.value = u.usuario;
             opt.textContent = u.usuario + ' (' + u.rol + ')';
-            if (actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador') && u.usuario === actual.usuario) {
+            if (actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador' || actual.rol === 'Jefe Departamento') && u.usuario === actual.usuario) {
               opt.selected = true;
             }
             selectSol.appendChild(opt);
@@ -3087,8 +3145,8 @@
             msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
             return null;
           }
-          if (solicitanteUser.rol !== 'Solicitante' && solicitanteUser.rol !== 'Elaborador') {
-            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE DEBE TENER ROL "Solicitante" O "Elaborador".</div>';
+          if (solicitanteUser.rol !== 'Solicitante' && solicitanteUser.rol !== 'Elaborador' && solicitanteUser.rol !== 'Jefe Departamento') {
+            msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE DEBE TENER ROL "Solicitante", "Elaborador" O "Jefe Departamento".</div>';
             return null;
           }
         }
@@ -3689,12 +3747,16 @@
         if (!proyecto) return alert('Proyecto no encontrado');
 
         var esInmobienesOC = esDepartamentoInmobienes(proyecto.departamento);
-        var rolValidoSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador' ||
+        var rolValidoSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador' || actual.rol === 'Jefe Departamento' ||
           (esInmobienesOC && actual.rol === 'Jefe Departamento');
         if (!rolValidoSolicitante) return alert('Solo el Solicitante/Responsable designado puede aprobar.');
 
-        if (actual.u !== oc.solicitante) {
+        if (actual.u !== oc.solicitante && actual.rol !== 'Jefe Departamento') {
           return alert('❌ Solo el solicitante designado (' + oc.solicitante + ') puede aprobar esta OC.');
+        }
+
+        if (actual.rol === 'Jefe Departamento' && !usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
+          return alert('Sin permiso');
         }
 
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
@@ -4014,8 +4076,8 @@
       window.registrarFactura = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         var oc = ordenes[index];
-        if (actual.u !== oc.solicitante && actual.u !== oc.elaborador && actual.rol !== 'Administrador') {
-          return alert('Solo el solicitante, elaborador o administrador pueden registrar la factura.');
+        if (actual.u !== oc.solicitante && actual.u !== oc.elaborador && actual.rol !== 'Administrador' && actual.rol !== 'Jefe Departamento') {
+          return alert('Solo el solicitante, elaborador, jefe de departamento o administrador pueden registrar la factura.');
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
@@ -6010,7 +6072,7 @@
           selectProyecto.appendChild(optionManual);
         }
 
-        if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
+        if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
             selectProyecto.selectedIndex = 0;
           }
@@ -6123,7 +6185,7 @@
 
               // Botones de aprobación según rol
               if (!o.pausada) {
-                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estado === 'CREADA' && o.solicitante === actual.u) {
+                if ((rol === 'Solicitante' || rol === 'Elaborador' || rol === 'Jefe Departamento') && o.estado === 'CREADA' && (o.solicitante === actual.u || rol === 'Jefe Departamento')) {
                   acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
                 }
                 if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
@@ -6137,7 +6199,7 @@
                 if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
                   acciones += '<button class="btn-warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Paridad</button>';
                 }
-                if ((rol === 'Solicitante' || rol === 'Elaborador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                if ((rol === 'Solicitante' || rol === 'Elaborador' || rol === 'Jefe Departamento') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
@@ -6385,7 +6447,7 @@
           var panelCXC = document.getElementById('panelCXC');
           var panelOF = document.getElementById('panelOF');
           var bandejaOCCard = document.getElementById('bandejaOCCard');
-          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador');
+          var puedeCrear = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
           
           panelProyecto.classList.add('hidden');
           tablaProyectosCard.classList.add('hidden');
@@ -6400,7 +6462,7 @@
           
           setTimeout(function() {
             render();
-            if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante')) {
+            if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
               window.actualizarDatosOC();
             }
             var cuerpo = document.getElementById('cuerpoProductos');
@@ -6449,9 +6511,10 @@
         var esDirector = actual.rol === 'Director General';
         var esAdmin = actual.rol === 'Administrador';
         var esFinanzas = actual.rol === 'Finanzas';
+        var esJefe = actual.rol === 'Jefe Departamento';
 
-        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
-        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector);
+        document.getElementById('panelProyecto').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector && !esJefe);
+        document.getElementById('panelOC').classList.toggle('hidden', !esElaborador && !esAdmin && !esDirector && !esJefe);
 
         var filtroDeptoContainer = document.getElementById('filtroDeptoContainer');
         var filtroProyectoContainer = document.getElementById('filtroProyectoContainer');
@@ -6459,7 +6522,7 @@
         var btnPendientes = document.getElementById('btnPendientesPagar');
         var btnLimpiar = document.getElementById('btnLimpiarFiltros');
 
-        var puedeFiltrar = esDirector || esAdmin || esFinanzas;
+        var puedeFiltrar = esDirector || esAdmin || esFinanzas || esJefe;
         filtroDeptoContainer.classList.toggle('hidden', !puedeFiltrar);
         filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
         filtroEstadoContainer.classList.toggle('hidden', !puedeFiltrar);
