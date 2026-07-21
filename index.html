@@ -1186,7 +1186,7 @@
     width: 100%;
   }
   .maestro-logo-container img {
-    max-height: 80px;
+    max-height: 120px;
     width: auto;
     max-width: 100%;
     object-fit: contain;
@@ -1269,7 +1269,7 @@
     width: 100%;
   }
   .interno-logo-container img {
-    max-height: 60px;
+    max-height: 120px;
     width: auto;
     max-width: 100%;
     object-fit: contain;
@@ -1341,6 +1341,12 @@
     margin: 0 auto;
     justify-items: center;
   }
+  .acceso-unico-logo-container img {
+    max-height: 120px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
 
   @media (max-width: 600px) {
     .modulos-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 100% }
@@ -1352,6 +1358,9 @@
     .modulo-interno-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
     .modulo-interno-item .modulo-leyenda { font-size: 10px }
     .acceso-unico-grid { grid-template-columns: repeat(2, 1fr); gap: 12px }
+    .maestro-logo-container img { max-height: 80px }
+    .interno-logo-container img { max-height: 80px }
+    .acceso-unico-logo-container img { max-height: 80px }
   }
 
   #contenidoApp { display: none !important }
@@ -1636,7 +1645,7 @@
     border-bottom: 2px solid var(--gray-200);
   }
   .depto-logo-container img {
-    max-height: 60px;
+    max-height: 120px;
     width: auto;
     max-width: 100%;
     object-fit: contain;
@@ -1752,8 +1761,8 @@
 
     <!-- ===== MENÚ ACCESO ÚNICO (SOLO ADMIN) ===== -->
     <div id="menuAccesoUnico">
-      <div class="maestro-logo-container">
-        <img id="accesoUnicoLogoImg" src="" alt="Logo" style="display:none; max-height:60px;">
+      <div class="maestro-logo-container acceso-unico-logo-container">
+        <img id="accesoUnicoLogoImg" src="" alt="Logo" style="display:none; max-height:120px;">
         <span id="accesoUnicoDeptoName" class="maestro-depto-name">ACCESO ÚNICO</span>
       </div>
       <h2 style="margin-bottom:20px; color:var(--gray-700);">🔑 Módulos de Acceso Único</h2>
@@ -1767,7 +1776,6 @@
           <span class="modulo-leyenda">Productos</span>
         </div>
       </div>
-      <button onclick="window.volverAlMenu()" class="btn-volver-menu" style="margin-top:20px; background:var(--gray-600);">⬅ Volver al Menú Maestro</button>
     </div>
 
     <!-- ===== MENÚ INTERNO (TODOS LOS MÓDULOS) ===== -->
@@ -1799,7 +1807,6 @@
           <span class="modulo-leyenda">OF</span>
         </div>
       </div>
-      <button onclick="window.volverAlMenu()" class="btn-volver-menu" style="margin-top:15px; background:var(--gray-600);">⬅ Volver al Menú Maestro</button>
     </div>
 
     <div id="contenidoApp" class="hidden">
@@ -2845,10 +2852,9 @@
       };
 
       window.volverAlMenu = function() {
-        // Si estamos en un módulo interno, volver al menú interno
-        if (moduloActual && moduloActual !== 'deudas' && moduloActual !== 'ingresos') {
-          window.mostrarMenuInterno();
-        } else if (document.getElementById('menuAccesoUnico').classList.contains('visible')) {
+        // Desde el menú interno o acceso único, volver al menú maestro
+        if (document.getElementById('menuInterno').classList.contains('visible') || 
+            document.getElementById('menuAccesoUnico').classList.contains('visible')) {
           window.mostrarMenuMaestro();
         } else {
           window.mostrarMenuMaestro();
@@ -2864,7 +2870,7 @@
         document.getElementById('menuInterno').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
-        document.getElementById('btnVolverMenu').classList.remove('hidden');
+        document.getElementById('btnVolverMenu').classList.add('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
         
         // Ocultar todos los paneles
@@ -2892,7 +2898,7 @@
         document.getElementById('menuAccesoUnico').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
-        document.getElementById('btnVolverMenu').classList.remove('hidden');
+        document.getElementById('btnVolverMenu').classList.add('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
       };
 
@@ -2968,7 +2974,8 @@
         document.getElementById('menuAccesoUnico').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.add('visible');
-        document.getElementById('btnVolverMenu').classList.remove('hidden');
+        document.getElementById('btnVolverMenu').classList.add('hidden');
+        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
 
         var panelOC = document.getElementById('panelOC');
         var panelProyecto = document.getElementById('panelProyecto');
@@ -6883,7 +6890,7 @@
           document.getElementById('menuMaestro').classList.remove('visible');
           document.getElementById('contenidoApp').classList.remove('hidden');
           document.getElementById('contenidoApp').classList.add('visible');
-          document.getElementById('btnVolverMenu').classList.remove('hidden');
+          document.getElementById('btnVolverMenu').classList.add('hidden');
           
           // Configurar qué módulos mostrar según el rol
           var esAdmin = actual && actual.rol === 'Administrador';
