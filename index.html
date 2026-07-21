@@ -1165,22 +1165,45 @@
   .grupo-formulario:last-child { margin-bottom: 0 }
   .campo-obligatorio::after { content: " *"; color: var(--danger); font-weight: bold }
 
-  /* ===== MENÚ PRINCIPAL CON SOLO CXC Y CXP ===== */
-  #menuPrincipal {
+  /* ===== MENÚ MAESTRO ===== */
+  #menuMaestro {
     background: var(--gray-100);
     padding: 30px 20px;
     text-align: center;
     min-height: 60vh;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
   }
+  #menuMaestro.visible { display: flex }
+  
+  .maestro-logo-container {
+    text-align: center;
+    padding: 10px 0 15px 0;
+    margin-bottom: 15px;
+    border-bottom: 2px solid var(--gray-300);
+    width: 100%;
+  }
+  .maestro-logo-container img {
+    max-height: 80px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  .maestro-logo-container .maestro-depto-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--gray-700);
+    display: block;
+    margin-top: 6px;
+  }
+  
   .modulos-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
-    max-width: 400px;
+    max-width: 500px;
     width: 100%;
     margin: 0 auto;
     justify-items: center;
@@ -1224,7 +1247,6 @@
   }
   .modulo-item .modulo-leyenda { margin-top: 8px; font-size: 16px; font-weight: 500; color: var(--gray-700); text-align: center }
   .modulo-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
-  .modulo-item .modulo-leyenda.admin-only { color: var(--secondary); font-weight: 600; font-size: 10px }
 
   /* ===== MENÚ INTERNO (TODOS LOS MÓDULOS) ===== */
   #menuInterno {
@@ -1238,6 +1260,28 @@
     justify-content: center;
   }
   #menuInterno.visible { display: flex }
+  
+  .interno-logo-container {
+    text-align: center;
+    padding: 8px 0 12px 0;
+    margin-bottom: 12px;
+    border-bottom: 2px solid var(--gray-300);
+    width: 100%;
+  }
+  .interno-logo-container img {
+    max-height: 60px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  .interno-logo-container .interno-depto-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-700);
+    display: block;
+    margin-top: 4px;
+  }
+  
   .modulos-interno-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -1275,6 +1319,29 @@
   }
   .modulo-interno-item .modulo-leyenda { margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--gray-700); text-align: center }
 
+  /* ===== MENÚ ACCESO ÚNICO (SOLO ADMIN) ===== */
+  #menuAccesoUnico {
+    background: var(--gray-100);
+    padding: 30px 20px;
+    text-align: center;
+    min-height: 60vh;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #menuAccesoUnico.visible { display: flex }
+  
+  .acceso-unico-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 350px;
+    width: 100%;
+    margin: 0 auto;
+    justify-items: center;
+  }
+
   @media (max-width: 600px) {
     .modulos-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 100% }
     .modulo-item { width: 100px }
@@ -1284,6 +1351,7 @@
     .modulo-interno-item { width: 60px }
     .modulo-interno-item .modulo-cuadro { width: 60px; height: 60px; font-size: 24px }
     .modulo-interno-item .modulo-leyenda { font-size: 10px }
+    .acceso-unico-grid { grid-template-columns: repeat(2, 1fr); gap: 12px }
   }
 
   #contenidoApp { display: none !important }
@@ -1659,9 +1727,13 @@
       </div>
     </div>
 
-    <!-- ===== MENÚ PRINCIPAL - SOLO CXC Y CXP ===== -->
-    <div id="menuPrincipal" class="hidden">
-      <h2 style="margin-bottom:20px; color:var(--gray-700);">📊 Selecciona un Módulo</h2>
+    <!-- ===== MENÚ MAESTRO ===== -->
+    <div id="menuMaestro">
+      <div class="maestro-logo-container" id="maestroLogoContainer">
+        <img id="maestroLogoImg" src="" alt="Logo" style="display:none;">
+        <span id="maestroDeptoName" class="maestro-depto-name"></span>
+      </div>
+      <h2 style="margin-bottom:20px; color:var(--gray-700);">📊 Menú Maestro</h2>
       <div class="modulos-grid" id="modulosGrid">
         <div class="modulo-item" data-modulo="cxp">
           <div class="modulo-cuadro funcional">💰</div>
@@ -1671,12 +1743,41 @@
           <div class="modulo-cuadro funcional">💳</div>
           <span class="modulo-leyenda">CXC</span>
         </div>
+        <!-- ===== ACCESO ÚNICO (SOLO ADMIN) ===== -->
+        <div class="modulo-item" id="menuAccesoUnicoBtn" data-modulo="acceso_unico" style="display:none;">
+          <div class="modulo-cuadro funcional">🔑</div>
+          <span class="modulo-leyenda">Acceso Único</span>
+        </div>
       </div>
     </div>
 
-    <!-- ===== MENÚ INTERNO - TODOS LOS MÓDULOS ===== -->
+    <!-- ===== MENÚ ACCESO ÚNICO (SOLO ADMIN) ===== -->
+    <div id="menuAccesoUnico">
+      <div class="maestro-logo-container">
+        <img id="accesoUnicoLogoImg" src="" alt="Logo" style="display:none; max-height:60px;">
+        <span id="accesoUnicoDeptoName" class="maestro-depto-name">ACCESO ÚNICO</span>
+      </div>
+      <h2 style="margin-bottom:20px; color:var(--gray-700);">🔑 Módulos de Acceso Único</h2>
+      <div class="acceso-unico-grid" id="accesoUnicoGrid">
+        <div class="modulo-item" data-modulo="proveedores">
+          <div class="modulo-cuadro funcional">🏢</div>
+          <span class="modulo-leyenda">Proveedores</span>
+        </div>
+        <div class="modulo-item" data-modulo="productos">
+          <div class="modulo-cuadro funcional">📦</div>
+          <span class="modulo-leyenda">Productos</span>
+        </div>
+      </div>
+      <button onclick="window.volverAlMenu()" class="btn-volver-menu" style="margin-top:20px; background:var(--gray-600);">⬅ Volver al Menú Maestro</button>
+    </div>
+
+    <!-- ===== MENÚ INTERNO (TODOS LOS MÓDULOS) ===== -->
     <div id="menuInterno">
-      <h3 style="margin-bottom:15px; color:var(--gray-700);">📋 Selecciona un Módulo Interno</h3>
+      <div class="interno-logo-container" id="internoLogoContainer">
+        <img id="internoLogoImg" src="" alt="Logo" style="display:none;">
+        <span id="internoDeptoName" class="interno-depto-name"></span>
+      </div>
+      <h3 style="margin-bottom:15px; color:var(--gray-700);">📋 Módulos disponibles</h3>
       <div class="modulos-interno-grid" id="modulosInternoGrid">
         <div class="modulo-interno-item" data-modulo="oc">
           <div class="modulo-cuadro funcional">📄</div>
@@ -1699,6 +1800,7 @@
           <span class="modulo-leyenda">OF</span>
         </div>
       </div>
+      <button onclick="window.volverAlMenu()" class="btn-volver-menu" style="margin-top:15px; background:var(--gray-600);">⬅ Volver al Menú Maestro</button>
     </div>
 
     <div id="contenidoApp" class="hidden">
@@ -2718,10 +2820,13 @@
       // ============================================================
       // FUNCIONES DE NAVEGACIÓN
       // ============================================================
-      window.mostrarMenuPrincipal = function() {
-        document.getElementById('menuPrincipal').classList.remove('hidden');
+      window.mostrarMenuMaestro = function() {
+        document.getElementById('menuMaestro').classList.add('visible');
+        document.getElementById('menuMaestro').classList.remove('hidden');
         document.getElementById('menuInterno').classList.remove('visible');
         document.getElementById('menuInterno').classList.add('hidden');
+        document.getElementById('menuAccesoUnico').classList.remove('visible');
+        document.getElementById('menuAccesoUnico').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
@@ -2735,19 +2840,27 @@
         document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
           card.classList.add('hidden');
         });
+        
+        // Mostrar el logo en el menú maestro
+        mostrarLogoMaestro();
       };
 
       window.volverAlMenu = function() {
         // Si estamos en un módulo interno, volver al menú interno
         if (moduloActual && moduloActual !== 'cxp' && moduloActual !== 'cxc') {
           window.mostrarMenuInterno();
+        } else if (document.getElementById('menuAccesoUnico').classList.contains('visible')) {
+          window.mostrarMenuMaestro();
         } else {
-          window.mostrarMenuPrincipal();
+          window.mostrarMenuMaestro();
         }
       };
 
       window.mostrarMenuInterno = function() {
-        document.getElementById('menuPrincipal').classList.add('hidden');
+        document.getElementById('menuMaestro').classList.remove('visible');
+        document.getElementById('menuMaestro').classList.add('hidden');
+        document.getElementById('menuAccesoUnico').classList.remove('visible');
+        document.getElementById('menuAccesoUnico').classList.add('hidden');
         document.getElementById('menuInterno').classList.add('visible');
         document.getElementById('menuInterno').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
@@ -2760,12 +2873,28 @@
           card.classList.add('hidden');
         });
         
+        // Mostrar el logo en el menú interno
+        mostrarLogoInterno();
+        
         // Ocultar el menú interno si no hay módulos visibles
         var modulosVisibles = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item:not(.hidden)');
         if (modulosVisibles.length === 0) {
           document.getElementById('menuInterno').classList.remove('visible');
           document.getElementById('menuInterno').classList.add('hidden');
         }
+      };
+
+      window.mostrarAccesoUnico = function() {
+        document.getElementById('menuMaestro').classList.remove('visible');
+        document.getElementById('menuMaestro').classList.add('hidden');
+        document.getElementById('menuInterno').classList.remove('visible');
+        document.getElementById('menuInterno').classList.add('hidden');
+        document.getElementById('menuAccesoUnico').classList.add('visible');
+        document.getElementById('menuAccesoUnico').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.remove('visible');
+        document.getElementById('contenidoApp').classList.add('hidden');
+        document.getElementById('btnVolverMenu').classList.remove('hidden');
+        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
       };
 
       function mostrarConstruccion() { alert('🚧 Módulo en construcción'); }
@@ -2775,7 +2904,7 @@
       function configurarModulos() {
         if (modulosConfigurados) return;
         
-        // Menú principal (CXC y CXP)
+        // Menú maestro (CXP, CXC, Acceso Único)
         var grid = document.getElementById('modulosGrid');
         if (grid) {
           grid.addEventListener('click', function(e) {
@@ -2788,6 +2917,8 @@
             } else if (modulo === 'cxc') {
               window.mostrarMenuInterno();
               setTimeout(function() { window.mostrarModulo('cxc'); }, 100);
+            } else if (modulo === 'acceso_unico') {
+              window.mostrarAccesoUnico();
             }
           });
         }
@@ -2812,14 +2943,30 @@
           });
         }
         
+        // Menú Acceso Único
+        var gridAccesoUnico = document.getElementById('accesoUnicoGrid');
+        if (gridAccesoUnico) {
+          gridAccesoUnico.addEventListener('click', function(e) {
+            var item = e.target.closest('.modulo-item');
+            if (!item) return;
+            var modulo = item.dataset.modulo;
+            if (modulo === 'proveedores' || modulo === 'productos') {
+              mostrarConstruccion();
+            }
+          });
+        }
+        
         modulosConfigurados = true;
       }
 
       window.mostrarModulo = function(modulo) {
         moduloActual = modulo;
-        document.getElementById('menuPrincipal').classList.add('hidden');
+        document.getElementById('menuMaestro').classList.remove('visible');
+        document.getElementById('menuMaestro').classList.add('hidden');
         document.getElementById('menuInterno').classList.add('hidden');
         document.getElementById('menuInterno').classList.remove('visible');
+        document.getElementById('menuAccesoUnico').classList.remove('visible');
+        document.getElementById('menuAccesoUnico').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.add('visible');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
@@ -2904,6 +3051,111 @@
           }
         }, 100);
       };
+
+      // ============================================================
+      // FUNCIONES PARA MOSTRAR LOGOS EN MENÚS
+      // ============================================================
+      function mostrarLogoMaestro() {
+        var container = document.getElementById('maestroLogoContainer');
+        var img = document.getElementById('maestroLogoImg');
+        var nameDisplay = document.getElementById('maestroDeptoName');
+        
+        if (!container || !img || !nameDisplay) return;
+        
+        if (!actual) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var depto = defaultData.departamento || '';
+        var empresa = defaultData.empresa || '';
+        
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        if (!depto) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        var deptoUpper = depto.toUpperCase().trim();
+        var logoUrl = '';
+        var nombreMostrar = depto;
+        
+        if (deptoUpper.includes('INMOBIENES')) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
+          nombreMostrar = 'INMOBIENES';
+        } else if (deptoUpper.includes('SUMINISERVICES')) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
+          nombreMostrar = 'SUMINISERVICES';
+        } else {
+          container.style.display = 'none';
+          return;
+        }
+        
+        container.style.display = 'block';
+        img.src = logoUrl;
+        img.style.display = 'block';
+        img.onerror = function() {
+          img.style.display = 'none';
+          nameDisplay.textContent = nombreMostrar;
+        };
+        nameDisplay.textContent = nombreMostrar;
+      }
+
+      function mostrarLogoInterno() {
+        var container = document.getElementById('internoLogoContainer');
+        var img = document.getElementById('internoLogoImg');
+        var nameDisplay = document.getElementById('internoDeptoName');
+        
+        if (!container || !img || !nameDisplay) return;
+        
+        if (!actual) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var depto = defaultData.departamento || '';
+        var empresa = defaultData.empresa || '';
+        
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        if (!depto) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        var deptoUpper = depto.toUpperCase().trim();
+        var logoUrl = '';
+        var nombreMostrar = depto;
+        
+        if (deptoUpper.includes('INMOBIENES')) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
+          nombreMostrar = 'INMOBIENES';
+        } else if (deptoUpper.includes('SUMINISERVICES')) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
+          nombreMostrar = 'SUMINISERVICES';
+        } else {
+          container.style.display = 'none';
+          return;
+        }
+        
+        container.style.display = 'block';
+        img.src = logoUrl;
+        img.style.display = 'block';
+        img.onerror = function() {
+          img.style.display = 'none';
+          nameDisplay.textContent = nombreMostrar;
+        };
+        nameDisplay.textContent = nombreMostrar;
+      }
 
       // ============================================================
       // FUNCIONES PARA ACTUALIZAR CAMPOS AUTOMÁTICOS
@@ -6611,6 +6863,16 @@
 
         var ocId = detectarEnlaceTelegram();
 
+        // Configurar visibilidad del botón de Acceso Único
+        var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
+        if (accesoUnicoBtn) {
+          if (actual && actual.rol === 'Administrador') {
+            accesoUnicoBtn.style.display = 'flex';
+          } else {
+            accesoUnicoBtn.style.display = 'none';
+          }
+        }
+
         if (ocId) {
           console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
           pendingOcId = ocId;
@@ -6618,7 +6880,8 @@
           
           configurarModulos();
           
-          document.getElementById('menuPrincipal').classList.add('hidden');
+          document.getElementById('menuMaestro').classList.add('hidden');
+          document.getElementById('menuMaestro').classList.remove('visible');
           document.getElementById('contenidoApp').classList.remove('hidden');
           document.getElementById('contenidoApp').classList.add('visible');
           document.getElementById('btnVolverMenu').classList.remove('hidden');
@@ -6682,9 +6945,8 @@
           }, 300);
           
         } else {
-          // Mostrar menú principal con CXC y CXP
-          document.getElementById('menuPrincipal').classList.remove('hidden');
-          document.getElementById('contenidoApp').classList.add('hidden');
+          // Mostrar menú maestro
+          window.mostrarMenuMaestro();
           configurarModulos();
         }
 
