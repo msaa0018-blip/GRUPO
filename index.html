@@ -1714,7 +1714,7 @@
     <div class="container-login" id="loginContainer">
       <div id="login">
         <div class="login-logo">
-          <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
+          <img src="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20ALLIN.png" alt="ALLIN" onerror="this.style.display='none'">
         </div>
         <h2>Bienvenido</h2>
         <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
@@ -1735,18 +1735,17 @@
       </div>
       <h2 style="margin-bottom:20px; color:var(--gray-700);">📊 Menú Maestro</h2>
       <div class="modulos-grid" id="modulosGrid">
-        <div class="modulo-item" data-modulo="cxp">
+        <div class="modulo-item" data-modulo="deudas">
           <div class="modulo-cuadro funcional">💰</div>
-          <span class="modulo-leyenda">CXP</span>
+          <span class="modulo-leyenda">DEUDAS</span>
         </div>
-        <div class="modulo-item" data-modulo="cxc">
+        <div class="modulo-item" data-modulo="ingresos">
           <div class="modulo-cuadro funcional">💳</div>
-          <span class="modulo-leyenda">CXC</span>
+          <span class="modulo-leyenda">INGRESOS</span>
         </div>
-        <!-- ===== ACCESO ÚNICO (SOLO ADMIN) ===== -->
         <div class="modulo-item" id="menuAccesoUnicoBtn" data-modulo="acceso_unico" style="display:none;">
           <div class="modulo-cuadro funcional">🔑</div>
-          <span class="modulo-leyenda">Acceso Único</span>
+          <span class="modulo-leyenda">ACCESO ÚNICO</span>
         </div>
       </div>
     </div>
@@ -2847,7 +2846,7 @@
 
       window.volverAlMenu = function() {
         // Si estamos en un módulo interno, volver al menú interno
-        if (moduloActual && moduloActual !== 'cxp' && moduloActual !== 'cxc') {
+        if (moduloActual && moduloActual !== 'deudas' && moduloActual !== 'ingresos') {
           window.mostrarMenuInterno();
         } else if (document.getElementById('menuAccesoUnico').classList.contains('visible')) {
           window.mostrarMenuMaestro();
@@ -2904,17 +2903,17 @@
       function configurarModulos() {
         if (modulosConfigurados) return;
         
-        // Menú maestro (CXP, CXC, Acceso Único)
+        // Menú maestro (DEUDAS, INGRESOS, ACCESO ÚNICO)
         var grid = document.getElementById('modulosGrid');
         if (grid) {
           grid.addEventListener('click', function(e) {
             var item = e.target.closest('.modulo-item');
             if (!item) return;
             var modulo = item.dataset.modulo;
-            if (modulo === 'cxp') {
+            if (modulo === 'deudas') {
               window.mostrarMenuInterno();
               setTimeout(function() { window.mostrarModulo('cxp'); }, 100);
-            } else if (modulo === 'cxc') {
+            } else if (modulo === 'ingresos') {
               window.mostrarMenuInterno();
               setTimeout(function() { window.mostrarModulo('cxc'); }, 100);
             } else if (modulo === 'acceso_unico') {
@@ -6982,7 +6981,7 @@
           var visible = false;
           
           if (esAdmin || esFinanzas || esJefe) {
-            // Admin, Finanzas y Jefe ven todos los módulos
+            // Admin, Finanzas y Jefe ven todos los módulos (excepto proveedores y productos que están en Acceso Único)
             visible = true;
           } else if (esDirector) {
             // Director solo ve OC y Proyectos
