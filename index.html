@@ -626,12 +626,12 @@
   
   /* ===== LOGIN CORPORATIVO PROFESIONAL ===== */
   #login { 
-    width: 563px;
-    min-height: 337px;
-    max-height: 337px;
+    width: 100%;
+    max-width: 520px;
+    min-height: 380px;
     margin: auto; 
     text-align: center; 
-    padding: 20px 30px;
+    padding: 30px 35px 35px 35px;
     background: white;
     border-radius: 20px;
     box-shadow: 0 12px 60px rgba(11, 26, 51, 0.12), 0 4px 20px rgba(0, 0, 0, 0.04);
@@ -655,13 +655,16 @@
     border-radius: 20px 20px 0 0;
   }
   #login .login-logo {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     flex-shrink: 0;
     position: relative;
+    width: 100%;
   }
   #login .login-logo img {
-    height: 120px;
+    height: 140px;
     width: auto;
+    max-width: 100%;
+    object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(11, 26, 51, 0.1));
   }
   #login h2 {
@@ -680,29 +683,28 @@
   #login .login-subtitle {
     color: var(--gray-500);
     font-size: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     font-weight: 400;
     letter-spacing: 0.3px;
     border-bottom: 2px solid var(--gray-100);
-    padding-bottom: 10px;
+    padding-bottom: 12px;
     width: 80%;
   }
   #login .flex {
-    gap: 8px;
+    gap: 10px;
     width: 100%;
     flex-direction: column;
     align-items: center;
   }
   #login .flex input {
-    min-height: 36px;
+    min-height: 38px;
     padding: 8px 16px;
     border-radius: 10px;
     border: 1.5px solid var(--gray-200);
     background: var(--gray-50);
     font-size: 13px;
     transition: all 0.25s ease;
-    width: 400px;
-    min-width: 400px;
+    width: 100%;
     max-width: 400px;
     flex: 0 0 auto;
     color: var(--gray-800);
@@ -722,7 +724,7 @@
     border-color: var(--gray-400);
   }
   #login .flex button {
-    min-height: 36px;
+    min-height: 38px;
     padding: 8px 20px;
     background: var(--primary-gradient);
     color: white;
@@ -730,8 +732,7 @@
     font-weight: 600;
     font-size: 13px;
     transition: all 0.25s ease;
-    width: 400px;
-    min-width: 400px;
+    width: 100%;
     max-width: 400px;
     flex: 0 0 auto;
     border: none;
@@ -750,9 +751,10 @@
     box-shadow: 0 2px 8px rgba(11, 26, 51, 0.15);
   }
   #login .alert {
-    margin-top: 8px;
+    margin-top: 10px;
     border-radius: 10px;
-    width: 400px;
+    width: 100%;
+    max-width: 400px;
     font-size: 11px;
     padding: 6px 12px;
     min-height: auto;
@@ -774,20 +776,20 @@
   @media (max-width: 768px) {
     #login {
       width: 85vw;
+      max-width: 85vw;
       min-height: 60vh;
-      max-height: 60vh;
       padding: 20px 18px;
       border-radius: 20px;
     }
     #login .login-logo img {
-      height: 44px;
+      height: 100px;
     }
     #login h2 {
       font-size: 18px;
     }
     #login .login-subtitle {
       font-size: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       width: 90%;
       padding-bottom: 8px;
     }
@@ -911,13 +913,13 @@
   @media (max-width: 480px) {
     #login {
       width: 88vw;
+      max-width: 88vw;
       min-height: 55vh;
-      max-height: 55vh;
       padding: 16px 14px;
       border-radius: 18px;
     }
     #login .login-logo img {
-      height: 36px;
+      height: 80px;
     }
     #login h2 {
       font-size: 16px;
@@ -2509,8 +2511,10 @@
 
       function usuarioPuedeCrearProyectos(usuario) {
         if (!usuario) return false;
-        if (usuario.rol === 'Administrador') return true;
+        if (usuario.rol === 'Administrador') return false;
         if (usuario.rol === 'Jefe Departamento') return true;
+        if (usuario.rol === 'Director General') return false;
+        if (usuario.rol === 'Finanzas') return false;
         return false;
       }
 
@@ -2519,8 +2523,11 @@
       // ============================================================
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        if (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
+        if (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return false;
         if (usuario.rol === 'Director General') return false;
+        if (usuario.rol === 'Jefe Departamento') return true;
+        if (usuario.rol === 'Solicitante') return true;
+        if (usuario.rol === 'Elaborador') return true;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
         var deptoNorm = normalizar(departamento);
@@ -2951,8 +2958,11 @@
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'cxc', icono: '💳', nombre: 'CXC' });
           }
-          if (actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General') {
-            modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
+          // OF solo para usuarios que no sean Admin, Finanzas ni Director
+          if (actual && (actual.rol === 'Jefe Departamento' || actual.rol === 'Solicitante' || actual.rol === 'Elaborador')) {
+            if (usuarioPuedeAccederOF(actual, actual.permisos?.[0]?.empresa || '', actual.permisos?.[0]?.depto || '')) {
+              modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
+            }
           }
         } else if (tipo === 'acceso_unico') {
           // Módulos para ACCESO ÚNICO: Proveedores y Productos (solo Admin)
@@ -3140,7 +3150,7 @@
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
+        var puedeVerOF = actual && (actual.rol === 'Jefe Departamento' || actual.rol === 'Solicitante' || actual.rol === 'Elaborador');
 
         // Ocultar todos los paneles primero
         panelOC.classList.add('hidden');
@@ -3323,7 +3333,7 @@
         
         if (!actual) return;
         
-        if (actual.rol === 'Director General' || actual.rol === 'Administrador') {
+        if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
           empresaInput.placeholder = 'Escribe la empresa';
@@ -3360,7 +3370,7 @@
         var selectedId = parseInt(selectProyecto.value);
         
         if (!selectedId || isNaN(selectedId)) {
-          if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
+          if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
             empresaInput.disabled = false;
             empresaInput.style.background = 'white';
             empresaInput.placeholder = 'Escribe la empresa';
@@ -3390,7 +3400,7 @@
           return;
         }
         
-        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
+        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
           empresaInput.disabled = false;
           empresaInput.style.background = 'white';
           empresaInput.value = proyecto.empresa;
@@ -3615,7 +3625,7 @@
         var deptoOC = document.getElementById('departamentoOC').value.trim().toUpperCase();
         
         if (!selectedId || isNaN(selectedId)) {
-          if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
+          if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
             if (!empresaOC || !deptoOC) {
               msgDiv.innerHTML = '<div class="alert">⚠️ INGRESA EMPRESA Y DEPARTAMENTO.</div>';
               return null;
@@ -3661,7 +3671,7 @@
           return null;
         }
         
-        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador') {
+        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador' && actual.rol !== 'Finanzas') {
           empresaOC = proyecto.empresa;
           deptoOC = proyecto.departamento;
           
@@ -3727,7 +3737,7 @@
           return null;
         }
         
-        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador') {
+        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador' && actual.rol !== 'Finanzas') {
           if (!usuarioPuedeAcceder(solicitanteUser, empresa, departamento)) {
             msgDiv.innerHTML = '<div class="alert">⚠️ EL SOLICITANTE/RESPONSABLE SELECCIONADO NO PERTENECE A ESTE DEPARTAMENTO/EMPRESA.</div>';
             return null;
@@ -5357,20 +5367,20 @@
         var esAccesoTotal = defaultData.libre === true;
         var esDirector = defaultData.esDirector === true;
         
-        if (esDirector) {
+        if (esDirector || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           empresaInput.disabled = true;
           empresaInput.style.background = 'var(--gray-200)';
-          empresaInput.placeholder = 'Director - Sin acceso';
+          empresaInput.placeholder = 'Sin acceso a OF';
           empresaInput.value = '';
           
           deptoSelect.disabled = true;
           deptoSelect.style.background = 'var(--gray-200)';
-          deptoSelect.innerHTML = '<option value="">Director - Sin acceso</option>';
+          deptoSelect.innerHTML = '<option value="">Sin acceso a OF</option>';
           
           folioInput.value = '';
           
           var selectResp = document.getElementById('ofResponsable');
-          selectResp.innerHTML = '<option value="">Director - Sin acceso</option>';
+          selectResp.innerHTML = '<option value="">Sin acceso a OF</option>';
           selectResp.disabled = true;
           selectResp.style.background = 'var(--gray-200)';
           
@@ -5386,8 +5396,10 @@
           document.getElementById('ofMetodoPago').disabled = true;
           document.getElementById('ofMoneda').disabled = true;
           
-          document.querySelector('#panelOF .btn-success').disabled = true;
-          document.querySelector('#panelOF .btn-warning').disabled = true;
+          var btnSuccess = document.querySelector('#panelOF .btn-success');
+          var btnWarning = document.querySelector('#panelOF .btn-warning');
+          if (btnSuccess) btnSuccess.disabled = true;
+          if (btnWarning) btnWarning.disabled = true;
           
           return;
         }
@@ -5767,6 +5779,11 @@
           return;
         }
 
+        if (actual.rol === 'Administrador' || actual.rol === 'Finanzas' || actual.rol === 'Director General') {
+          msgDiv.innerHTML = '<div class="alert">⚠️ No tienes permiso para generar OF.</div>';
+          return;
+        }
+
         var departamento = document.getElementById('ofDepartamento').value.trim().toUpperCase();
         var empresa = document.getElementById('ofEmpresa').value.trim().toUpperCase();
         var razonSocial = document.getElementById('ofRazonSocial').value.trim().toUpperCase();
@@ -5875,7 +5892,7 @@
         var of = ordenesFacturacion[index];
         if (!of) return;
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') {
-          alert('❌ Solo Finanzas puede imprimir la OF.');
+          alert('❌ Solo Finanzas y Administrador pueden imprimir la OF.');
           return;
         }
         if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
@@ -6067,16 +6084,17 @@
         var defaultData = obtenerEmpresaDeptoDefault(actual);
         var esAccesoTotal = defaultData.libre === true;
         var esDirector = defaultData.esDirector === true;
+        var esAdminFinanzas = actual && (actual.rol === 'Administrador' || actual.rol === 'Finanzas');
         
         if (selectDepto) {
-          if (esDirector) {
+          if (esDirector || esAdminFinanzas) {
             selectDepto.disabled = true;
             selectDepto.style.background = 'var(--gray-200)';
-            selectDepto.innerHTML = '<option value="">Director - Sin acceso</option>';
+            selectDepto.innerHTML = '<option value="">Sin acceso a OF</option>';
             if (empresaInput) {
               empresaInput.disabled = true;
               empresaInput.style.background = 'var(--gray-200)';
-              empresaInput.value = 'Director - Sin acceso';
+              empresaInput.value = 'Sin acceso a OF';
             }
           } else if (!esAccesoTotal && defaultData.departamento) {
             selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
@@ -6663,7 +6681,7 @@
             var deptoColor = getColorByEmpresa(p.empresa);
 
             var botones = '';
-            if (!esFinanzas) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
+            if (!esFinanzas && !esAdmin && !esDirectorProyecto) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
             if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
             if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
@@ -6672,7 +6690,7 @@
           });
         }
 
-        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
+        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
           var optionManual = document.createElement('option');
           optionManual.value = '';
           optionManual.textContent = '📝 Crear sin proyecto (manual)';
@@ -7057,7 +7075,7 @@
           var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
           var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
           var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-          var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
+          var puedeVerOF = actual && (actual.rol === 'Jefe Departamento' || actual.rol === 'Solicitante' || actual.rol === 'Elaborador');
           var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
           
           // Mostrar paneles según permisos
@@ -7161,7 +7179,7 @@
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var puedeVerOF = actual && (['Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) && actual.rol !== 'Director General';
+        var puedeVerOF = actual && (actual.rol === 'Jefe Departamento' || actual.rol === 'Solicitante' || actual.rol === 'Elaborador');
         
         document.getElementById('panelProyecto').classList.toggle('hidden', !puedeCrearProyecto);
         document.getElementById('panelOC').classList.toggle('hidden', !puedeCrearOC);
@@ -7263,7 +7281,7 @@
       window.crearProyecto = async function() {
         var empresa, departamento;
         
-        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador')) {
+        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
           empresa = document.getElementById('empresaProyecto').value.trim().toUpperCase();
           departamento = document.getElementById('departamentoProyecto').value.trim().toUpperCase();
         } else {
@@ -7294,7 +7312,7 @@
           return;
         }
         
-        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador') {
+        if (actual.rol !== 'Director General' && actual.rol !== 'Administrador' && actual.rol !== 'Finanzas') {
           if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
             msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
             return;
