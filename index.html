@@ -67,11 +67,11 @@
     height: auto
   }
   
-  /* ===== HEADER - SIEMPRE ALINEADO A LA DERECHA ===== */
+  /* ===== HEADER - TRES ZONAS: IZQUIERDA | CENTRO | DERECHA ===== */
   header {
     background: var(--primary);
     color: white;
-    padding: 12px 16px;
+    padding: 8px 16px;
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -82,27 +82,28 @@
     z-index: 100;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
     flex-shrink: 0;
-    min-height: 60px;
+    min-height: 64px;
   }
   
-  header .logo {
+  /* ZONA IZQUIERDA: Logo EXTINGUE + nombre empresa */
+  .header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: nowrap;
+    gap: 10px;
     flex: 0 1 auto;
     min-width: 0;
+    flex-shrink: 1;
   }
   
-  header .logo img {
+  .header-left .logo-img {
     height: 36px;
     width: auto;
     max-height: 40px;
     flex-shrink: 0;
   }
   
-  header .logo .company .name {
-    font-size: 18px;
+  .header-left .company .name {
+    font-size: 16px;
     font-weight: 600;
     letter-spacing: .5px;
     display: block;
@@ -110,57 +111,131 @@
     white-space: nowrap;
   }
   
-  header .logo .company .sub {
-    font-size: 10px;
+  .header-left .company .sub {
+    font-size: 9px;
     opacity: .75;
     font-weight: 300;
     display: block;
     white-space: nowrap;
   }
   
-  /* ===== HEADER ACTIONS - SIEMPRE A LA DERECHA ===== */
-  .header-actions { 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-    flex-wrap: nowrap;
-    justify-content: flex-end;
-    margin-left: auto;
-    flex: 0 1 auto;
+  /* ZONA CENTRO: Logo de empresa/departamento */
+  .header-center {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     min-width: 0;
+    padding: 0 8px;
   }
   
-  .header-actions .btn-volver-menu {
+  .header-center .depto-logo-header {
+    max-height: 50px;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    display: none;
+  }
+  
+  .header-center .depto-logo-header.visible {
+    display: block;
+  }
+  
+  /* ZONA DERECHA: Botones */
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 auto;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  
+  .header-right .btn-volver-menu {
     background: var(--gray-600);
     color: white;
     border: none;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 8px;
     font-weight: 500;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     transition: background 0.2s;
-    min-height: 36px;
+    min-height: 32px;
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .header-actions .btn-volver-menu:hover { background: var(--gray-700) }
+  .header-right .btn-volver-menu:hover { background: var(--gray-700) }
 
-  .header-actions .btn-cerrar-sesion-header {
+  .header-right .btn-cerrar-sesion-header {
     background: var(--danger);
     color: white;
     border: none;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 8px;
     font-weight: 500;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     transition: background 0.2s;
-    min-height: 36px;
+    min-height: 32px;
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .header-actions .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
+  .header-right .btn-cerrar-sesion-header:hover { background: var(--danger-hover) }
+
+  /* ===== RESPONSIVE HEADER ===== */
+  @media (max-width: 768px) {
+    header {
+      padding: 6px 10px;
+      min-height: 56px;
+      flex-wrap: nowrap;
+    }
+    .header-left .logo-img {
+      height: 28px;
+    }
+    .header-left .company .name {
+      font-size: 13px;
+    }
+    .header-left .company .sub {
+      font-size: 7px;
+    }
+    .header-center .depto-logo-header {
+      max-height: 38px;
+      max-width: 120px;
+    }
+    .header-right .btn-volver-menu,
+    .header-right .btn-cerrar-sesion-header {
+      font-size: 10px;
+      padding: 4px 8px;
+      min-height: 28px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    header {
+      padding: 4px 8px;
+      min-height: 48px;
+    }
+    .header-left .logo-img {
+      height: 22px;
+    }
+    .header-left .company .name {
+      font-size: 11px;
+    }
+    .header-left .company .sub {
+      font-size: 6px;
+    }
+    .header-center .depto-logo-header {
+      max-height: 30px;
+      max-width: 90px;
+    }
+    .header-right .btn-volver-menu,
+    .header-right .btn-cerrar-sesion-header {
+      font-size: 9px;
+      padding: 3px 6px;
+      min-height: 24px;
+    }
+  }
 
   .container {
     max-width: 100%;
@@ -362,7 +437,6 @@
   }
   
   /* ===== ESTILO PARA FILAS DE OC - DOS FILAS POR OC ===== */
-  /* Fila de información de la OC */
   tr.fila-oc-info td {
     border-bottom: none;
     padding-bottom: 4px;
@@ -372,7 +446,6 @@
     background: var(--gray-50);
   }
   
-  /* Fila de botones de acción - debajo de cada OC */
   tr.fila-oc-acciones td {
     border-bottom: 3px solid var(--gray-400) !important;
     background: var(--gray-100);
@@ -382,7 +455,6 @@
     background: var(--gray-100);
   }
   
-  /* ===== CONTENEDOR DE BOTONES - DISTRIBUCIÓN HORIZONTAL UNIFORME ===== */
   .oc-acciones-container {
     display: flex;
     flex-wrap: nowrap;
@@ -437,8 +509,6 @@
     background: #e6b300 !important;
     transform: scale(1.05) !important;
   }
-  
-  /* ===== SEPARADORES VISUALES ENTRE BOTONES ===== */
   .oc-acciones-container .btn-separator {
     color: var(--gray-400);
     font-weight: 300;
@@ -448,7 +518,6 @@
     flex: 0 0 auto;
   }
   
-  /* Ocultar la columna de acciones en el encabezado */
   th.acciones-header {
     min-width: 60px;
   }
@@ -491,7 +560,6 @@
     100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
   }
   
-  /* ===== ESTILO PARA OC NOTIFICADA - AURA DORADA + PARPADEO ===== */
   .pendiente-director-notificada {
     background: #FFC700 !important;
     border-left: 6px solid #FF8C00 !important;
@@ -624,7 +692,7 @@
     font-size: 16px
   }
   
-  /* ===== LOGIN CORPORATIVO PROFESIONAL - REDISEÑADO ===== */
+  /* ===== LOGIN CORPORATIVO PROFESIONAL ===== */
   #login { 
     max-width: 520px;
     width: 100%;
@@ -879,27 +947,6 @@
     #ofTabla .table-wrapper table {
       min-width: 700px;
     }
-    
-    /* ===== HEADER RESPONSIVE ===== */
-    header {
-      flex-wrap: nowrap;
-      padding: 8px 12px;
-    }
-    header .logo .company .name {
-      font-size: 14px;
-    }
-    header .logo .company .sub {
-      font-size: 8px;
-    }
-    .header-actions {
-      gap: 4px;
-    }
-    .header-actions .btn-volver-menu,
-    .header-actions .btn-cerrar-sesion-header {
-      font-size: 11px;
-      padding: 4px 10px;
-      min-height: 30px;
-    }
   }
 
   @media (max-width: 480px) {
@@ -946,29 +993,6 @@
     }
     #bandejaOCCard .table-wrapper table {
       min-width: 1000px;
-    }
-    
-    /* ===== HEADER RESPONSIVE ===== */
-    header .logo .company .name {
-      font-size: 12px;
-    }
-    header .logo .company .sub {
-      font-size: 7px;
-    }
-    header .logo img {
-      height: 28px;
-    }
-    .header-actions .btn-volver-menu,
-    .header-actions .btn-cerrar-sesion-header {
-      font-size: 10px;
-      padding: 4px 8px;
-      min-height: 26px;
-    }
-    .oc-acciones-container button {
-      font-size: 9px !important;
-      padding: 2px 4px !important;
-      min-height: 22px !important;
-      height: 24px !important;
     }
   }
 
@@ -1628,7 +1652,6 @@
     accent-color: var(--primary);
   }
 
-  /* ===== ESTILO PARA EL BANNER DE LOCALIZACIÓN DE OC ===== */
   .oc-location-banner {
     background: linear-gradient(135deg, #FFC700, #FFD740);
     border-radius: 10px;
@@ -1686,7 +1709,6 @@
     100% { box-shadow: 0 4px 20px rgba(255, 199, 0, 0.3); }
   }
 
-  /* ===== LOGO POR DEPARTAMENTO - CENTRADO EN LA BANDEJA DE OC ===== */
   .depto-logo-container {
     text-align: center;
     padding: 10px 0 5px 0;
@@ -1707,7 +1729,6 @@
     margin-top: 4px;
   }
 
-  /* ===== TABLAS CON ANCHO COMPLETO ===== */
   #tablaProyectosCard .table-wrapper,
   #cxpTablaProyectos .table-wrapper,
   #cxpTablaOC .table-wrapper,
@@ -1744,7 +1765,6 @@
     padding-right: 0 !important;
   }
 
-  /* ===== BANDEJA DE OC - CONTENEDOR PRINCIPAL CON MÁRGENES LATERALES DE 10PX ===== */
   #bandejaOCCard {
     margin-left: 10px !important;
     margin-right: 10px !important;
@@ -1754,15 +1774,24 @@
 </style>
 </head>
 <body>
+  <!-- ===== HEADER CON TRES ZONAS: IZQUIERDA | CENTRO | DERECHA ===== -->
   <header>
-    <div class="logo">
-      <img src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
+    <!-- ZONA IZQUIERDA: Logo EXTINGUE + nombre empresa -->
+    <div class="header-left">
+      <img class="logo-img" src="https://extingue.com.mx/img/logo.png" alt="Extingue" onerror="this.style.display='none'">
       <div class="company">
         <span class="name">GRUPO INDUSTRIAL EXTINGUE</span>
         <span class="sub">Workflow OC ERP v58</span>
       </div>
     </div>
-    <div class="header-actions">
+
+    <!-- ZONA CENTRO: Logo de empresa/departamento -->
+    <div class="header-center">
+      <img id="headerDeptoLogo" class="depto-logo-header" src="" alt="Logo departamento" onerror="this.style.display='none'">
+    </div>
+
+    <!-- ZONA DERECHA: Botones -->
+    <div class="header-right">
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">⬅ Volver</button>
       <button class="btn-cerrar-sesion-header hidden" id="btnCerrarSesionHeader" onclick="window.salir()">🚪 Cerrar sesión</button>
     </div>
@@ -2501,21 +2530,14 @@
 
       function usuarioPuedeCrearProyectos(usuario) {
         if (!usuario) return false;
-        // Solo Jefe de Departamento puede crear proyectos (Admin, Director, Finanzas no)
         if (usuario.rol === 'Jefe Departamento') return true;
         return false;
       }
 
-      // ============================================================
-      // FUNCIÓN DE PERMISOS PARA OF 
-      // TODOS PUEDEN GENERAR OF EXCEPTO: Administrador, Finanzas, Jefe de Departamento, Director General
-      // ============================================================
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        // Roles que NO pueden generar OF
         var rolesExcluidos = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
         if (rolesExcluidos.indexOf(usuario.rol) !== -1) return false;
-        // Los demás roles (Solicitante, Elaborador, etc.) pueden si tienen permisos
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
         var deptoNorm = normalizar(departamento);
@@ -2524,9 +2546,6 @@
         });
       }
 
-      // ============================================================
-      // FUNCIÓN PARA OBTENER EMPRESA/DEPARTAMENTO POR DEFECTO DEL USUARIO
-      // ============================================================
       function obtenerEmpresaDeptoDefault(usuario) {
         if (!usuario) return { empresa: '', departamento: '' };
         if (['Administrador', 'Finanzas', 'Contabilidad', 'Director General'].indexOf(usuario.rol) !== -1) {
@@ -2579,7 +2598,7 @@
       }
 
       // ============================================================
-      // RESPONSABLES DE OF (RESTRINGIDOS POR EMPRESA/DEPARTAMENTO)
+      // RESPONSABLES DE OF
       // ============================================================
       function getResponsablesOF(empresa, departamento) {
         return usuariosDB.filter(function(u) {
@@ -2886,13 +2905,12 @@
         ocNotificadaId = null;
         window.ocultarBannerLocalizacion();
         
-        // Ocultar todos los paneles
         document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
           card.classList.add('hidden');
         });
         
-        // Mostrar el logo en el menú maestro principal
         mostrarLogoMaestro();
+        actualizarHeaderLogo();
       };
 
       window.mostrarMenuMaestro = function(tipo, titulo) {
@@ -2907,7 +2925,6 @@
         document.getElementById('btnVolverMenu').classList.remove('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
         
-        // Cambiar título
         var tituloEl = document.getElementById('menuMaestroTitulo');
         if (tituloEl && titulo) {
           tituloEl.textContent = '📊 ' + titulo;
@@ -2915,11 +2932,9 @@
           tituloEl.textContent = '📊 Menú Maestro';
         }
         
-        // Mostrar el logo en el menú maestro
         mostrarLogoMaestro();
-        
-        // Llenar los módulos según el tipo de menú maestro
         llenarModulosMaestro(tipo);
+        actualizarHeaderLogo();
       };
 
       function llenarModulosMaestro(tipo) {
@@ -2931,7 +2946,6 @@
         var modulos = [];
         
         if (tipo === 'deudas') {
-          // Módulos para DEUDAS: CXP y OC
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'cxp', icono: '💰', nombre: 'CXP' });
           }
@@ -2939,24 +2953,20 @@
             modulos.push({ id: 'oc', icono: '📄', nombre: 'OC' });
           }
         } else if (tipo === 'ingresos') {
-          // Módulos para INGRESOS: CXC y OF
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'cxc', icono: '💳', nombre: 'CXC' });
           }
-          // OF: todos excepto Administrador, Finanzas, Jefe de Departamento, Director General
           var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
           if (actual && rolesExcluidosOF.indexOf(actual.rol) === -1) {
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
           }
         } else if (tipo === 'acceso_unico') {
-          // Módulos para ACCESO ÚNICO: Proveedores y Productos (solo Admin)
           if (actual && actual.rol === 'Administrador') {
             modulos.push({ id: 'proveedores', icono: '🏢', nombre: 'Proveedores' });
             modulos.push({ id: 'productos', icono: '📦', nombre: 'Productos' });
           }
         }
         
-        // Si no hay módulos disponibles, mostrar mensaje
         if (modulos.length === 0) {
           grid.innerHTML = '<p style="color:var(--gray-500); font-size:16px; grid-column:1/-1; padding:20px;">No tienes módulos disponibles en este menú</p>';
           return;
@@ -2978,7 +2988,6 @@
           item.appendChild(cuadro);
           item.appendChild(leyenda);
           
-          // Agregar evento de clic
           item.addEventListener('click', function(e) {
             var modulo = this.dataset.modulo;
             if (modulo === 'cxp') {
@@ -3007,7 +3016,6 @@
       };
 
       window.volverAlMenuMaestro = function() {
-        // Determinar qué menú maestro mostrar basado en el módulo actual
         if (moduloActual === 'cxp' || moduloActual === 'deudas') {
           window.mostrarMenuMaestro('deudas', 'DEUDAS');
         } else if (moduloActual === 'cxc' || moduloActual === 'ingresos') {
@@ -3015,13 +3023,11 @@
         } else if (moduloActual === 'acceso_unico' || moduloActual === 'proveedores' || moduloActual === 'productos') {
           window.mostrarMenuMaestro('acceso_unico', 'ACCESO ÚNICO');
         } else {
-          // Si no se puede determinar, volver al menú maestro principal
           window.mostrarMenuMaestroPrincipal();
         }
       };
 
       window.volverAlMenu = function() {
-        // Si estamos en un módulo interno, volver al menú maestro
         if (document.getElementById('menuInterno').classList.contains('visible')) {
           window.volverAlMenuMaestro();
         } else if (document.getElementById('menuMaestro').classList.contains('visible')) {
@@ -3043,15 +3049,13 @@
         document.getElementById('btnVolverMenu').classList.remove('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
         
-        // Ocultar todos los paneles
         document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
           card.classList.add('hidden');
         });
         
-        // Mostrar el logo en el menú interno
         mostrarLogoInterno();
+        actualizarHeaderLogo();
         
-        // Ocultar el menú interno si no hay módulos visibles
         var modulosVisibles = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item:not(.hidden)');
         if (modulosVisibles.length === 0) {
           document.getElementById('menuInterno').classList.remove('visible');
@@ -3066,7 +3070,6 @@
       function configurarModulos() {
         if (modulosConfigurados) return;
         
-        // Menú maestro principal (DEUDAS, INGRESOS, ACCESO ÚNICO)
         var gridPrincipal = document.getElementById('modulosGridPrincipal');
         if (gridPrincipal) {
           gridPrincipal.addEventListener('click', function(e) {
@@ -3087,15 +3090,12 @@
           });
         }
         
-        // Menú interno (todos los módulos)
         var gridInterno = document.getElementById('modulosInternoGrid');
         if (gridInterno) {
           gridInterno.addEventListener('click', function(e) {
             var item = e.target.closest('.modulo-interno-item');
             if (!item) return;
             var modulo = item.dataset.modulo;
-            
-            // Verificar si el módulo está visible
             if (item.classList.contains('hidden')) return;
             
             if (modulo === 'oc') window.mostrarModulo('oc');
@@ -3134,11 +3134,9 @@
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var puedeVerOF = actual && usuarioPuedeAccederOF(actual, '', '');
         var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
         var puedeVerOFReal = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
-        // Ocultar todos los paneles primero
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
         tablaProyectosCard.classList.add('hidden');
@@ -3147,7 +3145,6 @@
         panelOF.classList.add('hidden');
         bandejaOCCard.classList.add('hidden');
 
-        // Mostrar según el módulo seleccionado
         if (modulo === 'oc') {
           if (puedeCrearOC) panelOC.classList.remove('hidden');
           bandejaOCCard.classList.remove('hidden');
@@ -3202,11 +3199,13 @@
               irDirectoALaOC(pendingOcId);
             }, 800);
           }
+          
+          actualizarHeaderLogo();
         }, 100);
       };
 
       // ============================================================
-      // FUNCIONES PARA MOSTRAR LOGOS EN MENÚS
+      // FUNCIONES PARA MOSTRAR LOGOS EN MENÚS Y HEADER
       // ============================================================
       function mostrarLogoMaestro() {
         var container = document.getElementById('maestroLogoContainer');
@@ -3311,6 +3310,52 @@
       }
 
       // ============================================================
+      // ACTUALIZAR LOGO EN EL HEADER CENTRO
+      // ============================================================
+      function actualizarHeaderLogo() {
+        var headerLogo = document.getElementById('headerDeptoLogo');
+        if (!headerLogo) return;
+        
+        if (!actual) {
+          headerLogo.classList.remove('visible');
+          return;
+        }
+        
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var depto = defaultData.departamento || '';
+        var empresa = defaultData.empresa || '';
+        
+        // Usuarios con acceso total no muestran logo departamental
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          headerLogo.classList.remove('visible');
+          return;
+        }
+        
+        if (!depto) {
+          headerLogo.classList.remove('visible');
+          return;
+        }
+        
+        var deptoUpper = depto.toUpperCase().trim();
+        var logoUrl = '';
+        
+        if (deptoUpper.includes('INMOBIENES')) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
+        } else if (deptoUpper.includes('SUMINISERVICES')) {
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
+        } else {
+          headerLogo.classList.remove('visible');
+          return;
+        }
+        
+        headerLogo.src = logoUrl;
+        headerLogo.classList.add('visible');
+        headerLogo.onerror = function() {
+          headerLogo.classList.remove('visible');
+        };
+      }
+
+      // ============================================================
       // FUNCIONES PARA ACTUALIZAR CAMPOS AUTOMÁTICOS
       // ============================================================
       window.actualizarDatosProyecto = function() {
@@ -3320,7 +3365,6 @@
         if (!actual) return;
         
         if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
-          // Admin, Director, Finanzas no pueden crear proyectos
           empresaInput.disabled = true;
           empresaInput.style.background = 'var(--gray-200)';
           empresaInput.placeholder = 'No tienes permiso';
@@ -3414,7 +3458,6 @@
           return usuarioPuedeAcceder(u, proyecto.empresa, proyecto.departamento);
         });
         
-        // Si el usuario es Jefe Departamento, también puede ser solicitante
         if (actual && actual.rol === 'Jefe Departamento') {
           var jefeUsuario = usuariosDB.find(function(u) { return u.usuario === actual.usuario && u.rol === 'Jefe Departamento'; });
           if (jefeUsuario && usuarioPuedeAcceder(jefeUsuario, proyecto.empresa, proyecto.departamento)) {
@@ -3591,7 +3634,7 @@
       };
 
       // ============================================================
-      // VALIDACIÓN DE CLABE (18 DÍGITOS NUMÉRICOS)
+      // VALIDACIÓN DE CLABE
       // ============================================================
       function validarClabe(clabe) {
         if (!clabe || clabe === '') return { valido: false, mensaje: 'La CLABE es obligatoria.' };
@@ -3606,7 +3649,7 @@
       }
 
       // ============================================================
-      // RECOPILAR DATOS OC CON VALIDACIÓN DE CLABE
+      // RECOPILAR DATOS OC
       // ============================================================
       function recopilarDatosOC() {
         var selectProyecto = document.getElementById('selectProyecto');
@@ -3657,7 +3700,6 @@
         var cie = document.getElementById('cie').value.trim().toUpperCase();
         var referencia = document.getElementById('referencia').value.trim().toUpperCase();
 
-        // ========== VALIDACIÓN DE CLABE ==========
         if (clabe) {
           var validacionClabe = validarClabe(clabe);
           if (!validacionClabe.valido) {
@@ -3772,7 +3814,6 @@
         var deptoUpper = (departamento || '').toUpperCase().trim();
         var empUpper = (empresa || '').toUpperCase().trim();
         
-        // Primero revisar por departamento específico
         if (deptoUpper.includes('INMOBIENES')) {
           return {
             url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png',
@@ -3787,7 +3828,6 @@
           };
         }
         
-        // Si no hay departamento específico, usar logo por empresa
         if (empUpper.includes('GRUPO INDUSTRIAL EXTINGUE')) {
           return {
             url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png',
@@ -3819,12 +3859,10 @@
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
         
-        // Obtener logo por departamento o empresa
         var logoInfo = getLogoPorDepartamento(datos.empresa, datos.departamento);
         var logoUrl = logoInfo ? logoInfo.url : null;
         var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
 
-        // Si no hay logo específico, usar el logo de Extingue como fallback
         if (!logoUrl) {
           logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
           logoTipo = 'PNG';
@@ -3847,7 +3885,6 @@
             doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
             y += imgHeight + 25;
           } else {
-            // Fallback: texto simple
             doc.setFontSize(18);
             doc.setTextColor(11, 26, 51);
             doc.setFont('helvetica', 'bold');
@@ -3855,7 +3892,6 @@
             y += 60;
           }
         } catch (e) {
-          // Fallback: texto simple
           doc.setFontSize(18);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
@@ -4316,7 +4352,7 @@
       };
 
       // ============================================================
-      // FUNCIONES DE APROBACIONES
+      // FUNCIONES DE APROBACIONES (resumidas)
       // ============================================================
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
@@ -4883,9 +4919,6 @@
         return { proyectos: proyectosVisibles, oc: ocVisibles };
       }
 
-      // ============================================================
-      // FUNCIÓN DASHBOARD PARA CXP - CORREGIDA
-      // ============================================================
       window.verDashboardProyectoCXP = function(nombreProyecto) {
         var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
         if (!proyecto) {
@@ -5279,9 +5312,8 @@
       };
 
       // ============================================================
-      // FUNCIONES PARA OF (CON PERMISOS DE EMPRESA/DEPARTAMENTO Y CAMPOS POR DEFECTO)
+      // FUNCIONES PARA OF
       // ============================================================
-      
       function generarFolioOF(departamento) {
         var deptoClean = (departamento || 'GENERAL').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
         var existentes = ordenesFacturacion.filter(function(o) { 
@@ -5307,9 +5339,6 @@
         window.actualizarResponsablesOF();
       };
 
-      // ============================================================
-      // CONFIGURAR CAMPOS POR DEFECTO PARA OF
-      // ============================================================
       function configurarCamposDefaultOF() {
         if (!actual) return;
         
@@ -5356,7 +5385,6 @@
           return;
         }
         
-        // Admin y Finanzas también sin acceso a OF
         if (actual.rol === 'Administrador' || actual.rol === 'Finanzas' || actual.rol === 'Jefe Departamento') {
           empresaInput.disabled = true;
           empresaInput.style.background = 'var(--gray-200)';
@@ -5526,9 +5554,6 @@
         return partidas;
       }
 
-      // ============================================================
-      // RECOLECTAR DATOS DEL FORMULARIO DE OF (SIN GUARDAR)
-      // ============================================================
       function recopilarDatosOF() {
         return {
           departamento: document.getElementById('ofDepartamento').value.trim().toUpperCase(),
@@ -5554,9 +5579,6 @@
         };
       }
 
-      // ============================================================
-      // GENERAR PDF DE LA OF (MISMA CONFIGURACIÓN DE LOGO/RESTRICCIONES QUE LA OC)
-      // ============================================================
       async function generarPDFOF(datos) {
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
@@ -5567,12 +5589,10 @@
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
         
-        // Obtener logo por departamento o empresa
         var logoInfo = getLogoPorDepartamento(datos.empresa, datos.departamento);
         var logoUrl = logoInfo ? logoInfo.url : null;
         var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
 
-        // Si no hay logo específico, usar el logo de Extingue como fallback
         if (!logoUrl) {
           logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
           logoTipo = 'PNG';
@@ -5595,7 +5615,6 @@
             doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
             y += imgHeight + 25;
           } else {
-            // Fallback: texto simple
             doc.setFontSize(18);
             doc.setTextColor(11, 26, 51);
             doc.setFont('helvetica', 'bold');
@@ -5603,7 +5622,6 @@
             y += 60;
           }
         } catch (e) {
-          // Fallback: texto simple
           doc.setFontSize(18);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
@@ -5755,9 +5773,6 @@
         ofDocPDF.save(nombre + '.pdf');
       };
 
-      // ============================================================
-      // GUARDAR / GENERAR OF (CON VALIDACIÓN DE PERMISOS)
-      // ============================================================
       window.guardarOF = async function() {
         var msgDiv = document.getElementById('msgOF');
         msgDiv.innerHTML = '';
@@ -5803,7 +5818,6 @@
           return;
         }
 
-        // Verificar que el usuario tenga permiso para crear OF (todos excepto Admin, Finanzas, Jefe Depto, Director)
         var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
         if (rolesExcluidosOF.indexOf(actual.rol) !== -1) {
           msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR ÓRDENES DE FACTURACIÓN.</div>';
@@ -5874,9 +5888,6 @@
         window.renderOF();
       };
 
-      // ============================================================
-      // FINANZAS: IMPRIMIR OF (misma configuración de logo/restricciones que la OC)
-      // ============================================================
       window.imprimirOF = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -5908,9 +5919,6 @@
         }
       };
 
-      // ============================================================
-      // FINANZAS: APROBAR OF (SOLICITA FOLIO DE FACTURA -> FACTURADA)
-      // ============================================================
       window.aprobarOF = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -5949,9 +5957,6 @@
         alert('✅ OF ' + of.folio + ' facturada con folio ' + updates.folio_factura + '.');
       };
 
-      // ============================================================
-      // RESPONSABLE: MARCAR OF COMO PAGADA
-      // ============================================================
       window.marcarPagadaOF = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -5979,9 +5984,6 @@
         alert('✅ OF ' + of.folio + ' marcada como pagada.');
       };
 
-      // ============================================================
-      // RESPONSABLE: SOLICITAR CANCELACIÓN DE OF
-      // ============================================================
       window.solicitarCancelacionOF = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -6011,9 +6013,6 @@
         alert('⚠️ Solicitud de cancelación enviada para la OF ' + of.folio + '. Finanzas la revisará.');
       };
 
-      // ============================================================
-      // FINANZAS: CANCELAR OF (FINALIZA UNA SOLICITUD DE CANCELACIÓN)
-      // ============================================================
       window.cancelarOFFinanzas = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -6043,9 +6042,6 @@
         alert('❌ OF ' + of.folio + ' cancelada por ' + actual.u + '.');
       };
 
-      // ============================================================
-      // RENDER OF (CON FILTRADO POR PERMISOS)
-      // ============================================================
       window.renderOF = function() {
         var tbody = document.getElementById('ofCuerpo');
         if (!tbody) return;
@@ -6373,9 +6369,6 @@
         reportePreviewPDF = null;
       };
 
-      // ============================================================
-      // REPORTE CXF: OF PAGADAS VS PENDIENTES (POR PERMISOS DEL USUARIO)
-      // ============================================================
       function generarPDFReporteCXF(ofs) {
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
@@ -6525,9 +6518,6 @@
         document.getElementById('dashboardContent').innerHTML = '';
       };
 
-      // ============================================================
-      // FUNCIÓN PARA ACTUALIZAR FILTRO DE PROYECTOS DEPENDIENTE DE DEPARTAMENTO
-      // ============================================================
       function actualizarFiltroProyectos() {
         var deptoSelect = document.getElementById('filtroDepto');
         var proyectoSelect = document.getElementById('filtroProyecto');
@@ -6558,9 +6548,6 @@
         render();
       }
 
-      // ============================================================
-      // FUNCIÓN PARA MOSTRAR LOGO POR DEPARTAMENTO
-      // ============================================================
       function mostrarLogoDepartamento() {
         var container = document.getElementById('deptoLogoContainer');
         var img = document.getElementById('deptoLogoImg');
@@ -6613,7 +6600,7 @@
       }
 
       // ============================================================
-      // FUNCIONES DE RENDER PRINCIPAL
+      // FUNCIÓN DE RENDER PRINCIPAL
       // ============================================================
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
@@ -6626,7 +6613,6 @@
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
         var ocVisibles = filtrarOCSegunUsuario(actual);
 
-        // ==== FILTROS: DEPARTAMENTO, PROYECTO, ESTADO ====
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
           ocVisibles = ocVisibles.filter(function(o) {
@@ -6679,17 +6665,13 @@
           });
         }
 
-        // No permitir crear OC sin proyecto para Admin, Director, Finanzas
-        if (actual && (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
-          // No agregar opción manual
-        } else if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
+        if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
             selectProyecto.selectedIndex = 0;
           }
           window.actualizarDatosOC();
         }
 
-        // Invertir para mostrar las más recientes primero
         ocVisibles.reverse();
 
         tablaOC.innerHTML = '';
@@ -6698,13 +6680,11 @@
           tablaOC.innerHTML = '<tr><td colspan="16" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
           resumenTotales.innerHTML = '';
         } else {
-          // Calcular totales
           var totalMXN = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
           var totalUSD = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
           var totalMXNEquiv = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
           resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>';
 
-          // Generar filas de OC - DOS FILAS POR OC
           ocVisibles.forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
             var badgeClass = '';
@@ -6712,7 +6692,6 @@
             var rowClass = '';
             var botonAura = '';
 
-            // Determinar estado y clases
             if (o.estado === 'PENDIENTE_DIRECTOR' && actual && (actual.rol === 'Director General' || (actual.rol === 'Jefe Departamento' && ocEsInmobienes(o)))) {
               if (o.id === ocNotificadaId && o.notificacion_enviada === true) {
                 rowClass = 'pendiente-director-notificada';
@@ -6759,11 +6738,9 @@
               estadoMostrado = o.estado || '—';
             }
 
-            // ===== CONSTRUIR BOTONES DE ACCIÓN =====
             var acciones = '';
             var rol = actual ? actual.rol : '';
 
-            // --- BOTONES PARA DIRECTOR GENERAL ---
             if (rol === 'Director General') {
               acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
               
@@ -6868,7 +6845,6 @@
           window.agregarFilaProducto();
         }
 
-        // Actualizar filtros
         var filtroDeptoSelect = document.getElementById('filtroDepto');
         if (filtroDeptoSelect) {
           var currentDepto = filtroDeptoSelect.value;
@@ -6901,7 +6877,6 @@
           });
         }
 
-        // Renderizar otros paneles
         var panelCXP = document.getElementById('panelCXP');
         if (!panelCXP.classList.contains('hidden')) {
           window.renderCXP();
@@ -6923,11 +6898,9 @@
         }
 
         mostrarLogoDepartamento();
+        actualizarHeaderLogo();
       }
 
-      // ============================================================
-      // FUNCIONES ADICIONALES
-      // ============================================================
       window.editarOC = function(index) {
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
@@ -7023,7 +6996,6 @@
 
         var ocId = detectarEnlaceTelegram();
 
-        // Configurar visibilidad del botón de Acceso Único
         var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
         if (accesoUnicoBtn) {
           if (actual && actual.rol === 'Administrador') {
@@ -7046,14 +7018,12 @@
           document.getElementById('contenidoApp').classList.add('visible');
           document.getElementById('btnVolverMenu').classList.remove('hidden');
           
-          // Configurar qué módulos mostrar según el rol
           var esAdmin = actual && actual.rol === 'Administrador';
           var esFinanzas = actual && actual.rol === 'Finanzas';
           var esJefe = actual && actual.rol === 'Jefe Departamento';
           var esSolicitante = actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador');
           var esDirector = actual && actual.rol === 'Director General';
           
-          // Ocultar todos los paneles
           document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
             card.classList.add('hidden');
           });
@@ -7065,17 +7035,14 @@
           var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
           var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
           
-          // Mostrar paneles según permisos
           if (puedeCrearOC) document.getElementById('panelOC').classList.remove('hidden');
           if (puedeCrearProyecto) document.getElementById('panelProyecto').classList.remove('hidden');
           if (puedeVerCXP) document.getElementById('panelCXP').classList.remove('hidden');
           if (puedeVerCXC) document.getElementById('panelCXC').classList.remove('hidden');
           if (puedeVerOF) document.getElementById('panelOF').classList.remove('hidden');
           
-          // Siempre mostrar bandeja de OC
           document.getElementById('bandejaOCCard').classList.remove('hidden');
           
-          // Mostrar tabla de proyectos si es admin o jefe
           if (esJefe) {
             document.getElementById('tablaProyectosCard').classList.remove('hidden');
           }
@@ -7104,12 +7071,13 @@
               irDirectoALaOC(pendingOcId);
             }, 3000);
             
+            actualizarHeaderLogo();
           }, 300);
           
         } else {
-          // Mostrar menú maestro principal
           window.mostrarMenuMaestroPrincipal();
           configurarModulos();
+          actualizarHeaderLogo();
         }
 
         var infoSesion = '👤 ' + actual.u + ' (' + actual.rol + ')';
@@ -7137,20 +7105,16 @@
         var esSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador';
         var esDirector = actual.rol === 'Director General';
 
-        // Configurar visibilidad del menú interno según el rol
         var modulosInterno = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item');
         modulosInterno.forEach(function(item) {
           var modulo = item.dataset.modulo;
           var visible = false;
           
           if (esAdmin || esFinanzas || esJefe) {
-            // Admin, Finanzas y Jefe ven todos los módulos (excepto proveedores y productos que están en Acceso Único)
             visible = true;
           } else if (esDirector) {
-            // Director solo ve OC y Proyectos (solo lectura)
             visible = (modulo === 'oc' || modulo === 'proyectos');
           } else if (esSolicitante) {
-            // Solicitante ve OC, Proyectos y OF
             visible = (modulo === 'oc' || modulo === 'proyectos' || modulo === 'of');
           }
           
@@ -7161,7 +7125,6 @@
           }
         });
 
-        // Configurar visibilidad de paneles
         var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento');
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
@@ -7258,6 +7221,7 @@
           if (cuerpo && cuerpo.children.length === 0 && !document.getElementById('panelOC').classList.contains('hidden')) {
             window.agregarFilaProducto();
           }
+          actualizarHeaderLogo();
         }, 200);
       };
 
@@ -7325,6 +7289,7 @@
           if (data && data.length > 0) proyectos.push(data[0]);
           else await cargarDatos();
           render();
+          actualizarHeaderLogo();
         } catch (error) {
           console.error('❌ Error inesperado en crearProyecto:', error.stack || error);
           msgDiv.innerHTML = '<div class="alert">⚠️ ERROR INESPERADO: ' + error.message + '</div>';
@@ -7339,6 +7304,7 @@
         await supabase.from('proyectos').delete().eq('id', proyecto.id);
         proyectos.splice(index, 1);
         render();
+        actualizarHeaderLogo();
       };
 
       window.aumentarSaldoProyecto = async function(index) {
@@ -7360,6 +7326,7 @@
         Object.assign(proyecto, updates);
         render();
         alert('✅ Saldo aumentado. Nuevo presupuesto: ' + formatoMoneda(nuevoPresupuesto, proyecto.moneda));
+        actualizarHeaderLogo();
       };
 
       // ============================================================
