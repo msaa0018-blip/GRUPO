@@ -82,7 +82,7 @@
     min-height: 56px;
     width: 100%;
     max-width: 100vw;
-    overflow: hidden;
+    overflow: visible;
     box-sizing: border-box;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
     flex-shrink: 0;
@@ -144,25 +144,24 @@
     display: block;
   }
   
-
   /* ===== BOTONES FIJOS EN ESQUINA SUPERIOR DERECHA ===== */
-	  .header-right {
-	    position: relative;     
-
-	    display: flex;
-	    align-items: center;
-	    gap: 12px;
-	    z-index: 10;          
-	    background: rgba(11, 26, 51, 0.85);
-	    padding: 4px 10px;
-	    border-radius: 8px;
-	    backdrop-filter: blur(4px);
-	    border: 1px solid rgba(255, 255, 255, 0.1);
-	    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-	    flex-shrink: 0;
-	    overflow: hidden;       
-    }
-   max-width: 100%; box-sizing: border-box;
+  .header-right {
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+    background: rgba(11, 26, 51, 0.85);
+    padding: 4px 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    overflow: visible;
+  }
   
   .header-right .btn-volver-menu {
     background: var(--gray-600);
@@ -216,6 +215,8 @@
     .header-left .company .sub { font-size: 7px; }
     .header-center .depto-logo-header { max-height: 32px; max-width: 80px; }
     .header-right {
+      top: 6px;
+      right: 8px;
       padding: 3px 8px;
       gap: 8px;
     }
@@ -1670,6 +1671,7 @@
     </div>
 
     <!-- ===== MENÚ MAESTRO (EGRESOS, INGRESOS, ALTA DE REGISTROS) ===== -->
+    <!-- ===== MENÚ MMD: módulos disponibles del Menú Maestro seleccionado ===== -->
     <div id="menuMaestro">
       <div class="menu-maestro-logo-container">
         <img id="menuMaestroLogoImg" src="" alt="Logo" style="display:none; max-height:120px;">
@@ -2717,6 +2719,10 @@
         actualizarTotalesMenuPrincipal();
       };
 
+      // ============================================================
+      // MENÚ MMD — Módulos disponibles del Menú Maestro seleccionado
+      // (EGRESOS / INGRESOS / ALTA DE REGISTROS, según el rol del usuario)
+      // ============================================================
       window.mostrarMenuMaestro = function(tipo, titulo) {
         document.getElementById('menuMaestroPrincipal').classList.remove('visible');
         document.getElementById('menuMaestroPrincipal').classList.add('hidden');
@@ -2737,6 +2743,7 @@
         }
         
         mostrarLogoMaestro();
+        mostrarLogoMMD();
         llenarModulosMaestro(tipo);
         actualizarHeaderLogo();
       };
@@ -2843,14 +2850,14 @@
         }
       };
 
-       window.volverAlMenu = function() {
+      window.volverAlMenu = function() {
         if (document.getElementById('contenidoApp').classList.contains('visible')) {
-          // Está dentro de un módulo (CXP, OC, CXC, OF) → primer clic: volver al listado de módulos
+          // Está dentro de un módulo (CXP, OC, CXC, OF) → 1er clic: volver al listado de módulos disponibles
           window.volverAlMenuMaestro();
         } else if (document.getElementById('menuInterno').classList.contains('visible')) {
           window.volverAlMenuMaestro();
         } else if (document.getElementById('menuMaestro').classList.contains('visible')) {
-          // Ya está en el listado de módulos → segundo clic: al menú maestro principal
+          // Ya está en el listado de módulos → 2do clic: al menú maestro principal
           window.mostrarMenuMaestroPrincipal();
         } else {
           window.mostrarMenuMaestroPrincipal();
@@ -3095,43 +3102,26 @@
           return;
         }
         
-        var defaultData = obtenerEmpresaDeptoDefault(actual);
-        var depto = defaultData.departamento || '';
-        var empresa = defaultData.empresa || '';
-        
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           container.style.display = 'none';
           return;
         }
         
-        if (!depto) {
-          container.style.display = 'none';
-          return;
-        }
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var logoInfo = getLogoPorDepartamento(defaultData.empresa, defaultData.departamento);
         
-        var deptoUpper = depto.toUpperCase().trim();
-        var logoUrl = '';
-        var nombreMostrar = depto;
-        
-        if (deptoUpper.includes('INMOBIENES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
-          nombreMostrar = 'INMOBIENES';
-        } else if (deptoUpper.includes('SUMINISERVICES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
-          nombreMostrar = 'SUMINISERVICES';
-        } else {
+        if (!logoInfo) {
           container.style.display = 'none';
           return;
         }
         
         container.style.display = 'block';
-        img.src = logoUrl;
+        img.src = logoInfo.url;
         img.style.display = 'block';
         img.onerror = function() {
           img.style.display = 'none';
-          nameDisplay.textContent = nombreMostrar;
         };
-        nameDisplay.textContent = nombreMostrar;
+        nameDisplay.textContent = logoInfo.nombre;
       }
 
       function mostrarLogoInterno() {
@@ -3146,43 +3136,58 @@
           return;
         }
         
-        var defaultData = obtenerEmpresaDeptoDefault(actual);
-        var depto = defaultData.departamento || '';
-        var empresa = defaultData.empresa || '';
-        
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           container.style.display = 'none';
           return;
         }
         
-        if (!depto) {
-          container.style.display = 'none';
-          return;
-        }
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var logoInfo = getLogoPorDepartamento(defaultData.empresa, defaultData.departamento);
         
-        var deptoUpper = depto.toUpperCase().trim();
-        var logoUrl = '';
-        var nombreMostrar = depto;
-        
-        if (deptoUpper.includes('INMOBIENES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
-          nombreMostrar = 'INMOBIENES';
-        } else if (deptoUpper.includes('SUMINISERVICES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
-          nombreMostrar = 'SUMINISERVICES';
-        } else {
+        if (!logoInfo) {
           container.style.display = 'none';
           return;
         }
         
         container.style.display = 'block';
-        img.src = logoUrl;
+        img.src = logoInfo.url;
         img.style.display = 'block';
         img.onerror = function() {
           img.style.display = 'none';
-          nameDisplay.textContent = nombreMostrar;
         };
-        nameDisplay.textContent = nombreMostrar;
+        nameDisplay.textContent = logoInfo.nombre;
+      }
+
+      // ============================================================
+      // LOGO DEL MENÚ MMD (listado de módulos disponibles: EGRESOS/INGRESOS/ALTA)
+      // ============================================================
+      function mostrarLogoMMD() {
+        var img = document.getElementById('menuMaestroLogoImg');
+        var nameDisplay = document.getElementById('menuMaestroDeptoName');
+        
+        if (!img || !nameDisplay) return;
+        
+        if (!actual || ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+          img.style.display = 'none';
+          nameDisplay.textContent = '';
+          return;
+        }
+        
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var logoInfo = getLogoPorDepartamento(defaultData.empresa, defaultData.departamento);
+        
+        if (!logoInfo) {
+          img.style.display = 'none';
+          nameDisplay.textContent = '';
+          return;
+        }
+        
+        img.src = logoInfo.url;
+        img.style.display = 'block';
+        img.onerror = function() {
+          img.style.display = 'none';
+        };
+        nameDisplay.textContent = logoInfo.nombre;
       }
 
       // ============================================================
@@ -3197,33 +3202,20 @@
           return;
         }
         
-        var defaultData = obtenerEmpresaDeptoDefault(actual);
-        var depto = defaultData.departamento || '';
-        var empresa = defaultData.empresa || '';
-        
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           headerLogo.classList.remove('visible');
           return;
         }
         
-        if (!depto) {
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var logoInfo = getLogoPorDepartamento(defaultData.empresa, defaultData.departamento);
+        
+        if (!logoInfo) {
           headerLogo.classList.remove('visible');
           return;
         }
         
-        var deptoUpper = depto.toUpperCase().trim();
-        var logoUrl = '';
-        
-        if (deptoUpper.includes('INMOBIENES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
-        } else if (deptoUpper.includes('SUMINISERVICES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
-        } else {
-          headerLogo.classList.remove('visible');
-          return;
-        }
-        
-        headerLogo.src = logoUrl;
+        headerLogo.src = logoInfo.url;
         headerLogo.classList.add('visible');
         headerLogo.onerror = function() {
           headerLogo.classList.remove('visible');
@@ -3689,31 +3681,35 @@
         var deptoUpper = (departamento || '').toUpperCase().trim();
         var empUpper = (empresa || '').toUpperCase().trim();
         
-        if (deptoUpper.includes('INMOBIENES')) {
+        if (deptoUpper.includes('INMOBIENES') || empUpper.includes('INMOBIENES')) {
           return {
             url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png',
-            tipo: 'PNG'
+            tipo: 'PNG',
+            nombre: 'INMOBIENES'
           };
         }
         
-        if (deptoUpper.includes('SUMINISERVICES')) {
+        if (deptoUpper.includes('SUMINISERVICES') || empUpper.includes('SUMINISERVICES')) {
           return {
             url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg',
-            tipo: 'JPEG'
+            tipo: 'JPEG',
+            nombre: 'SUMINISERVICES'
           };
         }
         
-        if (empUpper.includes('GRUPO INDUSTRIAL EXTINGUE')) {
+        if (empUpper.includes('GRUPO INDUSTRIAL EXTINGUE') || deptoUpper.includes('GRUPO INDUSTRIAL EXTINGUE')) {
           return {
-            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png',
-            tipo: 'PNG'
+            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE.png',
+            tipo: 'PNG',
+            nombre: 'GRUPO INDUSTRIAL EXTINGUE'
           };
         }
         
-        if (empUpper.includes('VEXPAR OPERACIONES')) {
+        if (empUpper.includes('VEXPAR OPERACIONES') || deptoUpper.includes('VEXPAR OPERACIONES')) {
           return {
-            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/7560cffc8355eee7cf86c27139f539800784a955/LOGO%20VEXPAR%20PARA%20OC.jpg',
-            tipo: 'JPEG'
+            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20VEXPAR%20PARA%20OC.jpg',
+            tipo: 'JPEG',
+            nombre: 'VEXPAR OPERACIONES'
           };
         }
         
@@ -3739,7 +3735,7 @@
         var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
 
         if (!logoUrl) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE.png';
           logoTipo = 'PNG';
         }
 
@@ -5452,7 +5448,7 @@
         var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
 
         if (!logoUrl) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/814cb1ab7c47636f35ab0f988c76a900412d94c2/LOGO%20EXTINGUE.png';
+          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE.png';
           logoTipo = 'PNG';
         }
 
