@@ -18,7 +18,7 @@
     padding: 0
   }
   html, body {
-    max-width: 100vw;
+    max-width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -81,7 +81,7 @@
     z-index: 100;
     min-height: 56px;
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;
     overflow: visible;
     box-sizing: border-box;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
@@ -2769,6 +2769,9 @@
           if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
             modulos.push({ id: 'oc', icono: '📄', nombre: 'OC' });
           }
+          if (actual && usuarioPuedeCrearProyectos(actual)) {
+            modulos.push({ id: 'proyectos', icono: '🏗️', nombre: 'PROYECTO' });
+          }
         } else if (tipo === 'ingresos') {
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'cxc', icono: '💳', nombre: 'CXC' });
@@ -2831,6 +2834,9 @@
             } else if (modulo === 'oc') {
               window.mostrarMenuInterno();
               setTimeout(function() { window.mostrarModulo('oc'); }, 100);
+            } else if (modulo === 'proyectos') {
+              window.mostrarMenuInterno();
+              setTimeout(function() { window.mostrarModulo('proyectos'); }, 100);
             } else if (modulo === 'proveedores' || modulo === 'productos') {
               mostrarConstruccion();
             }
@@ -2845,9 +2851,9 @@
       };
 
       window.volverAlMenuMaestro = function() {
-        if (moduloActual === 'cxp' || moduloActual === 'egresos') {
+        if (moduloActual === 'cxp' || moduloActual === 'oc' || moduloActual === 'proyectos' || moduloActual === 'egresos') {
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
-        } else if (moduloActual === 'cxc' || moduloActual === 'ingresos') {
+        } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'ingresos') {
           window.mostrarMenuMaestro('ingresos', 'INGRESOS');
         } else if (moduloActual === 'alta_registros' || moduloActual === 'proveedores' || moduloActual === 'productos') {
           window.mostrarMenuMaestro('alta_registros', 'ALTA DE REGISTROS');
@@ -3044,52 +3050,60 @@
       // FUNCIONES PARA ACTUALIZAR TOTALES EN MENÚ PRINCIPAL
       // ============================================================
       function actualizarTotalesMenuPrincipal() {
-        var totalEgresosEl = document.getElementById('totalEgresos');
-        var totalIngresosEl = document.getElementById('totalIngresos');
-        
-        if (!totalEgresosEl || !totalIngresosEl) return;
-        
-        // Calcular EGRESOS (OC Pagadas)
-        var ocVisibles = filtrarOCSegunUsuario(actual);
-        var ocPagadas = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; });
-        var totalMXN = ocPagadas.filter(function(o) { return o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
-        var totalUSD = ocPagadas.filter(function(o) { return o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
-        
-        var textoEgresos = 'OC Pagadas: ' + formatoMoneda(totalMXN, 'MXN');
-        if (totalUSD > 0) {
-          textoEgresos += ' | ' + formatoMoneda(totalUSD, 'USD');
-        }
-        totalEgresosEl.textContent = textoEgresos;
-        
-        // Calcular INGRESOS (Facturas Pagadas - CXC)
-        var cxcVisibles = cuentasCXC.filter(function(c) { 
-          if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
-            return true;
+        try {
+          var totalEgresosEl = document.getElementById('totalEgresos');
+          var totalIngresosEl = document.getElementById('totalIngresos');
+          
+          if (!totalEgresosEl || !totalIngresosEl) return;
+          
+          var arrOrdenes = ordenes || [];
+          var arrCXC = cuentasCXC || [];
+          var arrProyectos = proyectos || [];
+          
+          // Calcular EGRESOS (OC Pagadas)
+          var ocVisibles = filtrarOCSegunUsuario(actual) || [];
+          var ocPagadas = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; });
+          var totalMXN = ocPagadas.filter(function(o) { return o.moneda === 'MXN'; }).reduce(function(s, o) { return s + (o.montototal || 0); }, 0);
+          var totalUSD = ocPagadas.filter(function(o) { return o.moneda === 'USD'; }).reduce(function(s, o) { return s + (o.montototal || 0); }, 0);
+          
+          var textoEgresos = 'OC Pagadas: ' + formatoMoneda(totalMXN, 'MXN');
+          if (totalUSD > 0) {
+            textoEgresos += ' | ' + formatoMoneda(totalUSD, 'USD');
           }
-          var orden = ordenes.find(function(o) { return o.codigo === c.occontrato; });
-          if (!orden) return false;
-          var proyecto = proyectos.find(function(p) { return p.nombre === orden.proyecto; });
-          if (!proyecto) return false;
-          return usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento);
-        });
-        
-        var cxcPagadas = cxcVisibles.filter(function(c) { return c.estado === 'PAGADO'; });
-        var totalCXCMXN = cxcPagadas.filter(function(c) { return c.moneda === 'MXN'; }).reduce(function(s, c) { return s + c.importe; }, 0);
-        var totalCXCUSD = cxcPagadas.filter(function(c) { return c.moneda === 'USD'; }).reduce(function(s, c) { return s + c.importe; }, 0);
-        
-        var textoIngresos = 'Facturas Pagadas: ' + formatoMoneda(totalCXCMXN, 'MXN');
-        if (totalCXCUSD > 0) {
-          textoIngresos += ' | ' + formatoMoneda(totalCXCUSD, 'USD');
-        }
-        totalIngresosEl.textContent = textoIngresos;
-        
-        var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
-        if (accesoUnicoBtn) {
-          if (actual && actual.rol === 'Administrador') {
-            accesoUnicoBtn.style.display = 'flex';
-          } else {
-            accesoUnicoBtn.style.display = 'none';
+          totalEgresosEl.textContent = textoEgresos;
+          
+          // Calcular INGRESOS (Facturas Pagadas - CXC)
+          var cxcVisibles = arrCXC.filter(function(c) { 
+            if (actual && ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
+              return true;
+            }
+            var orden = arrOrdenes.find(function(o) { return o.codigo === c.occontrato; });
+            if (!orden) return false;
+            var proyecto = arrProyectos.find(function(p) { return p.nombre === orden.proyecto; });
+            if (!proyecto) return false;
+            return usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento);
+          });
+          
+          var cxcPagadas = cxcVisibles.filter(function(c) { return c.estado === 'PAGADO'; });
+          var totalCXCMXN = cxcPagadas.filter(function(c) { return c.moneda === 'MXN'; }).reduce(function(s, c) { return s + (c.importe || 0); }, 0);
+          var totalCXCUSD = cxcPagadas.filter(function(c) { return c.moneda === 'USD'; }).reduce(function(s, c) { return s + (c.importe || 0); }, 0);
+          
+          var textoIngresos = 'Facturas Pagadas: ' + formatoMoneda(totalCXCMXN, 'MXN');
+          if (totalCXCUSD > 0) {
+            textoIngresos += ' | ' + formatoMoneda(totalCXCUSD, 'USD');
           }
+          totalIngresosEl.textContent = textoIngresos;
+          
+          var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
+          if (accesoUnicoBtn) {
+            if (actual && actual.rol === 'Administrador') {
+              accesoUnicoBtn.style.display = 'flex';
+            } else {
+              accesoUnicoBtn.style.display = 'none';
+            }
+          }
+        } catch (e) {
+          console.error('⚠️ Error calculando totales del menú principal (no crítico):', e);
         }
       }
 
@@ -6961,6 +6975,8 @@
         document.getElementById('login').classList.add('hidden');
         document.getElementById('loginContainer').style.display = 'none';
 
+        try {
+
         var ocId = detectarEnlaceTelegram();
 
         var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
@@ -7190,6 +7206,12 @@
           }
           actualizarHeaderLogo();
         }, 200);
+
+        } catch (e) {
+          console.error('❌ Error inicializando la interfaz después del login (revisa este mensaje en la consola):', e);
+          try { window.mostrarMenuMaestroPrincipal(); } catch (e2) { console.error('❌ Error adicional mostrando el menú principal:', e2); }
+          alert('Hubo un problema cargando parte de la interfaz. Se muestra el Menú Maestro Principal. Por favor comparte este mensaje con soporte: ' + e.message);
+        }
       };
 
       window.salir = function() { location.reload(); };
