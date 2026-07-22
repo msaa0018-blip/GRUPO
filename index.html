@@ -2647,7 +2647,42 @@
         mostrarLogoMaestro();
         actualizarHeaderLogo();
         actualizarTotalesMenuPrincipal();
+        
+        // Configurar event listeners del menú principal
+        configurarMenuPrincipal();
       };
+
+      // Configurar event listeners para el menú principal
+      function configurarMenuPrincipal() {
+        var gridPrincipal = document.getElementById('modulosGridPrincipal');
+        if (!gridPrincipal) return;
+        
+        // Remover listeners anteriores para evitar duplicados
+        var nuevoGrid = gridPrincipal.cloneNode(true);
+        gridPrincipal.parentNode.replaceChild(nuevoGrid, gridPrincipal);
+        
+        nuevoGrid.addEventListener('click', function(e) {
+          var item = e.target.closest('.modulo-item');
+          if (!item) return;
+          var modulo = item.dataset.modulo;
+          console.log('🔘 Click en módulo:', modulo);
+          
+          if (modulo === 'egresos') {
+            window.mostrarMenuMaestro('egresos', 'EGRESOS');
+          } else if (modulo === 'ingresos') {
+            window.mostrarMenuMaestro('ingresos', 'INGRESOS');
+          } else if (modulo === 'alta_registros') {
+            if (actual && actual.rol === 'Administrador') {
+              window.mostrarMenuMaestro('alta_registros', 'ALTA DE REGISTROS');
+            } else {
+              alert('⚠️ No tienes permisos para acceder a este menú.');
+            }
+          }
+        });
+        
+        // Actualizar referencia global
+        document.getElementById('modulosGridPrincipal') = nuevoGrid;
+      }
 
       // Nivel 2: Menú Maestro (EGRESOS, INGRESOS, ALTA DE REGISTROS)
       window.mostrarMenuMaestro = function(tipo, titulo) {
@@ -2662,7 +2697,7 @@
         
         // Mostrar botón Volver (para ir a Menú Maestro Principal)
         document.getElementById('btnVolverMenu').classList.remove('hidden');
-        document.getElementById('btnVolverMenu').textContent = '⬅ Menú Principal';
+        document.getElementById('btnVolverMenu').innerHTML = '<span class="btn-text">⬅ Menú Principal</span>';
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
         
         var tituloEl = document.getElementById('menuMaestroTitulo');
@@ -2679,33 +2714,6 @@
         mostrarLogoMMD();
         llenarModulosMaestro(tipo);
         actualizarHeaderLogo();
-      };
-
-      // Nivel 3: Menú Interno (MMD - Módulos disponibles)
-      window.mostrarMenuInterno = function() {
-        document.getElementById('menuMaestroPrincipal').classList.remove('visible');
-        document.getElementById('menuMaestroPrincipal').classList.add('hidden');
-        document.getElementById('menuMaestro').classList.remove('visible');
-        document.getElementById('menuMaestro').classList.add('hidden');
-        document.getElementById('menuInterno').classList.add('visible');
-        document.getElementById('menuInterno').classList.remove('hidden');
-        document.getElementById('contenidoApp').classList.remove('visible');
-        document.getElementById('contenidoApp').classList.add('hidden');
-        
-        // Mostrar botón Volver (para ir a Menú Maestro)
-        document.getElementById('btnVolverMenu').classList.remove('hidden');
-        document.getElementById('btnVolverMenu').textContent = '⬅ Menú Maestro';
-        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
-        
-        document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
-          card.classList.add('hidden');
-        });
-        
-        mostrarLogoInterno();
-        actualizarHeaderLogo();
-        
-        // Llenar los módulos disponibles según permisos
-        llenarModulosInterno();
       };
 
       // Función para llenar el Menú Maestro (Nivel 2)
@@ -2785,7 +2793,7 @@
                   }
                 });
               }, 100);
-            } else {
+            } else if (modulo === 'proveedores' || modulo === 'productos') {
               mostrarConstruccion();
             }
           });
@@ -2793,6 +2801,33 @@
           grid.appendChild(item);
         });
       }
+
+      // Nivel 3: Menú Interno (MMD - Módulos disponibles)
+      window.mostrarMenuInterno = function() {
+        document.getElementById('menuMaestroPrincipal').classList.remove('visible');
+        document.getElementById('menuMaestroPrincipal').classList.add('hidden');
+        document.getElementById('menuMaestro').classList.remove('visible');
+        document.getElementById('menuMaestro').classList.add('hidden');
+        document.getElementById('menuInterno').classList.add('visible');
+        document.getElementById('menuInterno').classList.remove('hidden');
+        document.getElementById('contenidoApp').classList.remove('visible');
+        document.getElementById('contenidoApp').classList.add('hidden');
+        
+        // Mostrar botón Volver (para ir a Menú Maestro)
+        document.getElementById('btnVolverMenu').classList.remove('hidden');
+        document.getElementById('btnVolverMenu').innerHTML = '<span class="btn-text">⬅ Menú Maestro</span>';
+        document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
+        
+        document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
+          card.classList.add('hidden');
+        });
+        
+        mostrarLogoInterno();
+        actualizarHeaderLogo();
+        
+        // Llenar los módulos disponibles según permisos
+        llenarModulosInterno();
+      };
 
       // Función para llenar el MMD (Nivel 3 - Menú Interno)
       function llenarModulosInterno() {
@@ -2846,9 +2881,7 @@
           grid.style.gridTemplateColumns = '120px';
         } else if (numModulos === 2) {
           grid.style.gridTemplateColumns = 'repeat(2, 120px)';
-        } else if (numModulos === 3) {
-          grid.style.gridTemplateColumns = 'repeat(3, 120px)';
-        } else {
+        } else if (numModulos >= 3) {
           grid.style.gridTemplateColumns = 'repeat(3, 120px)';
         }
         
@@ -2899,7 +2932,7 @@
         
         // Botón Volver: va al MMD (Menú Interno)
         document.getElementById('btnVolverMenu').classList.remove('hidden');
-        document.getElementById('btnVolverMenu').textContent = '⬅ Volver a MMD';
+        document.getElementById('btnVolverMenu').innerHTML = '<span class="btn-text">⬅ Volver a MMD</span>';
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
 
         var panelOC = document.getElementById('panelOC');
@@ -4766,6 +4799,9 @@
           }
         }
 
+        // Configurar el menú principal ANTES de mostrarlo
+        configurarMenuPrincipal();
+
         if (ocId) {
           console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
           pendingOcId = ocId;
@@ -4987,7 +5023,6 @@
       }
 
       window.salir = function() { 
-        // Limpiar estado y recargar
         actual = null;
         location.reload(); 
       };
@@ -5037,7 +5072,7 @@
       window.actualizarFiltroProyectos = actualizarFiltroProyectos;
       window.ocultarBannerLocalizacion = window.ocultarBannerLocalizacion || function() {};
 
-      // Funciones de aprobación (resumidas)
+      // Funciones de aprobación (resumidas) - se mantienen igual
       window.aprobarSolicitante = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         var oc = ordenes[index];
