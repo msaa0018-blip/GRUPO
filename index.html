@@ -67,24 +67,21 @@
     height: auto
   }
   
-  /* ===== HEADER =====
-     Grid en vez de flex: las columnas "auto" (centro y botones) SIEMPRE
-     reciben su ancho de contenido completo y nunca se recortan; toda la
-     contracción la absorbe la columna izquierda (minmax(0,1fr)). */
+  /* ===== HEADER - GRID OPTIMIZADO ===== */
   header {
     background: var(--primary);
-    padding: 6px 14px;
+    padding: 6px 12px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     position: sticky;
     top: 0;
     z-index: 100;
-    min-height: 56px;
+    min-height: 52px;
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
     box-sizing: border-box;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
     flex-shrink: 0;
@@ -94,18 +91,18 @@
     grid-column: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
     overflow: hidden;
   }
   .header-left .logo-img {
-    height: 32px;
+    height: 30px;
     width: auto;
     flex-shrink: 0;
-    max-height: 36px;
+    max-height: 34px;
   }
   .header-left .company .name {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: .3px;
     white-space: nowrap;
@@ -114,10 +111,10 @@
     color: white;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 140px;
+    max-width: 120px;
   }
   .header-left .company .sub {
-    font-size: 8px;
+    font-size: 7px;
     opacity: .75;
     font-weight: 300;
     white-space: nowrap;
@@ -133,8 +130,8 @@
     padding: 0 4px;
   }
   .header-center .depto-logo-header {
-    max-height: 40px;
-    max-width: 100px;
+    max-height: 36px;
+    max-width: 80px;
     width: auto;
     object-fit: contain;
     display: none;
@@ -143,39 +140,40 @@
     display: block;
   }
   
-  /* ===== CONTENEDOR DE BOTONES ===== */
+  /* ===== CONTENEDOR DE BOTONES - CON MARGEN EXACTO DE 1px ===== */
   .header-right {
     grid-column: 3;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 10px;
+    gap: 8px;
     z-index: 10;
-    background: #0b1a33;
-    padding: 6px 12px;
+    background: transparent;
+    padding: 4px 0;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
     box-sizing: border-box;
-    margin-right: 3px;
+    margin-right: 1px; /* MARGEN EXACTO DE 1px DESDE EL BORDE DERECHO */
     justify-self: end;
     flex-shrink: 0;
     min-width: 0;
     max-width: 100%;
+    overflow: visible;
   }
   
+  /* ===== BOTONES - SIEMPRE COMPLETOS, NUNCA RECORTADOS ===== */
   .header-right .btn-volver-menu,
   .header-right .btn-cerrar-sesion-header {
     background: var(--gray-600);
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 7px 14px;
     border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
     font-size: 12px;
     transition: background 0.2s, transform 0.15s;
-    min-height: 34px;
-    min-width: 60px;
+    min-height: 32px;
+    min-width: 56px;
     white-space: nowrap;
     flex-shrink: 0;
     overflow: visible;
@@ -185,6 +183,7 @@
     gap: 4px;
     box-sizing: border-box;
     max-width: 100%;
+    line-height: 1.2;
   }
   .header-right .btn-volver-menu:hover { background: var(--gray-700); transform: scale(1.03); }
   .header-right .btn-cerrar-sesion-header {
@@ -192,7 +191,7 @@
   }
   .header-right .btn-cerrar-sesion-header:hover { background: var(--danger-hover); transform: scale(1.03); }
   
-  /* Texto de los botones - oculto en pantallas muy pequeñas pero el botón sigue visible */
+  /* Texto de los botones - visible por defecto */
   .header-right .btn-volver-menu .btn-text,
   .header-right .btn-cerrar-sesion-header .btn-text {
     display: inline;
@@ -203,98 +202,114 @@
     display: none;
   }
 
-  /* ===== RESPONSIVE HEADER ===== */
+  /* ===== RESPONSIVE - PANTALLAS PEQUEÑAS ===== */
   @media (max-width: 768px) {
-    header { padding: 4px 10px; min-height: 48px; gap: 8px; }
-    .header-left .logo-img { height: 26px; }
-    .header-left .company .name { font-size: 11px; max-width: 100px; }
-    .header-left .company .sub { font-size: 7px; }
-    .header-center .depto-logo-header { max-height: 32px; max-width: 80px; }
-    .header-right {
-      padding: 5px 10px;
-      gap: 8px;
-      margin-right: 3px;
-    }
-    .header-right .btn-volver-menu,
-    .header-right .btn-cerrar-sesion-header {
-      font-size: 11px;
-      padding: 6px 12px;
-      min-height: 30px;
-      min-width: 50px;
-    }
-  }
-
-  @media (max-width: 600px) {
-    header { padding: 3px 8px; min-height: 44px; gap: 6px; }
-    .header-left .logo-img { height: 22px; }
-    .header-left .company .name { font-size: 10px; max-width: 80px; }
+    header { padding: 4px 8px; min-height: 44px; gap: 6px; }
+    .header-left .logo-img { height: 24px; }
+    .header-left .company .name { font-size: 10px; max-width: 90px; }
     .header-left .company .sub { font-size: 6px; }
+    .header-center .depto-logo-header { max-height: 28px; max-width: 60px; }
     .header-right {
-      padding: 4px 8px;
       gap: 6px;
-      margin-right: 3px;
+      padding: 3px 0;
+      margin-right: 1px;
     }
     .header-right .btn-volver-menu,
     .header-right .btn-cerrar-sesion-header {
       font-size: 10px;
       padding: 5px 10px;
       min-height: 28px;
-      min-width: 40px;
-    }
-    /* Ocultar el texto, mostrar solo ícono en pantallas muy pequeñas */
-    .header-right .btn-volver-menu .btn-text,
-    .header-right .btn-cerrar-sesion-header .btn-text {
-      display: none;
-    }
-    .header-right .btn-volver-menu .btn-icon-only,
-    .header-right .btn-cerrar-sesion-header .btn-icon-only {
-      display: inline;
+      min-width: 44px;
     }
   }
 
-  @media (max-width: 400px) {
-    header { padding: 2px 6px; min-height: 38px; gap: 4px; }
-    .header-left .logo-img { height: 18px; }
-    .header-left .company .name { font-size: 8px; max-width: 60px; }
+  @media (max-width: 550px) {
+    header { padding: 3px 6px; min-height: 40px; gap: 4px; }
+    .header-left .logo-img { height: 20px; }
+    .header-left .company .name { font-size: 9px; max-width: 70px; }
     .header-left .company .sub { display: none; }
-    .header-center { display: none; }
+    .header-center .depto-logo-header { max-height: 24px; max-width: 50px; }
     .header-right {
-      padding: 3px 6px;
       gap: 4px;
-      margin-right: 3px;
-      border-radius: 4px;
+      padding: 2px 0;
+      margin-right: 1px;
     }
     .header-right .btn-volver-menu,
     .header-right .btn-cerrar-sesion-header {
       font-size: 9px;
-      padding: 3px 6px;
+      padding: 4px 8px;
       min-height: 24px;
-      min-width: 28px;
+      min-width: 34px;
       border-radius: 4px;
     }
-    .header-right .btn-volver-menu .btn-text,
+    /* En pantallas muy pequeñas, mostrar solo el ícono del botón Volver */
+    .header-right .btn-volver-menu .btn-text {
+      display: none;
+    }
+    .header-right .btn-volver-menu .btn-icon-only {
+      display: inline;
+      font-size: 14px;
+    }
+    /* Cerrar sesión: mantener texto pero reducido, o mostrar solo ícono */
+    .header-right .btn-cerrar-sesion-header .btn-text {
+      font-size: 8px;
+    }
+  }
+
+  @media (max-width: 400px) {
+    header { padding: 2px 4px; min-height: 34px; gap: 3px; }
+    .header-left .logo-img { height: 16px; }
+    .header-left .company .name { font-size: 7px; max-width: 50px; }
+    .header-center { display: none; }
+    .header-right {
+      gap: 3px;
+      padding: 2px 0;
+      margin-right: 1px;
+    }
+    .header-right .btn-volver-menu,
+    .header-right .btn-cerrar-sesion-header {
+      font-size: 8px;
+      padding: 3px 6px;
+      min-height: 20px;
+      min-width: 26px;
+      border-radius: 3px;
+    }
+    .header-right .btn-volver-menu .btn-text {
+      display: none;
+    }
+    .header-right .btn-volver-menu .btn-icon-only {
+      display: inline;
+      font-size: 12px;
+    }
     .header-right .btn-cerrar-sesion-header .btn-text {
       display: none;
     }
-    .header-right .btn-volver-menu .btn-icon-only,
     .header-right .btn-cerrar-sesion-header .btn-icon-only {
       display: inline;
       font-size: 12px;
     }
   }
 
-  @media (max-width: 360px) {
+  @media (max-width: 320px) {
+    header { padding: 1px 3px; min-height: 28px; gap: 2px; }
+    .header-left .logo-img { height: 12px; }
+    .header-left .company .name { font-size: 6px; max-width: 35px; }
     .header-right {
-      padding: 2px 4px;
-      gap: 3px;
-      margin-right: 2px;
+      gap: 2px;
+      padding: 1px 0;
+      margin-right: 1px;
     }
     .header-right .btn-volver-menu,
     .header-right .btn-cerrar-sesion-header {
-      font-size: 8px;
+      font-size: 7px;
       padding: 2px 4px;
-      min-height: 20px;
+      min-height: 16px;
       min-width: 20px;
+      border-radius: 2px;
+    }
+    .header-right .btn-volver-menu .btn-icon-only,
+    .header-right .btn-cerrar-sesion-header .btn-icon-only {
+      font-size: 10px;
     }
   }
 
@@ -1646,7 +1661,7 @@
       <img id="headerDeptoLogo" class="depto-logo-header" src="" alt="Logo departamento" onerror="this.style.display='none'">
     </div>
 
-    <!-- ZONA DERECHA: Botones fijos -->
+    <!-- ZONA DERECHA: Botones fijos con margen exacto de 1px -->
     <div class="header-right">
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">
         <span class="btn-text">⬅ Volver</span>
