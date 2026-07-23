@@ -1150,7 +1150,7 @@
   .grupo-formulario:last-child { margin-bottom: 0 }
   .campo-obligatorio::after { content: " *"; color: var(--danger); font-weight: bold }
 
-  /* ===== MENÚ MAESTRO PRINCIPAL ===== */
+  /* ===== MENÚ MAESTRO PRINCIPAL - CENTRADO DINÁMICO ===== */
   #menuMaestroPrincipal {
     background: var(--gray-100);
     padding: 20px;
@@ -1190,15 +1190,16 @@
     margin-top: 6px;
   }
 
+  /* GRID CENTRADO DINÁMICO */
   .modulos-grid {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     gap: 20px;
     max-width: 100%;
     margin: 0 auto;
     width: 100%;
-    grid-template-columns: repeat(3, 120px);
   }
   .modulo-item {
     display: flex;
@@ -1207,6 +1208,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     width: 120px;
+    flex-shrink: 0;
   }
   .modulo-item .modulo-cuadro {
     width: 120px;
@@ -1295,7 +1297,8 @@
   }
 
   .modulos-maestro-grid {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     gap: 20px;
@@ -1310,6 +1313,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     width: 120px;
+    flex-shrink: 0;
   }
   .modulo-maestro-item .modulo-cuadro {
     width: 120px;
@@ -1440,11 +1444,11 @@
   .modulo-interno-item .modulo-leyenda { margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--gray-700); text-align: center }
 
   @media (max-width: 600px) {
-    .modulos-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 100% }
+    .modulos-grid { gap: 12px; max-width: 100% }
     .modulo-item { width: 100px }
     .modulo-item .modulo-cuadro { width: 100px; height: 100px; font-size: 36px }
     .modulo-item .modulo-leyenda { font-size: 13px }
-    .modulos-maestro-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 100% }
+    .modulos-maestro-grid { gap: 12px; max-width: 100% }
     .modulo-maestro-item { width: 100px }
     .modulo-maestro-item .modulo-cuadro { width: 100px; height: 100px; font-size: 36px }
     .modulo-maestro-item .modulo-leyenda { font-size: 13px }
@@ -2833,10 +2837,53 @@
           card.classList.add('hidden');
         });
 
+        // Mostrar el logo correspondiente al usuario autenticado
         mostrarLogoMaestro();
+
+        // Centrar módulos visibles en el menú principal
+        centrarModulosMenuPrincipal();
+
         actualizarHeaderLogo();
         actualizarTotalesMenuPrincipal();
       };
+
+      // ============================================================
+      // FUNCIÓN PARA CENTRAR MÓDULOS DEL MENÚ PRINCIPAL
+      // ============================================================
+      function centrarModulosMenuPrincipal() {
+        var grid = document.getElementById('modulosGridPrincipal');
+        if (!grid) return;
+
+        // Obtener todos los módulos visibles
+        var modulosVisibles = Array.from(grid.children).filter(function(child) {
+          return child.style.display !== 'none' && child.style.display !== '';
+        });
+
+        // Si solo hay 1 módulo, forzar una sola columna centrada
+        if (modulosVisibles.length === 1) {
+          grid.style.display = 'flex';
+          grid.style.flexWrap = 'wrap';
+          grid.style.justifyContent = 'center';
+          grid.style.alignItems = 'center';
+          grid.style.gap = '20px';
+          grid.style.width = '100%';
+          modulosVisibles.forEach(function(modulo) {
+            modulo.style.width = '120px';
+            modulo.style.flexShrink = '0';
+          });
+        } else {
+          grid.style.display = 'flex';
+          grid.style.flexWrap = 'wrap';
+          grid.style.justifyContent = 'center';
+          grid.style.alignItems = 'center';
+          grid.style.gap = '20px';
+          grid.style.width = '100%';
+          modulosVisibles.forEach(function(modulo) {
+            modulo.style.width = '120px';
+            modulo.style.flexShrink = '0';
+          });
+        }
+      }
 
       // ============================================================
       // MENÚ MMD — Módulos disponibles del Menú Maestro seleccionado
@@ -2900,18 +2947,6 @@
           }
         }
 
-        // Configurar grid según cantidad de módulos
-        var numModulos = modulos.length;
-        if (numModulos === 1) {
-          grid.style.gridTemplateColumns = '120px';
-        } else if (numModulos === 2) {
-          grid.style.gridTemplateColumns = 'repeat(2, 120px)';
-        } else if (numModulos >= 3) {
-          grid.style.gridTemplateColumns = 'repeat(3, 120px)';
-        } else {
-          grid.style.gridTemplateColumns = '1fr';
-        }
-
         if (modulos.length === 0) {
           grid.innerHTML = '<p style="color:var(--gray-500); font-size:16px; grid-column:1/-1; padding:20px;">No tienes módulos disponibles en este menú</p>';
           return;
@@ -2956,6 +2991,20 @@
           });
 
           grid.appendChild(item);
+        });
+
+        // Centrar los módulos visibles en el grid
+        // Usar flex para centrar
+        grid.style.display = 'flex';
+        grid.style.flexWrap = 'wrap';
+        grid.style.justifyContent = 'center';
+        grid.style.alignItems = 'center';
+        grid.style.gap = '20px';
+        grid.style.width = '100%';
+        var items = grid.querySelectorAll('.modulo-maestro-item');
+        items.forEach(function(item) {
+          item.style.width = '120px';
+          item.style.flexShrink = '0';
         });
       }
 
@@ -3022,7 +3071,20 @@
 
         var gridPrincipal = document.getElementById('modulosGridPrincipal');
         if (gridPrincipal) {
-          gridPrincipal.style.gridTemplateColumns = 'repeat(3, 120px)';
+          // Usar flex para centrar dinámicamente
+          gridPrincipal.style.display = 'flex';
+          gridPrincipal.style.flexWrap = 'wrap';
+          gridPrincipal.style.justifyContent = 'center';
+          gridPrincipal.style.alignItems = 'center';
+          gridPrincipal.style.gap = '20px';
+          gridPrincipal.style.width = '100%';
+
+          // Asegurar que cada módulo tenga un tamaño fijo
+          var items = gridPrincipal.querySelectorAll('.modulo-item');
+          items.forEach(function(item) {
+            item.style.width = '120px';
+            item.style.flexShrink = '0';
+          });
 
           gridPrincipal.addEventListener('click', function(e) {
             var item = e.target.closest('.modulo-item');
@@ -3230,6 +3292,7 @@
           return;
         }
 
+        // Si es administrador, no mostrar logo de departamento
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
           container.style.display = 'none';
           return;
