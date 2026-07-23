@@ -1769,6 +1769,12 @@
     gap: 16px;
     margin-bottom: 16px;
   }
+  
+  /* Tarjeta "Compras del mes" ocupa 2 columnas */
+  .kpi-card.kpi-compras-mes {
+    grid-column: span 2;
+  }
+
   .kpi-card {
     background: white;
     border-radius: var(--radius);
@@ -1837,6 +1843,12 @@
     font-size: 11px;
     color: var(--gray-400);
     margin-top: 4px;
+  }
+
+  @media (max-width: 820px) {
+    .kpi-card.kpi-compras-mes {
+      grid-column: span 1;
+    }
   }
 
   .charts-grid {
@@ -1965,6 +1977,9 @@
     .kpi-card .kpi-value {
       font-size: 22px;
     }
+    .kpi-card.kpi-compras-mes {
+      grid-column: span 1;
+    }
   }
 
   @media (max-width: 480px) {
@@ -1980,6 +1995,9 @@
     }
     .kpi-card .kpi-label {
       font-size: 11px;
+    }
+    .kpi-card.kpi-compras-mes {
+      grid-column: span 1;
     }
     .chart-card .chart-container {
       height: 150px;
@@ -4069,7 +4087,7 @@
           valor: '$' + formatearNumeroMexico(d.comprasMes, true),
           label: 'Compras del mes',
           cambio: d.comprasMesCount + ' OC',
-          clase: 'border-primary',
+          clase: 'border-primary kpi-compras-mes',
           click: function() { window.mostrarModulo('oc'); }
         }, {
           icono: '💵',
