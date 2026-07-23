@@ -2366,6 +2366,88 @@
       var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
 
       // ============================================================
+      // FUNCIÓN DE FORMATEO DE NÚMEROS (MEXICANO)
+      // ============================================================
+      function formatearNumeroMexico(valor, esMoneda, esCantidad) {
+        if (valor === null || valor === undefined || isNaN(valor)) return '0';
+        var num = parseFloat(valor);
+        if (isNaN(num)) return '0';
+        var opciones = {};
+        if (esMoneda !== false) {
+          opciones.minimumFractionDigits = 2;
+          opciones.maximumFractionDigits = 2;
+        } else if (esCantidad === true) {
+          // Si es cantidad y es entero, no mostrar decimales
+          if (Number.isInteger(num)) {
+            opciones.minimumFractionDigits = 0;
+            opciones.maximumFractionDigits = 0;
+          } else {
+            opciones.minimumFractionDigits = 2;
+            opciones.maximumFractionDigits = 2;
+          }
+        } else {
+          opciones.minimumFractionDigits = 0;
+          opciones.maximumFractionDigits = 2;
+        }
+        return new Intl.NumberFormat('es-MX', opciones).format(num);
+      }
+
+      function formatearMiles(num) {
+        return formatearNumeroMexico(num, true);
+      }
+
+      function parseNumero(str) {
+        if (!str || typeof str !== 'string') return 0;
+        var limpio = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+        var num = parseFloat(limpio);
+        return isNaN(num) ? 0 : num;
+      }
+
+      // ============================================================
+      // FUNCIONES PARA FORMATEAR CAMPOS NUMÉRICOS EN TIEMPO REAL
+      // ============================================================
+      function aplicarFormatoMiles(input) {
+        if (!input || input.type !== 'text' || input.readOnly) return;
+        var raw = input.value.replace(/,/g, '');
+        var num = parseFloat(raw);
+        if (!isNaN(num)) {
+          var esMoneda = input.classList.contains('importe') || input.classList.contains('precio') || input.id === 'totalProductos' || input.id === 'sumaPartidasOF' || input.id === 'ofMonto';
+          var esCantidad = input.classList.contains('cantidad');
+          var formateado = formatearNumeroMexico(num, esMoneda, esCantidad);
+          if (input.value !== formateado) {
+            var cursorPos = input.selectionStart;
+            input.value = formateado;
+            // Mantener el cursor aproximadamente en la misma posición
+            var diff = formateado.length - raw.length;
+            input.setSelectionRange(cursorPos + diff, cursorPos + diff);
+          }
+        }
+      }
+
+      function formatearElemento(elemento) {
+        if (!elemento) return;
+        if (elemento.tagName === 'INPUT') {
+          aplicarFormatoMiles(elemento);
+        } else if (elemento.tagName === 'TD' || elemento.tagName === 'SPAN' || elemento.tagName === 'DIV') {
+          var texto = elemento.textContent || '';
+          var raw = texto.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+          var num = parseFloat(raw);
+          if (!isNaN(num) && texto.match(/[0-9]/)) {
+            var esMoneda = elemento.classList.contains('importe') || elemento.classList.contains('precio') || elemento.id === 'totalProductos' || elemento.id === 'sumaPartidasOF';
+            var esCantidad = elemento.classList.contains('cantidad');
+            var formateado = formatearNumeroMexico(num, esMoneda, esCantidad);
+            // Reemplazar solo el número manteniendo el símbolo de moneda si existe
+            var simbolo = texto.match(/^[^0-9]*/);
+            if (simbolo && simbolo[0]) {
+              elemento.textContent = simbolo[0] + formateado;
+            } else {
+              elemento.textContent = formateado;
+            }
+          }
+        }
+      }
+
+      // ============================================================
       // MAPEO DE EMPRESAS Y DEPARTAMENTOS
       // ============================================================
       var EMPRESAS_MAP = {
@@ -2441,7 +2523,7 @@
       function formatoMoneda(monto, moneda) {
         moneda = moneda || 'MXN';
         var simbolo = moneda === 'USD' ? 'USD ' : '$';
-        return simbolo + monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return simbolo + formatearNumeroMexico(monto, true);
       }
 
       function normalizar(str) { return str.trim().toUpperCase(); }
@@ -3629,7 +3711,7 @@
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="number" value="' + cantidad + '" min="1" step="1" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="number" value="' + precio + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:90px;width:100px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:90px;width:100px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -3660,17 +3742,40 @@
       window.recalcularFila = function(elemento) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
-        var cantidad = parseFloat(fila.querySelector('.cantidad').value) || 0;
-        var precio = parseFloat(fila.querySelector('.precio').value) || 0;
-        var descuento = parseFloat(fila.querySelector('.descuento').value) || 0;
-        var impuesto = parseFloat(fila.querySelector('.impuesto').value) || 0;
+        var cantidadInput = fila.querySelector('.cantidad');
+        var precioInput = fila.querySelector('.precio');
+        var descuentoInput = fila.querySelector('.descuento');
+        var impuestoInput = fila.querySelector('.impuesto');
+        var importeInput = fila.querySelector('.importe');
+
+        var cantidad = parseNumero(cantidadInput ? cantidadInput.value : '0');
+        var precio = parseNumero(precioInput ? precioInput.value : '0');
+        var descuento = parseFloat(descuentoInput ? descuentoInput.value : 0) || 0;
+        var impuesto = parseFloat(impuestoInput ? impuestoInput.value : 0) || 0;
+
+        // Aplicar formato a cantidad y precio
+        if (cantidadInput) {
+          var cantFormateada = formatearNumeroMexico(cantidad, false, true);
+          if (cantidadInput.value !== cantFormateada) {
+            cantidadInput.value = cantFormateada;
+          }
+        }
+        if (precioInput) {
+          var precFormateado = formatearNumeroMexico(precio, true);
+          if (precioInput.value !== precFormateado) {
+            precioInput.value = precFormateado;
+          }
+        }
+
         var subtotal = cantidad * precio;
         var descuentoValor = subtotal * (descuento / 100);
         var subtotalConDescuento = subtotal - descuentoValor;
         var impuestoValor = subtotalConDescuento * (impuesto / 100);
         var importe = subtotalConDescuento + impuestoValor;
-        var importeInput = fila.querySelector('.importe');
-        if (importeInput) importeInput.value = importe.toFixed(2);
+
+        if (importeInput) {
+          importeInput.value = formatearNumeroMexico(importe, true);
+        }
         window.recalcularTotal();
       };
 
@@ -3680,9 +3785,15 @@
         var total = 0;
         filas.forEach(function(fila) {
           var importeInput = fila.querySelector('.importe');
-          if (importeInput) total += parseFloat(importeInput.value) || 0;
+          if (importeInput) {
+            total += parseNumero(importeInput.value);
+          }
         });
-        document.getElementById('totalProductos').textContent = '$' + total.toFixed(2);
+        var totalEl = document.getElementById('totalProductos');
+        if (totalEl) {
+          totalEl.textContent = '$' + formatearNumeroMexico(total, true);
+        }
+        return total;
       };
 
       // ============================================================
@@ -3806,11 +3917,11 @@
           var parte = fila.querySelector('.part')?.value?.trim().toUpperCase() || '';
           var descripcion = fila.querySelector('.desc')?.value?.trim().toUpperCase() || '';
           var udm = fila.querySelector('.udm')?.value || 'PZA';
-          var cantidad = parseFloat(fila.querySelector('.cantidad')?.value) || 0;
-          var precio = parseFloat(fila.querySelector('.precio')?.value) || 0;
+          var cantidad = parseNumero(fila.querySelector('.cantidad')?.value || '0');
+          var precio = parseNumero(fila.querySelector('.precio')?.value || '0');
           var descuento = parseFloat(fila.querySelector('.descuento')?.value) || 0;
           var impuesto = parseFloat(fila.querySelector('.impuesto')?.value) || 0;
-          var importe = parseFloat(fila.querySelector('.importe')?.value) || 0;
+          var importe = parseNumero(fila.querySelector('.importe')?.value || '0');
           if (!descripcion || cantidad <= 0 || precio <= 0) { valido = false; return; }
           productos.push({ parte: parte, descripcion: descripcion, udm: udm, cantidad: cantidad, precioUnitario: precio, descuento: descuento, impuesto: impuesto, importe: importe });
           montototal += importe;
@@ -4000,10 +4111,10 @@
         var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         var rows = datos.productos.map(function(p, i) {
           return [
-            i + 1, p.parte || '', p.descripcion, p.cantidad, p.udm || 'PZA',
+            i + 1, p.parte || '', p.descripcion, formatearNumeroMexico(p.cantidad, false, true), p.udm || 'PZA',
             formatoMoneda(p.precioUnitario, datos.moneda),
-            p.descuento.toFixed(2) + '%',
-            p.impuesto.toFixed(2) + '%',
+            (p.descuento || 0).toFixed(2) + '%',
+            (p.impuesto || 0).toFixed(2) + '%',
             formatoMoneda(p.importe, datos.moneda)
           ];
         });
@@ -4048,7 +4159,7 @@
         doc.text('Subtotal:', totalX, y);
         doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
-        doc.text('IVA (' + impuestoPorcentaje + '%):', totalX, y);
+        doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', totalX, y);
         doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += lineSpacing;
         doc.setDrawColor(200, 200, 200);
@@ -5035,13 +5146,13 @@
         var resumenDiv = document.getElementById('cxpResumen');
         resumenDiv.innerHTML =
           '<div class="cxp-tarjeta pagado"><div class="numero">' + formatoMoneda(totalPagado, 'MXN') + '</div><div class="etiqueta">✅ Pagado</div>' +
-          (totalPagadoUSD > 0 ? '<div class="etiqueta">USD ' + totalPagadoUSD.toFixed(2) + '</div>' : '') +
+          (totalPagadoUSD > 0 ? '<div class="etiqueta">USD ' + formatearNumeroMexico(totalPagadoUSD, true) + '</div>' : '') +
           '</div>' +
           '<div class="cxp-tarjeta pendiente"><div class="numero">' + formatoMoneda(totalPendiente, 'MXN') + '</div><div class="etiqueta">⏳ Pendiente de pago</div>' +
-          (totalPendienteUSD > 0 ? '<div class="etiqueta">USD ' + totalPendienteUSD.toFixed(2) + '</div>' : '') +
+          (totalPendienteUSD > 0 ? '<div class="etiqueta">USD ' + formatearNumeroMexico(totalPendienteUSD, true) + '</div>' : '') +
           '</div>' +
           '<div class="cxp-tarjeta vencido"><div class="numero">' + formatoMoneda(totalVencido, 'MXN') + '</div><div class="etiqueta">🔴 Vencido (>1 día)</div>' +
-          (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + totalVencidoUSD.toFixed(2) + '</div>' : '') +
+          (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + formatearNumeroMexico(totalVencidoUSD, true) + '</div>' : '') +
           '</div>' +
           '<div class="cxp-tarjeta"><div class="numero">' + ocFiltradas.length + '</div><div class="etiqueta">📄 Total OC</div></div>';
 
@@ -5335,13 +5446,13 @@
         var resumenDiv = document.getElementById('cxcResumen');
         resumenDiv.innerHTML =
           '<div class="cxc-tarjeta pagado"><div class="numero">' + formatoMoneda(totalPagado, 'MXN') + '</div><div class="etiqueta">✅ Pagado</div>' +
-          (totalPagadoUSD > 0 ? '<div class="etiqueta">USD ' + totalPagadoUSD.toFixed(2) + '</div>' : '') +
+          (totalPagadoUSD > 0 ? '<div class="etiqueta">USD ' + formatearNumeroMexico(totalPagadoUSD, true) + '</div>' : '') +
           '</div>' +
           '<div class="cxc-tarjeta pendiente"><div class="numero">' + formatoMoneda(totalPendiente, 'MXN') + '</div><div class="etiqueta">⏳ Pendiente</div>' +
-          (totalPendienteUSD > 0 ? '<div class="etiqueta">USD ' + totalPendienteUSD.toFixed(2) + '</div>' : '') +
+          (totalPendienteUSD > 0 ? '<div class="etiqueta">USD ' + formatearNumeroMexico(totalPendienteUSD, true) + '</div>' : '') +
           '</div>' +
           '<div class="cxc-tarjeta vencido"><div class="numero">' + formatoMoneda(totalVencido, 'MXN') + '</div><div class="etiqueta">🔴 Vencido</div>' +
-          (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + totalVencidoUSD.toFixed(2) + '</div>' : '') +
+          (totalVencidoUSD > 0 ? '<div class="etiqueta">USD ' + formatearNumeroMexico(totalVencidoUSD, true) + '</div>' : '') +
           '</div>' +
           '<div class="cxc-tarjeta total"><div class="numero">' + cuentas.length + '</div><div class="etiqueta">📄 Total registros</div></div>';
 
@@ -5521,9 +5632,9 @@
         fila.innerHTML = '<td class="indice">' + idx + '</td>' +
           '<td><input class="codigo-sat" type="text" value="' + codigoSat.toUpperCase() + '" placeholder="Código SAT" style="min-width:110px;width:130px;text-transform:uppercase;"></td>' +
           '<td><textarea class="concepto" placeholder="Concepto" oninput="window.autoAjustar(this)">' + concepto.toUpperCase() + '</textarea></td>' +
-          '<td><input class="cantidad" type="number" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
+          '<td><input class="cantidad" type="text" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
           '<td><select class="udm" onchange="window.recalcularFilaOF(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td>' +
-          '<td><input class="pu" type="number" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
+          '<td><input class="pu" type="text" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:170px;width:180px;"></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaPartidaOF(this)">🗑️</button></td>';
@@ -5555,7 +5666,9 @@
         var subtotal = cantidad * pu;
         var importe = subtotal + (subtotal * (impuesto / 100));
         var importeInput = fila.querySelector('.importe');
-        if (importeInput) importeInput.value = importe.toFixed(2);
+        if (importeInput) {
+          importeInput.value = formatearNumeroMexico(importe, true);
+        }
         window.recalcularSumaOF();
       };
 
@@ -5564,12 +5677,18 @@
         var total = 0;
         tbody.querySelectorAll('tr').forEach(function(fila) {
           var importeInput = fila.querySelector('.importe');
-          if (importeInput) total += parseFloat(importeInput.value) || 0;
+          if (importeInput) {
+            total += parseNumero(importeInput.value);
+          }
         });
         var sumaEl = document.getElementById('sumaPartidasOF');
-        if (sumaEl) sumaEl.textContent = '$' + total.toFixed(2);
+        if (sumaEl) {
+          sumaEl.textContent = '$' + formatearNumeroMexico(total, true);
+        }
         var montoInput = document.getElementById('ofMonto');
-        if (montoInput) montoInput.value = '$' + total.toFixed(2);
+        if (montoInput) {
+          montoInput.value = '$' + formatearNumeroMexico(total, true);
+        }
         return total;
       };
 
@@ -5583,11 +5702,11 @@
             partida: i + 1,
             codigo_sat: fila.querySelector('.codigo-sat').value.trim().toUpperCase(),
             concepto: concepto,
-            cantidad: parseFloat(fila.querySelector('.cantidad').value) || 0,
+            cantidad: parseNumero(fila.querySelector('.cantidad').value || '0'),
             um: fila.querySelector('.udm').value,
-            pu: parseFloat(fila.querySelector('.pu').value) || 0,
+            pu: parseNumero(fila.querySelector('.pu').value || '0'),
             impuesto: parseFloat(fila.querySelector('.impuesto').value) || 0,
-            importe: parseFloat(fila.querySelector('.importe').value) || 0
+            importe: parseNumero(fila.querySelector('.importe').value || '0')
           });
         });
         return partidas;
@@ -5717,7 +5836,7 @@
         var headers = ['#', 'Cód. SAT', 'Concepto', 'Cant.', 'UM', 'PU', 'Imp.%', 'Importe'];
         var rows = (datos.partidas || []).map(function(p) {
           return [
-            p.partida, p.codigo_sat || '', p.concepto, p.cantidad, p.um,
+            p.partida, p.codigo_sat || '', p.concepto, formatearNumeroMexico(p.cantidad, false, true), p.um,
             formatoMoneda(p.pu, datos.moneda),
             (p.impuesto || 0).toFixed(2) + '%',
             formatoMoneda(p.importe, datos.moneda)
