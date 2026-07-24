@@ -3187,6 +3187,27 @@
         return { empresa: '', departamento: '', libre: false };
       }
 
+      // Rellena los campos (deshabilitados) de Empresa/Departamento del
+      // formulario "Crear Proyecto" con la empresa/departamento del
+      // usuario logueado (Jefe Departamento), o los deja vacíos con un
+      // texto indicativo si el rol tiene acceso libre (sin depto fijo).
+      function actualizarCamposEmpresaDeptoProyecto() {
+        var inputEmpresa = document.getElementById('empresaProyecto');
+        var inputDepto = document.getElementById('departamentoProyecto');
+        if (!inputEmpresa || !inputDepto) return;
+
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        if (defaultData.libre) {
+          inputEmpresa.value = '';
+          inputEmpresa.placeholder = 'Empresa (selecciona el usuario)';
+          inputDepto.value = '';
+          inputDepto.placeholder = 'Departamento (selecciona el usuario)';
+          return;
+        }
+        inputEmpresa.value = defaultData.empresa || '';
+        inputDepto.value = mostrarDepto(defaultData.departamento);
+      }
+
       function filtrarProyectosSegunUsuario(usuario) {
         if (!usuario) return [];
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return proyectos;
@@ -6264,6 +6285,8 @@
       // ============================================================
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
+
+        actualizarCamposEmpresaDeptoProyecto();
 
         var tablaProyectos = document.getElementById('tablaProyectos');
         var selectProyecto = document.getElementById('selectProyecto');
