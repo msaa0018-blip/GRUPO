@@ -3145,13 +3145,23 @@
         return usuariosDB.find(function(u) { return u.usuario && u.usuario.toUpperCase() === usuario.toUpperCase(); });
       }
 
+      // Para empresas sin departamentos registrados (SMV, ICE, ISCI), el
+      // depto puede venir vacío ('') en los permisos del usuario, o con
+      // la abreviatura de la empresa en los registros guardados (proyectos,
+      // ordenes, etc.). Ambos representan "sin departamento", así que se
+      // colapsan al mismo valor ('') antes de comparar.
+      function deptoParaComparar(empresa, depto) {
+        if (getDepartamentosPorEmpresa(empresa).length === 0) return '';
+        return normalizar(depto);
+      }
+
       function usuarioPuedeAcceder(usuario, empresa, depto) {
         if (!usuario) return false;
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
-        var deptoNorm = normalizar(depto);
-        return usuario.permisos.some(function(p) { return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm; });
+        var deptoNorm = deptoParaComparar(empresa, depto);
+        return usuario.permisos.some(function(p) { return normalizar(p.empresa) === empNorm && deptoParaComparar(p.empresa, p.depto) === deptoNorm; });
       }
 
       function usuarioPuedeCrearProyectos(usuario) {
@@ -3166,9 +3176,9 @@
         if (rolesExcluidos.indexOf(usuario.rol) !== -1) return false;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
-        var deptoNorm = normalizar(departamento);
+        var deptoNorm = deptoParaComparar(empresa, departamento);
         return usuario.permisos.some(function(p) {
-          return normalizar(p.empresa) === empNorm && normalizar(p.depto) === deptoNorm;
+          return normalizar(p.empresa) === empNorm && deptoParaComparar(p.empresa, p.depto) === deptoNorm;
         });
       }
 
