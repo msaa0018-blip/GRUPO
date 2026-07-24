@@ -2927,41 +2927,174 @@
       }
 
       // ============================================================
-      // MAPEO DE EMPRESAS Y DEPARTAMENTOS
+      // CAPA ORGANIZACIONAL CENTRALIZADA (Empresa -> Departamento)
       // ============================================================
-      var EMPRESAS_MAP = {
-        'GRUPO INDUSTRIAL EXTINGUE': 'GIE',
-        'VEXPAR OPERACIONES': 'VOP',
-        'SUMINISERVICES': 'SMV',
-        'INMOBIENES': 'ICE',
-        'ISCI': 'ISCI'
+      // Única fuente de verdad para toda la estructura organizacional
+      // del ERP: empresas, sus departamentos y abreviaturas para el
+      // código de OC. Todo módulo que necesite datos organizacionales
+      // debe consumir este catálogo (o las funciones que lo envuelven)
+      // en vez de tener nombres/abreviaturas escritos directo en el código.
+      var ORG_CATALOGO = {
+        empresas: [
+          {
+            id: 'VOP',
+            nombre: 'VEXPAR OPERACIONES',
+            abreviatura: 'VOP',
+            logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20VEXPAR%20PARA%20OC.jpg',
+            estado: 'Activo',
+            departamentos: [
+              { id: 'VOP-VC', nombre: 'VENTAS CORPORATIVAS VEXPAR', abreviatura: 'VC', estado: 'Activo' }
+            ]
+          },
+          {
+            id: 'GIE',
+            nombre: 'GRUPO INDUSTRIAL EXTINGUE',
+            abreviatura: 'GIE',
+            logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE.png',
+            estado: 'Activo',
+            departamentos: [
+              { id: 'GIE-TLLR', nombre: 'TALLER', abreviatura: 'TLLR', estado: 'Activo' },
+              { id: 'GIE-SERV', nombre: 'SERVICIOS', abreviatura: 'SERV', estado: 'Activo' },
+              { id: 'GIE-VC', nombre: 'VENTAS CORPORATIVAS EXTINGUE', abreviatura: 'VC', estado: 'Activo' },
+              { id: 'GIE-FIN', nombre: 'FINANZAS', abreviatura: 'FIN', estado: 'Activo' },
+              { id: 'GIE-DIR', nombre: 'DIRECCIÓN', abreviatura: 'DIR', estado: 'Activo' },
+              { id: 'GIE-ADM', nombre: 'ADMINISTRACION', abreviatura: 'ADM', estado: 'Activo' }
+            ]
+          },
+          {
+            id: 'SMV',
+            nombre: 'SUMINISERVICES',
+            abreviatura: 'SMV',
+            logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg',
+            estado: 'Activo',
+            departamentos: []
+          },
+          {
+            id: 'ICE',
+            nombre: 'INMOBIENES DEL CENTRO',
+            abreviatura: 'ICE',
+            logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png',
+            estado: 'Activo',
+            departamentos: []
+          },
+          {
+            id: 'ISCI',
+            nombre: 'INGENIERÍA EN SISTEMAS CONTRA INCENDIO',
+            abreviatura: 'ISCI',
+            logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20ISCI.png',
+            estado: 'Activo',
+            departamentos: []
+          }
+        ]
       };
 
-      var DEPARTAMENTOS_MAP = {
-        'SERVICIOS': 'SERV',
-        'TALLER': 'TLLER',
-        'VENTAS CORPORATIVAS EXTINGUE': 'VC GIE',
-        'VENTAS CORPORATIVAS VEXPAR': 'VC VOP'
+      function normalizarOrg(str) {
+        return (str || '').toString().trim().toUpperCase();
+      }
+
+      // Coincidencia flexible para no romper datos históricos guardados
+      // con nombres parciales (ej. "INMOBIENES" en vez de "INMOBIENES DEL CENTRO",
+      // o "ISCI" en vez del nombre completo de la empresa 5).
+      function coincideOrg(valorGuardado, nombreCatalogo, abreviaturaCatalogo) {
+        if (!valorGuardado) return false;
+        var v = normalizarOrg(valorGuardado);
+        var n = normalizarOrg(nombreCatalogo);
+        var a = normalizarOrg(abreviaturaCatalogo);
+        return v === n || v === a || n.indexOf(v) !== -1 || v.indexOf(n) !== -1;
+      }
+
+      function getEmpresasCatalogo() {
+        return ORG_CATALOGO.empresas.filter(function(e) { return e.estado === 'Activo'; });
+      }
+
+      function getEmpresaCatalogoPorNombre(nombreEmpresa) {
+        if (!nombreEmpresa) return null;
+        return ORG_CATALOGO.empresas.find(function(e) {
+          return coincideOrg(nombreEmpresa, e.nombre, e.abreviatura);
+        }) || null;
+      }
+
+      function getDepartamentosPorEmpresa(nombreEmpresa) {
+        var empresa = getEmpresaCatalogoPorNombre(nombreEmpresa);
+        if (!empresa) return [];
+        return empresa.departamentos.filter(function(d) { return d.estado === 'Activo'; });
+      }
+
+      function getDepartamentoCatalogo(nombreEmpresa, nombreDepartamento) {
+        var empresa = getEmpresaCatalogoPorNombre(nombreEmpresa);
+        if (!empresa || !nombreDepartamento) return null;
+        return empresa.departamentos.find(function(d) {
+          return coincideOrg(nombreDepartamento, d.nombre, d.abreviatura);
+        }) || null;
+      }
+
+      function getLogoEmpresaCatalogo(nombreEmpresa) {
+        var empresa = getEmpresaCatalogoPorNombre(nombreEmpresa);
+        return empresa ? empresa.logo : null;
+      }
+
+      // Puebla un <select> de departamentos dependiendo de la empresa elegida.
+      // Uso genérico para cualquier pantalla (usuarios, proyectos, OC, filtros).
+      window.actualizarDepartamentosPorEmpresaSelect = function(selectEmpresaId, selectDeptoId, opcionesExtra) {
+        var selectEmpresa = document.getElementById(selectEmpresaId);
+        var selectDepto = document.getElementById(selectDeptoId);
+        if (!selectEmpresa || !selectDepto) return;
+
+        var nombreEmpresa = selectEmpresa.value;
+        var valorPrevio = selectDepto.value;
+        var deptos = getDepartamentosPorEmpresa(nombreEmpresa);
+
+        var opciones = '<option value="">' + (opcionesExtra && opcionesExtra.placeholder || 'Departamento') + '</option>';
+        if (deptos.length === 0) {
+          // Empresa sin departamentos registrados (ej. SMV, ICE, ISCI)
+          selectDepto.innerHTML = opciones;
+          selectDepto.disabled = true;
+          return;
+        }
+        selectDepto.disabled = false;
+        opciones += deptos.map(function(d) {
+          return '<option value="' + d.nombre + '">' + d.nombre + '</option>';
+        }).join('');
+        selectDepto.innerHTML = opciones;
+        if (deptos.some(function(d) { return d.nombre === valorPrevio; })) {
+          selectDepto.value = valorPrevio;
+        }
       };
+
+      // Mapas legados: se conservan solo por compatibilidad de referencias
+      // antiguas, pero ahora se derivan del catálogo único (ya no hardcode).
+      var EMPRESAS_MAP = (function() {
+        var map = {};
+        ORG_CATALOGO.empresas.forEach(function(e) { map[e.nombre] = e.abreviatura; });
+        return map;
+      })();
+
+      var DEPARTAMENTOS_MAP = (function() {
+        var map = {};
+        ORG_CATALOGO.empresas.forEach(function(e) {
+          e.departamentos.forEach(function(d) { map[d.nombre] = d.abreviatura; });
+        });
+        return map;
+      })();
 
       function getAbreviaturaEmpresa(empresa) {
         if (!empresa) return empresa;
-        var emp = empresa.trim().toUpperCase();
-        for (var key in EMPRESAS_MAP) {
-          if (emp.indexOf(key) !== -1 || emp === key) {
-            return EMPRESAS_MAP[key];
-          }
-        }
-        return empresa;
+        var encontrada = getEmpresaCatalogoPorNombre(empresa);
+        return encontrada ? encontrada.abreviatura : empresa;
       }
 
-      function getAbreviaturaDepartamento(departamento) {
+      function getAbreviaturaDepartamento(departamento, empresa) {
         if (!departamento) return departamento;
-        var dep = departamento.trim().toUpperCase();
-        for (var key in DEPARTAMENTOS_MAP) {
-          if (dep.indexOf(key) !== -1 || dep === key) {
-            return DEPARTAMENTOS_MAP[key];
-          }
+        if (empresa) {
+          var depto = getDepartamentoCatalogo(empresa, departamento);
+          if (depto) return depto.abreviatura;
+        }
+        // Búsqueda sin empresa (compatibilidad con llamadas existentes)
+        for (var i = 0; i < ORG_CATALOGO.empresas.length; i++) {
+          var d = ORG_CATALOGO.empresas[i].departamentos.find(function(dep) {
+            return coincideOrg(departamento, dep.nombre, dep.abreviatura);
+          });
+          if (d) return d.abreviatura;
         }
         return departamento;
       }
@@ -3005,7 +3138,8 @@
         return simbolo + formatearNumeroMexico(monto, true);
       }
 
-      function normalizar(str) { return str.trim().toUpperCase(); }
+      function normalizar(str) { return (str || '').toString().trim().toUpperCase(); }
+      function mostrarDepto(depto) { return depto ? depto : '—'; }
 
       function buscarUsuarioDB(usuario) {
         return usuariosDB.find(function(u) { return u.usuario && u.usuario.toUpperCase() === usuario.toUpperCase(); });
@@ -3157,6 +3291,15 @@
           }, 0);
       }
 
+      // ============================================================
+      // GENERACIÓN DEL CÓDIGO DE OC
+      // Formato: EMPRESA-DEPTO-OC-FECHA-LETRA-PROVEEDOR-PROYECTO-CLIENTE-ELABORADOR
+      //   - EMPRESA: abreviatura de la empresa (VOP, GIE, SMV, ICE, ISCI).
+      //   - DEPTO: abreviatura del departamento del catálogo (TLLR, SERV,
+      //     VC, FIN, DIR, ADM). Si la empresa no tiene departamentos
+      //     registrados (SMV, ICE, ISCI) se repite la abreviatura de la
+      //     empresa en este segmento.
+      // ============================================================
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
         var fecha = new Date();
         var anio = String(fecha.getFullYear()).slice(2);
@@ -3164,14 +3307,27 @@
         var dia = String(fecha.getDate()).padStart(2, '0');
         var fechaStr = anio + mes + dia;
 
-        var deptoClean = departamento.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
-        var proveedorClean = proveedor.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-        var proyectoClean = proyecto.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-        var clienteClean = cliente.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
-        var elaboradorClean = elaborador.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
+        var empresaClean = getAbreviaturaEmpresa(empresa) || normalizarOrg(empresa).replace(/[^A-Z0-9]/g, '').slice(0, 8);
+
+        var deptoInfo = getDepartamentoCatalogo(empresa, departamento);
+        var deptoClean;
+        if (deptoInfo) {
+          deptoClean = deptoInfo.abreviatura;
+        } else if (getDepartamentosPorEmpresa(empresa).length === 0) {
+          // Empresa sin departamentos registrados: se repite la abreviatura de la empresa
+          deptoClean = empresaClean;
+        } else {
+          // Fallback: sin coincidencia en catálogo, se limpia el texto tal cual antes
+          deptoClean = (departamento || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+        }
+
+        var proveedorClean = (proveedor || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        var proyectoClean = (proyecto || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+        var clienteClean = (cliente || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+        var elaboradorClean = (elaborador || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
 
         var letra = seq || 'A';
-        return deptoClean + '-OC-' + fechaStr + '-' + letra + '-' + proveedorClean + '-' + proyectoClean + '-' + clienteClean + '-' + elaboradorClean;
+        return empresaClean + '-' + deptoClean + '-OC-' + fechaStr + '-' + letra + '-' + proveedorClean + '-' + proyectoClean + '-' + clienteClean + '-' + elaboradorClean;
       }
 
       function verificarCodigoExistente(codigoBase) {
@@ -3180,7 +3336,7 @@
         });
         var letras = existentes.map(function(o) {
           var parts = o.codigo.split('-');
-          return parts[3] || '';
+          return parts[4] || ''; // EMPRESA-DEPTO-OC-FECHA-LETRA => índice 4
         });
         var letrasExistentes = letras.filter(function(l) { return l.length === 1 && l >= 'A' && l <= 'Z'; });
         if (letrasExistentes.length === 0) return 'A';
@@ -4867,56 +5023,18 @@
       }
 
       function getLogoPorDepartamento(empresa, departamento) {
-        // Regla de negocio prioritaria: coincidencia exacta del departamento
+        // Regla de negocio prioritaria: coincidencia exacta del departamento ISCI
         if (esDepartamentoISCI(departamento)) {
-          return {
-            url: LOGO_ISCI_URL,
-            tipo: 'PNG',
-            nombre: 'ISCI'
-          };
+          return { url: LOGO_ISCI_URL, tipo: 'PNG', nombre: 'ISCI' };
         }
 
-        var deptoUpper = (departamento || '').toUpperCase().trim();
-        var empUpper = (empresa || '').toUpperCase().trim();
-
-        if (deptoUpper.includes('INMOBIENES') || empUpper.includes('INMOBIENES')) {
+        // Fuente única de verdad: catálogo organizacional
+        var empresaCatalogo = getEmpresaCatalogoPorNombre(empresa) || getEmpresaCatalogoPorNombre(departamento);
+        if (empresaCatalogo && empresaCatalogo.logo) {
           return {
-            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png',
-            tipo: 'PNG',
-            nombre: 'INMOBIENES'
-          };
-        }
-
-        if (deptoUpper.includes('SUMINISERVICES') || empUpper.includes('SUMINISERVICES')) {
-          return {
-            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg',
-            tipo: 'JPEG',
-            nombre: 'SUMINISERVICES'
-          };
-        }
-
-        if (empUpper.includes('GRUPO INDUSTRIAL EXTINGUE') || deptoUpper.includes('GRUPO INDUSTRIAL EXTINGUE')) {
-          return {
-            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE.png',
-            tipo: 'PNG',
-            nombre: 'GRUPO INDUSTRIAL EXTINGUE'
-          };
-        }
-
-        if (empUpper.includes('VEXPAR OPERACIONES') || deptoUpper.includes('VEXPAR OPERACIONES')) {
-          return {
-            url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20VEXPAR%20PARA%20OC.jpg',
-            tipo: 'JPEG',
-            nombre: 'VEXPAR OPERACIONES'
-          };
-        }
-
-        if (empUpper.includes('ISCI') || deptoUpper.includes('ISCI') ||
-            empUpper.includes('SISTEMAS CONTRA INCENDIO') || deptoUpper.includes('SISTEMAS CONTRA INCENDIO')) {
-          return {
-            url: LOGO_ISCI_URL,
-            tipo: 'PNG',
-            nombre: 'ISCI'
+            url: empresaCatalogo.logo,
+            tipo: empresaCatalogo.logo.toLowerCase().endsWith('.jpg') || empresaCatalogo.logo.toLowerCase().endsWith('.jpeg') ? 'JPEG' : 'PNG',
+            nombre: empresaCatalogo.nombre
           };
         }
 
@@ -5375,7 +5493,7 @@
         if (motivoExceso) mensaje += '⚠️ ' + motivoExceso + '\n\n';
         mensaje += '📌 *Código:* ' + datosOC.codigo + '\n';
         mensaje += '🏢 *Empresa:* ' + datosOC.empresa + '\n';
-        mensaje += '📁 *Departamento:* ' + datosOC.departamento + '\n';
+        mensaje += '📁 *Departamento:* ' + mostrarDepto(datosOC.departamento) + '\n';
         mensaje += '📂 *Proyecto:* ' + datosOC.proyectonombre + '\n';
         mensaje += '👤 *Solicitante:* ' + datosOC.solicitante + '\n';
         mensaje += '👤 *Elaborador:* ' + datosOC.elaborador + '\n';
@@ -5592,7 +5710,7 @@
             tbodyProyectos.innerHTML +=
               '<tr>' +
               '<td data-label="Empresa">' + p.empresa + '</td>' +
-              '<td data-label="Departamento">' + p.departamento + '</td>' +
+              '<td data-label="Departamento">' + mostrarDepto(p.departamento) + '</td>' +
               '<td data-label="Proyecto"><strong>' + p.nombre + '</strong></td>' +
               '<td data-label="Cliente">' + p.cliente + '</td>' +
               '<td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td>' +
@@ -6201,7 +6319,7 @@
             if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
             if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
-            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Departamento">' + p.departamento + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Departamento">' + mostrarDepto(p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
@@ -7703,7 +7821,7 @@
             '<td data-label="Folio"><code>' + o.folio + '</code></td>' +
             '<td data-label="Fecha">' + (o.fecha || '') + '</td>' +
             '<td data-label="Empresa">' + (o.empresa || '') + '</td>' +
-            '<td data-label="Depto">' + o.departamento + '</td>' +
+            '<td data-label="Depto">' + mostrarDepto(o.departamento) + '</td>' +
             '<td data-label="Razón Social">' + o.razon_social + '</td>' +
             '<td data-label="Responsable">' + (o.responsable || '-') + '</td>' +
             '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
@@ -8751,7 +8869,7 @@
           '<div style="flex:1;min-width:280px;background:white;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;">' +
           '<h3 style="margin-bottom:12px;">' + p.nombre + '</h3>' +
           '<p><strong>Empresa:</strong> ' + p.empresa + '</p>' +
-          '<p><strong>Departamento:</strong> ' + p.departamento + '</p>' +
+          '<p><strong>Departamento:</strong> ' + mostrarDepto(p.departamento) + '</p>' +
           '<p><strong>Cliente:</strong> ' + (p.cliente || 'No especificado') + '</p>' +
           '<p style="margin-top:10px;"><strong>Presupuesto:</strong> ' + formatoMoneda(p.presupuesto, p.moneda) + '</p>' +
           '<p><strong>Límite (60%):</strong> ' + formatoMoneda(p.limite, p.moneda) + '</p>' +
@@ -8844,28 +8962,13 @@
           return;
         }
 
-        var deptoUpper = depto.toUpperCase().trim();
-        var empUpper = empresa.toUpperCase().trim();
-        var logoUrl = '';
-        var nombreMostrar = depto;
-
-        if (esDepartamentoISCI(depto)) {
-          logoUrl = LOGO_ISCI_URL;
-          nombreMostrar = 'ISCI';
-        } else if (deptoUpper.includes('INMOBIENES') || empUpper.includes('INMOBIENES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES.png';
-          nombreMostrar = 'INMOBIENES';
-        } else if (deptoUpper.includes('SUMINISERVICES') || empUpper.includes('SUMINISERVICES')) {
-          logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES.jpeg';
-          nombreMostrar = 'SUMINISERVICES';
-        } else if (deptoUpper.includes('ISCI') || empUpper.includes('ISCI') ||
-                   deptoUpper.includes('SISTEMAS CONTRA INCENDIO') || empUpper.includes('SISTEMAS CONTRA INCENDIO')) {
-          logoUrl = LOGO_ISCI_URL;
-          nombreMostrar = 'ISCI';
-        } else {
+        var logoInfo = getLogoPorDepartamento(empresa, depto);
+        if (!logoInfo) {
           container.classList.add('hidden');
           return;
         }
+        var logoUrl = logoInfo.url;
+        var nombreMostrar = logoInfo.nombre;
 
         img.src = logoUrl;
         img.style.display = 'block';
