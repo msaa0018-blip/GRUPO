@@ -91,6 +91,7 @@
     box-sizing: border-box;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
     flex-shrink: 0;
+    overflow-x: hidden;
   }
 
   /* === ZONA IZQUIERDA === */
@@ -167,8 +168,9 @@
     flex: 0 1 auto;
     min-width: 0;
     max-width: 45%;
-    overflow: visible;
+    overflow: hidden;
     flex-shrink: 0;
+    flex-wrap: nowrap;
   }
 
   /* === BOTONES === */
@@ -183,17 +185,18 @@
     cursor: pointer;
     font-size: 12px;
     transition: background 0.2s, transform 0.15s;
-    min-height: 32px;
+    height: 32px;
     min-width: 56px;
+    max-width: 33%;
     white-space: nowrap;
-    flex-shrink: 0;
+    flex: 0 1 33%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
     box-sizing: border-box;
     line-height: 1.2;
-    overflow: visible;
+    overflow: hidden;
   }
   .header-right .btn-volver-menu {
     background: var(--gray-600);
@@ -251,8 +254,10 @@
     .header-right .btn-cerrar-sesion-header {
       font-size: 11px;
       padding: 6px 12px;
-      min-height: 28px;
+      height: 28px;
       min-width: 48px;
+      max-width: 33%;
+      flex: 0 1 33%;
     }
   }
 
@@ -286,8 +291,10 @@
     .header-right .btn-cerrar-sesion-header {
       font-size: 10px;
       padding: 5px 10px;
-      min-height: 26px;
+      height: 26px;
       min-width: 38px;
+      max-width: 33%;
+      flex: 0 1 33%;
       border-radius: 4px;
     }
     /* Solo mostrar ícono para Volver */
@@ -338,8 +345,10 @@
     .header-right .btn-cerrar-sesion-header {
       font-size: 9px;
       padding: 4px 8px;
-      min-height: 24px;
+      height: 24px;
       min-width: 30px;
+      max-width: 33%;
+      flex: 0 1 33%;
       border-radius: 3px;
     }
     .header-right .btn-volver-menu .btn-text {
@@ -384,8 +393,10 @@
     .header-right .btn-cerrar-sesion-header {
       font-size: 7px;
       padding: 3px 5px;
-      min-height: 20px;
+      height: 20px;
       min-width: 22px;
+      max-width: 33%;
+      flex: 0 1 33%;
       border-radius: 2px;
     }
     .header-right .btn-volver-menu .btn-icon-only,
@@ -2470,6 +2481,13 @@
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXP()">🖨️ Previsualizar Reporte</button>
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
+
+        <div id="cxpChartCard" class="card" style="margin:16px 0;">
+          <h3 id="cxpChartTitulo">📊 Distribución</h3>
+          <div style="max-width:520px;margin:0 auto;">
+            <canvas id="cxpChartPolar" height="280"></canvas>
+          </div>
+        </div>
         <h3>📋 Detalle por Proyecto</h3>
         <div id="cxpTablaProyectos" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
@@ -2483,7 +2501,7 @@
         <div id="cxpTablaOC" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
             <table style="min-width:100% !important; width:100% !important;">
-              <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Aprobación</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Código</th><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Proveedor</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Aprobación</th><th>Estado</th><th>Acciones</th></tr></thead>
               <tbody id="cxpCuerpoOC"></tbody>
             </table>
           </div>
@@ -5550,53 +5568,90 @@
       // ============================================================
       // FUNCIONES CXP, CXC, OF (resumidas)
       // ============================================================
+      // Roles con visión global en CXP (ven todas las empresas).
+      // El resto (Jefe Departamento, Solicitante, Elaborador) queda
+      // limitado a su propia empresa.
+      var ROLES_CXP_GLOBAL = ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
+
+      function esRolGlobalCXP(usuario) {
+        return !!(usuario && ROLES_CXP_GLOBAL.indexOf(usuario.rol) !== -1);
+      }
+
       function cargarFiltrosCXP() {
-        var empresas = [];
-        var deptos = [];
-        var proyNombres = [];
-
-        if (actual && ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(actual.rol) !== -1) {
-          empresas = [...new Set(proyectos.map(function(p) { return p.empresa; }))];
-          deptos = [...new Set(proyectos.map(function(p) { return p.departamento; }))];
-          proyNombres = proyectos.map(function(p) { return p.nombre; });
-        } else if (actual && actual.permisos) {
-          var permisos = actual.permisos;
-          empresas = [...new Set(permisos.map(function(p) { return p.empresa; }))];
-          deptos = [...new Set(permisos.map(function(p) { return p.depto; }))];
-          var proysPermitidos = proyectos.filter(function(p) { return usuarioPuedeAcceder(actual, p.empresa, p.departamento); });
-          proyNombres = proysPermitidos.map(function(p) { return p.nombre; });
-        }
-
         var selectEmpresa = document.getElementById('cxpFiltroEmpresa');
         var selectDepto = document.getElementById('cxpFiltroDepto');
         var selectProyecto = document.getElementById('cxpFiltroProyecto');
+        var esGlobal = esRolGlobalCXP(actual);
 
-        selectEmpresa.innerHTML = '<option value="">Todas las empresas</option>';
-        empresas.forEach(function(e) {
+        // Base de proyectos ya restringida por permisos del usuario
+        // (para roles no-globales, filtrarProyectosSegunUsuario ya
+        // devuelve únicamente los de su propia empresa/departamento).
+        var proyectosBase = esGlobal ? proyectos : filtrarProyectosSegunUsuario(actual);
+
+        // --- EMPRESA ---
+        var empresasDisponibles = [...new Set(proyectosBase.map(function(p) { return p.empresa; }))].filter(Boolean);
+        selectEmpresa.innerHTML = '';
+        if (esGlobal) {
+          selectEmpresa.innerHTML = '<option value="">Todas las empresas</option>';
+        }
+        empresasDisponibles.forEach(function(e) {
           var opt = document.createElement('option');
           opt.value = e;
           opt.textContent = e;
           selectEmpresa.appendChild(opt);
         });
 
-        selectDepto.innerHTML = '<option value="">Todos los departamentos</option>';
-        deptos.forEach(function(d) {
-          var opt = document.createElement('option');
-          opt.value = d;
-          opt.textContent = d;
-          selectDepto.appendChild(opt);
-        });
+        if (esGlobal) {
+          selectEmpresa.disabled = false;
+        } else {
+          // Bloqueado: un usuario no-global solo tiene su propia empresa
+          selectEmpresa.disabled = true;
+          if (empresasDisponibles.length > 0) selectEmpresa.value = empresasDisponibles[0];
+        }
 
-        selectProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
-        proyNombres.forEach(function(p) {
-          var opt = document.createElement('option');
-          opt.value = p;
-          opt.textContent = p;
-          selectProyecto.appendChild(opt);
-        });
+        function poblarDepartamentos() {
+          var empresaSel = selectEmpresa.value;
+          var base = empresaSel ? proyectosBase.filter(function(p) { return p.empresa === empresaSel; }) : proyectosBase;
+          var deptosDisponibles = [...new Set(base.map(function(p) { return p.departamento; }))].filter(Boolean);
+          var valorPrevio = selectDepto.value;
+          selectDepto.innerHTML = '<option value="">Todos los departamentos</option>';
+          deptosDisponibles.forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            selectDepto.appendChild(opt);
+          });
+          selectDepto.value = deptosDisponibles.indexOf(valorPrevio) !== -1 ? valorPrevio : '';
+        }
 
-        selectEmpresa.onchange = function() { window.renderCXP(); };
-        selectDepto.onchange = function() { window.renderCXP(); };
+        function poblarProyectos() {
+          var empresaSel = selectEmpresa.value;
+          var deptoSel = selectDepto.value;
+          var base = proyectosBase;
+          if (empresaSel) base = base.filter(function(p) { return p.empresa === empresaSel; });
+          if (deptoSel) base = base.filter(function(p) { return p.departamento === deptoSel; });
+          var valorPrevio = selectProyecto.value;
+          var nombres = base.map(function(p) { return p.nombre; });
+          selectProyecto.innerHTML = '<option value="">Todos los proyectos</option>';
+          nombres.forEach(function(n) {
+            var opt = document.createElement('option');
+            opt.value = n;
+            opt.textContent = n;
+            selectProyecto.appendChild(opt);
+          });
+          selectProyecto.value = nombres.indexOf(valorPrevio) !== -1 ? valorPrevio : '';
+        }
+
+        poblarDepartamentos();
+        poblarProyectos();
+
+        selectEmpresa.onchange = function() {
+          if (!esGlobal) return; // bloqueado para roles no-globales
+          poblarDepartamentos();
+          poblarProyectos();
+          window.renderCXP();
+        };
+        selectDepto.onchange = function() { poblarProyectos(); window.renderCXP(); };
         selectProyecto.onchange = function() { window.renderCXP(); };
         document.getElementById('cxpFiltroEstado').onchange = function() { window.renderCXP(); };
 
@@ -5611,6 +5666,8 @@
       }
 
       function obtenerDatosCXP() {
+        var esGlobal = esRolGlobalCXP(actual);
+
         var filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
         var filtroDepto = document.getElementById('cxpFiltroDepto').value;
         var filtroProyecto = document.getElementById('cxpFiltroProyecto').value;
@@ -5618,14 +5675,31 @@
         var fechaInicio = document.getElementById('cxpFechaInicio').value;
         var fechaFin = document.getElementById('cxpFechaFin').value;
 
+        // Defensa en profundidad: para roles no-globales, el filtro de
+        // empresa SIEMPRE se fuerza a la empresa del usuario, sin importar
+        // qué valor traiga el <select> (aunque haya sido manipulado desde
+        // el navegador). La fuente real de la restricción es de todos
+        // modos filtrarProyectosSegunUsuario/filtrarOCSegunUsuario, que
+        // ya limitan por permisos reales del usuario más abajo.
+        if (!esGlobal) {
+          var empresaPropia = (actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
+          filtroEmpresa = empresaPropia;
+        }
+
+        // proyectosVisibles siempre parte de los permisos reales del
+        // usuario (filtrarProyectosSegunUsuario), nunca de lo que diga
+        // el filtro de la UI — así un valor manipulado en el <select>,
+        // la URL, localStorage o sessionStorage no puede ampliar el acceso.
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
 
         if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.empresa === filtroEmpresa; });
         if (filtroDepto) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.departamento === filtroDepto; });
         if (filtroProyecto) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.nombre === filtroProyecto; });
 
+        // JOIN OC -> Proyecto: solo se incluyen OC cuyo proyecto existe
+        // dentro de proyectosVisibles (equivalente a INNER JOIN válido).
+        // Si una OC no tiene proyecto correspondiente, queda excluida.
         var ocVisibles = filtrarOCSegunUsuario(actual);
-
         var nombresProyectos = proyectosVisibles.map(function(p) { return p.nombre; });
         ocVisibles = ocVisibles.filter(function(o) { return nombresProyectos.indexOf(o.proyecto) !== -1; });
 
@@ -5660,7 +5734,7 @@
         } else if (filtroEstado === 'AUTORIZADA') ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA'; });
         else if (filtroEstado === 'CONCLUIDA') ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'CONCLUIDA'; });
 
-        return { proyectos: proyectosVisibles, oc: ocVisibles };
+        return { proyectos: proyectosVisibles, oc: ocVisibles, esGlobal: esGlobal };
       }
 
       window.verDashboardProyectoCXP = function(nombreProyecto) {
@@ -5761,10 +5835,17 @@
         var tbodyOC = document.getElementById('cxpCuerpoOC');
         tbodyOC.innerHTML = '';
         if (ocFiltradas.length === 0) {
-          tbodyOC.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>';
+          tbodyOC.innerHTML = '<tr><td colspan="12" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>';
         } else {
+          // Mapa proyecto->empresa/departamento (LEFT JOIN ya resuelto):
+          // toda OC en ocFiltradas ya tiene garantizado un proyecto
+          // correspondiente en "proys" (ver obtenerDatosCXP).
+          var mapaProyectos = {};
+          proys.forEach(function(p) { mapaProyectos[p.nombre] = p; });
+
           ocFiltradas.slice().reverse().forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
+            var proyectoOC = mapaProyectos[o.proyecto];
             var estadoLabel = o.estado;
             var badgeClass = '';
 
@@ -5790,6 +5871,8 @@
             tbodyOC.innerHTML +=
               '<tr>' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
+              '<td data-label="Empresa">' + (proyectoOC ? proyectoOC.empresa : '—') + '</td>' +
+              '<td data-label="Departamento">' + mostrarDepto(proyectoOC ? proyectoOC.departamento : '') + '</td>' +
               '<td data-label="Proyecto">' + o.proyecto + '</td>' +
               '<td data-label="Proveedor">' + o.proveedor + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
@@ -5802,7 +5885,88 @@
               '</tr>';
           });
         }
+
+        actualizarChartCXP(datos);
       };
+
+      // ============================================================
+      // GRÁFICO DE CXP (polarArea)
+      // - Roles globales (Director General, Administrador, Finanzas,
+      //   Contabilidad): gráfico con el total por EMPRESA, cruzando
+      //   información de todas las empresas.
+      // - Resto de roles (Jefe Departamento, Solicitante, Elaborador):
+      //   gráfico acotado exclusivamente a su propia empresa/depto,
+      //   desglosado por PROYECTO. Nunca mezcla datos de otra empresa
+      //   o departamento, porque "datos.oc"/"datos.proyectos" ya vienen
+      //   pre-filtrados por permisos desde obtenerDatosCXP().
+      // ============================================================
+      function actualizarChartCXP(datos) {
+        var canvas = document.getElementById('cxpChartPolar');
+        var titulo = document.getElementById('cxpChartTitulo');
+        if (!canvas) return;
+
+        var etiquetas = [];
+        var valores = [];
+
+        if (datos.esGlobal) {
+          titulo.textContent = '📊 Distribución global por empresa';
+          var porEmpresa = {};
+          datos.oc.forEach(function(o) {
+            var proyecto = datos.proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var empresa = proyecto ? proyecto.empresa : 'Sin empresa';
+            porEmpresa[empresa] = (porEmpresa[empresa] || 0) + (o.montomxn || 0);
+          });
+          etiquetas = Object.keys(porEmpresa);
+          valores = etiquetas.map(function(e) { return porEmpresa[e]; });
+        } else {
+          var empresaUsuario = (actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
+          var deptoUsuario = (actual && actual.permisos && actual.permisos[0] && actual.permisos[0].depto) || '';
+          titulo.textContent = '📊 Distribución de mis proyectos (' + (deptoUsuario || empresaUsuario) + ')';
+          var porProyecto = {};
+          datos.oc.forEach(function(o) {
+            porProyecto[o.proyecto] = (porProyecto[o.proyecto] || 0) + (o.montomxn || 0);
+          });
+          etiquetas = Object.keys(porProyecto);
+          valores = etiquetas.map(function(p) { return porProyecto[p]; });
+        }
+
+        if (chartsInstances.cxpPolar) {
+          chartsInstances.cxpPolar.destroy();
+        }
+
+        if (etiquetas.length === 0) {
+          var ctxVacio = canvas.getContext('2d');
+          ctxVacio.clearRect(0, 0, canvas.width, canvas.height);
+          return;
+        }
+
+        var colores = ['#2196F3', '#E53935', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#FDD835', '#6D4C41', '#5C6BC0', '#26A69A'];
+
+        chartsInstances.cxpPolar = new Chart(canvas.getContext('2d'), {
+          type: 'polarArea',
+          data: {
+            labels: etiquetas,
+            datasets: [{
+              data: valores,
+              backgroundColor: etiquetas.map(function(_, i) { return colores[i % colores.length] + 'CC'; }),
+              borderColor: '#fff',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) { return ctx.label + ': $' + Number(ctx.raw || 0).toLocaleString(); }
+                }
+              }
+            }
+          }
+        });
+      }
 
       function obtenerInfoProyectoCXC(cxc) {
         var orden = ordenes.find(function(o) { return o.codigo === cxc.occontrato; });
