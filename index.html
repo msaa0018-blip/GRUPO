@@ -3205,7 +3205,11 @@
           return;
         }
         inputEmpresa.value = defaultData.empresa || '';
-        inputDepto.value = mostrarDepto(defaultData.departamento);
+        var deptoMostrar = defaultData.departamento;
+        if (!deptoMostrar && getDepartamentosPorEmpresa(defaultData.empresa).length === 0) {
+          deptoMostrar = getAbreviaturaEmpresa(defaultData.empresa) || defaultData.empresa;
+        }
+        inputDepto.value = mostrarDepto(deptoMostrar);
       }
 
       function filtrarProyectosSegunUsuario(usuario) {
@@ -6603,9 +6607,19 @@
         }
 
         var permisos = obtenerOpcionesPermisos(actual);
+        var departamentoPermiso;
         if (permisos.length > 0) {
           empresa = permisos[0].empresa || '';
-          departamento = permisos[0].depto || '';
+          departamentoPermiso = permisos[0].depto || '';
+          if (departamentoPermiso) {
+            departamento = departamentoPermiso;
+          } else if (getDepartamentosPorEmpresa(empresa).length === 0) {
+            // Empresa sin departamentos registrados (SMV, ICE, ISCI):
+            // se guarda la abreviatura de la empresa en el campo departamento.
+            departamento = getAbreviaturaEmpresa(empresa) || empresa;
+          } else {
+            departamento = '';
+          }
         } else {
           document.getElementById('msgProyecto').innerHTML = '<div class="alert">⚠️ No tienes permisos para crear proyectos.</div>';
           return;
@@ -6633,7 +6647,7 @@
           return;
         }
 
-        if (!usuarioPuedeAcceder(actual, empresa, departamento)) {
+        if (!usuarioPuedeAcceder(actual, empresa, departamentoPermiso)) {
           msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR PROYECTOS EN ESTA EMPRESA/DEPARTAMENTO.</div>';
           return;
         }
