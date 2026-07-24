@@ -8109,6 +8109,117 @@
         }
       };
 
+      // ============================================================
+      // RECOPILAR DATOS DEL FORMULARIO DE CREAR OC
+      // (Faltaba esta función: por eso Previsualizar/Confirmar no
+      // hacían nada — ambas la llaman antes de generar el PDF/guardar.)
+      // ============================================================
+      function recopilarDatosOC() {
+        var msgDiv = document.getElementById('mensajeOC');
+        var mostrarError = function(texto) {
+          if (msgDiv) msgDiv.innerHTML = '<div class="alert">⚠️ ' + texto + '</div>';
+          else alert(texto);
+        };
+
+        var selectProyecto = document.getElementById('selectProyecto');
+        var selectedId = parseInt(selectProyecto ? selectProyecto.value : '');
+        var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
+        if (!proyecto) {
+          mostrarError('Selecciona un proyecto válido.');
+          return null;
+        }
+
+        var proveedor = (document.getElementById('proveedor').value || '').trim().toUpperCase();
+        var direccion = (document.getElementById('direccion').value || '').trim().toUpperCase();
+        var direccionEntrega = (document.getElementById('direccionEntrega').value || '').trim().toUpperCase();
+        var responsable = document.getElementById('solicitanteOC').value;
+        var banco = (document.getElementById('banco').value || '').trim().toUpperCase();
+
+        if (!proveedor) { mostrarError('El campo Proveedor es obligatorio.'); return null; }
+        if (!direccion) { mostrarError('El campo Dirección es obligatorio.'); return null; }
+        if (!direccionEntrega) { mostrarError('El campo Dirección de entrega es obligatorio.'); return null; }
+        if (!responsable) { mostrarError('Selecciona un Solicitante/Responsable.'); return null; }
+        if (!banco) { mostrarError('El campo Banco es obligatorio.'); return null; }
+
+        var filas = document.querySelectorAll('#cuerpoProductos tr');
+        if (filas.length === 0) {
+          mostrarError('Agrega al menos un producto.');
+          return null;
+        }
+        var productos = [];
+        var productoInvalido = false;
+        filas.forEach(function(fila) {
+          var descripcion = (fila.querySelector('.desc') ? fila.querySelector('.desc').value : '').trim().toUpperCase();
+          var cantidad = parseNumero(fila.querySelector('.cantidad') ? fila.querySelector('.cantidad').value : '0');
+          var precioUnitario = parseNumero(fila.querySelector('.precio') ? fila.querySelector('.precio').value : '0');
+          var importe = parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
+          if (!descripcion || cantidad <= 0 || precioUnitario <= 0) { productoInvalido = true; }
+          productos.push({
+            parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
+            descripcion: descripcion,
+            cantidad: cantidad,
+            udm: fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA',
+            precioUnitario: precioUnitario,
+            descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
+            impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
+            importe: importe
+          });
+        });
+        if (productoInvalido) {
+          mostrarError('Revisa los productos: descripción, cantidad y precio deben ser válidos.');
+          return null;
+        }
+
+        var moneda = document.getElementById('monedaOC').value;
+        var montototal = window.recalcularTotal();
+        var tipocambio = 1;
+        if (moneda === 'USD') {
+          tipocambio = parseNumero(document.getElementById('paridadInicial').value || '0');
+          if (!tipocambio || tipocambio <= 0) {
+            mostrarError('Captura el tipo de cambio (MXN/USD).');
+            return null;
+          }
+        }
+        var montomxn = moneda === 'USD' ? montototal * tipocambio : montototal;
+
+        var fechaPago = document.getElementById('fechaPago').value || null;
+        var fechaEntrega = document.getElementById('fechaEntrega').value || null;
+        if (!fechaEntrega) { mostrarError('Captura la Fecha de entrega.'); return null; }
+
+        if (msgDiv) msgDiv.innerHTML = '';
+
+        return {
+          empresa: proyecto.empresa,
+          departamento: proyecto.departamento,
+          proyectonombre: proyecto.nombre,
+          cliente: proyecto.cliente,
+          proveedor: proveedor,
+          rfc: (document.getElementById('rfc').value || '').trim().toUpperCase(),
+          direccion: direccion,
+          usocfdi: document.getElementById('usoCFDI').value,
+          direccionentrega: direccionEntrega,
+          cp: (document.getElementById('cp').value || '').trim(),
+          moneda: moneda,
+          tipocambio: tipocambio,
+          montototal: montototal,
+          montomxn: montomxn,
+          estado: 'CREADA',
+          fechapago: fechaPago,
+          fechaentrega: fechaEntrega,
+          responsable: responsable,
+          solicitante: responsable,
+          motivo: null,
+          productos: productos,
+          elaborador: actual ? actual.usuario : 'Desconocido',
+          banco: banco,
+          cuenta: (document.getElementById('cuenta').value || '').trim(),
+          clabe: (document.getElementById('clabe').value || '').trim(),
+          swift: (document.getElementById('swift').value || '').trim().toUpperCase(),
+          cie: (document.getElementById('cie').value || '').trim().toUpperCase(),
+          referencia: (document.getElementById('referencia').value || '').trim().toUpperCase()
+        };
+      }
+
       window.previsualizarOC = async function() {
         var datos = recopilarDatosOC();
         if (!datos) return;
