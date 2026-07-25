@@ -5611,6 +5611,21 @@
 
         function poblarDepartamentos() {
           var empresaSel = selectEmpresa.value;
+
+          // Empresa sin departamentos registrados en el catálogo (SMV, ICE,
+          // ISCI): el "departamento" no es una elección real, así que se
+          // autocompleta y se bloquea el select, en vez de listar valores
+          // sueltos ('' vacío en registros viejos vs. la abreviatura en
+          // registros nuevos, que representan lo mismo: "sin departamento").
+          if (empresaSel && getDepartamentosPorEmpresa(empresaSel).length === 0) {
+            var abrev = getAbreviaturaEmpresa(empresaSel) || empresaSel;
+            selectDepto.innerHTML = '<option value="' + abrev + '">' + abrev + '</option>';
+            selectDepto.value = abrev;
+            selectDepto.disabled = true;
+            return;
+          }
+
+          selectDepto.disabled = false;
           var base = empresaSel ? proyectosBase.filter(function(p) { return p.empresa === empresaSel; }) : proyectosBase;
           var deptosDisponibles = [...new Set(base.map(function(p) { return p.departamento; }))].filter(Boolean);
           var valorPrevio = selectDepto.value;
@@ -5693,7 +5708,11 @@
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
 
         if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.empresa === filtroEmpresa; });
-        if (filtroDepto) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.departamento === filtroDepto; });
+        if (filtroDepto) {
+          proyectosVisibles = proyectosVisibles.filter(function(p) {
+            return deptoParaComparar(p.empresa, p.departamento) === deptoParaComparar(filtroEmpresa || p.empresa, filtroDepto);
+          });
+        }
         if (filtroProyecto) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.nombre === filtroProyecto; });
 
         // JOIN OC -> Proyecto: solo se incluyen OC cuyo proyecto existe
