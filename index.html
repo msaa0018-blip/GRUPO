@@ -3182,27 +3182,30 @@
         // dos capas superpuestas de distinto grosor y color.
         // ============================================================
 
-        // Franja externa (toca el borde superior, más gruesa)
+        // Franja interna (grande, se dibuja primero/detrás; asoma hacia el contenido)
         dibujarOnda(doc, 0, 0, [
           [0, 120],
           [100, 20, 200, -60, 297, -60],
           [93, -40, 203, 80, 298, 40],
           [0, -100]
-        ], colorExterno);
+        ], colorInterno);
 
-        // Franja interna (más cercana al contenido, más delgada, encima)
+        // Franja externa (delgada, se dibuja encima; toca el borde superior)
         dibujarOnda(doc, 0, 0, [
           [0, 95],
           [100, 15, 200, -50, 297, -50],
           [93, -35, 203, 65, 298, 35],
           [0, -80]
-        ], colorInterno);
+        ], colorExterno);
 
         // ============================================================
         // PIE DE PÁGINA: mismo patrón en "S", espejeado verticalmente.
+        // Orden de color INVERTIDO respecto a la cabecera: aquí la
+        // franja que toca el borde (exterior) es la de "colorInterno"
+        // y la que asoma hacia el contenido es la de "colorExterno".
         // ============================================================
 
-        // Franja externa (toca el borde inferior)
+        // Franja grande (detrás; asoma hacia el contenido)
         dibujarOnda(doc, 0, h, [
           [0, -120],
           [100, -20, 200, 60, 297, 60],
@@ -3210,7 +3213,7 @@
           [0, 100]
         ], colorExterno);
 
-        // Franja interna
+        // Franja delgada (encima; toca el borde inferior)
         dibujarOnda(doc, 0, h, [
           [0, -95],
           [100, -15, 200, 50, 297, 50],
