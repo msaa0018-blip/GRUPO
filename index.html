@@ -3132,7 +3132,45 @@
         if (emp.indexOf('VEXPAR OPERACIONES') !== -1) return '#0000FF';
         if (emp.indexOf('INMOBIENES') !== -1) return '#FF8C00';
         if (emp.indexOf('SUMINISERVICES') !== -1) return '#00A86B';
+        if (emp.indexOf('ISCI') !== -1 || emp.indexOf('SISTEMAS CONTRA INCENDIO') !== -1) return '#8B0000';
         return '#6b7280';
+      }
+
+      // Convierte un color hex (#RRGGBB) a componentes RGB para jsPDF.
+      function hexARgb(hex) {
+        hex = (hex || '#6b7280').replace('#', '');
+        return {
+          r: parseInt(hex.substring(0, 2), 16),
+          g: parseInt(hex.substring(2, 4), 16),
+          b: parseInt(hex.substring(4, 6), 16)
+        };
+      }
+
+      function sombrearRgb(rgb, factor) {
+        return {
+          r: Math.max(0, Math.min(255, Math.round(rgb.r * factor))),
+          g: Math.max(0, Math.min(255, Math.round(rgb.g * factor))),
+          b: Math.max(0, Math.min(255, Math.round(rgb.b * factor)))
+        };
+      }
+
+      // Dibuja el membrete de franjas diagonales por empresa (inspirado
+      // en el estilo de membrete corporativo con banda superior/inferior
+      // de color, usando el color asociado a cada empresa/departamento).
+      function dibujarMembreteEmpresa(doc, pageWidth, pageHeight, empresa) {
+        var base = hexARgb(getColorByEmpresa(empresa));
+        var oscuro = sombrearRgb(base, 0.6);
+        var alturaBanda = 46;
+
+        doc.setFillColor(oscuro.r, oscuro.g, oscuro.b);
+        doc.rect(0, 0, pageWidth, alturaBanda, 'F');
+        doc.setFillColor(base.r, base.g, base.b);
+        doc.triangle(0, alturaBanda, pageWidth, 0, pageWidth, alturaBanda, 'F');
+
+        doc.setFillColor(base.r, base.g, base.b);
+        doc.rect(0, pageHeight - 16, pageWidth, 16, 'F');
+        doc.setFillColor(oscuro.r, oscuro.g, oscuro.b);
+        doc.triangle(0, pageHeight - 16, 0, pageHeight, pageWidth * 0.45, pageHeight, 'F');
       }
 
       function getNombreMembrete(empresa) {
@@ -3790,20 +3828,15 @@
           item.addEventListener('click', function(e) {
             var modulo = this.dataset.modulo;
             if (modulo === 'cxp') {
-              window.mostrarMenuInterno();
-              setTimeout(function() { window.mostrarModulo('cxp'); }, 100);
+              window.mostrarModulo('cxp');
             } else if (modulo === 'cxc') {
-              window.mostrarMenuInterno();
-              setTimeout(function() { window.mostrarModulo('cxc'); }, 100);
+              window.mostrarModulo('cxc');
             } else if (modulo === 'of') {
-              window.mostrarMenuInterno();
-              setTimeout(function() { window.mostrarModulo('of'); }, 100);
+              window.mostrarModulo('of');
             } else if (modulo === 'oc') {
-              window.mostrarMenuInterno();
-              setTimeout(function() { window.mostrarModulo('oc'); }, 100);
+              window.mostrarModulo('oc');
             } else if (modulo === 'proyectos') {
-              window.mostrarMenuInterno();
-              setTimeout(function() { window.mostrarModulo('proyectos'); }, 100);
+              window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos') {
               mostrarConstruccion();
             }
@@ -4045,19 +4078,19 @@
           if (puedeVerCXP) {
             panelCXP.classList.remove('hidden');
             cargarFiltrosCXP();
-            setTimeout(function() { window.renderCXP(); }, 100);
+            window.renderCXP();
           }
           bandejaOCCard.classList.remove('hidden');
         } else if (modulo === 'cxc') {
           if (puedeVerCXC) {
             panelCXC.classList.remove('hidden');
             cargarFiltrosCXC();
-            setTimeout(function() { window.renderCXC(); }, 100);
+            window.renderCXC();
           }
         } else if (modulo === 'of') {
           if (puedeVerOFReal) {
             panelOF.classList.remove('hidden');
-            setTimeout(function() { window.renderOF(); }, 100);
+            window.renderOF();
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
             window.mostrarMenuInterno();
@@ -5178,7 +5211,7 @@
               fechaaprobacionjefe: new Date().toISOString(),
               nombrejefe: actual.u,
               fechaaprobaciondirector: new Date().toISOString(),
-              nombredirector: actual.u,
+              nombredirector: getDirector(),
               estadopago: null,
               notificacion_enviada: false
             };
@@ -5296,7 +5329,7 @@
             fechaaprobacionjefe: new Date().toISOString(),
             nombrejefe: actual.u,
             fechaaprobaciondirector: new Date().toISOString(),
-            nombredirector: actual.u,
+            nombredirector: getDirector(),
             estadopago: null,
             notificacion_enviada: false
           };
@@ -5374,7 +5407,7 @@
         var updates = {
           estado: 'AUTORIZADA',
           fechaaprobaciondirector: new Date().toISOString(),
-          nombredirector: actual.u,
+          nombredirector: getDirector(),
           estadopago: null
         };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
@@ -6463,13 +6496,17 @@
         var descuento = parseFloat(descuentoInput ? descuentoInput.value : 0) || 0;
         var impuesto = parseFloat(impuestoInput ? impuestoInput.value : 0) || 0;
 
-        if (cantidadInput) {
+        // No reformatear el campo que el usuario está escribiendo
+        // activamente: hacerlo en cada tecla mueve el cursor y le
+        // impide teclear libremente. Solo se reformatea al perder
+        // el foco (blur), cuando ya terminó de escribir.
+        if (cantidadInput && document.activeElement !== cantidadInput) {
           var cantFormateada = formatearNumeroMexico(cantidad, false, true);
           if (cantidadInput.value !== cantFormateada) {
             cantidadInput.value = cantFormateada;
           }
         }
-        if (precioInput) {
+        if (precioInput && document.activeElement !== precioInput) {
           var precFormateado = formatearNumeroMexico(precio, true);
           if (precioInput.value !== precFormateado) {
             precioInput.value = precFormateado;
@@ -8239,6 +8276,72 @@
         render();
       };
 
+      // ============================================================
+      // MIGRACIÓN DE CÓDIGOS DE OC HISTÓRICOS AL FORMATO ACTUAL
+      // (EMPRESA-DEPTO-OC-FECHA-LETRA-PROVEEDOR-PROYECTO-CLIENTE-ELABORADOR)
+      // Uso desde la consola del navegador (solo Administrador):
+      //   window.migrarCodigosOCHistoricos()        -> vista previa (no escribe nada)
+      //   window.migrarCodigosOCHistoricos(true)     -> ejecuta el cambio real en Supabase
+      // ============================================================
+      window.migrarCodigosOCHistoricos = async function(commit) {
+        if (!actual || actual.rol !== 'Administrador') {
+          console.warn('Solo un usuario con rol Administrador puede ejecutar esta migración.');
+          return;
+        }
+
+        var ordenadas = ordenes.slice().sort(function(a, b) {
+          return new Date(a.fechacreacion) - new Date(b.fechacreacion);
+        });
+
+        var contadorPorClave = {};
+        var cambios = [];
+        var sinProyecto = [];
+
+        ordenadas.forEach(function(o) {
+          var proyecto = proyectos.find(function(p) { return normalizar(p.nombre) === normalizar(o.proyecto); });
+          if (!proyecto) {
+            sinProyecto.push(o.codigo);
+            return;
+          }
+          var clave = generarCodigoOC(proyecto.empresa, proyecto.departamento, o.proveedor || '', o.proyecto || '', o.cliente || '', o.elaborador || '', 'X');
+          var indice = contadorPorClave[clave] || 0;
+          contadorPorClave[clave] = indice + 1;
+          var letra = String.fromCharCode(65 + indice);
+          var nuevoCodigo = generarCodigoOC(proyecto.empresa, proyecto.departamento, o.proveedor || '', o.proyecto || '', o.cliente || '', o.elaborador || '', letra);
+
+          if (nuevoCodigo !== o.codigo) {
+            cambios.push({ id: o.id, anterior: o.codigo, nuevo: nuevoCodigo });
+          }
+        });
+
+        console.table(cambios);
+        if (sinProyecto.length > 0) {
+          console.warn('OC sin proyecto válido (no se pueden migrar, quedan igual):', sinProyecto);
+        }
+        console.log(cambios.length + ' código(s) se actualizarían.' + (commit ? ' Ejecutando cambios reales...' : ' Vista previa únicamente — llama a migrarCodigosOCHistoricos(true) para aplicar.'));
+
+        if (!commit) return cambios;
+
+        var errores = [];
+        for (var i = 0; i < cambios.length; i++) {
+          var cambio = cambios[i];
+          var { error } = await supabase.from('ordenes').update({ codigo: cambio.nuevo }).eq('id', cambio.id);
+          if (error) {
+            errores.push({ id: cambio.id, error: error.message });
+          } else {
+            var ocLocal = ordenes.find(function(o) { return o.id === cambio.id; });
+            if (ocLocal) ocLocal.codigo = cambio.nuevo;
+          }
+        }
+
+        if (errores.length > 0) {
+          console.error('Errores al migrar:', errores);
+        }
+        console.log('Migración completada: ' + (cambios.length - errores.length) + ' de ' + cambios.length + ' códigos actualizados.');
+        render();
+        return { actualizados: cambios.length - errores.length, errores: errores };
+      };
+
       window.limpiarFiltros = function() {
         document.getElementById('filtroDepto').value = '';
         document.getElementById('filtroProyecto').value = '';
@@ -8317,7 +8420,7 @@
             fechapago: oc.fechapago || new Date().toISOString(),
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             responsable: oc.responsable || 'No definido',
-            solicitante: oc.solicitante || 'No definido',
+            solicitante: oc.responsable || oc.nombresolicitante || 'No definido',
             productos: productos,
             cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
@@ -8694,7 +8797,7 @@
             fechapago: oc.fechapago || new Date().toISOString(),
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             responsable: oc.responsable || 'No definido',
-            solicitante: oc.solicitante || 'No definido',
+            solicitante: oc.responsable || oc.nombresolicitante || 'No definido',
             productos: productos,
             cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
@@ -8718,8 +8821,11 @@
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
+        var pageHeight = doc.internal.pageSize.getHeight();
         var margin = 40;
-        var y = margin;
+
+        dibujarMembreteEmpresa(doc, pageWidth, pageHeight, datos.empresa);
+        var y = margin + 46;
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
