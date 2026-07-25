@@ -5717,10 +5717,14 @@
 
         // JOIN OC -> Proyecto: solo se incluyen OC cuyo proyecto existe
         // dentro de proyectosVisibles (equivalente a INNER JOIN válido).
-        // Si una OC no tiene proyecto correspondiente, queda excluida.
+        // Comparación normalizada (trim + mayúsculas) para no perder OC
+        // por diferencias triviales de espacios/capitalización entre
+        // ordenes.proyecto y proyectos.nombre. Si una OC no tiene
+        // proyecto correspondiente ni así, queda excluida.
         var ocVisibles = filtrarOCSegunUsuario(actual);
-        var nombresProyectos = proyectosVisibles.map(function(p) { return p.nombre; });
-        ocVisibles = ocVisibles.filter(function(o) { return nombresProyectos.indexOf(o.proyecto) !== -1; });
+        var nombresProyectosNorm = {};
+        proyectosVisibles.forEach(function(p) { nombresProyectosNorm[normalizar(p.nombre)] = true; });
+        ocVisibles = ocVisibles.filter(function(o) { return !!nombresProyectosNorm[normalizar(o.proyecto)]; });
 
         if (fechaInicio) {
           var fechaInicioObj = new Date(fechaInicio);
@@ -5820,7 +5824,7 @@
           tbodyProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos que coincidan con los filtros</td></tr>';
         } else {
           proys.forEach(function(p) {
-            var ocProyecto = ocFiltradas.filter(function(o) { return o.proyecto === p.nombre; });
+            var ocProyecto = ocFiltradas.filter(function(o) { return normalizar(o.proyecto) === normalizar(p.nombre); });
             var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
             var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
             var vencido = 0;
@@ -5860,11 +5864,11 @@
           // toda OC en ocFiltradas ya tiene garantizado un proyecto
           // correspondiente en "proys" (ver obtenerDatosCXP).
           var mapaProyectos = {};
-          proys.forEach(function(p) { mapaProyectos[p.nombre] = p; });
+          proys.forEach(function(p) { mapaProyectos[normalizar(p.nombre)] = p; });
 
           ocFiltradas.slice().reverse().forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
-            var proyectoOC = mapaProyectos[o.proyecto];
+            var proyectoOC = mapaProyectos[normalizar(o.proyecto)];
             var estadoLabel = o.estado;
             var badgeClass = '';
 
@@ -5931,7 +5935,7 @@
           titulo.textContent = '📊 Distribución global por empresa';
           var porEmpresa = {};
           datos.oc.forEach(function(o) {
-            var proyecto = datos.proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var proyecto = datos.proyectos.find(function(p) { return normalizar(p.nombre) === normalizar(o.proyecto); });
             var empresa = proyecto ? proyecto.empresa : 'Sin empresa';
             porEmpresa[empresa] = (porEmpresa[empresa] || 0) + (o.montomxn || 0);
           });
