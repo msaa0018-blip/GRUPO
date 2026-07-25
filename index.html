@@ -3169,9 +3169,11 @@
       // superpuestas (una oscura de base, una del color de la empresa
       // por encima) en la esquina superior izquierda y la esquina
       // superior derecha, con el mismo patrón espejeado abajo.
-      function dibujarMembreteEmpresa(doc, pageWidth, pageHeight, empresa) {
-        var base = hexARgb(getColorByEmpresa(empresa));
-        var oscuro = sombrearRgb(base, 0.45);
+      // Dibuja las ondas de cabecera/pie de página con colores explícitos.
+      // colorInterno = franja más cercana al contenido (dominante, se
+      // dibuja encima). colorExterno = franja que toca el borde de la
+      // hoja (se dibuja debajo, asoma como filo alrededor de la interna).
+      function dibujarOndasMembrete(doc, pageWidth, pageHeight, colorInterno, colorExterno, incluirMalla) {
         var w = pageWidth;
         var h = pageHeight;
 
@@ -3180,47 +3182,58 @@
         // dos capas superpuestas de distinto grosor y color.
         // ============================================================
 
-        // Capa de fondo (oscura, más gruesa): (0,0)-(0,120)-S hasta (w,100)-(w,0)-cierra
+        // Franja externa (toca el borde superior, más gruesa)
         dibujarOnda(doc, 0, 0, [
           [0, 120],
           [120, 10, 100, -40, 77, -30],
           [100, -20, 110, 30, 88, 30],
           [0, -100]
-        ], oscuro);
+        ], colorExterno);
 
-        // Capa frontal (color de empresa, más delgada, asoma el borde oscuro debajo)
+        // Franja interna (más cercana al contenido, más delgada, encima)
         dibujarOnda(doc, 0, 0, [
           [0, 95],
           [120, 5, 100, -35, 77, -20],
           [100, -15, 110, 25, 88, 25],
           [0, -80]
-        ], base);
+        ], colorInterno);
 
         // ============================================================
         // PIE DE PÁGINA: mismo patrón en "S", espejeado verticalmente.
         // ============================================================
 
-        // Capa de fondo (oscura)
+        // Franja externa (toca el borde inferior)
         dibujarOnda(doc, 0, h, [
           [0, -120],
           [120, -10, 100, 40, 77, 30],
           [100, 20, 110, -30, 88, -30],
           [0, 100]
-        ], oscuro);
+        ], colorExterno);
 
-        // Capa frontal (color de empresa)
+        // Franja interna
         dibujarOnda(doc, 0, h, [
           [0, -95],
           [120, -5, 100, 35, 77, 20],
           [100, 15, 110, -25, 88, -25],
           [0, 80]
-        ], base);
+        ], colorInterno);
 
         // ============================================================
         // PATRÓN DE FONDO: malla sutil de cuadros tenues en la franja
         // central, entre la onda superior y la inferior.
         // ============================================================
-        dibujarPatronFondo(doc, w, h);
+        if (incluirMalla !== false) {
+          dibujarPatronFondo(doc, w, h);
+        }
+      }
+
+      // Membrete de OC: colores derivados de la empresa/departamento
+      // (color de la empresa como franja interna, versión oscurecida
+      // como franja externa). Usado en la generación real de la OC.
+      function dibujarMembreteEmpresa(doc, pageWidth, pageHeight, empresa) {
+        var base = hexARgb(getColorByEmpresa(empresa));
+        var oscuro = sombrearRgb(base, 0.45);
+        dibujarOndasMembrete(doc, pageWidth, pageHeight, base, oscuro, true);
       }
 
       // Malla/red sutil de baja opacidad para el fondo central del PDF.
@@ -3240,6 +3253,27 @@
           }
         }
       }
+
+      // ============================================================
+      // PLANTILLA EN BLANCO (solo gráficos) para validar la forma y
+      // los colores exactos de las ondas antes de aplicarlas a una OC
+      // real. Colores fijos: coral/naranja quemado (interna) y azul
+      // marino (externa), como en la imagen de referencia.
+      // Llamar desde la consola: window.generarPlantillaMembretePreview()
+      // ============================================================
+      window.generarPlantillaMembretePreview = function() {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var pageHeight = doc.internal.pageSize.getHeight();
+
+        var coral = hexARgb('#E2572B');   // naranja quemado / coral
+        var marino = hexARgb('#1B2A4A');  // azul marino
+
+        dibujarOndasMembrete(doc, pageWidth, pageHeight, coral, marino, true);
+
+        doc.save('plantilla_membrete_preview.pdf');
+      };
 
       function getNombreMembrete(empresa) {
         if (!empresa) return 'GRUPO INDUSTRIAL EXTINGUE';
