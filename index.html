@@ -3239,6 +3239,50 @@
         dibujarOndasMembrete(doc, pageWidth, pageHeight, base, oscuro, true);
       }
 
+      // Descarga una imagen y la regresa como dataURL (base64), lista
+      // para insertarse en el PDF con doc.addImage.
+      async function obtenerImagenComoDataURL(url) {
+        var response = await fetch(url);
+        if (!response.ok) return null;
+        var blob = await response.blob();
+        return await new Promise(function(resolve) {
+          var reader = new FileReader();
+          reader.onload = function(e) { resolve(e.target.result); };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      // Membrete de la OC con dos imágenes fijas: franja superior (1/8
+      // de la altura de la página) y franja inferior (1/8), cada una
+      // ocupando el ancho completo. Devuelve el rango [yInicio, yFin]
+      // disponible para el contenido central (los 6/8 restantes).
+      var LOGO_SUPERIOR_OC_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/SUPERIOR%201.png';
+      var LOGO_INFERIOR_OC_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INGERIOR%201.png';
+
+      async function dibujarMembreteImagenesOC(doc, pageWidth, pageHeight) {
+        var alturaFranja = pageHeight / 8;
+
+        try {
+          var dataSup = await obtenerImagenComoDataURL(LOGO_SUPERIOR_OC_URL);
+          if (dataSup) {
+            doc.addImage(dataSup, 'PNG', 0, 0, pageWidth, alturaFranja);
+          }
+        } catch (e) {
+          console.warn('No se pudo cargar la imagen superior del membrete:', e);
+        }
+
+        try {
+          var dataInf = await obtenerImagenComoDataURL(LOGO_INFERIOR_OC_URL);
+          if (dataInf) {
+            doc.addImage(dataInf, 'PNG', 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+          }
+        } catch (e) {
+          console.warn('No se pudo cargar la imagen inferior del membrete:', e);
+        }
+
+        return { yInicio: alturaFranja, yFin: pageHeight - alturaFranja };
+      }
+
       // Malla/red sutil de baja opacidad para el fondo central del PDF.
       // jsPDF (build base) no siempre expone opacidad real (GState), así
       // que se logra el efecto "tenue" con un gris casi blanco en vez de
@@ -8929,8 +8973,8 @@
         var pageHeight = doc.internal.pageSize.getHeight();
         var margin = 40;
 
-        dibujarMembreteEmpresa(doc, pageWidth, pageHeight, datos.empresa);
-        var y = margin + 130;
+        var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight);
+        var y = franjas.yInicio + 25;
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
@@ -9160,7 +9204,7 @@
         dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
         y += 70;
 
-        var pieY = doc.internal.pageSize.height - 55;
+        var pieY = doc.internal.pageSize.height - (doc.internal.pageSize.height / 8) - 20;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
