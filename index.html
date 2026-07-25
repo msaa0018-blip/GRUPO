@@ -3157,20 +3157,69 @@
       // Dibuja el membrete de franjas diagonales por empresa (inspirado
       // en el estilo de membrete corporativo con banda superior/inferior
       // de color, usando el color asociado a cada empresa/departamento).
+      // Dibuja una figura curva (tipo "ola") rellena, usando segmentos
+      // Bézier relativos al punto inicial. jsPDF no tiene primitivas de
+      // onda nativas, así que se arma con doc.lines() + curvas cúbicas.
+      function dibujarOnda(doc, x, y, segmentos, color) {
+        doc.setFillColor(color.r, color.g, color.b);
+        doc.lines(segmentos, x, y, [1, 1], 'F', true);
+      }
+
+      // Membrete inspirado en el diseño de referencia: dos ondas
+      // superpuestas (una oscura de base, una del color de la empresa
+      // por encima) en la esquina superior izquierda y la esquina
+      // superior derecha, con el mismo patrón espejeado abajo.
       function dibujarMembreteEmpresa(doc, pageWidth, pageHeight, empresa) {
         var base = hexARgb(getColorByEmpresa(empresa));
-        var oscuro = sombrearRgb(base, 0.6);
-        var alturaBanda = 46;
+        var oscuro = sombrearRgb(base, 0.45);
+        var w = pageWidth;
+        var h = pageHeight;
 
-        doc.setFillColor(oscuro.r, oscuro.g, oscuro.b);
-        doc.rect(0, 0, pageWidth, alturaBanda, 'F');
-        doc.setFillColor(base.r, base.g, base.b);
-        doc.triangle(0, alturaBanda, pageWidth, 0, pageWidth, alturaBanda, 'F');
+        // --- ONDA SUPERIOR IZQUIERDA (oscura, capa de fondo) ---
+        dibujarOnda(doc, 0, 0, [
+          [0, 130],
+          [70, 25, 160, 30, 230, -20],
+          [30, -25, 55, -60, 60, -100],
+          [0, -20, -0.1, 0, -0.1, 0]
+        ], oscuro);
 
-        doc.setFillColor(base.r, base.g, base.b);
-        doc.rect(0, pageHeight - 16, pageWidth, 16, 'F');
-        doc.setFillColor(oscuro.r, oscuro.g, oscuro.b);
-        doc.triangle(0, pageHeight - 16, 0, pageHeight, pageWidth * 0.45, pageHeight, 'F');
+        // --- ONDA SUPERIOR IZQUIERDA (color empresa, capa frontal) ---
+        dibujarOnda(doc, 0, 26, [
+          [0, 95],
+          [90, 30, 200, 35, 300, -25],
+          [-15, -30, -25, -55, -20, -85],
+          [0, -11, -0.1, 0, -0.1, 0]
+        ], base);
+
+        // --- ONDA SUPERIOR DERECHA (color empresa, pequeño acento) ---
+        dibujarOnda(doc, w, 0, [
+          [0, 34],
+          [-45, 6, -95, -4, -130, -34],
+          [0, 0, -0.1, 0, -0.1, 0]
+        ], base);
+
+        // --- ONDA INFERIOR DERECHA (oscura, capa de fondo) ---
+        dibujarOnda(doc, w, h, [
+          [0, -120],
+          [-70, -22, -160, -28, -230, 18],
+          [-30, 23, -55, 55, -60, 92],
+          [0, 18, 0.1, 0, 0.1, 0]
+        ], oscuro);
+
+        // --- ONDA INFERIOR DERECHA (color empresa, capa frontal) ---
+        dibujarOnda(doc, w, h - 24, [
+          [0, -88],
+          [-90, -28, -200, -32, -300, 23],
+          [15, 28, 25, 51, 20, 78],
+          [0, 10, 0.1, 0, 0.1, 0]
+        ], base);
+
+        // --- ONDA INFERIOR IZQUIERDA (color empresa, pequeño acento) ---
+        dibujarOnda(doc, 0, h, [
+          [0, -32],
+          [45, -6, 95, 4, 130, 32],
+          [0, 0, 0.1, 0, 0.1, 0]
+        ], base);
       }
 
       function getNombreMembrete(empresa) {
@@ -8825,7 +8874,7 @@
         var margin = 40;
 
         dibujarMembreteEmpresa(doc, pageWidth, pageHeight, datos.empresa);
-        var y = margin + 46;
+        var y = margin + 115;
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
