@@ -2741,6 +2741,7 @@
           </div>
           <button id="btnPendientesPagar" class="btn-pendientes-pagar hidden" onclick="window.filtrarPendientesPagar()">💰 Pendientes por Pagar</button>
           <button id="btnLimpiarFiltros" class="btn-pendientes-pagar hidden" onclick="window.limpiarFiltros()" style="background:var(--color-gris);">🗑️ Limpiar Filtros</button>
+          <button id="btnToggleMisOC" class="btn-pendientes-pagar" onclick="window.toggleVerSoloMisOC()" style="background:var(--color-azul);">👤 Solo mis OC</button>
         </div>
         <div id="resumenTotales" class="resumen-totales"></div>
         <div class="table-wrapper">
@@ -2860,6 +2861,10 @@
 
       // Variables para Indicadores
       var chartsInstances = {};
+      // Estado del toggle "Solo mis OC / Todas" en la Bandeja de OC.
+      // null = aún no inicializado; se define la primera vez que se
+      // renderiza según el rol (ver render()).
+      var verSoloMisOC = null;
       var indicadoresTimer = null;
       var indicadoresData = {};
 
@@ -3265,6 +3270,25 @@
           ocFiltradas = ocFiltradas.filter(function(o) { return o.elaborador === usuario.usuario; });
         }
         return ocFiltradas;
+      }
+
+      // Variante para reportes departamentales (CXP): mismo alcance de
+      // empresa/departamento que filtrarOCSegunUsuario, pero SIN la
+      // restricción "solo mis OC" que aplica a Solicitante/Elaborador.
+      // Esa restricción tiene sentido en la Bandeja de aprobación (cada
+      // quien gestiona lo suyo), pero no en un reporte de cuentas por
+      // pagar: cualquier usuario del departamento debe poder ver todas
+      // las OC de su empresa/departamento, las haya creado él o no.
+      function filtrarOCParaCXP(usuario) {
+        if (!usuario) return [];
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
+          return ordenes.slice();
+        }
+        return ordenes.filter(function(o) {
+          var p = proyectos.find(function(proj) { return normalizar(proj.nombre) === normalizar(o.proyecto); });
+          if (!p) return false;
+          return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
+        });
       }
 
       function obtenerOpcionesPermisos(usuario) {
@@ -5721,7 +5745,7 @@
         // por diferencias triviales de espacios/capitalización entre
         // ordenes.proyecto y proyectos.nombre. Si una OC no tiene
         // proyecto correspondiente ni así, queda excluida.
-        var ocVisibles = filtrarOCSegunUsuario(actual);
+        var ocVisibles = filtrarOCParaCXP(actual);
         var nombresProyectosNorm = {};
         proyectosVisibles.forEach(function(p) { nombresProyectosNorm[normalizar(p.nombre)] = true; });
         ocVisibles = ocVisibles.filter(function(o) { return !!nombresProyectosNorm[normalizar(o.proyecto)]; });
@@ -6495,7 +6519,30 @@
         var resumenTotales = document.getElementById('resumenTotales');
 
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
-        var ocVisibles = filtrarOCSegunUsuario(actual);
+
+        // Inicializa el toggle "Solo mis OC / Todas" la primera vez,
+        // preservando el comportamiento actual por rol: Solicitante y
+        // Elaborador arrancan viendo solo lo suyo (como siempre); el
+        // resto arranca viendo todo lo de su alcance (como siempre).
+        // A partir de ahí, cada usuario puede cambiarlo con el botón.
+        if (verSoloMisOC === null) {
+          verSoloMisOC = !!(actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador'));
+        }
+
+        var ocVisibles;
+        if (verSoloMisOC) {
+          ocVisibles = filtrarOCParaCXP(actual).filter(function(o) {
+            return actual && (o.solicitante === actual.usuario || o.elaborador === actual.usuario);
+          });
+        } else {
+          ocVisibles = filtrarOCParaCXP(actual);
+        }
+
+        var btnToggleMisOC = document.getElementById('btnToggleMisOC');
+        if (btnToggleMisOC) {
+          btnToggleMisOC.textContent = verSoloMisOC ? '👤 Solo mis OC' : '🌐 Todas las OC';
+          btnToggleMisOC.style.background = verSoloMisOC ? 'var(--color-azul)' : 'var(--gray-600)';
+        }
 
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
@@ -8184,6 +8231,11 @@
           var pendientes = contarPendientesPagar();
           btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
         }
+        render();
+      };
+
+      window.toggleVerSoloMisOC = function() {
+        verSoloMisOC = !verSoloMisOC;
         render();
       };
 
