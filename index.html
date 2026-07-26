@@ -3256,11 +3256,38 @@
         var response = await fetch(url);
         if (!response.ok) return null;
         var blob = await response.blob();
-        return await new Promise(function(resolve) {
+        var dataUrlOriginal = await new Promise(function(resolve) {
           var reader = new FileReader();
           reader.onload = function(e) { resolve(e.target.result); };
           reader.readAsDataURL(blob);
         });
+
+        // Reprocesa cualquier imagen (PNG o JPG) a través de un <canvas>
+        // y la aplana a JPEG. Esto evita un problema conocido de jsPDF
+        // 2.5.1 al decodificar PNG grandes con canal alpha (transparencia),
+        // que puede hacer fallar la generación completa del PDF en silencio.
+        // El fondo blanco de relleno no afecta el diseño: estas imágenes
+        // son membretes que ya van sobre una hoja blanca.
+        try {
+          var img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = dataUrlOriginal;
+          await new Promise(function(resolve, reject) {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          var canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          return canvas.toDataURL('image/jpeg', 0.88);
+        } catch (e) {
+          console.warn('No se pudo reprocesar la imagen a JPEG, se usa el archivo original:', e);
+          return dataUrlOriginal;
+        }
       }
 
       // Catálogo de formatos de membrete disponibles para la OC. Cada
@@ -3297,7 +3324,7 @@
         try {
           var dataSup = await obtenerImagenComoDataURL(config.superior.url);
           if (dataSup) {
-            doc.addImage(dataSup, config.superior.tipo, 0, 0, pageWidth, alturaFranja);
+            doc.addImage(dataSup, 'JPEG', 0, 0, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen superior del membrete:', e);
@@ -3306,7 +3333,7 @@
         try {
           var dataInf = await obtenerImagenComoDataURL(config.inferior.url);
           if (dataInf) {
-            doc.addImage(dataInf, config.inferior.tipo, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+            doc.addImage(dataInf, 'JPEG', 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen inferior del membrete:', e);
