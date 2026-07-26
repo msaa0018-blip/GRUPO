@@ -3257,18 +3257,21 @@
       async function obtenerImagenComoDataURL(url) {
         var dataUrlOriginal;
         if (url.indexOf('data:') === 0) {
-          // Ya es un data URI embebido (formatos 5/6): no hace falta fetch.
-          dataUrlOriginal = url;
-        } else {
-          var response = await fetch(url);
-          if (!response.ok) return null;
-          var blob = await response.blob();
-          dataUrlOriginal = await new Promise(function(resolve) {
-            var reader = new FileReader();
-            reader.onload = function(e) { resolve(e.target.result); };
-            reader.readAsDataURL(blob);
-          });
+          // Ya es un data URI embebido (formatos 5/6): son PNG propios,
+          // pequeños (pocos KB), sin el problema de tamaño que afecta a
+          // jsPDF con PNG grandes. Se usan tal cual, sin aplanar a JPEG,
+          // para conservar la calidad exacta (transparencia incluida).
+          return url;
         }
+
+        var response = await fetch(url);
+        if (!response.ok) return null;
+        var blob = await response.blob();
+        dataUrlOriginal = await new Promise(function(resolve) {
+          var reader = new FileReader();
+          reader.onload = function(e) { resolve(e.target.result); };
+          reader.readAsDataURL(blob);
+        });
 
         // Reprocesa cualquier imagen (PNG o JPG) a través de un <canvas>
         // y la aplana a JPEG. Esto evita un problema conocido de jsPDF
@@ -3291,7 +3294,7 @@
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
-          return canvas.toDataURL('image/jpeg', 0.88);
+          return canvas.toDataURL('image/jpeg', 0.96);
         } catch (e) {
           console.warn('No se pudo reprocesar la imagen a JPEG, se usa el archivo original:', e);
           return dataUrlOriginal;
@@ -3348,7 +3351,8 @@
         try {
           var dataSup = await obtenerImagenComoDataURL(config.superior.url);
           if (dataSup) {
-            doc.addImage(dataSup, 'JPEG', 0, 0, pageWidth, alturaFranja);
+            var tipoSup = config.superior.url.indexOf('data:') === 0 ? 'PNG' : 'JPEG';
+            doc.addImage(dataSup, tipoSup, 0, 0, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen superior del membrete:', e);
@@ -3357,7 +3361,8 @@
         try {
           var dataInf = await obtenerImagenComoDataURL(config.inferior.url);
           if (dataInf) {
-            doc.addImage(dataInf, 'JPEG', 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+            var tipoInf = config.inferior.url.indexOf('data:') === 0 ? 'PNG' : 'JPEG';
+            doc.addImage(dataInf, tipoInf, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen inferior del membrete:', e);
