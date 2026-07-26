@@ -3257,26 +3257,27 @@
       async function obtenerImagenComoDataURL(url) {
         var dataUrlOriginal;
         if (url.indexOf('data:') === 0) {
-          // Ya es un data URI embebido (formatos 5/6): son PNG propios,
-          // pequeños (pocos KB), sin el problema de tamaño que afecta a
-          // jsPDF con PNG grandes. Se usan tal cual, sin aplanar a JPEG,
-          // para conservar la calidad exacta (transparencia incluida).
-          return url;
+          // Ya es un data URI embebido (formatos 5/6): no hace falta fetch,
+          // pero SÍ debe pasar por el aplanado de abajo: el problema de
+          // jsPDF no es el tamaño del archivo, es el canal alpha (PNG con
+          // transparencia), sin importar qué tan chico sea.
+          dataUrlOriginal = url;
+        } else {
+          var response = await fetch(url);
+          if (!response.ok) return null;
+          var blob = await response.blob();
+          dataUrlOriginal = await new Promise(function(resolve) {
+            var reader = new FileReader();
+            reader.onload = function(e) { resolve(e.target.result); };
+            reader.readAsDataURL(blob);
+          });
         }
-
-        var response = await fetch(url);
-        if (!response.ok) return null;
-        var blob = await response.blob();
-        dataUrlOriginal = await new Promise(function(resolve) {
-          var reader = new FileReader();
-          reader.onload = function(e) { resolve(e.target.result); };
-          reader.readAsDataURL(blob);
-        });
 
         // Reprocesa cualquier imagen (PNG o JPG) a través de un <canvas>
         // y la aplana a JPEG. Esto evita un problema conocido de jsPDF
-        // 2.5.1 al decodificar PNG grandes con canal alpha (transparencia),
-        // que puede hacer fallar la generación completa del PDF en silencio.
+        // 2.5.1 al decodificar PNG con canal alpha (transparencia) —
+        // pasa incluso con archivos chicos, no solo los grandes — que
+        // puede hacer fallar la generación completa del PDF en silencio.
         // El fondo blanco de relleno no afecta el diseño: estas imágenes
         // son membretes que ya van sobre una hoja blanca.
         try {
@@ -3294,7 +3295,7 @@
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
-          return canvas.toDataURL('image/jpeg', 0.96);
+          return canvas.toDataURL('image/jpeg', 0.97);
         } catch (e) {
           console.warn('No se pudo reprocesar la imagen a JPEG, se usa el archivo original:', e);
           return dataUrlOriginal;
@@ -3351,8 +3352,7 @@
         try {
           var dataSup = await obtenerImagenComoDataURL(config.superior.url);
           if (dataSup) {
-            var tipoSup = config.superior.url.indexOf('data:') === 0 ? 'PNG' : 'JPEG';
-            doc.addImage(dataSup, tipoSup, 0, 0, pageWidth, alturaFranja);
+            doc.addImage(dataSup, 'JPEG', 0, 0, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen superior del membrete:', e);
@@ -3361,8 +3361,7 @@
         try {
           var dataInf = await obtenerImagenComoDataURL(config.inferior.url);
           if (dataInf) {
-            var tipoInf = config.inferior.url.indexOf('data:') === 0 ? 'PNG' : 'JPEG';
-            doc.addImage(dataInf, tipoInf, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+            doc.addImage(dataInf, 'JPEG', 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen inferior del membrete:', e);
