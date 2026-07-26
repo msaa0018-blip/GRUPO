@@ -2399,6 +2399,17 @@
         </div>
         <div class="grupo-formulario">
           <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Formato de membrete:</label>
+            <select id="formatoMembreteOC" style="flex:1.5;">
+              <option value="1">Formato 1</option>
+              <option value="2">Formato 2</option>
+              <option value="3">Formato 3</option>
+              <option value="4">Formato 4</option>
+            </select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
             <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Solicitante / Responsable:</label>
             <select id="solicitanteOC" style="flex:1.5;"></select>
           </div>
@@ -3252,29 +3263,50 @@
         });
       }
 
-      // Membrete de la OC con dos imágenes fijas: franja superior (1/8
-      // de la altura de la página) y franja inferior (1/8), cada una
-      // ocupando el ancho completo. Devuelve el rango [yInicio, yFin]
-      // disponible para el contenido central (los 6/8 restantes).
-      var LOGO_SUPERIOR_OC_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/SUPERIOR%201.png';
-      var LOGO_INFERIOR_OC_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INGERIOR%201.png';
+      // Catálogo de formatos de membrete disponibles para la OC. Cada
+      // formato define la imagen superior/inferior y su tipo (jsPDF
+      // necesita saber si es PNG o JPEG para insertarla correctamente).
+      var FORMATOS_MEMBRETE_OC = {
+        '1': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/SUPERIOR%201.png', tipo: 'PNG' },
+          inferior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INGERIOR%201.png', tipo: 'PNG' }
+        },
+        '2': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/SUPERIOR%202.png', tipo: 'PNG' },
+          inferior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INFERIOR%202.png', tipo: 'PNG' }
+        },
+        '3': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/SUPERIOR%203.jpg', tipo: 'JPEG' },
+          inferior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INFERIOR%203.jpg', tipo: 'JPEG' }
+        },
+        '4': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/SUPERIOR%204.jpg', tipo: 'JPEG' },
+          inferior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INFERIOR%204.jpg', tipo: 'JPEG' }
+        }
+      };
 
-      async function dibujarMembreteImagenesOC(doc, pageWidth, pageHeight) {
+      // Membrete de la OC con dos imágenes fijas según el formato
+      // elegido: franja superior (1/8 de la altura de la página) y
+      // franja inferior (1/8), cada una ocupando el ancho completo.
+      // Devuelve el rango [yInicio, yFin] disponible para el contenido
+      // central (los 6/8 restantes).
+      async function dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formato) {
+        var config = FORMATOS_MEMBRETE_OC[formato] || FORMATOS_MEMBRETE_OC['1'];
         var alturaFranja = pageHeight / 8;
 
         try {
-          var dataSup = await obtenerImagenComoDataURL(LOGO_SUPERIOR_OC_URL);
+          var dataSup = await obtenerImagenComoDataURL(config.superior.url);
           if (dataSup) {
-            doc.addImage(dataSup, 'PNG', 0, 0, pageWidth, alturaFranja);
+            doc.addImage(dataSup, config.superior.tipo, 0, 0, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen superior del membrete:', e);
         }
 
         try {
-          var dataInf = await obtenerImagenComoDataURL(LOGO_INFERIOR_OC_URL);
+          var dataInf = await obtenerImagenComoDataURL(config.inferior.url);
           if (dataInf) {
-            doc.addImage(dataInf, 'PNG', 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+            doc.addImage(dataInf, config.inferior.tipo, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen inferior del membrete:', e);
@@ -8570,6 +8602,7 @@
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             responsable: oc.responsable || 'No definido',
             solicitante: oc.responsable || oc.nombresolicitante || 'No definido',
+            formatomembrete: oc.formatomembrete || '1',
             productos: productos,
             cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
@@ -8723,6 +8756,7 @@
           fechaentrega: fechaEntrega,
           responsable: responsable,
           solicitante: responsable,
+          formatomembrete: (document.getElementById('formatoMembreteOC') ? document.getElementById('formatoMembreteOC').value : '1'),
           motivo: null,
           productos: productos,
           elaborador: actual ? actual.usuario : 'Desconocido',
@@ -8802,6 +8836,7 @@
           swift: datos.swift,
           cie: datos.cie,
           referencia: datos.referencia,
+          formatomembrete: datos.formatomembrete || '1',
           notificacion_enviada: false
         };
 
@@ -8888,6 +8923,7 @@
           swift: datos.swift,
           cie: datos.cie,
           referencia: datos.referencia,
+          formatomembrete: datos.formatomembrete || '1',
           notificacion_enviada: false
         };
 
@@ -8947,6 +8983,7 @@
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             responsable: oc.responsable || 'No definido',
             solicitante: oc.responsable || oc.nombresolicitante || 'No definido',
+            formatomembrete: oc.formatomembrete || '1',
             productos: productos,
             cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
@@ -8973,7 +9010,8 @@
         var pageHeight = doc.internal.pageSize.getHeight();
         var margin = 40;
 
-        var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight);
+        var formatoElegido = (ocExistente && ocExistente.formatomembrete) || datos.formatomembrete || '1';
+        var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formatoElegido);
         var y = franjas.yInicio + 25;
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
