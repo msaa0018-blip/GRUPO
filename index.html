@@ -9125,48 +9125,126 @@
           y += 60;
         }
 
-        doc.setFontSize(16);
-        doc.setTextColor(0, 0, 0);
+        // ============================================================
+        // REDISEÑO VISUAL: bloque desde "ORDEN DE COMPRA" hasta antes
+        // de "AUTORIZACIONES". Solo cambia presentación; toda la
+        // lógica, cálculos y datos usados son exactamente los mismos.
+        // ============================================================
+        var azulCorp = [23, 63, 115];       // #173F73
+        var grisClaro = [243, 245, 247];    // #F3F5F7
+        var colorBorde = [217, 226, 236];   // #D9E2EC
+        var colorTexto = [31, 41, 55];      // #1F2937
+
+        // Folio para mostrar en el encabezado (misma lógica que ya usa
+        // el pie de página más abajo; no se altera esa parte).
+        var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
+
+        // ---------- 1. ENCABEZADO DE LA ORDEN ----------
+        var headerH = 72;
+        doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+        doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+        doc.setLineWidth(0.75);
+        doc.roundedRect(margin, y, pageWidth - 2 * margin, headerH, 6, 6, 'FD');
+        doc.setFillColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.roundedRect(margin, y, 7, headerH, 3, 3, 'F');
+
         doc.setFont('helvetica', 'bold');
-        doc.text('ORDEN DE COMPRA', margin, y);
-        y += 12;
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 10;
+        doc.setFontSize(20);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('ORDEN DE COMPRA', margin + 24, y + headerH / 2 + 7);
 
-        doc.setFontSize(9);
-        doc.setTextColor(0, 0, 0);
+        var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+        doc.text('Folio: ' + codigoFinalHeader, xDerecha, y + 24, { align: 'right' });
+        doc.text('Fecha de Entrega: ' + new Date(datos.fechaentrega).toLocaleDateString(), xDerecha, y + 38, { align: 'right' });
+        doc.text('Fecha de Pago: ' + (datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A'), xDerecha, y + 52, { align: 'right' });
 
-        var datosLista = [
-          { label: 'Proveedor:', value: datos.proveedor },
+        y += headerH + 20;
+
+        // ---------- 2. INFORMACIÓN GENERAL (dos tarjetas) ----------
+        function dibujarCampoLinea(x, yPos, label, value, maxWidth) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+          doc.text(label, x, yPos);
+          doc.setFont('helvetica', 'normal');
+          var labelWidth = doc.getTextWidth(label) + 6;
+          var lineas = doc.splitTextToSize(String(value || ''), Math.max(maxWidth - labelWidth, 20));
+          doc.text(lineas, x + labelWidth, yPos);
+          return lineas.length * 11;
+        }
+
+        var cardGap = 14;
+        var cardW = (pageWidth - 2 * margin - cardGap) / 2;
+        var cardHeaderH = 24;
+        var cardPaddingX = 14;
+        var anchoContenidoCard = cardW - cardPaddingX * 2;
+
+        var camposProveedor = [
+          { label: 'Razón Social:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
-          { label: 'Fecha de Entrega:', value: new Date(datos.fechaentrega).toLocaleDateString() },
-          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' },
           { label: 'Dirección:', value: datos.direccion },
-          { label: 'Dirección de entrega:', value: datos.direccionentrega },
+          { label: 'Datos Bancarios:', value: datos.banco || 'No especificado' },
+          { label: 'CLABE:', value: datos.clabe || 'N/A' }
+        ];
+        var camposEntrega = [
+          { label: 'Dirección de Entrega:', value: datos.direccionentrega },
           { label: 'Código Postal:', value: datos.cp || '' },
-          { label: 'Banco:', value: datos.banco || 'No especificado' },
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-          { label: 'Uso CFDI:', value: datos.usocfdi },
-          { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Moneda:', value: datos.moneda },
+          { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') },
           { label: 'Solicitante:', value: datos.solicitante || 'No especificado' }
         ];
 
-        datosLista.forEach(function(item) {
-          doc.setFont('helvetica', 'bold');
-          doc.text(item.label, margin, y);
-          doc.setFont('helvetica', 'normal');
-          var labelWidth = doc.getTextWidth(item.label) + 8;
-          var maxWidth = pageWidth - margin - labelWidth - 20;
-          var textLines = doc.splitTextToSize(item.value, maxWidth);
-          doc.text(textLines, margin + labelWidth, y);
-          y += textLines.length * 9 + 2;
-        });
-        y += 5;
+        function alturaCampos(campos, maxWidth) {
+          var total = 0;
+          campos.forEach(function(c) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            var labelWidth = doc.getTextWidth(c.label) + 6;
+            doc.setFont('helvetica', 'normal');
+            var lineas = doc.splitTextToSize(String(c.value || ''), Math.max(maxWidth - labelWidth, 20));
+            total += lineas.length * 11 + 6;
+          });
+          return total;
+        }
 
+        var altoCuerpo1 = alturaCampos(camposProveedor, anchoContenidoCard);
+        var altoCuerpo2 = alturaCampos(camposEntrega, anchoContenidoCard);
+        var cardBodyPadding = 16;
+        var cardH = cardHeaderH + Math.max(altoCuerpo1, altoCuerpo2) + cardBodyPadding;
+
+        function dibujarTarjeta(x, titulo, campos) {
+          doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+          doc.setLineWidth(0.75);
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(x, y, cardW, cardH, 6, 6, 'FD');
+
+          doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+          doc.roundedRect(x, y, cardW, cardHeaderH, 6, 6, 'F');
+          doc.rect(x, y + cardHeaderH / 2, cardW, cardHeaderH / 2, 'F');
+          doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+          doc.line(x, y + cardHeaderH, x + cardW, y + cardHeaderH);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+          doc.text(titulo, x + cardPaddingX, y + cardHeaderH / 2 + 4);
+
+          var yCampo = y + cardHeaderH + 16;
+          campos.forEach(function(c) {
+            var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard);
+            yCampo += alto + 6;
+          });
+        }
+
+        dibujarTarjeta(margin, 'DATOS DEL PROVEEDOR', camposProveedor);
+        dibujarTarjeta(margin + cardW + cardGap, 'LUGAR DE ENTREGA Y SOLICITUD', camposEntrega);
+
+        y += cardH + 24;
+
+        // ---------- 3. TABLA DE PRODUCTOS ----------
         var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         var rows = datos.productos.map(function(p, i) {
           return [
@@ -9183,8 +9261,17 @@
           body: rows,
           startY: y,
           margin: { left: margin, right: margin },
-          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-          headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+          theme: 'plain',
+          styles: {
+            fontSize: 8, cellPadding: 5, font: 'helvetica',
+            lineColor: colorBorde, lineWidth: { top: 0, left: 0, right: 0, bottom: 0.5 },
+            textColor: colorTexto
+          },
+          headStyles: {
+            fillColor: azulCorp, textColor: [255, 255, 255], fontSize: 8,
+            font: 'helvetica', fontStyle: 'bold', lineWidth: { top: 0, left: 0, right: 0, bottom: 0 }
+          },
+          bodyStyles: { fillColor: [255, 255, 255] },
           columnStyles: {
             0: { cellWidth: 20 },
             1: { cellWidth: 40 },
@@ -9212,28 +9299,82 @@
           iva = subtotal * (impuestoPorcentaje / 100);
         }
 
-        var totalX = pageWidth * 0.72 - 5;
-        var lineSpacing = 13;
-        y += 15;
+        // ---------- 4. PARTE INFERIOR (dos columnas) ----------
+        y += 22;
+        var bottomGap = 14;
+        var bottomW = (pageWidth - 2 * margin - bottomGap) / 2;
+        var bottomX1 = margin;
+        var bottomX2 = margin + bottomW + bottomGap;
+        var bottomHeaderH = 22;
 
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        doc.text('Subtotal:', totalX, y);
-        doc.text(formatoMoneda(subtotal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += lineSpacing;
-        doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', totalX, y);
-        doc.text(formatoMoneda(iva, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += lineSpacing;
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.3);
-        doc.line(totalX, y, pageWidth - margin, y);
-        y += lineSpacing;
+        var textoCondiciones = datos.condicionpago
+          ? String(datos.condicionpago)
+          : 'Sin condiciones adicionales especificadas.';
+        var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
+
+        var bottomBodyPadding = 16;
+        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 11 + bottomBodyPadding;
+        var altoFinanciero = bottomHeaderH + 3 * 20 + bottomBodyPadding;
+        var bottomH = Math.max(altoTerminos, altoFinanciero, 96);
+
+        // Tarjeta izquierda: TÉRMINOS Y CONDICIONES
+        doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+        doc.setLineWidth(0.75);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(bottomX1, y, bottomW, bottomH, 6, 6, 'FD');
+        doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+        doc.roundedRect(bottomX1, y, bottomW, bottomHeaderH, 6, 6, 'F');
+        doc.rect(bottomX1, y + bottomHeaderH / 2, bottomW, bottomHeaderH / 2, 'F');
+        doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+        doc.line(bottomX1, y + bottomHeaderH, bottomX1 + bottomW, y + bottomHeaderH);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text('TOTAL:', totalX, y);
-        doc.text(formatoMoneda(datos.montototal, datos.moneda), pageWidth - margin, y, { align: 'right' });
-        y += 30;
+        doc.setFontSize(10);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('TÉRMINOS Y CONDICIONES', bottomX1 + 14, y + bottomHeaderH / 2 + 4);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+        doc.text(lineasCondiciones, bottomX1 + 14, y + bottomHeaderH + 16);
+
+        // Tarjeta derecha: resumen financiero
+        doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+        doc.setLineWidth(0.75);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(bottomX2, y, bottomW, bottomH, 6, 6, 'FD');
+        doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+        doc.roundedRect(bottomX2, y, bottomW, bottomHeaderH, 6, 6, 'F');
+        doc.rect(bottomX2, y + bottomHeaderH / 2, bottomW, bottomHeaderH / 2, 'F');
+        doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+        doc.line(bottomX2, y + bottomHeaderH, bottomX2 + bottomW, y + bottomHeaderH);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('RESUMEN FINANCIERO', bottomX2 + 14, y + bottomHeaderH / 2 + 4);
+
+        var yResumen = y + bottomHeaderH + 18;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+        doc.text('Subtotal:', bottomX2 + 14, yResumen);
+        doc.text(formatoMoneda(subtotal, datos.moneda), bottomX2 + bottomW - 14, yResumen, { align: 'right' });
+        yResumen += 18;
+        doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', bottomX2 + 14, yResumen);
+        doc.text(formatoMoneda(iva, datos.moneda), bottomX2 + bottomW - 14, yResumen, { align: 'right' });
+        yResumen += 16;
+
+        var totalBoxY = yResumen - 2;
+        var totalBoxH = bottomH - (totalBoxY - y) - 8;
+        if (totalBoxH > 20) {
+          doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+          doc.roundedRect(bottomX2 + 8, totalBoxY, bottomW - 16, totalBoxH, 4, 4, 'F');
+        }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('TOTAL:', bottomX2 + 16, totalBoxY + totalBoxH / 2 + 5);
+        doc.text(formatoMoneda(datos.montototal, datos.moneda), bottomX2 + bottomW - 16, totalBoxY + totalBoxH / 2 + 5, { align: 'right' });
+
+        y += bottomH + 26;
 
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
