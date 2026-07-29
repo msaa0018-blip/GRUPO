@@ -2768,8 +2768,6 @@
                 <th>Cliente</th>
                 <th>Proveedor</th>
                 <th>RFC</th>
-                <th>Dirección entrega</th>
-                <th>CP</th>
                 <th>Moneda</th>
                 <th>Total</th>
                 <th>Equiv. MXN</th>
@@ -6872,7 +6870,7 @@
             if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
             if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
-            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + p.empresa + '</td><td data-label="Departamento">' + mostrarDepto(p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
@@ -7027,12 +7025,10 @@
               '<tr class="fila-oc-info ' + rowClass + '" data-oc-id="' + o.id + '">' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
               '<td data-label="Proyecto">' + o.proyecto + '</td>' +
-              '<td data-label="Depto">' + (proyecto ? proyecto.departamento : '—') + '</td>' +
+              '<td data-label="Depto">' + mostrarDepto(proyecto ? (getAbreviaturaDepartamento(proyecto.departamento, proyecto.empresa) || proyecto.departamento) : '') + '</td>' +
               '<td data-label="Cliente">' + cliente + '</td>' +
               '<td data-label="Proveedor">' + o.proveedor + '</td>' +
               '<td data-label="RFC">' + (o.rfc || '—') + '</td>' +
-              '<td data-label="Dirección entrega">' + (o.direccionentrega || '—') + '</td>' +
-              '<td data-label="CP">' + (o.cp || '—') + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
@@ -7045,7 +7041,7 @@
 
             tablaOC.innerHTML +=
               '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
-              '<td colspan="16">' +
+              '<td colspan="14">' +
               '<div class="oc-acciones-container">' + acciones + '</div>' +
               '</td>' +
               '</tr>';
@@ -9187,12 +9183,12 @@
           { label: 'Razón Social:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
           { label: 'Dirección:', value: datos.direccion },
+          { label: 'Código Postal:', value: datos.cp || '' },
           { label: 'Datos Bancarios:', value: datos.banco || 'No especificado' },
           { label: 'CLABE:', value: datos.clabe || 'N/A' }
         ];
         var camposEntrega = [
           { label: 'Dirección de Entrega:', value: datos.direccionentrega },
-          { label: 'Código Postal:', value: datos.cp || '' },
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
           { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') },
           { label: 'Solicitante:', value: datos.solicitante || 'No especificado' }
