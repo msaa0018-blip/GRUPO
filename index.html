@@ -63,7 +63,7 @@
     --orange-gold: #FFC700;
     /* Nueva paleta de colores */
     --color-azul: #A9C7D1;
-    --color-verde: #E6F4EA;
+    --color-verde: #2E9E5B;
     --color-gris: #C7CDD6;
     --color-rojo: #E53935;
   }
@@ -492,8 +492,8 @@
   button:active { transform: scale(.97) }
   button.danger { background: var(--color-rojo); color: white; }
   button.danger:hover { background: #c62828; }
-  button.success { background: var(--color-verde); color: #0b1a33; }
-  button.success:hover { background: #c8dfd0; }
+  button.success { background: var(--color-verde); color: #ffffff; }
+  button.success:hover { background: #257F4A; }
   button.warning { background: #f5e56b; color: #0b1a33; }
   button.warning:hover { background: #e0ce4a; }
   button.full-width { width: 100%; justify-content: center }
@@ -604,8 +604,8 @@
   .oc-acciones-container .btn-imprimir:hover { background: #b0b8c4; }
   .oc-acciones-container .btn-editar { background: var(--color-azul); color: #0b1a33; }
   .oc-acciones-container .btn-editar:hover { background: #8fb6c4; }
-  .oc-acciones-container .btn-success { background: var(--color-verde); color: #0b1a33; }
-  .oc-acciones-container .btn-success:hover { background: #c8dfd0; }
+  .oc-acciones-container .btn-success { background: var(--color-verde); color: #ffffff; }
+  .oc-acciones-container .btn-success:hover { background: #257F4A; }
   .oc-acciones-container .btn-warning { background: #f5e56b; color: #0b1a33; }
   .oc-acciones-container .btn-warning:hover { background: #e0ce4a; }
   .oc-acciones-container .btn-danger { background: var(--color-rojo); color: white; }
@@ -2767,7 +2767,6 @@
                 <th>Depto</th>
                 <th>Cliente</th>
                 <th>Proveedor</th>
-                <th>RFC</th>
                 <th>Moneda</th>
                 <th>Total</th>
                 <th>Equiv. MXN</th>
@@ -3657,6 +3656,8 @@
       //     VC, FIN, DIR, ADM). Si la empresa no tiene departamentos
       //     registrados (SMV, ICE, ISCI) se repite la abreviatura de la
       //     empresa en este segmento.
+      //   - LETRA: consecutivo A, B, C... para evitar códigos duplicados
+      //     cuando coincide empresa+depto+fecha+proveedor+proyecto+cliente.
       // ============================================================
       function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
         var fecha = new Date();
@@ -7028,7 +7029,6 @@
               '<td data-label="Depto">' + mostrarDepto(proyecto ? (getAbreviaturaDepartamento(proyecto.departamento, proyecto.empresa) || proyecto.departamento) : '') + '</td>' +
               '<td data-label="Cliente">' + cliente + '</td>' +
               '<td data-label="Proveedor">' + o.proveedor + '</td>' +
-              '<td data-label="RFC">' + (o.rfc || '—') + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
@@ -7041,7 +7041,7 @@
 
             tablaOC.innerHTML +=
               '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
-              '<td colspan="14">' +
+              '<td colspan="13">' +
               '<div class="oc-acciones-container">' + acciones + '</div>' +
               '</td>' +
               '</tr>';
