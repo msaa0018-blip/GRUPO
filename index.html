@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
 <title>Workflow OC ERP v58</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20ALLIN.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js">
@@ -6142,8 +6143,8 @@
 
             tbodyProyectos.innerHTML +=
               '<tr>' +
-              '<td data-label="Empresa">' + p.empresa + '</td>' +
-              '<td data-label="Departamento">' + mostrarDepto(p.departamento) + '</td>' +
+              '<td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td>' +
+              '<td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td>' +
               '<td data-label="Proyecto"><strong>' + p.nombre + '</strong></td>' +
               '<td data-label="Cliente">' + p.cliente + '</td>' +
               '<td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td>' +
@@ -6195,8 +6196,8 @@
             tbodyOC.innerHTML +=
               '<tr>' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
-              '<td data-label="Empresa">' + (proyectoOC ? proyectoOC.empresa : '—') + '</td>' +
-              '<td data-label="Departamento">' + mostrarDepto(proyectoOC ? proyectoOC.departamento : '') + '</td>' +
+              '<td data-label="Empresa">' + (proyectoOC ? (getAbreviaturaEmpresa(proyectoOC.empresa) || proyectoOC.empresa) : '—') + '</td>' +
+              '<td data-label="Departamento">' + mostrarDepto(proyectoOC ? (getAbreviaturaDepartamento(proyectoOC.departamento, proyectoOC.empresa) || proyectoOC.departamento) : '') + '</td>' +
               '<td data-label="Proyecto">' + o.proyecto + '</td>' +
               '<td data-label="Proveedor">' + o.proveedor + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
