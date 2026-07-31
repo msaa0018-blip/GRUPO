@@ -2763,15 +2763,10 @@
             <thead>
               <tr>
                 <th>Código</th>
-                <th>Proyecto</th>
-                <th>Depto</th>
-                <th>Cliente</th>
                 <th>Proveedor</th>
                 <th>Moneda</th>
                 <th>Total</th>
-                <th>Equiv. MXN</th>
                 <th>F.Pago</th>
-                <th>F.Entrega</th>
                 <th>UUID</th>
                 <th>Estado</th>
                 <th class="acciones-header">Acciones</th>
@@ -6888,7 +6883,7 @@
         tablaOC.innerHTML = '';
 
         if (ocVisibles.length === 0) {
-          tablaOC.innerHTML = '<tr><td colspan="16" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
+          tablaOC.innerHTML = '<tr><td colspan="8" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
           resumenTotales.innerHTML = '';
         } else {
           var totalMXN = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
@@ -7025,15 +7020,10 @@
             tablaOC.innerHTML +=
               '<tr class="fila-oc-info ' + rowClass + '" data-oc-id="' + o.id + '">' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
-              '<td data-label="Proyecto">' + o.proyecto + '</td>' +
-              '<td data-label="Depto">' + mostrarDepto(proyecto ? (getAbreviaturaDepartamento(proyecto.departamento, proyecto.empresa) || proyecto.departamento) : '') + '</td>' +
-              '<td data-label="Cliente">' + cliente + '</td>' +
-              '<td data-label="Proveedor">' + o.proveedor + '</td>' +
+              '<td data-label="Proveedor">' + String(o.proveedor || '').slice(0, 20) + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
-              '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
               '<td data-label="F.Pago">' + fechaPago + '</td>' +
-              '<td data-label="F.Entrega">' + fechaEntrega + '</td>' +
               '<td data-label="UUID">' + (o.uuidfactura || '—') + '</td>' +
               '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td>' +
               '<td data-label="Acciones" class="acciones-header">—</td>' +
@@ -7041,7 +7031,7 @@
 
             tablaOC.innerHTML +=
               '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
-              '<td colspan="13">' +
+              '<td colspan="8">' +
               '<div class="oc-acciones-container">' + acciones + '</div>' +
               '</td>' +
               '</tr>';
