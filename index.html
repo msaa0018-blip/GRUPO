@@ -2800,6 +2800,7 @@
             <div class="flex">
               <input id="ofCP" placeholder="CP *" maxlength="5" style="flex:0.7;">
               <input id="ofODCContrato" placeholder="ODC o Contrato" style="flex:1;">
+              <input id="ofOCNumero" placeholder="Número de OC (si aplica)" style="flex:1;">
               <select id="ofResponsable" style="flex:1;"><option value="">Responsable *</option></select>
             </div>
           </div>
@@ -8110,6 +8111,7 @@
           moneda: document.getElementById('ofMoneda').value,
           cp: document.getElementById('ofCP').value.trim(),
           odcContrato: document.getElementById('ofODCContrato').value.trim().toUpperCase(),
+          ocNumero: document.getElementById('ofOCNumero').value.trim().toUpperCase(),
           responsable: document.getElementById('ofResponsable').value,
           partidas: recopilarPartidasOF(),
           suma: window.recalcularSumaOF(),
@@ -8192,6 +8194,7 @@
           { label: 'Dirección:', value: datos.direccion },
           { label: 'Código Postal:', value: datos.cp || '' },
           { label: 'ODC o Contrato:', value: datos.odcContrato || 'N/A' },
+          { label: 'Número de OC:', value: datos.ocNumero || 'N/A' },
           { label: 'Forma de Pago:', value: datos.formaPago },
           { label: 'Método de Pago:', value: datos.metodoPago },
           { label: 'Banco:', value: datos.banco || 'No especificado' },
@@ -8336,6 +8339,7 @@
         var moneda = document.getElementById('ofMoneda').value;
         var cp = document.getElementById('ofCP').value.trim();
         var odcContrato = document.getElementById('ofODCContrato').value.trim().toUpperCase();
+        var ocNumero = document.getElementById('ofOCNumero').value.trim().toUpperCase();
         var responsable = document.getElementById('ofResponsable').value;
 
         if (!departamento) {
@@ -8398,6 +8402,7 @@
           moneda: moneda,
           cp: cp,
           odc_contrato: odcContrato,
+          oc_numero: ocNumero,
           responsable: responsable,
           partidas: partidas,
           suma: suma,
@@ -8423,6 +8428,7 @@
         document.getElementById('ofCuenta').value = '';
         document.getElementById('ofCP').value = '';
         document.getElementById('ofODCContrato').value = '';
+        document.getElementById('ofOCNumero').value = '';
         document.getElementById('ofResponsable').value = '';
         window.actualizarFolioOF();
 
@@ -8454,6 +8460,7 @@
             direccion: of.direccion,
             cp: of.cp,
             odcContrato: of.odc_contrato,
+            ocNumero: of.oc_numero,
             formaPago: of.forma_pago,
             metodoPago: of.metodo_pago,
             banco: of.banco,
@@ -8510,6 +8517,7 @@
             direccion: of.direccion,
             cp: of.cp,
             odcContrato: of.odc_contrato,
+            ocNumero: of.oc_numero,
             formaPago: of.forma_pago,
             metodoPago: of.metodo_pago,
             banco: of.banco,
