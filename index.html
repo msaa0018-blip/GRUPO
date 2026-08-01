@@ -1291,6 +1291,7 @@
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
+    flex: 1;
   }
   #menuMaestro.visible { display: flex }
 
@@ -1385,6 +1386,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    width: 33.333%;
   }
   .btn-volver-menu-center:hover { background: var(--gray-700); }
 
@@ -8268,8 +8270,14 @@
               empresaInput.style.background = 'var(--gray-200)';
               empresaInput.value = 'Sin acceso a OF';
             }
-          } else if (!esAccesoTotal && defaultData.departamento) {
-            selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
+          } else if (!esAccesoTotal) {
+            if (defaultData.departamento) {
+              selectDepto.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
+            } else {
+              // Empresa sin departamentos registrados (SMV, ICE, ISCI):
+              // no hay nada que restringir por depto, solo por empresa.
+              selectDepto.innerHTML = '<option value="" selected>—</option>';
+            }
             selectDepto.disabled = true;
             selectDepto.style.background = 'var(--gray-200)';
 
