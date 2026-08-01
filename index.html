@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
 <title>Workflow OC ERP v58</title>
-<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20ALLIN.png">
+<link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FAVICON%201.jpg">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js">
@@ -160,6 +160,10 @@
     display: block;
   }
   .header-usuario-rol {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     color: #ffffff;
     font-size: 13px;
     font-weight: 600;
@@ -167,6 +171,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 40%;
+    pointer-events: none;
   }
 
   /* === ZONA DERECHA === */
@@ -2521,7 +2527,7 @@
         <div id="cxpTablaProyectos" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
             <table style="min-width:100% !important; width:100% !important;">
-              <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Vencido</th><th>% Uso</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Empresa</th><th>DPTO</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Vencido</th><th>% Uso</th><th>Acciones</th></tr></thead>
               <tbody id="cxpCuerpoProyectos"></tbody>
             </table>
           </div>
@@ -2530,7 +2536,7 @@
         <div id="cxpTablaOC" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
             <table style="min-width:100% !important; width:100% !important;">
-              <thead><tr><th>Código</th><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Proveedor</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Aprobación</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Código</th><th>Proyecto</th><th>Moneda</th><th>Total</th><th>Equiv. MXN</th><th>F.Pago</th><th>F.Aprobación</th><th>Estado</th></tr></thead>
               <tbody id="cxpCuerpoOC"></tbody>
             </table>
           </div>
@@ -6159,9 +6165,9 @@
             tbodyProyectos.innerHTML +=
               '<tr>' +
               '<td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td>' +
-              '<td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td>' +
-              '<td data-label="Proyecto"><strong>' + p.nombre + '</strong></td>' +
-              '<td data-label="Cliente">' + p.cliente + '</td>' +
+              '<td data-label="DPTO">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td>' +
+              '<td data-label="Proyecto"><strong>' + String(p.nombre || '').slice(0, 20) + '</strong></td>' +
+              '<td data-label="Cliente">' + String(p.cliente || '').slice(0, 20) + '</td>' +
               '<td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td>' +
               '<td data-label="Pagado" style="color:' + (pagado > 0 ? '#2e7d32' : 'inherit') + '">' + formatoMoneda(pagado, 'MXN') + '</td>' +
               '<td data-label="Pendiente" style="color:' + (pendiente > 0 ? '#b8860b' : 'inherit') + '">' + formatoMoneda(pendiente, 'MXN') + '</td>' +
@@ -6175,7 +6181,7 @@
         var tbodyOC = document.getElementById('cxpCuerpoOC');
         tbodyOC.innerHTML = '';
         if (ocFiltradas.length === 0) {
-          tbodyOC.innerHTML = '<tr><td colspan="12" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>';
+          tbodyOC.innerHTML = '<tr><td colspan="8" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>';
         } else {
           // Mapa proyecto->empresa/departamento (LEFT JOIN ya resuelto):
           // toda OC en ocFiltradas ya tiene garantizado un proyecto
@@ -6211,17 +6217,19 @@
             tbodyOC.innerHTML +=
               '<tr>' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
-              '<td data-label="Empresa">' + (proyectoOC ? (getAbreviaturaEmpresa(proyectoOC.empresa) || proyectoOC.empresa) : '—') + '</td>' +
-              '<td data-label="Departamento">' + mostrarDepto(proyectoOC ? (getAbreviaturaDepartamento(proyectoOC.departamento, proyectoOC.empresa) || proyectoOC.departamento) : '') + '</td>' +
               '<td data-label="Proyecto">' + o.proyecto + '</td>' +
-              '<td data-label="Proveedor">' + o.proveedor + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
               '<td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td>' +
               '<td data-label="F.Aprobación">' + (o.fechaaprobaciondirector ? new Date(o.fechaaprobaciondirector).toLocaleDateString() : (o.fechaaprobacionjefe ? new Date(o.fechaaprobacionjefe).toLocaleDateString() : '—')) + '</td>' +
               '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoLabel + '</span></td>' +
-              '<td data-label="Acciones"><button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Ver</button><button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️</button></td>' +
+              '</tr>' +
+              '<tr>' +
+              '<td colspan="8" style="text-align:center;">' +
+              '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Ver</button> ' +
+              '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ Imprimir</button>' +
+              '</td>' +
               '</tr>';
           });
         }
@@ -9898,6 +9906,7 @@
         nameDisplay.textContent = nombreMostrar;
         container.classList.remove('hidden');
       }
+
     })();
   </script>
 </body>
