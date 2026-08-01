@@ -582,6 +582,121 @@
   }
   tr.fila-oc-acciones:hover td { background: var(--gray-100); }
 
+  .oc-paginacion-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 4px 4px 4px;
+    border-top: 1px solid var(--gray-200);
+    margin-top: 8px;
+  }
+  .oc-paginacion-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--gray-700);
+  }
+  .oc-paginacion-filas-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .oc-paginacion-filas-label select {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+    font-size: 13px;
+  }
+  .oc-paginacion-botones {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .oc-paginacion-botones button {
+    min-width: 34px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+    background: #ffffff;
+    color: var(--gray-700);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .oc-paginacion-botones button:hover:not(:disabled) {
+    background: var(--gray-100);
+  }
+  .oc-paginacion-botones button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .oc-paginacion-numeros {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .oc-paginacion-numeros button {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+    background: #ffffff;
+    color: var(--gray-700);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .oc-paginacion-numeros button:hover {
+    background: var(--gray-100);
+  }
+  .oc-paginacion-numeros button.activa {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+  }
+
+  .cxp-paginacion {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 0 4px 0;
+  }
+  .cxp-paginacion button {
+    min-width: 34px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+    background: #ffffff;
+    color: var(--gray-700);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cxp-paginacion button:hover:not(:disabled) {
+    background: var(--gray-100);
+  }
+  .cxp-paginacion button.activa {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+  }
+  .cxp-paginacion button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .oc-acciones-container {
     display: flex;
     flex-wrap: nowrap;
@@ -2541,6 +2656,7 @@
             </table>
           </div>
         </div>
+        <div id="cxpPaginacionOC" class="cxp-paginacion"></div>
       </div>
 
       <div id="panelCXC" class="card hidden">
@@ -2796,6 +2912,26 @@
             <tbody id="tablaOC"></tbody>
           </table>
         </div>
+        <div id="ocPaginacionContainer" class="oc-paginacion-container">
+          <div class="oc-paginacion-info">
+            <span id="ocPaginacionContador">Mostrando 0 - 0 de 0</span>
+            <label class="oc-paginacion-filas-label">
+              Filas por página:
+              <select id="ocFilasPorPagina">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+          </div>
+          <div class="oc-paginacion-botones">
+            <button id="ocPaginacionAnterior" onclick="window.paginaAnteriorOC()">← Anterior</button>
+            <span id="ocPaginacionNumeros" class="oc-paginacion-numeros"></span>
+            <button id="ocPaginacionSiguiente" onclick="window.paginaSiguienteOC()">Siguiente →</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2892,6 +3028,17 @@
       // null = aún no inicializado; se define la primera vez que se
       // renderiza según el rol (ver render()).
       var verSoloMisOC = null;
+      // Página actual de la tabla "Órdenes de Compra" dentro de CXP.
+      var cxpPaginaOC = 1;
+      var CXP_OC_POR_PAGINA = 20;
+
+      // Estado de paginación de la Bandeja de Órdenes de Compra (módulo OC).
+      var ocPaginacion = {
+        paginaActual: 1,
+        filasPorPagina: 10,
+        totalRegistros: 0,
+        datosFiltrados: []
+      };
       var indicadoresTimer = null;
       var indicadoresData = {};
 
@@ -3733,6 +3880,21 @@
         }
 
         console.log('🔍 Buscando OC con ID:', ocId);
+
+        // Con la Bandeja de OC paginada, la fila solo existe en el DOM
+        // si está en la página actual. Si la OC está en otra página,
+        // saltamos a esa página primero (y re-renderizamos) antes de
+        // intentar el scroll/resaltado.
+        if (ocPaginacion && ocPaginacion.datosFiltrados && ocPaginacion.datosFiltrados.length > 0) {
+          var idxEnFiltrados = ocPaginacion.datosFiltrados.findIndex(function(o) { return o.id === ocId; });
+          if (idxEnFiltrados !== -1) {
+            var paginaDestino = Math.floor(idxEnFiltrados / ocPaginacion.filasPorPagina) + 1;
+            if (paginaDestino !== ocPaginacion.paginaActual) {
+              ocPaginacion.paginaActual = paginaDestino;
+              renderTablaOCPaginada();
+            }
+          }
+        }
 
         function intentarScroll() {
           var row = document.querySelector('tr.fila-oc-info[data-oc-id="' + ocId + '"]');
@@ -5987,11 +6149,12 @@
           if (!esGlobal) return; // bloqueado para roles no-globales
           poblarDepartamentos();
           poblarProyectos();
+          cxpPaginaOC = 1;
           window.renderCXP();
         };
-        selectDepto.onchange = function() { poblarProyectos(); window.renderCXP(); };
-        selectProyecto.onchange = function() { window.renderCXP(); };
-        document.getElementById('cxpFiltroEstado').onchange = function() { window.renderCXP(); };
+        selectDepto.onchange = function() { poblarProyectos(); cxpPaginaOC = 1; window.renderCXP(); };
+        selectProyecto.onchange = function() { cxpPaginaOC = 1; window.renderCXP(); };
+        document.getElementById('cxpFiltroEstado').onchange = function() { cxpPaginaOC = 1; window.renderCXP(); };
 
         var hoy = new Date();
         var haceUnMes = new Date(hoy);
@@ -5999,8 +6162,8 @@
         document.getElementById('cxpFechaInicio').value = haceUnMes.toISOString().split('T')[0];
         document.getElementById('cxpFechaFin').value = hoy.toISOString().split('T')[0];
 
-        document.getElementById('cxpFechaInicio').onchange = function() { window.renderCXP(); };
-        document.getElementById('cxpFechaFin').onchange = function() { window.renderCXP(); };
+        document.getElementById('cxpFechaInicio').onchange = function() { cxpPaginaOC = 1; window.renderCXP(); };
+        document.getElementById('cxpFechaFin').onchange = function() { cxpPaginaOC = 1; window.renderCXP(); };
       }
 
       function obtenerDatosCXP() {
@@ -6180,7 +6343,14 @@
 
         var tbodyOC = document.getElementById('cxpCuerpoOC');
         tbodyOC.innerHTML = '';
-        if (ocFiltradas.length === 0) {
+        var ocOrdenadas = ocFiltradas.slice().reverse();
+        var totalPaginasOC = Math.max(1, Math.ceil(ocOrdenadas.length / CXP_OC_POR_PAGINA));
+        if (cxpPaginaOC > totalPaginasOC) cxpPaginaOC = totalPaginasOC;
+        if (cxpPaginaOC < 1) cxpPaginaOC = 1;
+        var inicioPagina = (cxpPaginaOC - 1) * CXP_OC_POR_PAGINA;
+        var ocPagina = ocOrdenadas.slice(inicioPagina, inicioPagina + CXP_OC_POR_PAGINA);
+
+        if (ocOrdenadas.length === 0) {
           tbodyOC.innerHTML = '<tr><td colspan="8" class="mensaje-sin-datos">No hay órdenes de compra que coincidan con los filtros</td></tr>';
         } else {
           // Mapa proyecto->empresa/departamento (LEFT JOIN ya resuelto):
@@ -6189,7 +6359,7 @@
           var mapaProyectos = {};
           proys.forEach(function(p) { mapaProyectos[normalizar(p.nombre)] = p; });
 
-          ocFiltradas.slice().reverse().forEach(function(o, i) {
+          ocPagina.forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
             var proyectoOC = mapaProyectos[normalizar(o.proyecto)];
             var estadoLabel = o.estado;
@@ -6236,7 +6406,37 @@
           });
         }
 
+        renderPaginacionCXP(totalPaginasOC);
         actualizarChartCXP(datos);
+      };
+
+      // Dibuja los controles de paginación de la tabla de OC de CXP.
+      // Siempre muestra el número total de páginas; oculta "Siguiente"
+      // en la última página.
+      function renderPaginacionCXP(totalPaginas) {
+        var cont = document.getElementById('cxpPaginacionOC');
+        if (!cont) return;
+        if (totalPaginas <= 1) {
+          cont.innerHTML = '';
+          return;
+        }
+
+        var html = '<button ' + (cxpPaginaOC === 1 ? 'disabled' : '') + ' onclick="window.irAPaginaCXP(' + (cxpPaginaOC - 1) + ')">← Anterior</button>';
+
+        for (var i = 1; i <= totalPaginas; i++) {
+          html += '<button class="' + (i === cxpPaginaOC ? 'activa' : '') + '" onclick="window.irAPaginaCXP(' + i + ')">' + i + '</button>';
+        }
+
+        if (cxpPaginaOC < totalPaginas) {
+          html += '<button onclick="window.irAPaginaCXP(' + (cxpPaginaOC + 1) + ')">Siguiente →</button>';
+        }
+
+        cont.innerHTML = html;
+      }
+
+      window.irAPaginaCXP = function(pagina) {
+        cxpPaginaOC = pagina;
+        window.renderCXP();
       };
 
       // ============================================================
@@ -6815,27 +7015,11 @@
       // ============================================================
       // FUNCIONES DE RENDER PRINCIPAL
       // ============================================================
-      function render() {
-        console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
-
-        actualizarCamposEmpresaDeptoProyecto();
-
-        var tablaProyectos = document.getElementById('tablaProyectos');
-        var selectProyecto = document.getElementById('selectProyecto');
-        var tablaOC = document.getElementById('tablaOC');
-        var resumenTotales = document.getElementById('resumenTotales');
-
-        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
-
-        // Inicializa el toggle "Solo mis OC / Todas" la primera vez,
-        // preservando el comportamiento actual por rol: Solicitante y
-        // Elaborador arrancan viendo solo lo suyo (como siempre); el
-        // resto arranca viendo todo lo de su alcance (como siempre).
-        // A partir de ahí, cada usuario puede cambiarlo con el botón.
-        if (verSoloMisOC === null) {
-          verSoloMisOC = !!(actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador'));
-        }
-
+      // Centraliza la lógica de filtrado de la Bandeja de OC (toggle
+      // "Solo mis OC", departamento, proyecto, estado, pendientes por
+      // pagar). Devuelve el arreglo completo ya filtrado (sin paginar),
+      // en el mismo orden que antes (más reciente primero).
+      function obtenerOCFiltradas() {
         var ocVisibles;
         if (verSoloMisOC) {
           ocVisibles = filtrarOCParaCXP(actual).filter(function(o) {
@@ -6843,12 +7027,6 @@
           });
         } else {
           ocVisibles = filtrarOCParaCXP(actual);
-        }
-
-        var btnToggleMisOC = document.getElementById('btnToggleMisOC');
-        if (btnToggleMisOC) {
-          btnToggleMisOC.textContent = verSoloMisOC ? '👤 Solo mis OC' : '🌐 Todas las OC';
-          btnToggleMisOC.style.background = verSoloMisOC ? 'var(--color-azul)' : 'var(--gray-600)';
         }
 
         var filtroDepto = document.getElementById('filtroDepto');
@@ -6877,52 +7055,33 @@
           ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; });
         }
 
-        tablaProyectos.innerHTML = '';
-        selectProyecto.innerHTML = '';
+        return ocVisibles.slice().reverse();
+      }
 
-        if (proyectosVisibles.length === 0) {
-          tablaProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>';
-          selectProyecto.innerHTML = '<option value="">No hay proyectos disponibles</option>';
-        } else {
-          proyectosVisibles.forEach(function(p, idx) {
-            var gastado = gastoProyectoMoneda(p.nombre);
-            var disponible = p.limite - gastado;
-            var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
-            var esAdmin = actual && actual.rol === 'Administrador';
-            var esFinanzas = actual && actual.rol === 'Finanzas';
-            var esDirectorProyecto = actual && actual.rol === 'Director General';
+      // Renderiza SOLO la página actual de la Bandeja de OC (tablaOC),
+      // a partir de ocPaginacion.datosFiltrados (ya calculado por
+      // obtenerOCFiltradas() dentro de render()). Conserva exactamente
+      // la misma lógica de estado/acciones por rol que ya existía.
+      function renderTablaOCPaginada() {
+        var tablaOC = document.getElementById('tablaOC');
+        if (!tablaOC) return;
 
-            var botones = '';
-            if (!esFinanzas) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
-            if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
-            if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
+        var datos = ocPaginacion.datosFiltrados;
+        ocPaginacion.totalRegistros = datos.length;
 
-            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
-            selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
-          });
-        }
+        var totalPaginas = Math.max(1, Math.ceil(datos.length / ocPaginacion.filasPorPagina));
+        if (ocPaginacion.paginaActual > totalPaginas) ocPaginacion.paginaActual = totalPaginas;
+        if (ocPaginacion.paginaActual < 1) ocPaginacion.paginaActual = 1;
 
-        if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
-          if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
-            selectProyecto.selectedIndex = 0;
-          }
-          window.actualizarDatosOC();
-        }
-
-        ocVisibles.reverse();
+        var inicioPagina = (ocPaginacion.paginaActual - 1) * ocPaginacion.filasPorPagina;
+        var ocPagina = datos.slice(inicioPagina, inicioPagina + ocPaginacion.filasPorPagina);
 
         tablaOC.innerHTML = '';
 
-        if (ocVisibles.length === 0) {
+        if (datos.length === 0) {
           tablaOC.innerHTML = '<tr><td colspan="8" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
-          resumenTotales.innerHTML = '';
         } else {
-          var totalMXN = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
-          var totalUSD = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
-          var totalMXNEquiv = ocVisibles.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
-          resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>';
-
-          ocVisibles.forEach(function(o, i) {
+          ocPagina.forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
             var badgeClass = '';
             var estadoMostrado = '';
@@ -7074,6 +7233,143 @@
               '</tr>';
           });
         }
+
+        actualizarControlesPaginacionOC();
+      }
+
+      // Dibuja/actualiza los controles de paginación de la Bandeja de OC:
+      // contador "Mostrando X - Y de Z", números de página y botones
+      // Anterior/Siguiente (deshabilitados en los extremos).
+      function actualizarControlesPaginacionOC() {
+        var total = ocPaginacion.totalRegistros;
+        var porPagina = ocPaginacion.filasPorPagina;
+        var pagina = ocPaginacion.paginaActual;
+        var totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+
+        var contador = document.getElementById('ocPaginacionContador');
+        if (contador) {
+          if (total === 0) {
+            contador.textContent = 'Sin registros';
+          } else {
+            var inicio = (pagina - 1) * porPagina + 1;
+            var fin = Math.min(pagina * porPagina, total);
+            contador.textContent = 'Mostrando ' + inicio + ' - ' + fin + ' de ' + total;
+          }
+        }
+
+        var numerosCont = document.getElementById('ocPaginacionNumeros');
+        if (numerosCont) {
+          var html = '';
+          for (var i = 1; i <= totalPaginas; i++) {
+            html += '<button class="' + (i === pagina ? 'activa' : '') + '" onclick="window.irAPaginaOC(' + i + ')">' + i + '</button>';
+          }
+          numerosCont.innerHTML = html;
+        }
+
+        var btnAnterior = document.getElementById('ocPaginacionAnterior');
+        if (btnAnterior) btnAnterior.disabled = pagina <= 1;
+
+        var btnSiguiente = document.getElementById('ocPaginacionSiguiente');
+        if (btnSiguiente) btnSiguiente.disabled = pagina >= totalPaginas;
+
+        var selectFilas = document.getElementById('ocFilasPorPagina');
+        if (selectFilas && String(selectFilas.value) !== String(porPagina)) {
+          selectFilas.value = String(porPagina);
+        }
+      }
+
+      window.irAPaginaOC = function(pagina) {
+        ocPaginacion.paginaActual = pagina;
+        renderTablaOCPaginada();
+      };
+
+      window.paginaAnteriorOC = function() {
+        if (ocPaginacion.paginaActual > 1) {
+          ocPaginacion.paginaActual--;
+          renderTablaOCPaginada();
+        }
+      };
+
+      window.paginaSiguienteOC = function() {
+        var totalPaginas = Math.max(1, Math.ceil(ocPaginacion.totalRegistros / ocPaginacion.filasPorPagina));
+        if (ocPaginacion.paginaActual < totalPaginas) {
+          ocPaginacion.paginaActual++;
+          renderTablaOCPaginada();
+        }
+      };
+
+      function render() {
+        console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
+
+        actualizarCamposEmpresaDeptoProyecto();
+
+        var tablaProyectos = document.getElementById('tablaProyectos');
+        var selectProyecto = document.getElementById('selectProyecto');
+        var tablaOC = document.getElementById('tablaOC');
+        var resumenTotales = document.getElementById('resumenTotales');
+
+        var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+
+        // Inicializa el toggle "Solo mis OC / Todas" la primera vez,
+        // preservando el comportamiento actual por rol: Solicitante y
+        // Elaborador arrancan viendo solo lo suyo (como siempre); el
+        // resto arranca viendo todo lo de su alcance (como siempre).
+        // A partir de ahí, cada usuario puede cambiarlo con el botón.
+        if (verSoloMisOC === null) {
+          verSoloMisOC = !!(actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador'));
+        }
+
+        var btnToggleMisOC = document.getElementById('btnToggleMisOC');
+        if (btnToggleMisOC) {
+          btnToggleMisOC.textContent = verSoloMisOC ? '👤 Solo mis OC' : '🌐 Todas las OC';
+          btnToggleMisOC.style.background = verSoloMisOC ? 'var(--color-azul)' : 'var(--gray-600)';
+        }
+
+        ocPaginacion.datosFiltrados = obtenerOCFiltradas();
+
+        tablaProyectos.innerHTML = '';
+        selectProyecto.innerHTML = '';
+
+        if (proyectosVisibles.length === 0) {
+          tablaProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>';
+          selectProyecto.innerHTML = '<option value="">No hay proyectos disponibles</option>';
+        } else {
+          proyectosVisibles.forEach(function(p, idx) {
+            var gastado = gastoProyectoMoneda(p.nombre);
+            var disponible = p.limite - gastado;
+            var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
+            var esAdmin = actual && actual.rol === 'Administrador';
+            var esFinanzas = actual && actual.rol === 'Finanzas';
+            var esDirectorProyecto = actual && actual.rol === 'Director General';
+
+            var botones = '';
+            if (!esFinanzas) botones += '<button class="success" onclick="window.mostrarDashboard(' + proyectos.indexOf(p) + ')">📊 Dashboard</button>';
+            if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
+            if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
+
+            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
+          });
+        }
+
+        if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
+          if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
+            selectProyecto.selectedIndex = 0;
+          }
+          window.actualizarDatosOC();
+        }
+
+        if (ocPaginacion.datosFiltrados.length === 0) {
+          resumenTotales.innerHTML = '';
+        } else {
+          var totalMXN = ocPaginacion.datosFiltrados.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
+          var totalUSD = ocPaginacion.datosFiltrados.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
+          var totalMXNEquiv = ocPaginacion.datosFiltrados.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
+          resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>';
+        }
+
+        renderTablaOCPaginada();
+
 
         var panelOC = document.getElementById('panelOC');
         var cuerpo = document.getElementById('cuerpoProductos');
@@ -7558,6 +7854,7 @@
               btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
               if (!filtroPendientesActivo) btn.style.background = '#f5e56b';
             }
+            ocPaginacion.paginaActual = 1;
             render();
           };
 
@@ -7576,6 +7873,7 @@
               btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
               if (!filtroPendientesActivo) btn.style.background = '#f5e56b';
             }
+            ocPaginacion.paginaActual = 1;
             render();
           };
 
@@ -7587,6 +7885,7 @@
               btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
               if (!filtroPendientesActivo) btn.style.background = '#f5e56b';
             }
+            ocPaginacion.paginaActual = 1;
             render();
           };
 
@@ -7638,6 +7937,15 @@
         }
 
         detectarEnlaceTelegram();
+
+        var ocFilasPorPagina = document.getElementById('ocFilasPorPagina');
+        if (ocFilasPorPagina) {
+          ocFilasPorPagina.addEventListener('change', function() {
+            ocPaginacion.filasPorPagina = parseInt(this.value, 10) || 10;
+            ocPaginacion.paginaActual = 1;
+            renderTablaOCPaginada();
+          });
+        }
 
         await cargarDatos();
       }
@@ -8542,11 +8850,13 @@
           var pendientes = contarPendientesPagar();
           btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
         }
+        ocPaginacion.paginaActual = 1;
         render();
       };
 
       window.toggleVerSoloMisOC = function() {
         verSoloMisOC = !verSoloMisOC;
+        ocPaginacion.paginaActual = 1;
         render();
       };
 
@@ -8626,6 +8936,7 @@
         var pendientes = contarPendientesPagar();
         btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
         actualizarFiltroProyectos();
+        ocPaginacion.paginaActual = 1;
         render();
       };
 
