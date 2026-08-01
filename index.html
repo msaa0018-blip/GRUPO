@@ -605,12 +605,15 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .oc-paginacion-filas-label select {
     padding: 4px 8px;
     border-radius: 6px;
     border: 1px solid var(--gray-300);
     font-size: 13px;
+    width: auto;
   }
   .oc-paginacion-botones {
     display: flex;
@@ -2551,6 +2554,26 @@
               <option value="5">Formato 5 (Azul)</option>
               <option value="6">Formato 6 (Rojo)</option>
             </select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Condiciones comerciales:</label>
+            <select id="condicionesComercialesOC" style="flex:1.5;">
+              <option value="">Selecciona una condición</option>
+              <option value="100% CONTADO">100% Contado</option>
+              <option value="50/50 FINIQUITO Y ANTICIPO">50/50 Finiquito y anticipo</option>
+              <option value="100% CONTRA ENTREGA">100% Contra entrega</option>
+              <option value="100% ANTICIPO">100% Anticipo</option>
+              <option value="CREDITO 30 DIAS">Crédito 30 días</option>
+              <option value="CREDITO 15 DIAS">Crédito 15 días</option>
+            </select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Notas:</label>
+            <textarea id="notasOC" placeholder="Notas adicionales (opcional)" style="flex:1.5;min-height:60px;"></textarea>
           </div>
         </div>
         <div class="grupo-formulario">
@@ -9013,6 +9036,8 @@
             responsable: oc.responsable || 'No definido',
             solicitante: oc.responsable || oc.nombresolicitante || 'No definido',
             formatomembrete: oc.formatomembrete || '1',
+            condicionpago: oc.condicionpago || '',
+            motivo: oc.motivo || null,
             productos: productos,
             cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
@@ -9167,7 +9192,8 @@
           responsable: responsable,
           solicitante: responsable,
           formatomembrete: (document.getElementById('formatoMembreteOC') ? document.getElementById('formatoMembreteOC').value : '1'),
-          motivo: null,
+          condicionpago: (document.getElementById('condicionesComercialesOC') ? document.getElementById('condicionesComercialesOC').value : ''),
+          motivo: (document.getElementById('notasOC') ? document.getElementById('notasOC').value.trim() : null) || null,
           productos: productos,
           elaborador: actual ? actual.usuario : 'Desconocido',
           banco: banco,
@@ -9252,6 +9278,7 @@
           cie: datos.cie,
           referencia: datos.referencia,
           formatomembrete: datos.formatomembrete || '1',
+          condicionpago: datos.condicionpago || null,
           notificacion_enviada: false
         };
 
@@ -9339,6 +9366,7 @@
           cie: datos.cie,
           referencia: datos.referencia,
           formatomembrete: datos.formatomembrete || '1',
+          condicionpago: datos.condicionpago || null,
           notificacion_enviada: false
         };
 
@@ -9399,6 +9427,8 @@
             responsable: oc.responsable || 'No definido',
             solicitante: oc.responsable || oc.nombresolicitante || 'No definido',
             formatomembrete: oc.formatomembrete || '1',
+            condicionpago: oc.condicionpago || '',
+            motivo: oc.motivo || null,
             productos: productos,
             cliente: oc.cliente || proyecto.cliente || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
@@ -9656,15 +9686,18 @@
 
         var textoCondiciones = datos.condicionpago
           ? String(datos.condicionpago)
-          : 'Sin condiciones adicionales especificadas.';
+          : 'Sin condiciones comerciales especificadas.';
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
+        var textoNotas = datos.motivo ? String(datos.motivo) : '—';
+        var lineasNotas = doc.splitTextToSize(textoNotas, bottomW - 28);
+
         var bottomBodyPadding = 16;
-        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 11 + bottomBodyPadding;
+        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 11 + 16 + lineasNotas.length * 11 + bottomBodyPadding;
         var altoFinanciero = bottomHeaderH + 3 * 20 + bottomBodyPadding;
         var bottomH = Math.max(altoTerminos, altoFinanciero, 96);
 
-        // Tarjeta izquierda: TÉRMINOS Y CONDICIONES
+        // Tarjeta izquierda: CONDICIONES COMERCIALES + NOTAS
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
         doc.setFillColor(255, 255, 255);
@@ -9677,11 +9710,21 @@
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('TÉRMINOS Y CONDICIONES', bottomX1 + 14, y + bottomHeaderH / 2 + 4);
+        doc.text('CONDICIONES COMERCIALES', bottomX1 + 14, y + bottomHeaderH / 2 + 4);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         doc.text(lineasCondiciones, bottomX1 + 14, y + bottomHeaderH + 16);
+
+        var yNotas = y + bottomHeaderH + 16 + lineasCondiciones.length * 11 + 12;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('NOTAS', bottomX1 + 14, yNotas);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+        doc.text(lineasNotas, bottomX1 + 14, yNotas + 13);
 
         // Tarjeta derecha: resumen financiero
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
