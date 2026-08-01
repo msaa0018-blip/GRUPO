@@ -159,6 +159,15 @@
   .header-center .depto-logo-header.visible {
     display: block;
   }
+  .header-usuario-rol {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   /* === ZONA DERECHA === */
   .header-right {
@@ -2141,6 +2150,7 @@
     <!-- ZONA CENTRO -->
     <div class="header-center">
       <img id="headerDeptoLogo" class="depto-logo-header" src="" alt="Logo departamento" onerror="this.style.display='none'">
+      <span id="headerUsuarioRol" class="header-usuario-rol"></span>
     </div>
 
     <!-- ZONA DERECHA -->
@@ -5335,6 +5345,12 @@
 
       function actualizarHeaderLogo() {
         var headerLogo = document.getElementById('headerDeptoLogo');
+        var headerUsuarioRol = document.getElementById('headerUsuarioRol');
+
+        if (headerUsuarioRol) {
+          headerUsuarioRol.textContent = actual ? (actual.usuario + ' - ' + actual.rol) : '';
+        }
+
         if (!headerLogo) return;
 
         if (!actual) {
@@ -9882,7 +9898,6 @@
         nameDisplay.textContent = nombreMostrar;
         container.classList.remove('hidden');
       }
-
     })();
   </script>
 </body>
