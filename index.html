@@ -3667,7 +3667,7 @@
 
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        var rolesExcluidos = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
+        var rolesExcluidos = ['Administrador', 'Finanzas', 'Director General'];
         if (rolesExcluidos.indexOf(usuario.rol) !== -1) return false;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
@@ -6858,7 +6858,7 @@
         var defaultData = obtenerEmpresaDeptoDefault(actual);
         var esAccesoTotal = defaultData.libre === true;
 
-        if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas' || actual.rol === 'Jefe Departamento') {
+        if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
           empresaInput.disabled = true;
           empresaInput.style.background = 'var(--gray-200)';
           empresaInput.placeholder = 'Sin acceso a OF';
@@ -6916,12 +6916,17 @@
 
           deptoSelect.onchange = window.actualizarFolioOF;
         } else {
-          if (defaultData.empresa && defaultData.departamento) {
+          if (defaultData.empresa) {
             empresaInput.value = defaultData.empresa;
             empresaInput.disabled = true;
             empresaInput.style.background = 'var(--gray-200)';
 
-            deptoSelect.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
+            if (defaultData.departamento) {
+              deptoSelect.innerHTML = '<option value="' + defaultData.departamento + '" selected>' + defaultData.departamento + '</option>';
+            } else {
+              // Empresa sin departamentos registrados (SMV, ICE, ISCI)
+              deptoSelect.innerHTML = '<option value="" selected>—</option>';
+            }
             deptoSelect.disabled = true;
             deptoSelect.style.background = 'var(--gray-200)';
 
@@ -8677,7 +8682,7 @@
         var esAccesoTotal = defaultData.libre === true;
 
         if (selectDepto) {
-          if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas' || actual.rol === 'Jefe Departamento') {
+          if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
             selectDepto.disabled = true;
             selectDepto.style.background = 'var(--gray-200)';
             selectDepto.innerHTML = '<option value="">Sin acceso a OF</option>';
@@ -10337,6 +10342,7 @@
         nameDisplay.textContent = nombreMostrar;
         container.classList.remove('hidden');
       }
+
     })();
   </script>
 </body>
