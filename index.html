@@ -4244,7 +4244,7 @@
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'cxc', icono: '💳', nombre: 'CXC' });
           }
-          var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
+          var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
           if (actual && rolesExcluidosOF.indexOf(actual.rol) === -1) {
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
           }
@@ -4513,7 +4513,7 @@
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
+        var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
         var puedeVerOFReal = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
         if (modulo === 'oc') {
@@ -7736,7 +7736,7 @@
             var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
             var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
             var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-            var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
+            var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
             var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
             if (puedeCrearOC) document.getElementById('panelOC').classList.remove('hidden');
@@ -7833,7 +7833,7 @@
           var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
           var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
           var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-          var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
+          var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
           var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
           document.getElementById('panelProyecto').classList.toggle('hidden', !puedeCrearProyecto);
@@ -8354,7 +8354,7 @@
           return;
         }
 
-        var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Jefe Departamento', 'Director General'];
+        var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
         if (rolesExcluidosOF.indexOf(actual.rol) !== -1) {
           msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR ÓRDENES DE FACTURACIÓN.</div>';
           return;
@@ -8423,6 +8423,59 @@
 
         window.renderOF();
         actualizarTotalesMenuPrincipal();
+      };
+
+      window.visualizarOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+        var esFinanzasOAdmin = actual.rol === 'Finanzas' || actual.rol === 'Administrador';
+        if (!esFinanzasOAdmin && !usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
+          alert('❌ No tienes permiso sobre esta empresa/departamento.');
+          return;
+        }
+        try {
+          var partidas = of.partidas;
+          if (typeof partidas === 'string') { try { partidas = JSON.parse(partidas); } catch (e) { partidas = []; } }
+          if (!Array.isArray(partidas)) partidas = [];
+          var datos = {
+            folio: of.folio,
+            fecha: of.fecha,
+            departamento: of.departamento,
+            empresa: of.empresa,
+            razonSocial: of.razon_social,
+            rfc: of.rfc,
+            cfdi: of.cfdi,
+            direccion: of.direccion,
+            cp: of.cp,
+            odcContrato: of.odc_contrato,
+            formaPago: of.forma_pago,
+            metodoPago: of.metodo_pago,
+            banco: of.banco,
+            cuenta: of.num_cuenta,
+            moneda: of.moneda,
+            responsable: of.responsable,
+            elaborador: of.elaborador,
+            estado: of.estado,
+            partidas: partidas,
+            suma: of.suma || of.monto || 0
+          };
+          var doc = await generarPDFOF(datos);
+
+          var pdfBlob = doc.output('blob');
+          var pdfUrl = URL.createObjectURL(pdfBlob);
+
+          var frame = document.getElementById('visualizarFrame');
+          if (frame) {
+            frame.src = pdfUrl;
+            frame.style.display = 'block';
+          }
+
+          document.getElementById('visualizarModal').classList.add('active');
+        } catch (error) {
+          console.error('❌ Error al visualizar la OF:', error);
+          alert('Error al visualizar la OF: ' + error.message);
+        }
       };
 
       window.imprimirOF = async function(index) {
@@ -8728,6 +8781,10 @@
           var acciones = '';
           var esResponsable = actual && o.responsable && o.responsable === actual.usuario;
           var esOverride = actual && actual.rol === 'Administrador';
+
+          if (esFinanzas || usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
+            acciones += '<button class="btn-visualizar" onclick="window.visualizarOF(' + idxOriginal + ')">👁️ Ver</button>';
+          }
 
           if (esFinanzas && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="btn-imprimir" onclick="window.imprimirOF(' + idxOriginal + ')">🖨️ Imprimir</button>';
@@ -9497,6 +9554,9 @@
             }
             var logoX = pageWidth - margin - imgWidth;
             var logoY = (franjas.yInicio - imgHeight) / 2;
+            var padLogo = 8;
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(logoX - padLogo, logoY - padLogo, imgWidth + padLogo * 2, imgHeight + padLogo * 2, 5, 5, 'F');
             doc.addImage(imgData, logoTipo, logoX, logoY, imgWidth, imgHeight);
           } else {
             doc.setFontSize(14);
@@ -10277,7 +10337,6 @@
         nameDisplay.textContent = nombreMostrar;
         container.classList.remove('hidden');
       }
-
     })();
   </script>
 </body>
