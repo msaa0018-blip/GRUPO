@@ -3684,8 +3684,12 @@
 
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
-        var rolesExcluidos = ['Administrador', 'Finanzas', 'Director General'];
-        if (rolesExcluidos.indexOf(usuario.rol) !== -1) return false;
+        // Finanzas/Administrador (gestionan aprobaciones y pagos) y Director
+        // General (solo consulta/reporte CXF) ven TODAS las OF, sin importar
+        // empresa/departamento. La creación de OF para estos 3 roles se
+        // bloquea aparte (ver el candado "Sin acceso a OF" del formulario).
+        var rolesVisionAmplia = ['Administrador', 'Finanzas', 'Director General'];
+        if (rolesVisionAmplia.indexOf(usuario.rol) !== -1) return true;
         if (!usuario.permisos) return false;
         var empNorm = normalizar(empresa);
         var deptoNorm = deptoParaComparar(empresa, departamento);
@@ -3868,8 +3872,8 @@
       //   - LETRA: consecutivo A, B, C... para evitar códigos duplicados
       //     cuando coincide empresa+depto+fecha+proveedor+proyecto+cliente.
       // ============================================================
-      function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq) {
-        var fecha = new Date();
+      function generarCodigoOC(empresa, departamento, proveedor, proyecto, cliente, elaborador, seq, fechaOverride) {
+        var fecha = fechaOverride || new Date();
         var anio = String(fecha.getFullYear()).slice(2);
         var mes = String(fecha.getMonth() + 1).padStart(2, '0');
         var dia = String(fecha.getDate()).padStart(2, '0');
@@ -4261,9 +4265,10 @@
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'cxc', icono: '💳', nombre: 'CXC' });
           }
-          var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
+          var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
           if (actual && rolesExcluidosOF.indexOf(actual.rol) === -1) {
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
+            modulos.push({ id: 'cxf', icono: '🧾', nombre: 'CXF' });
           }
         } else if (tipo === 'alta_registros') {
           if (actual && actual.rol === 'Administrador') {
@@ -4301,6 +4306,8 @@
               window.mostrarModulo('cxc');
             } else if (modulo === 'of') {
               window.mostrarModulo('of');
+            } else if (modulo === 'cxf') {
+              window.previsualizarReporteCXF();
             } else if (modulo === 'oc') {
               window.mostrarModulo('oc');
             } else if (modulo === 'proyectos') {
@@ -4530,7 +4537,7 @@
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
         var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
+        var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
         var puedeVerOFReal = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
         if (modulo === 'oc') {
@@ -4569,7 +4576,6 @@
 
         if (modulo === 'proyectos' || modulo === 'oc' || modulo === 'cxp') {
           window.actualizarDatosOC();
-          window.actualizarDatosProyecto();
         }
 
         setTimeout(function() {
@@ -6841,17 +6847,28 @@
       // ============================================================
       // FUNCIONES PARA OF
       // ============================================================
-      function generarFolioOF(departamento) {
-        var deptoClean = (departamento || 'GENERAL').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
+      function generarFolioOF(empresa, departamento) {
+        var empresaClean = getAbreviaturaEmpresa(empresa) || normalizar(empresa).replace(/[^A-Z0-9]/g, '').slice(0, 8);
+
+        var deptoInfo = getDepartamentoCatalogo(empresa, departamento);
+        var deptoClean;
+        if (deptoInfo) {
+          deptoClean = deptoInfo.abreviatura;
+        } else if (getDepartamentosPorEmpresa(empresa).length === 0) {
+          // Empresa sin departamentos registrados (SMV, ICE, ISCI): se repite la abreviatura de la empresa
+          deptoClean = empresaClean;
+        } else {
+          deptoClean = (departamento || 'GENERAL').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+        }
+
+        var prefijo = empresaClean + '-' + deptoClean;
         var existentes = ordenesFacturacion.filter(function(o) {
-          var deptoOF = (o.departamento || '').toUpperCase();
-          var deptoParam = (departamento || '').toUpperCase();
-          return deptoOF === deptoParam;
+          return normalizar(o.empresa) === normalizar(empresa) && deptoParaComparar(o.empresa, o.departamento) === deptoParaComparar(empresa, departamento);
         });
         var consecutivo = existentes.length + 1;
         var folio, intentos = 0;
         do {
-          folio = deptoClean + '-OF-' + String(consecutivo).padStart(4, '0');
+          folio = prefijo + '-OF-' + String(consecutivo).padStart(4, '0');
           var yaExiste = ordenesFacturacion.some(function(o) { return o.folio === folio; });
           if (!yaExiste) break;
           consecutivo++;
@@ -6861,8 +6878,9 @@
       }
 
       window.actualizarFolioOF = function() {
+        var empresa = document.getElementById('ofEmpresa').value;
         var depto = document.getElementById('ofDepartamento').value;
-        document.getElementById('ofFolio').value = depto ? generarFolioOF(depto) : '';
+        document.getElementById('ofFolio').value = (empresa || depto) ? generarFolioOF(empresa, depto) : '';
         window.actualizarResponsablesOF();
       };
 
@@ -6905,8 +6923,10 @@
           document.getElementById('ofMetodoPago').disabled = true;
           document.getElementById('ofMoneda').disabled = true;
 
-          document.querySelector('#panelOF .btn-success').disabled = true;
-          document.querySelector('#panelOF .btn-warning').disabled = true;
+          var btnAgregarPartidaOF = document.querySelector('#panelOF button.success');
+          if (btnAgregarPartidaOF) btnAgregarPartidaOF.disabled = true;
+          var btnGuardarOF = document.querySelector('#panelOF button.warning');
+          if (btnGuardarOF) btnGuardarOF.disabled = true;
 
           return;
         }
@@ -6948,7 +6968,7 @@
             deptoSelect.disabled = true;
             deptoSelect.style.background = 'var(--gray-200)';
 
-            folioInput.value = generarFolioOF(defaultData.departamento);
+            folioInput.value = generarFolioOF(defaultData.empresa, defaultData.departamento);
             window.actualizarResponsablesOF();
           } else {
             empresaInput.value = 'Sin permisos asignados';
@@ -7759,7 +7779,7 @@
             var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
             var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
             var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-            var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
+            var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
             var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
             if (puedeCrearOC) document.getElementById('panelOC').classList.remove('hidden');
@@ -7856,7 +7876,7 @@
           var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
           var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
           var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-          var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
+          var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
           var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
           document.getElementById('panelProyecto').classList.toggle('hidden', !puedeCrearProyecto);
@@ -8380,7 +8400,7 @@
           return;
         }
 
-        var rolesExcluidosOF = ['Administrador', 'Finanzas', 'Director General'];
+        var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
         if (rolesExcluidosOF.indexOf(actual.rol) !== -1) {
           msgDiv.innerHTML = '<div class="alert">⚠️ NO TIENES PERMISO PARA CREAR ÓRDENES DE FACTURACIÓN.</div>';
           return;
@@ -8398,7 +8418,7 @@
         }
 
         var suma = window.recalcularSumaOF();
-        var folio = generarFolioOF(departamento);
+        var folio = generarFolioOF(empresa, departamento);
 
         var estadoOF = metodoPago === 'PPD' ? 'PENDIENTE' : (metodoPago === 'PUE' ? 'FACTURADA' : 'CREADA');
 
@@ -9003,11 +9023,12 @@
             sinProyecto.push(o.codigo);
             return;
           }
-          var clave = generarCodigoOC(proyecto.empresa, proyecto.departamento, o.proveedor || '', o.proyecto || '', o.cliente || '', o.elaborador || '', 'X');
+          var fechaHistorica = o.fechacreacion ? new Date(o.fechacreacion) : new Date();
+          var clave = generarCodigoOC(proyecto.empresa, proyecto.departamento, o.proveedor || '', o.proyecto || '', o.cliente || '', o.elaborador || '', 'X', fechaHistorica);
           var indice = contadorPorClave[clave] || 0;
           contadorPorClave[clave] = indice + 1;
           var letra = String.fromCharCode(65 + indice);
-          var nuevoCodigo = generarCodigoOC(proyecto.empresa, proyecto.departamento, o.proveedor || '', o.proyecto || '', o.cliente || '', o.elaborador || '', letra);
+          var nuevoCodigo = generarCodigoOC(proyecto.empresa, proyecto.departamento, o.proveedor || '', o.proyecto || '', o.cliente || '', o.elaborador || '', letra, fechaHistorica);
 
           if (nuevoCodigo !== o.codigo) {
             cambios.push({ id: o.id, anterior: o.codigo, nuevo: nuevoCodigo });
@@ -9039,6 +9060,71 @@
         }
         console.log('Migración completada: ' + (cambios.length - errores.length) + ' de ' + cambios.length + ' códigos actualizados.');
         render();
+        return { actualizados: cambios.length - errores.length, errores: errores };
+      };
+
+      // Regenera los folios históricos de OF para que usen las abreviaturas
+      // del catálogo (EMPRESA-DEPTO-OF-####), igual que ya hace
+      // migrarCodigosOCHistoricos() para las OC. Uso desde la consola:
+      //   window.migrarFoliosOFHistoricos()        -> vista previa (no escribe nada)
+      //   window.migrarFoliosOFHistoricos(true)     -> ejecuta el cambio real en Supabase
+      window.migrarFoliosOFHistoricos = async function(commit) {
+        if (!actual || actual.rol !== 'Administrador') {
+          console.warn('Solo un usuario con rol Administrador puede ejecutar esta migración.');
+          return;
+        }
+
+        var ordenadas = ordenesFacturacion.slice().sort(function(a, b) {
+          return new Date(a.fecha) - new Date(b.fecha);
+        });
+
+        var contadorPorClave = {};
+        var cambios = [];
+
+        ordenadas.forEach(function(o) {
+          var empresaClean = getAbreviaturaEmpresa(o.empresa) || normalizar(o.empresa).replace(/[^A-Z0-9]/g, '').slice(0, 8);
+          var deptoInfo = getDepartamentoCatalogo(o.empresa, o.departamento);
+          var deptoClean;
+          if (deptoInfo) {
+            deptoClean = deptoInfo.abreviatura;
+          } else if (getDepartamentosPorEmpresa(o.empresa).length === 0) {
+            deptoClean = empresaClean;
+          } else {
+            deptoClean = (o.departamento || 'GENERAL').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+          }
+
+          var clave = empresaClean + '-' + deptoClean;
+          var indice = contadorPorClave[clave] || 0;
+          contadorPorClave[clave] = indice + 1;
+          var nuevoFolio = clave + '-OF-' + String(indice + 1).padStart(4, '0');
+
+          if (nuevoFolio !== o.folio) {
+            cambios.push({ id: o.id, anterior: o.folio, nuevo: nuevoFolio });
+          }
+        });
+
+        console.table(cambios);
+        console.log(cambios.length + ' folio(s) se actualizarían.' + (commit ? ' Ejecutando cambios reales...' : ' Vista previa únicamente — llama a migrarFoliosOFHistoricos(true) para aplicar.'));
+
+        if (!commit) return cambios;
+
+        var errores = [];
+        for (var i = 0; i < cambios.length; i++) {
+          var cambio = cambios[i];
+          var { error } = await supabase.from('ordenes_facturacion').update({ folio: cambio.nuevo }).eq('id', cambio.id);
+          if (error) {
+            errores.push({ id: cambio.id, error: error.message });
+          } else {
+            var ofLocal = ordenesFacturacion.find(function(o) { return o.id === cambio.id; });
+            if (ofLocal) ofLocal.folio = cambio.nuevo;
+          }
+        }
+
+        if (errores.length > 0) {
+          console.error('Errores al migrar:', errores);
+        }
+        console.log('Migración completada: ' + (cambios.length - errores.length) + ' de ' + cambios.length + ' folios actualizados.');
+        window.renderOF();
         return { actualizados: cambios.length - errores.length, errores: errores };
       };
 
