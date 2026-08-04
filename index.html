@@ -4079,7 +4079,10 @@
       // ============================================================
       async function cargarUsuarios() {
         try {
-          var { data, error } = await supabase.from('usuarios').select('*');
+          // NOTA SEGURIDAD: ya no se solicita la columna "password". El login real
+          // se valida en el servidor vía RPC (login_verificar); esta carga solo
+          // necesita usuario/rol/permisos para pintar la UI y calcular accesos.
+          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos');
           if (error) throw error;
           usuariosDB = data || [];
           console.log('✅ Usuarios cargados desde Supabase:', usuariosDB.length);
@@ -7667,11 +7670,13 @@
         try {
           await cargarUsuarios();
 
+          // NOTA SEGURIDAD: el password ya NO se compara desde el navegador contra
+          // la tabla "usuarios" (eso permitía que cualquiera con la anon key leyera
+          // la tabla completa de contraseñas). Ahora se valida server-side mediante
+          // la función RPC login_verificar (SECURITY DEFINER), que nunca devuelve
+          // la contraseña.
           var { data: userData, error: authError } = await supabase
-            .from('usuarios')
-            .select('*')
-            .ilike('usuario', user)
-            .eq('password', pass)
+            .rpc('login_verificar', { p_usuario: user, p_password: pass })
             .maybeSingle();
 
           if (authError) {
@@ -7703,7 +7708,6 @@
           actual = {
             usuario: userData.usuario,
             u: userData.usuario,
-            password: userData.password,
             rol: userData.rol,
             permisos: userData.permisos || []
           };
