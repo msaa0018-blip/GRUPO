@@ -561,11 +561,11 @@
     max-width: 100%;
   }
   th {
-    background: var(--gray-800);
-    color: white;
+    background: #FCC6BA;
+    color: var(--gray-900);
     padding: 10px 12px;
     text-align: left;
-    font-weight: 500;
+    font-weight: 600;
     white-space: nowrap;
     position: sticky;
     top: 0;
@@ -1969,15 +1969,27 @@
 
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     margin-bottom: 8px;
   }
-  
-  /* Tarjetas "Compras del mes" y "Ventas del mes" ocupan 2 columnas (mismo tamaño y comportamiento) */
+
+  /* Todas las tarjetas KPI son del mismo tamaño (cuadradas), sin
+     excepciones de ancho, para que formen una sola cuadrícula pareja. */
+  .kpi-card {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  /* Compras del mes y Ventas del mes conservan el doble de ancho; el resto
+     de las tarjetas KPI son cuadradas y del mismo tamaño entre sí. */
   .kpi-card.kpi-compras-mes,
   .kpi-card.kpi-ventas-mes {
     grid-column: span 2;
+    aspect-ratio: auto;
   }
 
   .kpi-card {
@@ -2089,6 +2101,7 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    aspect-ratio: 1 / 1;
     min-height: 180px;
   }
   .radar-ejecutivo-card h4 {
@@ -2116,6 +2129,7 @@
       grid-template-columns: 1fr;
     }
     .radar-ejecutivo-card {
+      aspect-ratio: auto;
       min-height: 200px;
     }
   }
@@ -2193,8 +2207,8 @@
     border-collapse: collapse;
   }
   .indicadores-tabla-wrapper table th {
-    background: var(--gray-50);
-    color: var(--gray-700);
+    background: #FCC6BA;
+    color: var(--gray-900);
     font-weight: 600;
     padding: 8px 10px;
     text-align: left;
@@ -2223,6 +2237,64 @@
     height: 100%;
     border-radius: 4px;
     transition: width 0.6s ease;
+  }
+
+  .oc-stepper-referencia {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    margin: 10px 0 14px;
+    padding: 0 8px;
+    overflow-x: auto;
+  }
+  .oc-stepper-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 110px;
+  }
+  .oc-stepper-circulo {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--color-azul);
+    color: #0b1a33;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .oc-stepper-label {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-700);
+    text-align: center;
+    max-width: 105px;
+  }
+  .oc-stepper-sub {
+    margin-top: 2px;
+    font-size: 8px;
+    color: var(--gray-500);
+    text-align: center;
+    max-width: 110px;
+    line-height: 1.3;
+  }
+  .oc-stepper-linea {
+    flex: 1;
+    height: 2px;
+    background: var(--gray-300);
+    margin: 13px 4px 0;
+    min-width: 20px;
+  }
+  @media (max-width: 480px) {
+    .oc-stepper-label { font-size: 9px; max-width: 60px; }
+    .oc-stepper-sub { display: none; }
+    .oc-stepper-circulo { width: 20px; height: 20px; font-size: 11px; }
+    .oc-stepper-linea { margin-top: 10px; }
   }
 
   .semforo {
@@ -2947,7 +3019,7 @@
         </div>
         <div id="ofResumenCXF" style="margin:10px 0;"></div>
 
-        <div class="card" style="margin:12px 0; padding:14px 16px;">
+        <div class="card" id="ofFormularioNuevo" style="margin:12px 0; padding:14px 16px;">
           <h4>➕ Nueva Orden de Facturación</h4>
           <div class="grupo-formulario">
             <div class="flex">
@@ -3084,6 +3156,38 @@
         <div id="deptoLogoContainer" class="depto-logo-container hidden">
           <img id="deptoLogoImg" src="" alt="Logo del departamento" style="display:none;">
           <span id="deptoNameDisplay" class="depto-name"></span>
+        </div>
+
+        <div id="semaforoBandejaOC" class="oc-stepper-referencia">
+          <div class="oc-stepper-item">
+            <div class="oc-stepper-circulo">1</div>
+            <div class="oc-stepper-label">Elaboración</div>
+            <div class="oc-stepper-sub">CREADA</div>
+          </div>
+          <div class="oc-stepper-linea"></div>
+          <div class="oc-stepper-item">
+            <div class="oc-stepper-circulo">2</div>
+            <div class="oc-stepper-label">Autorización Jefe Dpto</div>
+            <div class="oc-stepper-sub">APROBADA SOLICITANTE</div>
+          </div>
+          <div class="oc-stepper-linea"></div>
+          <div class="oc-stepper-item">
+            <div class="oc-stepper-circulo">3</div>
+            <div class="oc-stepper-label">Autorización LJGR</div>
+            <div class="oc-stepper-sub">PENDIENTE DIRECTOR · AUTORIZADA</div>
+          </div>
+          <div class="oc-stepper-linea"></div>
+          <div class="oc-stepper-item">
+            <div class="oc-stepper-circulo">4</div>
+            <div class="oc-stepper-label">Pagada</div>
+            <div class="oc-stepper-sub">ESTADO PAGO: PAGADA</div>
+          </div>
+          <div class="oc-stepper-linea"></div>
+          <div class="oc-stepper-item">
+            <div class="oc-stepper-circulo">5</div>
+            <div class="oc-stepper-label">Facturación / Cierre</div>
+            <div class="oc-stepper-sub">CONCLUIDA · OF FACTURADA/PAGADO</div>
+          </div>
         </div>
 
         <div id="ocLocationBanner" class="oc-location-banner hidden">
@@ -4951,6 +5055,12 @@
           if (puedeVerOFReal) {
             panelOF.classList.remove('hidden');
             panelOF.querySelectorAll('.card').forEach(function(card) { card.classList.remove('hidden'); });
+            // El Director General solo debe ver el reporte CXF dentro de OF,
+            // no el formulario de alta de nueva Orden de Facturación.
+            var formularioNuevaOF = document.getElementById('ofFormularioNuevo');
+            if (formularioNuevaOF) {
+              formularioNuevaOF.classList.toggle('hidden', actual && actual.rol === 'Director General');
+            }
             window.renderOF();
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
