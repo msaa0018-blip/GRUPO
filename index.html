@@ -7509,6 +7509,7 @@
           var { data, error } = await supabase.from('proveedores').select('*').eq('activo', true).order('nombre');
           if (error) throw error;
           proveedoresCatalogoCache = data || [];
+          console.log('✅ Proveedores cargados para autocompletar OC:', proveedoresCatalogoCache.length, proveedoresCatalogoCache);
           lista.innerHTML = proveedoresCatalogoCache.map(function(p) {
             return '<option value="' + escapeHTML(p.nombre) + '"></option>';
           }).join('');
@@ -7531,6 +7532,12 @@
         'ANTICIPADO': '100% ANTICIPO',
         'CONTADO': '100% CONTADO',
         'APLAZADO': 'CREDITO 30 DIAS'
+      };
+
+      window.debugProveedoresCache = function() {
+        console.log('Cache actual de proveedores:', proveedoresCatalogoCache);
+        console.log('Handler oninput conectado:', typeof document.getElementById('proveedor').oninput);
+        return proveedoresCatalogoCache;
       };
 
       window.autocompletarProveedorOC = function() {
