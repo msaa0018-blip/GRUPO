@@ -1097,6 +1097,15 @@
     #bandejaOCCard .table-wrapper table { min-width: 1000px; }
   }
 
+  .cerrar-modal-btn {
+    padding: 2.5px 4.5px !important;
+    min-height: 11px !important;
+    min-width: 11px !important;
+    border-radius: 2.5px !important;
+    font-size: 3.5px !important;
+    gap: 1.5px !important;
+  }
+
   .card.modal-card .cerrar-modal-btn { display: none; }
   .card.modal-card.abierta .cerrar-modal-btn { display: inline-block; }
 
@@ -2449,6 +2458,13 @@
                 <th>Teléfono</th>
                 <th>Email</th>
                 <th>Dirección</th>
+                <th>CP</th>
+                <th>Cuenta Bancaria</th>
+                <th>Banco</th>
+                <th>Clave</th>
+                <th>Swift</th>
+                <th>CIE</th>
+                <th>Condiciones Comerciales</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -2461,6 +2477,19 @@
                 <td><input id="nvoProvTelefono" placeholder="Teléfono"></td>
                 <td><input id="nvoProvEmail" placeholder="Email"></td>
                 <td><input id="nvoProvDireccion" placeholder="Dirección"></td>
+                <td><input id="nvoProvCP" placeholder="CP"></td>
+                <td><input id="nvoProvCuentaBancaria" placeholder="Cuenta bancaria"></td>
+                <td><input id="nvoProvBanco" placeholder="Banco"></td>
+                <td><input id="nvoProvClave" placeholder="Clave"></td>
+                <td><input id="nvoProvSwift" placeholder="Swift"></td>
+                <td><input id="nvoProvCIE" placeholder="CIE"></td>
+                <td>
+                  <select id="nvoProvCondiciones">
+                    <option value="Anticipado">Anticipado</option>
+                    <option value="Contado">Contado</option>
+                    <option value="Aplazado">Aplazado</option>
+                  </select>
+                </td>
                 <td><button class="success" onclick="window.agregarProveedorCatalogo()">➕ Agregar</button></td>
               </tr>
             </tfoot>
@@ -2477,6 +2506,7 @@
             <thead>
               <tr>
                 <th>Código</th>
+                <th>Número de Parte</th>
                 <th>Descripción</th>
                 <th>Unidad de Medida</th>
                 <th>Precio de Referencia</th>
@@ -2487,6 +2517,7 @@
             <tfoot>
               <tr>
                 <td><input id="nvoProdCodigo" placeholder="Código"></td>
+                <td><input id="nvoProdNumeroParte" placeholder="Número de parte"></td>
                 <td><input id="nvoProdDescripcion" placeholder="Descripción *"></td>
                 <td>
                   <select id="nvoProdUdm">
@@ -2765,7 +2796,13 @@
               </tfoot>
             </table>
           </div>
-          <button onclick="window.agregarFilaProducto()" class="success" style="margin-top:8px;">➕ Agregar Producto</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center;">
+            <select id="selectorProductoCatalogo" style="flex:1; min-width:220px;">
+              <option value="">-- Selecciona un producto del catálogo --</option>
+            </select>
+            <button onclick="window.agregarProductoDesdeCatalogo()" class="btn-visualizar">📦 Agregar desde catálogo</button>
+            <button onclick="window.agregarFilaProducto()" class="success">➕ Agregar Producto (manual)</button>
+          </div>
         </div>
         <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
           <button onclick="window.previsualizarOC()" class="success">👁️ Previsualizar</button>
@@ -4662,6 +4699,13 @@
               '<td>' + escapeHTML(p.telefono) + '</td>' +
               '<td>' + escapeHTML(p.email) + '</td>' +
               '<td>' + escapeHTML(p.direccion) + '</td>' +
+              '<td>' + escapeHTML(p.cp) + '</td>' +
+              '<td>' + escapeHTML(p.cuenta_bancaria) + '</td>' +
+              '<td>' + escapeHTML(p.banco) + '</td>' +
+              '<td>' + escapeHTML(p.clave) + '</td>' +
+              '<td>' + escapeHTML(p.swift) + '</td>' +
+              '<td>' + escapeHTML(p.cie) + '</td>' +
+              '<td>' + escapeHTML(p.condiciones_comerciales) + '</td>' +
               '<td><button class="danger" onclick="window.eliminarProveedorCatalogo(' + p.id + ')">🗑️ Eliminar</button></td>';
             cuerpo.appendChild(fila);
           });
@@ -4685,12 +4729,19 @@
           contacto: document.getElementById('nvoProvContacto').value.trim(),
           telefono: document.getElementById('nvoProvTelefono').value.trim(),
           email: document.getElementById('nvoProvEmail').value.trim(),
-          direccion: document.getElementById('nvoProvDireccion').value.trim()
+          direccion: document.getElementById('nvoProvDireccion').value.trim(),
+          cp: document.getElementById('nvoProvCP').value.trim(),
+          cuenta_bancaria: document.getElementById('nvoProvCuentaBancaria').value.trim(),
+          banco: document.getElementById('nvoProvBanco').value.trim(),
+          clave: document.getElementById('nvoProvClave').value.trim(),
+          swift: document.getElementById('nvoProvSwift').value.trim(),
+          cie: document.getElementById('nvoProvCIE').value.trim(),
+          condiciones_comerciales: document.getElementById('nvoProvCondiciones').value
         };
         try {
           var { error } = await supabase.from('proveedores').insert([nuevo]);
           if (error) throw error;
-          ['nvoProvNombre','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion'].forEach(function(id) {
+          ['nvoProvNombre','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion','nvoProvCP','nvoProvCuentaBancaria','nvoProvBanco','nvoProvClave','nvoProvSwift','nvoProvCIE'].forEach(function(id) {
             document.getElementById(id).value = '';
           });
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor agregado.</div>';
@@ -4725,6 +4776,7 @@
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(p.codigo) + '</td>' +
+              '<td>' + escapeHTML(p.numero_parte) + '</td>' +
               '<td>' + escapeHTML(p.descripcion) + '</td>' +
               '<td>' + escapeHTML(p.udm) + '</td>' +
               '<td>' + formatoMoneda(p.precio_referencia || 0, 'MXN') + '</td>' +
@@ -4748,6 +4800,7 @@
         var precio = parseFloat(document.getElementById('nvoProdPrecio').value);
         var nuevo = {
           codigo: document.getElementById('nvoProdCodigo').value.trim(),
+          numero_parte: document.getElementById('nvoProdNumeroParte').value.trim(),
           descripcion: descripcion,
           udm: document.getElementById('nvoProdUdm').value,
           precio_referencia: isNaN(precio) ? 0 : precio
@@ -4756,6 +4809,7 @@
           var { error } = await supabase.from('productos').insert([nuevo]);
           if (error) throw error;
           document.getElementById('nvoProdCodigo').value = '';
+          document.getElementById('nvoProdNumeroParte').value = '';
           document.getElementById('nvoProdDescripcion').value = '';
           document.getElementById('nvoProdPrecio').value = '';
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Producto agregado.</div>';
@@ -4864,6 +4918,7 @@
         if (modulo === 'oc') {
           ocModalToolbar.classList.remove('hidden');
           if (puedeCrearOC) panelOC.classList.remove('hidden');
+          window.cargarSelectorProductosCatalogo();
           // Bandeja de OC y Control por Proyecto ya no se muestran en línea
           // dentro del módulo OC: se abren como ventanas modales con los
           // botones "📬 Bandeja de OC" / "📊 Control por Proyecto".
@@ -7441,6 +7496,38 @@
       // ============================================================
       // PRODUCTOS
       // ============================================================
+      // ===== SELECTOR DE PRODUCTOS DEL CATÁLOGO DENTRO DE LA OC =====
+      var productosCatalogoCache = [];
+
+      window.cargarSelectorProductosCatalogo = async function() {
+        var select = document.getElementById('selectorProductoCatalogo');
+        if (!select) return;
+        try {
+          var { data, error } = await supabase.from('productos').select('*').eq('activo', true).order('descripcion');
+          if (error) throw error;
+          productosCatalogoCache = data || [];
+          select.innerHTML = '<option value="">-- Selecciona un producto del catálogo --</option>' +
+            productosCatalogoCache.map(function(p, i) {
+              var etiqueta = (p.numero_parte ? p.numero_parte + ' — ' : '') + p.descripcion;
+              return '<option value="' + i + '">' + escapeHTML(etiqueta) + '</option>';
+            }).join('');
+        } catch (e) {
+          console.error('Error cargando selector de productos:', e);
+        }
+      };
+
+      window.agregarProductoDesdeCatalogo = function() {
+        var select = document.getElementById('selectorProductoCatalogo');
+        if (!select || select.value === '') {
+          alert('⚠️ Selecciona un producto del catálogo primero.');
+          return;
+        }
+        var p = productosCatalogoCache[parseInt(select.value, 10)];
+        if (!p) return;
+        window.agregarFilaProducto(p.numero_parte || '', p.descripcion || '', p.udm || 'PZA', 1, p.precio_referencia || 0, 0, 0);
+        select.value = '';
+      };
+
       window.agregarFilaProducto = function(parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
         parte = parte || '';
         descripcion = descripcion || '';
