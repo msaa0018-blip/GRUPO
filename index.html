@@ -2694,7 +2694,8 @@
         </div>
         <div class="grupo-formulario">
           <div class="flex">
-            <input id="proveedor" placeholder="Proveedor *" style="flex:1.5;">
+            <input id="proveedor" list="listaProveedoresOC" placeholder="Proveedor *" style="flex:1.5;" autocomplete="off">
+            <datalist id="listaProveedoresOC"></datalist>
             <input id="rfc" placeholder="RFC (opcional)" style="flex:1;">
             <input id="direccion" placeholder="Dirección *" style="flex:1.5;">
           </div>
@@ -4919,6 +4920,7 @@
           ocModalToolbar.classList.remove('hidden');
           if (puedeCrearOC) panelOC.classList.remove('hidden');
           window.cargarSelectorProductosCatalogo();
+          window.cargarListaProveedoresOC();
           // Bandeja de OC y Control por Proyecto ya no se muestran en línea
           // dentro del módulo OC: se abren como ventanas modales con los
           // botones "📬 Bandeja de OC" / "📊 Control por Proyecto".
@@ -7496,6 +7498,21 @@
       // ============================================================
       // PRODUCTOS
       // ============================================================
+      // ===== AUTOCOMPLETAR PROVEEDOR EN LA OC CONTRA EL CATÁLOGO =====
+      window.cargarListaProveedoresOC = async function() {
+        var lista = document.getElementById('listaProveedoresOC');
+        if (!lista) return;
+        try {
+          var { data, error } = await supabase.from('proveedores').select('nombre').eq('activo', true).order('nombre');
+          if (error) throw error;
+          lista.innerHTML = (data || []).map(function(p) {
+            return '<option value="' + escapeHTML(p.nombre) + '"></option>';
+          }).join('');
+        } catch (e) {
+          console.error('Error cargando lista de proveedores para OC:', e);
+        }
+      };
+
       // ===== SELECTOR DE PRODUCTOS DEL CATÁLOGO DENTRO DE LA OC =====
       var productosCatalogoCache = [];
 
