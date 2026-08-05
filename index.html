@@ -2574,6 +2574,17 @@
           </div>
         </div>
 
+        <!-- Comparativa de Vendedores (Solicitantes) -->
+        <div class="indicadores-tabla-wrapper">
+          <h4>🏆 Comparativa de Solicitudes por Vendedor</h4>
+          <div id="tablaComparativaVendedores">
+            <table>
+              <thead><tr><th>#</th><th>Usuario</th><th>OC Generadas</th><th>Monto Total</th><th>Comparativa</th></tr></thead>
+              <tbody id="cuerpoComparativaVendedores"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Tablas de detalle -->
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="ocPendientesIndicadoresCard">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -5099,15 +5110,30 @@
             .sort(function(a, b) { return b[1] - a[1]; })
             .slice(0, 10);
 
-          // 8b. Top Vendedores (en este caso, los Solicitantes)
+          // 8b. Top Vendedores (en este caso, los Solicitantes), agrupado
+          // por usuario (código de usuario, ej. AAMS1), no por nombre libre.
+          // Se calcula tanto el monto total (para la gráfica) como la
+          // cantidad de OC generadas (para la tabla comparativa: quién
+          // vende más / quién vende menos, medido en solicitudes de OC).
           var vendedores = {};
+          var vendedoresConteo = {};
           ordenes.forEach(function(o) {
-            var sol = o.solicitante || o.elaborador || 'Desconocido';
+            var sol = (o.solicitante || o.elaborador || 'Desconocido').toString().trim().toUpperCase();
             vendedores[sol] = (vendedores[sol] || 0) + (o.montototal || 0);
+            vendedoresConteo[sol] = (vendedoresConteo[sol] || 0) + 1;
           });
           var topVendedores = Object.entries(vendedores)
             .sort(function(a, b) { return b[1] - a[1]; })
             .slice(0, 10);
+          var comparativaVendedores = Object.keys(vendedoresConteo)
+            .map(function(usuario) {
+              return {
+                usuario: usuario,
+                cantidadOC: vendedoresConteo[usuario],
+                monto: vendedores[usuario] || 0
+              };
+            })
+            .sort(function(a, b) { return b.cantidadOC - a.cantidadOC; });
 
           // 9. Top 10 clientes
           var clientes = {};
@@ -5233,6 +5259,7 @@
             comprasPorDepto: comprasPorDepto,
             topProveedores: topProveedores,
             topVendedores: topVendedores,
+            comparativaVendedores: comparativaVendedores,
             topClientes: topClientes,
             alertas: alertas,
             totalCXC: totalCXC,
@@ -5290,13 +5317,6 @@
           cambio: d.ventasMesCount + ' facturas',
           clase: 'border-green kpi-ventas-mes',
           click: function() { window.mostrarModulo('cxc'); }
-        }, {
-          icono: '📊',
-          valor: d.presupuestoConsumido.toFixed(1) + '%',
-          label: 'Presupuesto consumido',
-          cambio: 'Global',
-          clase: d.presupuestoConsumido > 80 ? 'border-red' : 'border-yellow',
-          click: function() { window.mostrarModulo('proyectos'); }
         }, {
           icono: '📁',
           valor: d.proyectosActivos + ' / ' + d.totalProyectos,
@@ -5752,6 +5772,32 @@
       // ============================================================
       function renderTablasIndicadores() {
         var d = indicadoresData;
+
+        // Comparativa de Vendedores (Solicitantes): cuenta de OC generadas
+        var tbodyVend = document.getElementById('cuerpoComparativaVendedores');
+        if (tbodyVend) {
+          var comparativa = d.comparativaVendedores || [];
+          if (comparativa.length === 0) {
+            tbodyVend.innerHTML = '<tr><td colspan="5" class="mensaje-sin-datos">No hay solicitudes de OC registradas</td></tr>';
+          } else {
+            var maxOC = comparativa[0].cantidadOC;
+            tbodyVend.innerHTML = comparativa.map(function(v, i) {
+              var pct = maxOC > 0 ? (v.cantidadOC / maxOC) * 100 : 0;
+              var esMayor = i === 0;
+              var esMenor = i === comparativa.length - 1 && comparativa.length > 1;
+              var badge = esMayor
+                ? '<span class="badge" style="background:var(--color-verde);color:#1e4a2a;">🥇 Vende más</span>'
+                : (esMenor ? '<span class="badge" style="background:#fde8e8;color:var(--color-rojo);">🔻 Vende menos</span>' : '');
+              return '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td>' + v.usuario + ' ' + badge + '</td>' +
+                '<td>' + v.cantidadOC + '</td>' +
+                '<td>' + formatoMoneda(v.monto, 'MXN') + '</td>' +
+                '<td><div class="barra-progreso"><div class="fill" style="width:' + pct + '%; background:' + (esMayor ? '#2e7d32' : (esMenor ? 'var(--color-rojo)' : 'var(--color-azul)')) + ';"></div></div></td>' +
+                '</tr>';
+            }).join('');
+          }
+        }
 
         // OC Pendientes
         var tbodyOC = document.getElementById('cuerpoOCPendientes');
