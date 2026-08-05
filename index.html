@@ -7712,6 +7712,21 @@
             permisos: userData.permisos || []
           };
 
+          // SEGURIDAD: el link que manda Telegram (?oc=ID) es exclusivo del
+          // Director General. Si alguien más entra con sus propias
+          // credenciales usando ese link, se le niega el acceso aquí mismo,
+          // antes de mostrar la app, con una ventana de error de usuario.
+          var ocIdTelegramCheck = detectarEnlaceTelegram();
+          if (ocIdTelegramCheck && actual.rol !== 'Director General') {
+            actual = null;
+            pendingOcId = null;
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Ingresar';
+            errorDiv.classList.remove('hidden');
+            errorDiv.innerHTML = '❌ Este enlace es exclusivo del Director General. Tu usuario no tiene permiso para acceder por esta vía.';
+            return;
+          }
+
         } catch (e) {
           console.error('Error inesperado en login:', e);
           errorDiv.classList.remove('hidden');
