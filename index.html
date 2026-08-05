@@ -2600,7 +2600,7 @@
         </div>
         <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
           <table style="min-width:100% !important; width:100% !important;">
-            <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>%</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>Acciones</th></tr></thead>
             <tbody id="tablaProyectos"></tbody>
           </table>
         </div>
@@ -4380,7 +4380,6 @@
           var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
           if (actual && rolesExcluidosOF.indexOf(actual.rol) === -1) {
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
-            modulos.push({ id: 'cxf', icono: '🧾', nombre: 'CXF' });
           }
         } else if (tipo === 'alta_registros') {
           if (actual && actual.rol === 'Administrador') {
@@ -4418,8 +4417,6 @@
               window.mostrarModulo('cxc');
             } else if (modulo === 'of') {
               window.mostrarModulo('of');
-            } else if (modulo === 'cxf') {
-              window.previsualizarReporteCXF();
             } else if (modulo === 'oc') {
               window.mostrarModulo('oc');
             } else if (modulo === 'proyectos') {
@@ -7730,7 +7727,7 @@
             if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
             if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
-            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="%"><span>' + porcentaje.toFixed(2) + '%</span><div class="progress-bar"><div class="fill" style="width:' + Math.min(porcentaje, 100) + '%; background:' + (porcentaje > 60 ? 'var(--color-rojo)' : '#2e7d32') + '"></div></div></td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
