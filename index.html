@@ -1098,9 +1098,10 @@
   }
 
   .cerrar-modal-btn {
-    padding: 2.5px 4.5px !important;
-    min-height: 11px !important;
-    min-width: 11px !important;
+    padding: 7.5px 1.5px !important;
+    min-height: 33px !important;
+    width: 33.333% !important;
+    flex: 0 0 33.333% !important;
     border-radius: 2.5px !important;
     font-size: 3.5px !important;
     gap: 1.5px !important;
@@ -7499,17 +7500,69 @@
       // PRODUCTOS
       // ============================================================
       // ===== AUTOCOMPLETAR PROVEEDOR EN LA OC CONTRA EL CATÁLOGO =====
+      var proveedoresCatalogoCache = [];
+
       window.cargarListaProveedoresOC = async function() {
         var lista = document.getElementById('listaProveedoresOC');
         if (!lista) return;
         try {
-          var { data, error } = await supabase.from('proveedores').select('nombre').eq('activo', true).order('nombre');
+          var { data, error } = await supabase.from('proveedores').select('*').eq('activo', true).order('nombre');
           if (error) throw error;
-          lista.innerHTML = (data || []).map(function(p) {
+          proveedoresCatalogoCache = data || [];
+          lista.innerHTML = proveedoresCatalogoCache.map(function(p) {
             return '<option value="' + escapeHTML(p.nombre) + '"></option>';
           }).join('');
+
+          var inputProveedor = document.getElementById('proveedor');
+          if (inputProveedor) {
+            inputProveedor.oninput = window.autocompletarProveedorOC;
+            inputProveedor.onchange = window.autocompletarProveedorOC;
+          }
         } catch (e) {
           console.error('Error cargando lista de proveedores para OC:', e);
+        }
+      };
+
+      // Cuando el texto capturado en "Proveedor" coincide (sin distinguir
+      // mayúsculas/espacios) con un proveedor del catálogo, se rellenan
+      // automáticamente sus datos dependientes: RFC, dirección, CP, datos
+      // bancarios y condiciones comerciales.
+      var MAPEO_CONDICIONES_PROVEEDOR_A_OC = {
+        'ANTICIPADO': '100% ANTICIPO',
+        'CONTADO': '100% CONTADO',
+        'APLAZADO': 'CREDITO 30 DIAS'
+      };
+
+      window.autocompletarProveedorOC = function() {
+        var inputProveedor = document.getElementById('proveedor');
+        if (!inputProveedor) return;
+        var valor = inputProveedor.value.trim().toUpperCase();
+        if (!valor) return;
+
+        var match = proveedoresCatalogoCache.find(function(p) {
+          return (p.nombre || '').trim().toUpperCase() === valor;
+        });
+        if (!match) return;
+
+        var campos = {
+          rfc: match.rfc,
+          direccion: match.direccion,
+          cp: match.cp,
+          banco: match.banco,
+          cuenta: match.cuenta_bancaria,
+          clabe: match.clave,
+          swift: match.swift,
+          cie: match.cie
+        };
+        Object.keys(campos).forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el && campos[id]) el.value = campos[id];
+        });
+
+        var selectCondiciones = document.getElementById('condicionesComercialesOC');
+        if (selectCondiciones && match.condiciones_comerciales) {
+          var condMapeada = MAPEO_CONDICIONES_PROVEEDOR_A_OC[match.condiciones_comerciales.toUpperCase()];
+          if (condMapeada) selectCondiciones.value = condMapeada;
         }
       };
 
