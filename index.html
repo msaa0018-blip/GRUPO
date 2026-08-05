@@ -1086,6 +1086,30 @@
     #bandejaOCCard .table-wrapper table { min-width: 1000px; }
   }
 
+  #modalOverlayBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .6);
+    z-index: 1999;
+    display: none;
+  }
+  #modalOverlayBackdrop.active { display: block; }
+  .card.modal-card.abierta {
+    display: block;
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    z-index: 2000;
+    max-width: 1100px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  @media (max-width: 720px) {
+    .card.modal-card.abierta { width: 96%; max-height: 92vh; }
+  }
+
   #pdfPreviewModal {
     position: fixed;
     top: 0;
@@ -2397,6 +2421,78 @@
       </div>
 
       <!-- Módulo INDICADORES -->
+      <!-- ===== ALTA DE REGISTROS: PROVEEDORES ===== -->
+      <div id="panelProveedores" class="card hidden">
+        <h2>🏢 Proveedores</h2>
+        <div class="table-wrapper productos-tabla">
+          <table id="tablaProveedoresCatalogo">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>RFC</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Dirección</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoProveedoresCatalogo"></tbody>
+            <tfoot>
+              <tr>
+                <td><input id="nvoProvNombre" placeholder="Nombre *"></td>
+                <td><input id="nvoProvRFC" placeholder="RFC"></td>
+                <td><input id="nvoProvContacto" placeholder="Contacto"></td>
+                <td><input id="nvoProvTelefono" placeholder="Teléfono"></td>
+                <td><input id="nvoProvEmail" placeholder="Email"></td>
+                <td><input id="nvoProvDireccion" placeholder="Dirección"></td>
+                <td><button class="success" onclick="window.agregarProveedorCatalogo()">➕ Agregar</button></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div id="msgProveedores"></div>
+      </div>
+
+      <!-- ===== ALTA DE REGISTROS: PRODUCTOS ===== -->
+      <div id="panelProductos" class="card hidden">
+        <h2>📦 Productos</h2>
+        <div class="table-wrapper productos-tabla">
+          <table id="tablaProductosCatalogo">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Unidad de Medida</th>
+                <th>Precio de Referencia</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoProductosCatalogo"></tbody>
+            <tfoot>
+              <tr>
+                <td><input id="nvoProdCodigo" placeholder="Código"></td>
+                <td><input id="nvoProdDescripcion" placeholder="Descripción *"></td>
+                <td>
+                  <select id="nvoProdUdm">
+                    <option value="PZA">PZA</option>
+                    <option value="SERVICIO">SERVICIO</option>
+                    <option value="KG">KG</option>
+                    <option value="LT">LT</option>
+                    <option value="MT">MT</option>
+                    <option value="CAJA">CAJA</option>
+                    <option value="LOTE">LOTE</option>
+                  </select>
+                </td>
+                <td><input id="nvoProdPrecio" type="number" step="0.01" placeholder="Precio"></td>
+                <td><button class="success" onclick="window.agregarProductoCatalogo()">➕ Agregar</button></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div id="msgProductos"></div>
+      </div>
+
       <div id="panelIndicadores" class="visible">
         <div class="indicadores-header">
           <h2>📊 Centro de Control Ejecutivo - INDICADORES</h2>
@@ -2494,8 +2590,11 @@
         <div id="msgProyecto"></div>
       </div>
 
-      <div class="card" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important;">
-        <h2 style="padding-left:18px; padding-right:18px;">📊 Control por Proyecto</h2>
+      <div class="card modal-card hidden" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-left:18px; padding-right:18px;">
+          <h2 style="margin:0;">📊 Control por Proyecto</h2>
+          <button class="danger" onclick="window.cerrarModalCard('tablaProyectosCard')">✕ Cerrar</button>
+        </div>
         <div id="adminActions" class="hidden" style="margin-bottom:10px; padding-left:18px; padding-right:18px;">
           <button class="danger" onclick="window.eliminarTodosProyectos()">🗑️ Eliminar todos los proyectos y OC</button>
         </div>
@@ -2505,6 +2604,11 @@
             <tbody id="tablaProyectos"></tbody>
           </table>
         </div>
+      </div>
+
+      <div id="ocModalToolbar" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+        <button onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de OC</button>
+        <button onclick="window.abrirModalCard('tablaProyectosCard')">📊 Control por Proyecto</button>
       </div>
 
       <div id="panelOC" class="card hidden">
@@ -2895,8 +2999,11 @@
       </div>
 
       <!-- ===== BANDEJA DE OC ===== -->
-      <div class="card" id="bandejaOCCard">
-        <h2>📬 Bandeja de Órdenes de Compra</h2>
+      <div class="card modal-card hidden" id="bandejaOCCard">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="margin:0;">📬 Bandeja de Órdenes de Compra</h2>
+          <button class="danger" onclick="window.cerrarModalCard('bandejaOCCard')">✕ Cerrar</button>
+        </div>
 
         <div id="deptoLogoContainer" class="depto-logo-container hidden">
           <img id="deptoLogoImg" src="" alt="Logo del departamento" style="display:none;">
@@ -2986,6 +3093,8 @@
     <button class="btn-volver" onclick="window.cerrarDashboard()">⬅ Volver</button>
     <div id="dashboardContent"></div>
   </div>
+
+  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard');"></div>
 
   <div id="pdfPreviewModal">
     <div class="modal-content">
@@ -4316,7 +4425,7 @@
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos') {
-              mostrarConstruccion();
+              window.mostrarModulo(modulo);
             }
           });
 
@@ -4469,6 +4578,172 @@
       // ============================================================
       // MOSTRAR MÓDULO - MODIFICADO PARA INDICADORES
       // ============================================================
+      // Abre una tarjeta (Bandeja de OC / Control por Proyecto) como ventana modal.
+      window.abrirModalCard = function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.classList.add('abierta');
+        document.getElementById('modalOverlayBackdrop').classList.add('active');
+      };
+
+      // Cierra una modal-card. Si ya no queda ninguna abierta, oculta el backdrop.
+      window.cerrarModalCard = function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('hidden');
+        el.classList.remove('abierta');
+        var algunaAbierta = document.querySelector('.modal-card.abierta');
+        if (!algunaAbierta) {
+          document.getElementById('modalOverlayBackdrop').classList.remove('active');
+        }
+      };
+
+      // Escapa texto antes de insertarlo en HTML, para evitar que un nombre
+      // de proveedor/producto con < > " ' inyecte HTML/JS en la página.
+      function escapeHTML(texto) {
+        if (texto === null || texto === undefined) return '';
+        return String(texto)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // ===== CATÁLOGO DE PROVEEDORES =====
+      window.cargarProveedoresCatalogo = async function() {
+        var cuerpo = document.getElementById('cuerpoProveedoresCatalogo');
+        if (!cuerpo) return;
+        try {
+          var { data, error } = await supabase.from('proveedores').select('*').order('nombre');
+          if (error) throw error;
+          cuerpo.innerHTML = '';
+          (data || []).forEach(function(p) {
+            var fila = document.createElement('tr');
+            fila.innerHTML =
+              '<td>' + escapeHTML(p.nombre) + '</td>' +
+              '<td>' + escapeHTML(p.rfc) + '</td>' +
+              '<td>' + escapeHTML(p.contacto) + '</td>' +
+              '<td>' + escapeHTML(p.telefono) + '</td>' +
+              '<td>' + escapeHTML(p.email) + '</td>' +
+              '<td>' + escapeHTML(p.direccion) + '</td>' +
+              '<td><button class="danger" onclick="window.eliminarProveedorCatalogo(' + p.id + ')">🗑️ Eliminar</button></td>';
+            cuerpo.appendChild(fila);
+          });
+        } catch (e) {
+          console.error('Error cargando proveedores:', e);
+          var msg = document.getElementById('msgProveedores');
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo cargar el catálogo de proveedores: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.agregarProveedorCatalogo = async function() {
+        var nombre = document.getElementById('nvoProvNombre').value.trim();
+        var msg = document.getElementById('msgProveedores');
+        if (!nombre) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del proveedor es obligatorio.</div>';
+          return;
+        }
+        var nuevo = {
+          nombre: nombre,
+          rfc: document.getElementById('nvoProvRFC').value.trim(),
+          contacto: document.getElementById('nvoProvContacto').value.trim(),
+          telefono: document.getElementById('nvoProvTelefono').value.trim(),
+          email: document.getElementById('nvoProvEmail').value.trim(),
+          direccion: document.getElementById('nvoProvDireccion').value.trim()
+        };
+        try {
+          var { error } = await supabase.from('proveedores').insert([nuevo]);
+          if (error) throw error;
+          ['nvoProvNombre','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion'].forEach(function(id) {
+            document.getElementById(id).value = '';
+          });
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor agregado.</div>';
+          window.cargarProveedoresCatalogo();
+        } catch (e) {
+          console.error('Error agregando proveedor:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo agregar: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.eliminarProveedorCatalogo = async function(id) {
+        if (!confirm('¿Eliminar este proveedor del catálogo?')) return;
+        try {
+          var { error } = await supabase.from('proveedores').delete().eq('id', id);
+          if (error) throw error;
+          window.cargarProveedoresCatalogo();
+        } catch (e) {
+          console.error('Error eliminando proveedor:', e);
+          alert('❌ No se pudo eliminar: ' + e.message);
+        }
+      };
+
+      // ===== CATÁLOGO DE PRODUCTOS =====
+      window.cargarProductosCatalogo = async function() {
+        var cuerpo = document.getElementById('cuerpoProductosCatalogo');
+        if (!cuerpo) return;
+        try {
+          var { data, error } = await supabase.from('productos').select('*').order('descripcion');
+          if (error) throw error;
+          cuerpo.innerHTML = '';
+          (data || []).forEach(function(p) {
+            var fila = document.createElement('tr');
+            fila.innerHTML =
+              '<td>' + escapeHTML(p.codigo) + '</td>' +
+              '<td>' + escapeHTML(p.descripcion) + '</td>' +
+              '<td>' + escapeHTML(p.udm) + '</td>' +
+              '<td>' + formatoMoneda(p.precio_referencia || 0, 'MXN') + '</td>' +
+              '<td><button class="danger" onclick="window.eliminarProductoCatalogo(' + p.id + ')">🗑️ Eliminar</button></td>';
+            cuerpo.appendChild(fila);
+          });
+        } catch (e) {
+          console.error('Error cargando productos:', e);
+          var msg = document.getElementById('msgProductos');
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo cargar el catálogo de productos: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.agregarProductoCatalogo = async function() {
+        var descripcion = document.getElementById('nvoProdDescripcion').value.trim();
+        var msg = document.getElementById('msgProductos');
+        if (!descripcion) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ La descripción del producto es obligatoria.</div>';
+          return;
+        }
+        var precio = parseFloat(document.getElementById('nvoProdPrecio').value);
+        var nuevo = {
+          codigo: document.getElementById('nvoProdCodigo').value.trim(),
+          descripcion: descripcion,
+          udm: document.getElementById('nvoProdUdm').value,
+          precio_referencia: isNaN(precio) ? 0 : precio
+        };
+        try {
+          var { error } = await supabase.from('productos').insert([nuevo]);
+          if (error) throw error;
+          document.getElementById('nvoProdCodigo').value = '';
+          document.getElementById('nvoProdDescripcion').value = '';
+          document.getElementById('nvoProdPrecio').value = '';
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Producto agregado.</div>';
+          window.cargarProductosCatalogo();
+        } catch (e) {
+          console.error('Error agregando producto:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo agregar: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.eliminarProductoCatalogo = async function(id) {
+        if (!confirm('¿Eliminar este producto del catálogo?')) return;
+        try {
+          var { error } = await supabase.from('productos').delete().eq('id', id);
+          if (error) throw error;
+          window.cargarProductosCatalogo();
+        } catch (e) {
+          console.error('Error eliminando producto:', e);
+          alert('❌ No se pudo eliminar: ' + e.message);
+        }
+      };
+
       window.mostrarModulo = function(modulo) {
         moduloActual = modulo;
         document.getElementById('menuMaestroPrincipal').classList.remove('visible');
@@ -4490,16 +4765,25 @@
         var panelOF = document.getElementById('panelOF');
         var bandejaOCCard = document.getElementById('bandejaOCCard');
         var panelIndicadores = document.getElementById('panelIndicadores');
+        var ocModalToolbar = document.getElementById('ocModalToolbar');
+        var panelProveedores = document.getElementById('panelProveedores');
+        var panelProductos = document.getElementById('panelProductos');
 
+        panelProveedores.classList.add('hidden');
+        panelProductos.classList.add('hidden');
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
         tablaProyectosCard.classList.add('hidden');
+        tablaProyectosCard.classList.remove('abierta');
         panelCXP.classList.add('hidden');
         panelCXC.classList.add('hidden');
         panelOF.classList.add('hidden');
         bandejaOCCard.classList.add('hidden');
+        bandejaOCCard.classList.remove('abierta');
         panelIndicadores.classList.remove('visible');
         panelIndicadores.classList.add('hidden');
+        ocModalToolbar.classList.add('hidden');
+        document.getElementById('modalOverlayBackdrop').classList.remove('active');
 
         // Detener actualización de indicadores si estaba corriendo
         if (indicadoresTimer) {
@@ -4544,14 +4828,20 @@
         var puedeVerOFReal = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
         if (modulo === 'oc') {
+          ocModalToolbar.classList.remove('hidden');
           if (puedeCrearOC) panelOC.classList.remove('hidden');
-          bandejaOCCard.classList.remove('hidden');
-          tablaProyectosCard.classList.remove('hidden');
+          // Bandeja de OC y Control por Proyecto ya no se muestran en línea
+          // dentro del módulo OC: se abren como ventanas modales con los
+          // botones "📬 Bandeja de OC" / "📊 Control por Proyecto".
+          bandejaOCCard.classList.add('hidden');
+          bandejaOCCard.classList.remove('abierta');
+          tablaProyectosCard.classList.add('hidden');
+          tablaProyectosCard.classList.remove('abierta');
         } else if (modulo === 'proyectos') {
           if (puedeCrearProyecto) {
             panelProyecto.classList.remove('hidden');
           }
-          tablaProyectosCard.classList.remove('hidden');
+          window.abrirModalCard('tablaProyectosCard');
         } else if (modulo === 'cxp') {
           if (puedeVerCXP) {
             panelCXP.classList.remove('hidden');
@@ -4572,6 +4862,24 @@
             window.renderOF();
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'proveedores') {
+          if (actual && actual.rol === 'Administrador') {
+            panelProveedores.classList.remove('hidden');
+            window.cargarProveedoresCatalogo();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Proveedores.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'productos') {
+          if (actual && actual.rol === 'Administrador') {
+            panelProductos.classList.remove('hidden');
+            window.cargarProductosCatalogo();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Productos.');
             window.mostrarMenuInterno();
             return;
           }
