@@ -5189,6 +5189,40 @@
       // ============================================================
       function procesarIndicadores() {
         try {
+          // Alcance de los indicadores según el usuario logueado: Director
+          // General, Administrador, Finanzas y Contabilidad ven todo el
+          // grupo (igual que en el resto de la app); el resto de roles
+          // solo ve los datos de su propia empresa/departamento.
+          // NOTA: "cuentas_cxc" (ventas/CXC) no tiene columna de empresa,
+          // departamento ni proyecto en la base de datos, así que no se
+          // puede acotar por departamento con el esquema actual; esos
+          // indicadores (Ventas del mes, Cuentas por cobrar) siguen
+          // mostrando el total del grupo.
+          var ordenes = filtrarOCSegunUsuario(actual);
+          var proyectos = filtrarProyectosSegunUsuario(actual);
+
+          // Versión de gastoProyectoMoneda acotada al alcance del usuario
+          // (usa las variables ordenes/proyectos locales de arriba, no las
+          // globales de toda la empresa).
+          function gastoProyectoMoneda(nombreProyecto) {
+            var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
+            if (!proyecto) return 0;
+            var monedaProyecto = proyecto.moneda || 'MXN';
+            return ordenes
+              .filter(function(o) { return o.proyecto === nombreProyecto && o.estadopago === 'PAGADA'; })
+              .reduce(function(sum, o) {
+                var montoEnMonedaProyecto = o.montomxn || 0;
+                if (monedaProyecto === 'USD') {
+                  if (o.tipocambio && o.tipocambio > 0) {
+                    montoEnMonedaProyecto = o.montomxn / o.tipocambio;
+                  } else {
+                    montoEnMonedaProyecto = o.montomxn / 20;
+                  }
+                }
+                return sum + montoEnMonedaProyecto;
+              }, 0);
+          }
+
           var hoy = new Date();
           var mesActual = hoy.getMonth();
           var anioActual = hoy.getFullYear();
