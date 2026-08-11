@@ -10488,9 +10488,9 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+        var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
         doc.text('Folio: ' + codigoFinalHeader, xDerecha, y + 24, { align: 'right' });
-        doc.text('Fecha de Entrega: ' + new Date(datos.fechaentrega).toLocaleDateString(), xDerecha, y + 38, { align: 'right' });
-        doc.text('Fecha de Pago: ' + (datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A'), xDerecha, y + 52, { align: 'right' });
+        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 38, { align: 'right' });
 
         y += headerH + 20;
 
@@ -10516,16 +10516,10 @@
         var camposProveedor = [
           { label: 'Razón Social:', value: datos.proveedor },
           { label: 'RFC:', value: datos.rfc },
-          { label: 'Dirección:', value: datos.direccion },
-          { label: 'Código Postal:', value: datos.cp || '' },
-          { label: 'Datos Bancarios:', value: datos.banco || 'No especificado' },
-          { label: 'CLABE:', value: datos.clabe || 'N/A' }
+          { label: 'Código Postal:', value: datos.cp || '' }
         ];
         var camposEntrega = [
-          { label: 'Dirección de Entrega:', value: datos.direccionentrega },
-          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-          { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') },
-          { label: 'Solicitante:', value: datos.solicitante || 'No especificado' }
+          { label: 'Dirección de Entrega:', value: datos.direccionentrega }
         ];
 
         function alturaCampos(campos, maxWidth) {
@@ -10643,11 +10637,20 @@
           : 'Sin condiciones comerciales especificadas.';
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
-        var textoNotas = datos.motivo ? String(datos.motivo) : '—';
-        var lineasNotas = doc.splitTextToSize(textoNotas, bottomW - 28);
+        var camposCondicionesExtra = [
+          { label: 'Dirección:', value: datos.direccion },
+          { label: 'Datos Bancarios:', value: datos.banco || 'No especificado' },
+          { label: 'CLABE:', value: datos.clabe || 'N/A' },
+          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
+          { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') },
+          { label: 'Solicitante:', value: datos.solicitante || 'No especificado' },
+          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' },
+          { label: 'Fecha de Entrega:', value: datos.fechaentrega ? new Date(datos.fechaentrega).toLocaleDateString() : 'N/A' }
+        ];
+        var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
 
         var bottomBodyPadding = 16;
-        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 11 + 16 + lineasNotas.length * 11 + bottomBodyPadding;
+        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 11 + 16 + altoCamposCondiciones + bottomBodyPadding;
         var altoFinanciero = bottomHeaderH + 3 * 20 + bottomBodyPadding;
         var bottomH = Math.max(altoTerminos, altoFinanciero, 96);
 
@@ -10670,15 +10673,11 @@
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         doc.text(lineasCondiciones, bottomX1 + 14, y + bottomHeaderH + 16);
 
-        var yNotas = y + bottomHeaderH + 16 + lineasCondiciones.length * 11 + 12;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('NOTAS', bottomX1 + 14, yNotas);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(lineasNotas, bottomX1 + 14, yNotas + 13);
+        var yCampoCondiciones = y + bottomHeaderH + 16 + lineasCondiciones.length * 11 + 12;
+        camposCondicionesExtra.forEach(function(c) {
+          var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28);
+          yCampoCondiciones += altoCampo + 6;
+        });
 
         // Tarjeta derecha: resumen financiero
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
@@ -10799,16 +10798,17 @@
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
-        doc.setFontSize(9);
+
+        var textoNotasPie = datos.motivo ? String(datos.motivo) : 'Sin notas.';
+        var lineasNotasPie = doc.splitTextToSize(textoNotasPie, pageWidth - 2 * margin - 100);
+        doc.setFontSize(8);
         doc.setTextColor(11, 26, 51);
         doc.setFont('helvetica', 'bold');
-        doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
-
-        var codigoFinal = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
+        doc.text('NOTAS:', pageWidth / 2, pieY + 10, { align: 'center' });
         doc.setFontSize(7);
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
-        doc.text(codigoFinal, pageWidth / 2, pieY + 20, { align: 'center' });
+        doc.text(lineasNotasPie, pageWidth / 2, pieY + 20, { align: 'center' });
 
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
