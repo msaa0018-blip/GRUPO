@@ -3835,6 +3835,44 @@
       // central (los 6/8 restantes).
       async function dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formato) {
         var config = FORMATOS_MEMBRETE_OC[formato] || FORMATOS_MEMBRETE_OC['1'];
+
+        // Formato 7: caso especial. El membrete no ocupa el ancho
+        // completo de la hoja como los demás formatos, sino que se
+        // ajusta a los márgenes de impresión: 1.5cm desde cada lado
+        // (horizontal) y 1cm desde el borde superior (vertical). No
+        // lleva franja inferior (solo se definió una imagen para este
+        // formato) ni logo de empresa/departamento (eso se controla
+        // aparte, en generarPDFParaPreview).
+        if (formato === '7') {
+          var CM_A_PT = 28.3464567;
+          var margenLateral7 = 1.5 * CM_A_PT;
+          var margenSuperior7 = 1 * CM_A_PT;
+          var anchoMembrete7 = pageWidth - 2 * margenLateral7;
+          var yFinMembrete7 = margenSuperior7;
+
+          try {
+            var dataSup7 = await obtenerImagenComoDataURL(config.superior.url);
+            if (dataSup7) {
+              var tipoSup7 = dataSup7.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
+              var propsImg7 = await new Promise(function(resolve) {
+                var imgEl = new Image();
+                imgEl.onload = function() { resolve({ w: imgEl.width, h: imgEl.height }); };
+                imgEl.onerror = function() { resolve(null); };
+                imgEl.src = dataSup7;
+              });
+              var altoMembrete7 = propsImg7 ? (anchoMembrete7 * (propsImg7.h / propsImg7.w)) : (pageHeight / 8);
+              doc.addImage(dataSup7, tipoSup7, margenLateral7, margenSuperior7, anchoMembrete7, altoMembrete7);
+              yFinMembrete7 = margenSuperior7 + altoMembrete7;
+            } else {
+              console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen del membrete (formato 7)');
+            }
+          } catch (e) {
+            console.warn('No se pudo cargar la imagen del membrete (formato 7):', e.stack || e);
+          }
+
+          return { yInicio: yFinMembrete7 + 12, yFin: pageHeight };
+        }
+
         var alturaFranja = pageHeight / 8;
 
         try {
@@ -10420,6 +10458,9 @@
           logoTipo = 'PNG';
         }
 
+        // El formato 7 no lleva logo de empresa/departamento superpuesto:
+        // solo la imagen de membrete definida para ese formato.
+        if (formatoElegido !== '7') {
         try {
           var response = await fetch(logoUrl);
           if (response.ok) {
@@ -10461,6 +10502,7 @@
           doc.setTextColor(255, 255, 255);
           doc.setFont('helvetica', 'bold');
           doc.text(nombreEmpresa, pageWidth - margin, franjas.yInicio / 2 + 5, { align: 'right' });
+        }
         }
 
         // ============================================================
