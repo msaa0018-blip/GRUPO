@@ -2790,6 +2790,7 @@
               <option value="4">Formato 4</option>
               <option value="5">Formato 5 (Azul)</option>
               <option value="6">Formato 6 (Rojo)</option>
+              <option value="7">Formato 7</option>
             </select>
           </div>
         </div>
@@ -3820,6 +3821,10 @@
         '6': {
           superior: { url: DATAURI_SUPERIOR_ORIGINAL_ROJO, tipo: 'PNG' },
           inferior: { url: DATAURI_INFERIOR_ORIGINAL_ROJO, tipo: 'PNG' }
+        },
+        '7': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE.png', tipo: 'PNG' },
+          inferior: null
         }
       };
 
@@ -3846,13 +3851,15 @@
         }
 
         try {
-          var dataInf = await obtenerImagenComoDataURL(config.inferior.url);
-          if (dataInf) {
-            var tipoInf = dataInf.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
-            console.log('🖼️ Membrete inferior: tipo=' + tipoInf + ', tamaño=' + dataInf.length + ' caracteres');
-            doc.addImage(dataInf, tipoInf, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
-          } else {
-            console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen inferior (formato ' + formato + ')');
+          if (config.inferior) {
+            var dataInf = await obtenerImagenComoDataURL(config.inferior.url);
+            if (dataInf) {
+              var tipoInf = dataInf.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
+              console.log('🖼️ Membrete inferior: tipo=' + tipoInf + ', tamaño=' + dataInf.length + ' caracteres');
+              doc.addImage(dataInf, tipoInf, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+            } else {
+              console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen inferior (formato ' + formato + ')');
+            }
           }
         } catch (e) {
           console.warn('No se pudo cargar la imagen inferior del membrete:', e.stack || e);
@@ -10489,7 +10496,7 @@
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
-        doc.text('Folio: ' + codigoFinalHeader, xDerecha, y + 24, { align: 'right' });
+        doc.text(codigoFinalHeader, xDerecha, y + 24, { align: 'right' });
         doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 38, { align: 'right' });
 
         y += headerH + 20;
@@ -10519,7 +10526,7 @@
           { label: 'Código Postal:', value: datos.cp || '' }
         ];
         var camposEntrega = [
-          { label: 'Dirección de Entrega:', value: datos.direccionentrega },
+          { label: 'Dirección de Entrega: ', value: datos.direccionentrega },
           { label: 'Solicitante:', value: datos.solicitante || 'No especificado' }
         ];
 
@@ -10639,7 +10646,7 @@
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
         var camposCondicionesExtra = [
-          { label: 'Datos Bancarios:', value: datos.banco || 'No especificado' },
+          { label: 'Banco:', value: datos.banco || 'No especificado' },
           { label: 'CLABE:', value: datos.clabe || 'N/A' },
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
           { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') },
