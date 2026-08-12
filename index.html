@@ -6751,7 +6751,7 @@
           // es exclusivo del usuario IQA.
           var btnAgregarCXCToggle = document.getElementById('btnAgregarCXCToggle');
           if (btnAgregarCXCToggle) {
-            btnAgregarCXCToggle.classList.toggle('hidden', !(actual && actual.usuario === 'IQA'));
+            btnAgregarCXCToggle.classList.add('hidden');
           }
         } catch (e) {
           console.error('⚠️ Error calculando totales del menú principal (no crítico):', e);
@@ -8134,11 +8134,12 @@
       };
 
       window.agregarCXC = async function() {
-        // La alta de cuentas por cobrar (ingresos) es exclusiva del
-        // usuario IQA, aunque alguien intente invocar la función directo.
-        if (!actual || actual.usuario !== 'IQA') {
-          return alert('⚠️ No tienes permiso para dar de alta cuentas por cobrar.');
-        }
+        // El botón "➕ Agregar" de CXC está deshabilitado para todos los
+        // usuarios (se le quitó el acceso exclusivo que tenía IQA).
+        return alert('⚠️ No tienes permiso para dar de alta cuentas por cobrar.');
+      };
+
+      window.agregarCXC_original = async function() {
         var msgDiv = document.getElementById('msgCXC');
         msgDiv.innerHTML = '';
 
@@ -9513,7 +9514,7 @@
           // es exclusivo del usuario IQA.
           var btnAgregarCXCToggleLogin = document.getElementById('btnAgregarCXCToggle');
           if (btnAgregarCXCToggleLogin) {
-            btnAgregarCXCToggleLogin.classList.toggle('hidden', !(actual && actual.usuario === 'IQA'));
+            btnAgregarCXCToggleLogin.classList.add('hidden');
           }
 
           // Mostrar/ocultar módulo INDICADORES en el menú principal
