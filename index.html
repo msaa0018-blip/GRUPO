@@ -2460,6 +2460,12 @@
           <span class="modulo-leyenda">INDICADORES</span>
           <div class="modulo-total" style="background:var(--primary);border-color:var(--orange-gold);color:var(--orange-gold);">Dashboard Ejecutivo</div>
         </div>
+        <!-- Módulo INVENTARIO - visible solo para el rol Administrador -->
+        <div class="modulo-item" id="menuInventarioBtn" data-modulo="inventario" style="display:none;">
+          <div class="modulo-cuadro funcional">📦</div>
+          <span class="modulo-leyenda">INVENTARIO</span>
+          <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Próximamente</div>
+        </div>
       </div>
     </div>
 
@@ -4768,6 +4774,13 @@
               } else {
                 alert('Acceso denegado. No cuenta con permisos para visualizar el módulo INDICADORES.');
               }
+            } else if (modulo === 'inventario') {
+              // INVENTARIO es exclusivo del rol Administrador.
+              if (actual && actual.rol === 'Administrador') {
+                mostrarConstruccion();
+              } else {
+                alert('⚠️ No tienes permisos para acceder a este módulo.');
+              }
             }
           });
         }
@@ -6115,6 +6128,15 @@
               accesoUnicoBtn.style.display = 'flex';
             } else {
               accesoUnicoBtn.style.display = 'none';
+            }
+          }
+
+          var inventarioBtn = document.getElementById('menuInventarioBtn');
+          if (inventarioBtn) {
+            if (actual && actual.rol === 'Administrador') {
+              inventarioBtn.style.display = 'flex';
+            } else {
+              inventarioBtn.style.display = 'none';
             }
           }
         } catch (e) {
@@ -8556,6 +8578,15 @@
               accesoUnicoBtn.style.display = 'flex';
             } else {
               accesoUnicoBtn.style.display = 'none';
+            }
+          }
+
+          var inventarioBtnLogin = document.getElementById('menuInventarioBtn');
+          if (inventarioBtnLogin) {
+            if (actual && actual.rol === 'Administrador') {
+              inventarioBtnLogin.style.display = 'flex';
+            } else {
+              inventarioBtnLogin.style.display = 'none';
             }
           }
 
