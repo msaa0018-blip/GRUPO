@@ -10498,7 +10498,7 @@
             var logoY = (franjas.yInicio - imgHeight) / 2;
             var padLogo = 8;
             doc.setFillColor(255, 255, 255);
-            doc.roundedRect(logoX - padLogo, logoY - padLogo, imgWidth + padLogo * 2, imgHeight + padLogo * 2, 5, 5, 'F');
+            doc.roundedRect(logoX - padLogo, logoY - padLogo, imgWidth + padLogo * 2, imgHeight + padLogo * 2, 3, 3, 'F');
             doc.addImage(imgData, logoTipo, logoX, logoY, imgWidth, imgHeight);
           } else {
             doc.setFontSize(14);
@@ -10529,13 +10529,13 @@
         var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
 
         // ---------- 1. ENCABEZADO DE LA ORDEN ----------
-        var headerH = 54;
+        var headerH = 42;
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
-        doc.roundedRect(margin, y, pageWidth - 2 * margin, headerH, 6, 6, 'FD');
+        doc.roundedRect(margin, y, pageWidth - 2 * margin, headerH, 3, 3, 'FD');
         doc.setFillColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.roundedRect(margin, y, 7, headerH, 3, 3, 'F');
+        doc.roundedRect(margin, y, 7, headerH, 2, 2, 'F');
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(17);
@@ -10547,8 +10547,8 @@
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
-        doc.text(codigoFinalHeader, xDerecha, y + 20, { align: 'right' });
-        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 33, { align: 'right' });
+        doc.text(codigoFinalHeader, xDerecha, y + 16, { align: 'right' });
+        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 29, { align: 'right' });
 
         y += headerH + 5;
 
@@ -10603,10 +10603,10 @@
           doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
           doc.setLineWidth(0.75);
           doc.setFillColor(255, 255, 255);
-          doc.roundedRect(x, y, cardW, cardH, 6, 6, 'FD');
+          doc.roundedRect(x, y, cardW, cardH, 3, 3, 'FD');
 
           doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-          doc.roundedRect(x, y, cardW, cardHeaderH, 6, 6, 'F');
+          doc.roundedRect(x, y, cardW, cardHeaderH, 3, 3, 'F');
           doc.rect(x, y + cardHeaderH / 2, cardW, cardHeaderH / 2, 'F');
           doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
           doc.line(x, y + cardHeaderH, x + cardW, y + cardHeaderH);
@@ -10714,9 +10714,9 @@
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(bottomX1, y, bottomW, bottomH, 6, 6, 'FD');
+        doc.roundedRect(bottomX1, y, bottomW, bottomH, 3, 3, 'FD');
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-        doc.roundedRect(bottomX1, y, bottomW, bottomHeaderH, 6, 6, 'F');
+        doc.roundedRect(bottomX1, y, bottomW, bottomHeaderH, 3, 3, 'F');
         doc.rect(bottomX1, y + bottomHeaderH / 2, bottomW, bottomHeaderH / 2, 'F');
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.line(bottomX1, y + bottomHeaderH, bottomX1 + bottomW, y + bottomHeaderH);
@@ -10739,9 +10739,9 @@
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(bottomX2, y, bottomW, bottomH, 6, 6, 'FD');
+        doc.roundedRect(bottomX2, y, bottomW, bottomH, 3, 3, 'FD');
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-        doc.roundedRect(bottomX2, y, bottomW, bottomHeaderH, 6, 6, 'F');
+        doc.roundedRect(bottomX2, y, bottomW, bottomHeaderH, 3, 3, 'F');
         doc.rect(bottomX2, y + bottomHeaderH / 2, bottomW, bottomHeaderH / 2, 'F');
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.line(bottomX2, y + bottomHeaderH, bottomX2 + bottomW, y + bottomHeaderH);
@@ -10765,7 +10765,7 @@
         var totalBoxH = bottomH - (totalBoxY - y) - 8;
         if (totalBoxH > 20) {
           doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-          doc.roundedRect(bottomX2 + 8, totalBoxY, bottomW - 16, totalBoxH, 4, 4, 'F');
+          doc.roundedRect(bottomX2 + 8, totalBoxY, bottomW - 16, totalBoxH, 2, 2, 'F');
         }
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
@@ -10779,7 +10779,7 @@
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 12;
+        y += 9;
 
         var solicitante = datos.solicitante || 'No definido';
         var jefe = getJefeDepto(datos.empresa, datos.departamento);
