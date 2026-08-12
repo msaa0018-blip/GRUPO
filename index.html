@@ -1196,6 +1196,86 @@
     flex-wrap: wrap
   }
 
+  /* ===== BOTÓN HAMBURGUESA (opciones de producto) ===== */
+  .btn-hamburguesa {
+    width: 34px;
+    height: 30px;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+  }
+  .btn-hamburguesa:hover { background: var(--gray-200); }
+  .btn-hamburguesa span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--gray-700);
+    border-radius: 1px;
+  }
+
+  /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
+  #productoAccionesModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, .6);
+    z-index: 2100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  #productoAccionesModal.active { display: flex }
+  #productoAccionesModal .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+  }
+  #productoAccionesModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    gap: 8px;
+  }
+  #productoAccionesModal .modal-header h3 { margin: 0; font-size: 1.05rem }
+  #productoAccionesModal .modal-header .pdfPreview-btn-group {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #productoAccionesModal .modal-body label { font-weight: 500; display: block; margin-bottom: 6px; }
+  #productoAccionesModal .modal-body input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 14px;
+  }
+  .btn-accion-producto {
+    flex: 1;
+    padding: 8px 6px;
+    border-radius: 6px;
+    border: 2px solid var(--gray-300);
+    background: white;
+    cursor: pointer;
+    font-weight: 500;
+    min-width: 90px;
+  }
+  .btn-accion-producto.seleccionado { border-color: var(--primary); background: var(--gray-100); }
+  .btn-accion-producto.danger.seleccionado { border-color: var(--danger, #dc2626); background: #fde8e8; }
+
   #visualizarModal {
     position: fixed;
     top: 0;
@@ -2628,6 +2708,31 @@
           </table>
         </div>
         <div id="msgProductos"></div>
+      </div>
+
+      <!-- ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== -->
+      <div id="productoAccionesModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>📦 <span id="productoAccionesNombre">Producto</span></h3>
+            <div class="pdfPreview-btn-group">
+              <button class="danger" onclick="window.cerrarModalAccionesProducto()">✕</button>
+              <button class="success" onclick="window.confirmarAccionProducto()">✔️</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div style="margin-bottom:10px;color:var(--gray-600);font-size:13px;">
+              Stock actual: <strong id="productoAccionesStockActual">0</strong>
+            </div>
+            <label for="productoAccionesCantidad">Cantidad:</label>
+            <input id="productoAccionesCantidad" type="number" min="0" step="1" placeholder="Cantidad">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn-accion-producto" data-accion="agregar" onclick="window.seleccionarAccionProducto('agregar')">➕ Agregar</button>
+              <button type="button" class="btn-accion-producto" data-accion="quitar" onclick="window.seleccionarAccionProducto('quitar')">➖ Quitar</button>
+              <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionProducto('eliminar')">🗑️ Eliminar</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="panelIndicadores" class="visible">
@@ -4957,12 +5062,12 @@
               '<td>' + escapeHTML(p.udm) + '</td>' +
               '<td>' + formatoMoneda(p.precio_referencia || 0, p.moneda || 'MXN') + '</td>' +
               '<td>' + (p.moneda === 'USD' ? 'Dólares (USD)' : 'Pesos (MXN)') + '</td>' +
-              '<td><div style="display:flex;align-items:center;gap:6px;justify-content:center;">' +
-                '<button class="danger" style="padding:2px 8px;" title="Restar 1" onclick="window.ajustarCantidadProducto(' + p.id + ', -1)">➖</button>' +
-                '<span style="min-width:28px;text-align:center;font-weight:600;">' + (p.cantidad || 0) + '</span>' +
-                '<button class="success" style="padding:2px 8px;" title="Agregar 1" onclick="window.ajustarCantidadProducto(' + p.id + ', 1)">➕</button>' +
-              '</div></td>' +
-              '<td><button class="danger" onclick="window.eliminarProductoCatalogo(' + p.id + ')">🗑️ Eliminar</button></td>';
+              '<td style="text-align:center;font-weight:600;">' + (p.cantidad || 0) + '</td>' +
+              '<td style="text-align:center;">' +
+                '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesProducto(' + p.id + ')">' +
+                  '<span></span><span></span><span></span>' +
+                '</button>' +
+              '</td>';
             cuerpo.appendChild(fila);
           });
         } catch (e) {
@@ -5077,6 +5182,59 @@
           console.error('Error eliminando producto:', e);
           alert('❌ No se pudo eliminar: ' + e.message);
         }
+      };
+
+      // ===== MODAL DE OPCIONES DE PRODUCTO (hamburguesa: Agregar/Quitar/Eliminar) =====
+      var accionProductoActual = null; // { id, accion }
+
+      window.abrirModalAccionesProducto = function(id) {
+        var producto = (productosCatalogoCache || []).find(function(p) { return p.id === id; });
+        if (!producto) return;
+        accionProductoActual = { id: id, accion: null };
+        document.getElementById('productoAccionesNombre').textContent = producto.descripcion || 'Producto';
+        document.getElementById('productoAccionesStockActual').textContent = producto.cantidad || 0;
+        document.getElementById('productoAccionesCantidad').value = '';
+        document.querySelectorAll('.btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
+        document.getElementById('productoAccionesModal').classList.add('active');
+      };
+
+      window.seleccionarAccionProducto = function(accion) {
+        if (!accionProductoActual) return;
+        accionProductoActual.accion = accion;
+        document.querySelectorAll('.btn-accion-producto').forEach(function(b) {
+          b.classList.toggle('seleccionado', b.dataset.accion === accion);
+        });
+      };
+
+      window.cerrarModalAccionesProducto = function() {
+        accionProductoActual = null;
+        document.getElementById('productoAccionesModal').classList.remove('active');
+      };
+
+      window.confirmarAccionProducto = async function() {
+        if (!accionProductoActual || !accionProductoActual.accion) {
+          alert('⚠️ Selecciona una opción: Agregar, Quitar o Eliminar.');
+          return;
+        }
+        var id = accionProductoActual.id;
+        var accion = accionProductoActual.accion;
+
+        if (accion === 'eliminar') {
+          window.cerrarModalAccionesProducto();
+          await window.eliminarProductoCatalogo(id);
+          return;
+        }
+
+        var cantidadInput = parseFloat(document.getElementById('productoAccionesCantidad').value);
+        var cantidad = isNaN(cantidadInput) ? 0 : cantidadInput;
+        if (cantidad <= 0) {
+          alert('⚠️ Ingresa una cantidad mayor a 0.');
+          return;
+        }
+
+        var delta = accion === 'agregar' ? cantidad : -cantidad;
+        window.cerrarModalAccionesProducto();
+        await window.ajustarCantidadProducto(id, delta);
       };
 
       window.mostrarModulo = function(modulo) {
