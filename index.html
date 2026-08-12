@@ -1261,7 +1261,7 @@
   }
 
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
-  #productoAccionesModal, #proveedorAccionesModal {
+  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1275,8 +1275,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #productoAccionesModal.active, #proveedorAccionesModal.active { display: flex }
-  #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content {
+  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active { display: flex }
+  #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1284,15 +1284,15 @@
     max-width: 420px;
     box-sizing: border-box;
   }
-  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header {
+  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
     gap: 8px;
   }
-  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3 { margin: 0; font-size: 1.05rem }
-  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group {
+  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3 { margin: 0; font-size: 1.05rem }
+  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
@@ -1303,6 +1303,8 @@
     box-sizing: border-box;
     margin-bottom: 14px;
   }
+  #ocAccionesModal .modal-body { display: flex; flex-direction: column; gap: 8px; }
+  #ocAccionesModal .modal-body button { width: 100%; justify-content: center; }
   .btn-accion-producto {
     flex: 1;
     padding: 8px 6px;
@@ -2267,6 +2269,39 @@
   .indicadores-kpi-col .kpi-grid {
     margin-bottom: 0;
     flex: 1;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 10px;
+  }
+  .indicadores-kpi-col .kpi-card {
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .indicadores-kpi-col .kpi-card .kpi-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  .indicadores-kpi-col .kpi-card .kpi-value {
+    font-size: 15px;
+    line-height: 1.15;
+  }
+  .indicadores-kpi-col .kpi-card .kpi-label {
+    font-size: 10px;
+    margin-top: 1px;
+  }
+  .indicadores-kpi-col .kpi-card .kpi-sub {
+    font-size: 9px;
+    margin-top: 2px;
+  }
+  /* En la cuadrícula 4×4 de la izquierda todas las tarjetas ocupan una
+     sola celda (uniformes), incluidas Compras/Ventas del mes. */
+  .indicadores-kpi-col .kpi-card.kpi-compras-mes,
+  .indicadores-kpi-col .kpi-card.kpi-ventas-mes {
+    grid-column: span 1;
   }
   .indicadores-radar-col {
     display: flex;
@@ -2281,7 +2316,7 @@
     display: flex;
     flex-direction: column;
     flex: 1;
-    min-height: 380px;
+    min-height: 300px;
   }
   .radar-ejecutivo-card h4 {
     font-size: 14px;
@@ -2768,6 +2803,21 @@
         </div>
       </div>
 
+      <!-- ===== MODAL: OPCIONES DE UNA OC (hamburguesa, solo Administrador) ===== -->
+      <div id="ocAccionesModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>⚙️ Opciones — <span id="ocAccionesCodigo"></span></h3>
+            <button class="danger btn-modal-x" onclick="window.cerrarModalAccionesOC()">✕</button>
+          </div>
+          <div class="modal-body">
+            <button id="ocAccionPausarBtn" class="warning" onclick="window.ejecutarAccionOC('pausar')">⏸️ Pausar</button>
+            <button class="btn-editar" onclick="window.ejecutarAccionOC('editar')">✏️ Editar Productos</button>
+            <button class="danger" onclick="window.ejecutarAccionOC('eliminar')">🗑️ Eliminar</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== ALTA DE REGISTROS: PRODUCTOS ===== -->
       <div id="panelProductos" class="card hidden">
         <h2>📦 Productos</h2>
@@ -3186,7 +3236,7 @@
       <div id="panelCXC" class="card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h2 style="margin:0;">💳 Cuentas por Cobrar (CXC)</h2>
-          <button class="success" onclick="window.abrirAgregarCXC()">➕ Agregar</button>
+          <button class="success hidden" id="btnAgregarCXCToggle" onclick="window.abrirAgregarCXC()">➕ Agregar</button>
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Gestión de cuentas por cobrar por cliente, empresa y departamento.</p>
         <div class="cxp-filtros">
@@ -3242,6 +3292,7 @@
           </select>
           <button class="btn-of" onclick="window.renderOF()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXF()">🖨️ Reporte CXF</button>
+          <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOFCard')">📋 Bandeja de OF</button>
         </div>
         <div id="ofResumenCXF" style="margin:10px 0;"></div>
 
@@ -3363,12 +3414,17 @@
           <div id="msgOF"></div>
         </div>
 
-        <h3>📋 Bandeja de OF</h3>
-        <div class="table-wrapper">
-          <table id="ofTabla">
-            <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>Responsable</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody id="ofCuerpo"></tbody>
-          </table>
+        <div class="card modal-card hidden" id="bandejaOFCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h3 style="margin:0;">📋 Bandeja de OF</h3>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('bandejaOFCard')">✕</button>
+          </div>
+          <div class="table-wrapper">
+            <table id="ofTabla">
+              <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Depto</th><th>Razón Social</th><th>Responsable</th><th>Monto</th><th>Moneda</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="ofCuerpo"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -3500,7 +3556,7 @@
     <div id="dashboardContent"></div>
   </div>
 
-  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard');"></div>
+  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard');"></div>
 
   <div id="pdfPreviewModal">
     <div class="modal-content">
@@ -5644,6 +5700,13 @@
           if (puedeVerOFReal) {
             panelOF.classList.remove('hidden');
             panelOF.querySelectorAll('.card').forEach(function(card) { card.classList.remove('hidden'); });
+            // La Bandeja de OF es una ventana modal (se abre con el botón
+            // "📋 Bandeja de OF"), no debe quedar visible por defecto.
+            var bandejaOFCard = document.getElementById('bandejaOFCard');
+            if (bandejaOFCard) {
+              bandejaOFCard.classList.add('hidden');
+              bandejaOFCard.classList.remove('abierta');
+            }
             // El Director General solo debe ver el reporte CXF dentro de OF,
             // no el formulario de alta de nueva Orden de Facturación.
             var formularioNuevaOF = document.getElementById('ofFormularioNuevo');
@@ -6675,6 +6738,13 @@
               inventarioBtn.style.display = 'none';
             }
           }
+
+          // El botón "➕ Agregar" de Cuentas por Cobrar (alta de ingresos)
+          // es exclusivo del usuario IQA.
+          var btnAgregarCXCToggle = document.getElementById('btnAgregarCXCToggle');
+          if (btnAgregarCXCToggle) {
+            btnAgregarCXCToggle.classList.toggle('hidden', !(actual && actual.usuario === 'IQA'));
+          }
         } catch (e) {
           console.error('⚠️ Error calculando totales del menú principal (no crítico):', e);
         }
@@ -7373,6 +7443,38 @@
         render();
       };
 
+      // ===== MODAL DE OPCIONES DE UNA OC (hamburguesa, solo Administrador) =====
+      var ocAccionesIndex = null;
+
+      window.abrirModalAccionesOC = function(index) {
+        var oc = ordenes[index];
+        if (!oc) return;
+        ocAccionesIndex = index;
+        var elCodigo = document.getElementById('ocAccionesCodigo');
+        if (elCodigo) elCodigo.textContent = oc.codigo || '';
+        var btnPausar = document.getElementById('ocAccionPausarBtn');
+        if (btnPausar) btnPausar.textContent = oc.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
+        document.getElementById('ocAccionesModal').classList.add('active');
+      };
+
+      window.cerrarModalAccionesOC = function() {
+        ocAccionesIndex = null;
+        document.getElementById('ocAccionesModal').classList.remove('active');
+      };
+
+      window.ejecutarAccionOC = function(accion) {
+        if (ocAccionesIndex === null) return;
+        var index = ocAccionesIndex;
+        window.cerrarModalAccionesOC();
+        if (accion === 'pausar') {
+          window.togglePausarOC(index);
+        } else if (accion === 'editar') {
+          window.editarOC(index);
+        } else if (accion === 'eliminar') {
+          window.eliminarOC(index);
+        }
+      };
+
       function ocEsInmobienes(oc) {
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         return proyecto ? esDepartamentoInmobienes(proyecto.departamento) : false;
@@ -8024,6 +8126,11 @@
       };
 
       window.agregarCXC = async function() {
+        // La alta de cuentas por cobrar (ingresos) es exclusiva del
+        // usuario IQA, aunque alguien intente invocar la función directo.
+        if (!actual || actual.usuario !== 'IQA') {
+          return alert('⚠️ No tienes permiso para dar de alta cuentas por cobrar.');
+        }
         var msgDiv = document.getElementById('msgCXC');
         msgDiv.innerHTML = '';
 
@@ -8731,10 +8838,7 @@
               }
 
               if (rol === 'Administrador') {
-                var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
-                acciones += '<button class="btn-warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
-                acciones += '<button class="btn-editar" onclick="window.editarOC(' + idxOriginal + ')">✏️ Editar Productos</button>';
-                acciones += '<button class="btn-danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
+                acciones += '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesOC(' + idxOriginal + ')"><span></span><span></span><span></span></button>';
               }
 
               if (!acciones) acciones = '—';
@@ -9395,6 +9499,13 @@
             } else {
               inventarioBtnLogin.style.display = 'none';
             }
+          }
+
+          // El botón "➕ Agregar" de Cuentas por Cobrar (alta de ingresos)
+          // es exclusivo del usuario IQA.
+          var btnAgregarCXCToggleLogin = document.getElementById('btnAgregarCXCToggle');
+          if (btnAgregarCXCToggleLogin) {
+            btnAgregarCXCToggleLogin.classList.toggle('hidden', !(actual && actual.usuario === 'IQA'));
           }
 
           // Mostrar/ocultar módulo INDICADORES en el menú principal
