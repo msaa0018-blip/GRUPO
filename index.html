@@ -2653,7 +2653,7 @@
         <h2>Bienvenido</h2>
         <p class="login-subtitle">Sistema de Gestión de Órdenes de Compra</p>
         <div class="flex">
-          <input id="usuario" placeholder="Usuario">
+          <input id="usuario" placeholder="Usuario" oninput="this.value = this.value.toUpperCase();" autocapitalize="characters" autocorrect="off" spellcheck="false">
           <input id="password" type="password" placeholder="Contraseña">
           <button id="btnLogin" type="button">Ingresar</button>
         </div>
@@ -3044,35 +3044,7 @@
             </table>
           </div>
           <div id="almacenesKpisUsuario" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;"></div>
-        </div>
-      </div>
-
-      <!-- ===== MODAL: PRODUCTOS DE UN ALMACÉN ===== -->
-      <div id="almacenProductosModal">
-        <div class="modal-content" style="max-width:1000px;">
-          <div class="modal-header">
-            <h3>📦 Productos — <span id="almacenProductosTitulo"></span></h3>
-            <button class="danger btn-modal-x" onclick="window.cerrarProductosAlmacen()">✕</button>
-          </div>
-          <div class="modal-body">
-            <div class="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Núm. Parte</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Descripción</th>
-                    <th>Cantidad</th>
-                    <th>Condición</th>
-                    <th>Ubicación</th>
-                  </tr>
-                </thead>
-                <tbody id="cuerpoAlmacenProductosModal"></tbody>
-              </table>
-            </div>
-          </div>
+          <div id="almacenesUsuarioProductosInline" class="hidden" style="margin-top:16px;"></div>
         </div>
       </div>
 
@@ -5813,6 +5785,14 @@
         var kpis = document.getElementById('almacenesKpisUsuario');
         if (!cuerpo) return;
 
+        // Reinicia la sección inline de "Ver Productos" al recargar la tabla.
+        almacenProductosAbiertoId = null;
+        var contenedorProductos = document.getElementById('almacenesUsuarioProductosInline');
+        if (contenedorProductos) {
+          contenedorProductos.classList.add('hidden');
+          contenedorProductos.innerHTML = '';
+        }
+
         var disponibles = obtenerAlmacenesDisponibles(actual);
         if (disponibles.length === 0) {
           cuerpo.innerHTML = '<tr><td colspan="10">No tienes ningún almacén asignado.</td></tr>';
@@ -5870,7 +5850,7 @@
               '<td>' + formatoMoneda(f.valorNuevo, 'MXN') + '</td>' +
               '<td>' + formatoMoneda(f.valorUsado, 'MXN') + '</td>' +
               '<td style="font-weight:600;">' + formatoMoneda(f.valorTotal, 'MXN') + '</td>' +
-              '<td><button class="btn-visualizar" onclick="window.verProductosAlmacen(' + f.id + ')">📦 Ver Productos</button></td>' +
+              '<td><button class="btn-visualizar btn-ver-productos-almacen" data-almacen-id="' + f.id + '" onclick="window.toggleProductosAlmacen(' + f.id + ')">📦 Ver Productos</button></td>' +
               '</tr>';
           }).join('');
 
@@ -5889,42 +5869,63 @@
         }
       };
 
-      // Modal: lista de productos de un almacén específico.
-      window.verProductosAlmacen = async function(almacenId) {
-        var modal = document.getElementById('almacenProductosModal');
-        var titulo = document.getElementById('almacenProductosTitulo');
-        var cuerpo = document.getElementById('cuerpoAlmacenProductosModal');
+      // Sección inline "Ver Productos / Ocultar" (debajo del contenedor
+      // Almacenes). Solo un almacén puede tener su lista de productos
+      // abierta a la vez.
+      var almacenProductosAbiertoId = null;
+
+      function actualizarBotonesVerProductosAlmacen() {
+        document.querySelectorAll('.btn-ver-productos-almacen').forEach(function(btn) {
+          var id = parseInt(btn.dataset.almacenId, 10);
+          btn.textContent = (id === almacenProductosAbiertoId) ? '🔼 Ocultar' : '📦 Ver Productos';
+        });
+      }
+
+      window.toggleProductosAlmacen = async function(almacenId) {
+        var contenedor = document.getElementById('almacenesUsuarioProductosInline');
+        if (!contenedor) return;
+
+        if (almacenProductosAbiertoId === almacenId) {
+          // Ya está abierto este almacén: el botón actúa como "Ocultar".
+          contenedor.classList.add('hidden');
+          contenedor.innerHTML = '';
+          almacenProductosAbiertoId = null;
+          actualizarBotonesVerProductosAlmacen();
+          return;
+        }
+
+        almacenProductosAbiertoId = almacenId;
+        actualizarBotonesVerProductosAlmacen();
+        contenedor.classList.remove('hidden');
+        contenedor.innerHTML = '<p>Cargando…</p>';
+
         var almacen = almacenesCache.find(function(a) { return a.id === almacenId; });
-        titulo.textContent = almacen ? almacen.nombre : '';
-        cuerpo.innerHTML = '<tr><td colspan="8">Cargando…</td></tr>';
-        modal.classList.add('active');
         try {
           var { data, error } = await supabase.from('productos').select('*').eq('almacen_id', almacenId).order('descripcion');
           if (error) throw error;
-          if (!data || data.length === 0) {
-            cuerpo.innerHTML = '<tr><td colspan="8">Este almacén no tiene productos registrados.</td></tr>';
-            return;
-          }
-          cuerpo.innerHTML = data.map(function(p) {
-            return '<tr>' +
-              '<td>' + escapeHTML(p.codigo) + '</td>' +
-              '<td>' + escapeHTML(p.numero_parte) + '</td>' +
-              '<td>' + escapeHTML(p.marca) + '</td>' +
-              '<td>' + escapeHTML(p.modelo) + '</td>' +
-              '<td>' + escapeHTML(p.descripcion) + '</td>' +
-              '<td style="text-align:center;">' + (p.cantidad || 0) + '</td>' +
-              '<td>' + escapeHTML(p.condicion || 'Nuevo') + '</td>' +
-              '<td>' + escapeHTML(p.ubicacion) + '</td>' +
-              '</tr>';
-          }).join('');
+          var filasHtml = (!data || data.length === 0)
+            ? '<tr><td colspan="8">Este almacén no tiene productos registrados.</td></tr>'
+            : data.map(function(p) {
+                return '<tr>' +
+                  '<td>' + escapeHTML(p.codigo) + '</td>' +
+                  '<td>' + escapeHTML(p.numero_parte) + '</td>' +
+                  '<td>' + escapeHTML(p.marca) + '</td>' +
+                  '<td>' + escapeHTML(p.modelo) + '</td>' +
+                  '<td>' + escapeHTML(p.descripcion) + '</td>' +
+                  '<td style="text-align:center;">' + (p.cantidad || 0) + '</td>' +
+                  '<td>' + escapeHTML(p.condicion || 'Nuevo') + '</td>' +
+                  '<td>' + escapeHTML(p.ubicacion) + '</td>' +
+                  '</tr>';
+              }).join('');
+          contenedor.innerHTML =
+            '<h4 style="margin:0 0 8px;">📦 Productos — ' + escapeHTML(almacen ? almacen.nombre : '') + '</h4>' +
+            '<div class="table-wrapper"><table><thead><tr>' +
+            '<th>Código</th><th>Núm. Parte</th><th>Marca</th><th>Modelo</th><th>Descripción</th><th>Cantidad</th><th>Condición</th><th>Ubicación</th>' +
+            '</tr></thead><tbody>' + filasHtml + '</tbody></table></div>';
         } catch (e) {
           console.error('Error cargando productos del almacén:', e);
-          cuerpo.innerHTML = '<tr><td colspan="8">❌ Error al cargar los productos.</td></tr>';
+          contenedor.innerHTML = '<div class="alert">❌ Error al cargar los productos.</div>';
         }
-      };
-
-      window.cerrarProductosAlmacen = function() {
-        document.getElementById('almacenProductosModal').classList.remove('active');
       };
 
       window.actualizarDeptosNuevoAlmacen = function() {
@@ -10656,7 +10657,16 @@
         }
       };
 
-      window.salir = function() { location.reload(); };
+      window.salir = function() {
+        // Excepción: dentro de ALMACENES, el botón ✕ regresa al Menú
+        // Principal en vez de cerrar la sesión (el usuario puede volver a
+        // presionar ✕ desde el Menú Principal para cerrar sesión normalmente).
+        if (moduloActual === 'almacenes') {
+          window.mostrarMenuMaestroPrincipal();
+          return;
+        }
+        location.reload();
+      };
 
       // ============================================================
       // INICIALIZACIÓN
