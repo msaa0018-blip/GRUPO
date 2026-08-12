@@ -10446,6 +10446,7 @@
         ocExistente = ocExistente || null;
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
+        doc.setLineHeightFactor(1.05);
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
         var margin = 40;
@@ -10528,7 +10529,7 @@
         var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
 
         // ---------- 1. ENCABEZADO DE LA ORDEN ----------
-        var headerH = 72;
+        var headerH = 54;
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
@@ -10537,19 +10538,19 @@
         doc.roundedRect(margin, y, 7, headerH, 3, 3, 'F');
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(20);
+        doc.setFontSize(17);
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('ORDEN DE COMPRA', margin + 24, y + headerH / 2 + 7);
+        doc.text('ORDEN DE COMPRA', margin + 24, y + headerH / 2 + 6);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
-        doc.text(codigoFinalHeader, xDerecha, y + 24, { align: 'right' });
-        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 38, { align: 'right' });
+        doc.text(codigoFinalHeader, xDerecha, y + 20, { align: 'right' });
+        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 33, { align: 'right' });
 
-        y += headerH + 20;
+        y += headerH + 16;
 
         // ---------- 2. INFORMACIÓN GENERAL (dos tarjetas) ----------
         function dibujarCampoLinea(x, yPos, label, value, maxWidth) {
@@ -10561,12 +10562,12 @@
           var labelWidth = doc.getTextWidth(label) + 6;
           var lineas = doc.splitTextToSize(String(value || ''), Math.max(maxWidth - labelWidth, 20));
           doc.text(lineas, x + labelWidth, yPos);
-          return lineas.length * 11;
+          return lineas.length * 9;
         }
 
         var cardGap = 14;
         var cardW = (pageWidth - 2 * margin - cardGap) / 2;
-        var cardHeaderH = 24;
+        var cardHeaderH = 20;
         var cardPaddingX = 14;
         var anchoContenidoCard = cardW - cardPaddingX * 2;
 
@@ -10588,14 +10589,14 @@
             var labelWidth = doc.getTextWidth(c.label) + 6;
             doc.setFont('helvetica', 'normal');
             var lineas = doc.splitTextToSize(String(c.value || ''), Math.max(maxWidth - labelWidth, 20));
-            total += lineas.length * 11 + 6;
+            total += lineas.length * 9 + 4;
           });
           return total;
         }
 
         var altoCuerpo1 = alturaCampos(camposProveedor, anchoContenidoCard);
         var altoCuerpo2 = alturaCampos(camposEntrega, anchoContenidoCard);
-        var cardBodyPadding = 16;
+        var cardBodyPadding = 10;
         var cardH = cardHeaderH + Math.max(altoCuerpo1, altoCuerpo2) + cardBodyPadding;
 
         function dibujarTarjeta(x, titulo, campos) {
@@ -10615,10 +10616,10 @@
           doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
           doc.text(titulo, x + cardPaddingX, y + cardHeaderH / 2 + 4);
 
-          var yCampo = y + cardHeaderH + 16;
+          var yCampo = y + cardHeaderH + 12;
           campos.forEach(function(c) {
             var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard);
-            yCampo += alto + 6;
+            yCampo += alto + 4;
           });
         }
 
@@ -10704,10 +10705,10 @@
         ];
         var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
 
-        var bottomBodyPadding = 16;
-        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 11 + 16 + altoCamposCondiciones + bottomBodyPadding;
-        var altoFinanciero = bottomHeaderH + 3 * 20 + bottomBodyPadding;
-        var bottomH = Math.max(altoTerminos, altoFinanciero, 96);
+        var bottomBodyPadding = 12;
+        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 9 + 12 + altoCamposCondiciones + bottomBodyPadding;
+        var altoFinanciero = bottomHeaderH + 3 * 17 + bottomBodyPadding;
+        var bottomH = Math.max(altoTerminos, altoFinanciero, 90);
 
         // Tarjeta izquierda: CONDICIONES COMERCIALES + NOTAS
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
@@ -10726,12 +10727,12 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(lineasCondiciones, bottomX1 + 14, y + bottomHeaderH + 16);
+        doc.text(lineasCondiciones, bottomX1 + 14, y + bottomHeaderH + 12);
 
-        var yCampoCondiciones = y + bottomHeaderH + 16 + lineasCondiciones.length * 11 + 12;
+        var yCampoCondiciones = y + bottomHeaderH + 12 + lineasCondiciones.length * 9 + 8;
         camposCondicionesExtra.forEach(function(c) {
           var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28);
-          yCampoCondiciones += altoCampo + 6;
+          yCampoCondiciones += altoCampo + 4;
         });
 
         // Tarjeta derecha: resumen financiero
@@ -10749,16 +10750,16 @@
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
         doc.text('RESUMEN FINANCIERO', bottomX2 + 14, y + bottomHeaderH / 2 + 4);
 
-        var yResumen = y + bottomHeaderH + 18;
+        var yResumen = y + bottomHeaderH + 15;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         doc.text('Subtotal:', bottomX2 + 14, yResumen);
         doc.text(formatoMoneda(subtotal, datos.moneda), bottomX2 + bottomW - 14, yResumen, { align: 'right' });
-        yResumen += 18;
+        yResumen += 15;
         doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', bottomX2 + 14, yResumen);
         doc.text(formatoMoneda(iva, datos.moneda), bottomX2 + bottomW - 14, yResumen, { align: 'right' });
-        yResumen += 16;
+        yResumen += 13;
 
         var totalBoxY = yResumen - 2;
         var totalBoxH = bottomH - (totalBoxY - y) - 8;
