@@ -1247,6 +1247,54 @@
   #agregarCXCModal .cxc-form-row { margin-bottom: 10px; }
 
   /* ===== BOTÓN HAMBURGUESA (opciones de producto) ===== */
+  /* ===== ZONA DE ARRASTRAR/SOLTAR FOTO DE PRODUCTO ===== */
+  .foto-dropzone {
+    width: 64px;
+    height: 64px;
+    border: 2px dashed var(--gray-300);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    color: var(--gray-500);
+    cursor: pointer;
+    overflow: hidden;
+    background: var(--gray-100);
+    transition: border-color 0.15s, background 0.15s;
+    padding: 2px;
+  }
+  .foto-dropzone:hover, .foto-dropzone.arrastrando {
+    border-color: var(--primary);
+    background: #eef2ff;
+  }
+  .foto-dropzone img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  .foto-thumb {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+    cursor: pointer;
+  }
+  .foto-thumb-vacio {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    border: 1px dashed var(--gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+    font-size: 16px;
+  }
+
   .btn-hamburguesa {
     width: 34px;
     height: 30px;
@@ -2905,6 +2953,7 @@
           <table id="tablaProductosCatalogo">
             <thead>
               <tr>
+                <th>Foto</th>
                 <th>Código</th>
                 <th>Número de Parte</th>
                 <th>Marca</th>
@@ -2924,6 +2973,13 @@
             <tbody id="cuerpoProductosCatalogo"></tbody>
             <tfoot>
               <tr>
+                <td>
+                  <div id="nvoProdFotoDropzone" class="foto-dropzone" onclick="document.getElementById('nvoProdFotoInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFoto(event, this)">
+                    <span id="nvoProdFotoDropzoneTexto">📷 Arrastra o toca</span>
+                    <img id="nvoProdFotoPreview" class="hidden" alt="Previsualización">
+                  </div>
+                  <input type="file" id="nvoProdFotoInput" accept="image/*" class="hidden" onchange="window.manejarSeleccionFoto(this)">
+                </td>
                 <td><input id="nvoProdCodigo" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se genera automáticamente y es consecutivo. No se puede editar."></td>
                 <td><input id="nvoProdNumeroParte" placeholder="Número de parte"></td>
                 <td><input id="nvoProdMarca" placeholder="Marca"></td>
@@ -5904,9 +5960,10 @@
           var { data, error } = await supabase.from('productos').select('*').eq('almacen_id', almacenId).order('descripcion');
           if (error) throw error;
           var filasHtml = (!data || data.length === 0)
-            ? '<tr><td colspan="8">Este almacén no tiene productos registrados.</td></tr>'
+            ? '<tr><td colspan="9">Este almacén no tiene productos registrados.</td></tr>'
             : data.map(function(p) {
                 return '<tr>' +
+                  '<td>' + (p.foto_url ? '<img src="' + escapeHTML(p.foto_url) + '" class="foto-thumb" onclick="window.open(\'' + escapeHTML(p.foto_url) + '\', \'_blank\')" alt="Foto">' : '<div class="foto-thumb-vacio">📦</div>') + '</td>' +
                   '<td>' + escapeHTML(p.codigo) + '</td>' +
                   '<td>' + escapeHTML(p.numero_parte) + '</td>' +
                   '<td>' + escapeHTML(p.marca) + '</td>' +
@@ -5920,7 +5977,7 @@
           contenedor.innerHTML =
             '<h4 style="margin:0 0 8px;">📦 Productos — ' + escapeHTML(almacen ? almacen.nombre : '') + '</h4>' +
             '<div class="table-wrapper"><table><thead><tr>' +
-            '<th>Código</th><th>Núm. Parte</th><th>Marca</th><th>Modelo</th><th>Descripción</th><th>Cantidad</th><th>Condición</th><th>Ubicación</th>' +
+            '<th>Foto</th><th>Código</th><th>Núm. Parte</th><th>Marca</th><th>Modelo</th><th>Descripción</th><th>Cantidad</th><th>Condición</th><th>Ubicación</th>' +
             '</tr></thead><tbody>' + filasHtml + '</tbody></table></div>';
         } catch (e) {
           console.error('Error cargando productos del almacén:', e);
@@ -6256,6 +6313,7 @@
             var almacen = almacenesCache.find(function(a) { return a.id === p.almacen_id; });
             var fila = document.createElement('tr');
             fila.innerHTML =
+              '<td>' + (p.foto_url ? '<img src="' + escapeHTML(p.foto_url) + '" class="foto-thumb" onclick="window.open(\'' + escapeHTML(p.foto_url) + '\', \'_blank\')" alt="Foto">' : '<div class="foto-thumb-vacio">📦</div>') + '</td>' +
               '<td>' + escapeHTML(p.codigo) + '</td>' +
               '<td>' + escapeHTML(p.numero_parte) + '</td>' +
               '<td>' + escapeHTML(p.marca) + '</td>' +
@@ -6332,6 +6390,77 @@
         }
       };
 
+      // ===== FOTO DE PRODUCTO: arrastrar/soltar o seleccionar archivo =====
+      var nvoProdFotoArchivo = null;
+
+      function mostrarPreviewFoto(archivo) {
+        var dropzone = document.getElementById('nvoProdFotoDropzone');
+        var texto = document.getElementById('nvoProdFotoDropzoneTexto');
+        var preview = document.getElementById('nvoProdFotoPreview');
+        var lector = new FileReader();
+        lector.onload = function(e) {
+          preview.src = e.target.result;
+          preview.classList.remove('hidden');
+          if (texto) texto.classList.add('hidden');
+        };
+        lector.readAsDataURL(archivo);
+      }
+
+      window.manejarSeleccionFoto = function(input) {
+        if (!input.files || !input.files[0]) return;
+        nvoProdFotoArchivo = input.files[0];
+        mostrarPreviewFoto(nvoProdFotoArchivo);
+      };
+
+      window.manejarDragOverFoto = function(event, el) {
+        event.preventDefault();
+        el.classList.add('arrastrando');
+      };
+
+      window.manejarDragLeaveFoto = function(event, el) {
+        el.classList.remove('arrastrando');
+      };
+
+      window.manejarDropFoto = function(event, el) {
+        event.preventDefault();
+        el.classList.remove('arrastrando');
+        var archivos = event.dataTransfer.files;
+        if (!archivos || !archivos[0]) return;
+        if (archivos[0].type.indexOf('image/') !== 0) {
+          alert('⚠️ Solo se aceptan imágenes.');
+          return;
+        }
+        nvoProdFotoArchivo = archivos[0];
+        mostrarPreviewFoto(nvoProdFotoArchivo);
+      };
+
+      function limpiarFotoProducto() {
+        nvoProdFotoArchivo = null;
+        var preview = document.getElementById('nvoProdFotoPreview');
+        var texto = document.getElementById('nvoProdFotoDropzoneTexto');
+        var input = document.getElementById('nvoProdFotoInput');
+        if (preview) { preview.src = ''; preview.classList.add('hidden'); }
+        if (texto) texto.classList.remove('hidden');
+        if (input) input.value = '';
+      }
+
+      // Sube la foto al bucket "productos-fotos" de Supabase Storage y
+      // devuelve la URL pública, o null si no había foto / falló la subida.
+      async function subirFotoProducto(archivo, codigoProducto) {
+        if (!archivo) return null;
+        try {
+          var extension = (archivo.name.split('.').pop() || 'jpg').toLowerCase();
+          var rutaArchivo = codigoProducto + '-' + Date.now() + '.' + extension;
+          var { error: errorSubida } = await supabase.storage.from('productos-fotos').upload(rutaArchivo, archivo, { upsert: true });
+          if (errorSubida) throw errorSubida;
+          var { data } = supabase.storage.from('productos-fotos').getPublicUrl(rutaArchivo);
+          return data ? data.publicUrl : null;
+        } catch (e) {
+          console.error('Error subiendo la foto del producto:', e);
+          return null;
+        }
+      }
+
       window.agregarProductoCatalogo = async function() {
         var descripcion = document.getElementById('nvoProdDescripcion').value.trim();
         var msg = document.getElementById('msgProductos');
@@ -6380,7 +6509,16 @@
           if (error) throw error;
           var nuevoId = data[0].id;
           var codigoGenerado = 'PROD-' + String(nuevoId).padStart(5, '0');
-          var { error: errorCodigo } = await supabase.from('productos').update({ codigo: codigoGenerado }).eq('id', nuevoId);
+          var updates = { codigo: codigoGenerado };
+
+          // Si se arrastró/seleccionó una foto, se sube al bucket y se
+          // guarda su URL pública junto con el código.
+          if (nvoProdFotoArchivo) {
+            var urlFoto = await subirFotoProducto(nvoProdFotoArchivo, codigoGenerado);
+            if (urlFoto) updates.foto_url = urlFoto;
+          }
+
+          var { error: errorCodigo } = await supabase.from('productos').update(updates).eq('id', nuevoId);
           if (errorCodigo) throw errorCodigo;
 
           document.getElementById('nvoProdNumeroParte').value = '';
@@ -6390,6 +6528,7 @@
           document.getElementById('nvoProdPrecio').value = '';
           document.getElementById('nvoProdCantidad').value = '';
           document.getElementById('nvoProdUbicacion').value = '';
+          limpiarFotoProducto();
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Producto agregado con código ' + escapeHTML(codigoGenerado) + '.</div>';
           window.cargarProductosCatalogo();
         } catch (e) {
