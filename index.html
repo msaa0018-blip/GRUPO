@@ -3324,7 +3324,7 @@
         </div>
         <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
           <table style="min-width:100% !important; width:100% !important;">
-            <thead><tr><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Código</th><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>Acciones</th></tr></thead>
             <tbody id="tablaProyectos"></tbody>
           </table>
         </div>
@@ -10024,7 +10024,7 @@
             if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
             if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
-            tablaProyectos.innerHTML += '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            tablaProyectos.innerHTML += '<tr><td data-label="Código">' + (p.codigo || '—') + '</td><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
@@ -10360,7 +10360,16 @@
             msgDiv.innerHTML = '<div class="alert">⚠️ ERROR: ' + error.message + '</div>';
             return;
           }
-          msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO.</div>';
+
+          // Código del proyecto: 4 dígitos, consecutivo y automático (nadie
+          // lo captura). Se genera a partir del id autoincremental que
+          // asigna la base de datos al insertar.
+          var nuevoProyectoId = data[0].id;
+          var codigoProyecto = String(nuevoProyectoId).padStart(4, '0');
+          var { error: errorCodigo } = await supabase.from('proyectos').update({ codigo: codigoProyecto }).eq('id', nuevoProyectoId);
+          if (!errorCodigo) data[0].codigo = codigoProyecto;
+
+          msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO' + (errorCodigo ? '' : ' — CÓDIGO ' + codigoProyecto) + '.</div>';
           document.getElementById('nombreProyecto').value = '';
           document.getElementById('cliente').value = '';
           document.getElementById('presupuesto').value = '';
