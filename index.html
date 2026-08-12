@@ -1058,10 +1058,11 @@
 
   .cerrar-modal-btn {
     flex: 0 0 auto !important;
+    white-space: nowrap !important;
   }
 
   .card.modal-card .cerrar-modal-btn { display: none; }
-  .card.modal-card.abierta .cerrar-modal-btn { display: inline-block; }
+  .card.modal-card.abierta .cerrar-modal-btn { display: inline-flex; }
 
   #modalOverlayBackdrop {
     position: fixed;
@@ -1142,6 +1143,45 @@
     justify-content: flex-end;
     flex-wrap: wrap
   }
+
+  /* ===== MODAL: EDITAR PRODUCTOS DE UNA OC (solo Administrador) ===== */
+  #editarProductosOCModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, .6);
+    z-index: 2100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  #editarProductosOCModal.active { display: flex }
+  #editarProductosOCModal .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    width: 100%;
+    max-width: 1100px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  #editarProductosOCModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #editarProductosOCModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #editarProductosOCModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #editarProductosOCModal .modal-body { overflow: auto; }
 
   /* ===== BOTÓN HAMBURGUESA (opciones de producto) ===== */
   .btn-hamburguesa {
@@ -2587,7 +2627,7 @@
                     <option value="Aplazado">Aplazado</option>
                   </select>
                 </td>
-                <td><button class="success" id="btnAgregarProveedor" onclick="window.agregarProveedorCatalogo()">➕ Agregar</button></td>
+                <td><button class="success" id="btnAgregarProveedor" onclick="window.agregarProveedorCatalogo()">➕</button></td>
               </tr>
             </tfoot>
           </table>
@@ -2774,7 +2814,7 @@
 
         <!-- Tablas de detalle -->
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="ocPendientesIndicadoresCard">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">📋 Órdenes de Compra Pendientes</h4>
             <button class="danger cerrar-modal-btn" onclick="window.cerrarModalCard('ocPendientesIndicadoresCard')">✕</button>
           </div>
@@ -2936,6 +2976,7 @@
               <thead>
                 <tr>
                   <th style="width:40px;">#</th>
+                  <th style="width:90px;">Código</th>
                   <th style="width:100px;">Núm. Parte</th>
                   <th style="min-width:150px;">Descripción</th>
                   <th style="width:140px;">Cantidad</th>
@@ -2950,7 +2991,7 @@
               <tbody id="cuerpoProductos"></tbody>
               <tfoot>
                 <tr>
-                  <td colspan="8" style="text-align:right;font-weight:bold">Total OC:</td>
+                  <td colspan="9" style="text-align:right;font-weight:bold">Total OC:</td>
                   <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:200px;width:210px;">$0.00</td>
                   <td></td>
                 </tr>
@@ -3235,7 +3276,7 @@
 
       <!-- ===== BANDEJA DE OC ===== -->
       <div class="card modal-card hidden" id="bandejaOCCard">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h2 style="margin:0;">📬 Bandeja de Órdenes de Compra</h2>
           <button class="danger cerrar-modal-btn" onclick="window.cerrarModalCard('bandejaOCCard')">✕</button>
         </div>
@@ -3380,6 +3421,53 @@
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Visualizar Orden de Compra</h3><button class="danger" onclick="window.cerrarVisualizar()">✕</button></div>
       <div class="modal-body"><iframe id="visualizarFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: EDITAR PRODUCTOS DE UNA OC (solo Administrador) ===== -->
+  <div id="editarProductosOCModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>✏️ Editar Productos — <span id="editarProductosOCCodigo"></span></h3>
+        <div class="pdfPreview-btn-group">
+          <button class="danger" onclick="window.cerrarEditarProductosOC()">✕</button>
+          <button class="success" onclick="window.guardarEdicionProductosOC()">✔️</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="table-wrapper">
+          <table class="productos-tabla" id="tablaEditarProductosOC">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th style="width:90px;">Código</th>
+                <th style="width:100px;">Núm. Parte</th>
+                <th style="min-width:150px;">Descripción</th>
+                <th style="width:110px;">Cantidad</th>
+                <th style="width:90px;">UDM</th>
+                <th style="width:100px;">Precio Unit.</th>
+                <th style="width:60px;">Dto.%</th>
+                <th style="width:60px;">Imp.%</th>
+                <th style="min-width:150px;">Importe</th>
+                <th style="width:50px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoEditarProductosOC"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="9" style="text-align:right;font-weight:bold">Total OC:</td>
+                <td id="totalEditarProductosOC" style="font-weight:bold;">$0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <button onclick="window.agregarFilaEditarProductosOC()" class="success" style="margin-top:8px;">➕ Agregar Producto</button>
+        <div id="msgEditarProductosOC" style="margin-top:8px;"></div>
+        <p style="margin-top:10px;font-size:12px;color:var(--gray-600);">
+          ℹ️ Si esta OC ya está <strong>PAGADA</strong>, el inventario de los productos con "Código" se ajustará automáticamente según la diferencia entre lo que había antes y lo que quede después de guardar.
+        </p>
+      </div>
     </div>
   </div>
 
@@ -5024,7 +5112,7 @@
             if (error) throw error;
             if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor actualizado.</div>';
             proveedorEditandoId = null;
-            if (btnAgregar) btnAgregar.textContent = '➕ Agregar';
+            if (btnAgregar) btnAgregar.textContent = '➕';
           } else {
             var { error } = await supabase.from('proveedores').insert([datosProveedor]);
             if (error) throw error;
@@ -5073,7 +5161,7 @@
         if (p.condiciones_comerciales) document.getElementById('nvoProvCondiciones').value = p.condiciones_comerciales;
         proveedorEditandoId = id;
         var btnAgregar = document.getElementById('btnAgregarProveedor');
-        if (btnAgregar) btnAgregar.textContent = '💾 Guardar Cambios';
+        if (btnAgregar) btnAgregar.textContent = '💾';
         var msg = document.getElementById('msgProveedores');
         if (msg) msg.innerHTML = '<div class="success-msg">✏️ Editando "' + escapeHTML(p.nombre) + '". Modifica los campos y presiona "Guardar Cambios".</div>';
         var panel = document.getElementById('panelProveedores');
@@ -7005,6 +7093,77 @@
         alert('✅ Paridad ingresada. OC autorizada.');
       };
 
+      // ============================================================
+      // INVENTARIO AUTOMÁTICO A PARTIR DE LAS OC
+      // ============================================================
+      // Ajusta el stock (`cantidad`) de un producto del catálogo,
+      // localizándolo por su "código" (el mismo código que se captura en
+      // la columna "Código" de la tabla de productos de la OC). Si el
+      // código no existe en el catálogo, no hace nada (esa línea de la OC
+      // no está ligada a inventario).
+      async function ajustarInventarioPorCodigo(codigo, delta) {
+        if (!codigo || !delta) return;
+        try {
+          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad').eq('codigo', codigo).maybeSingle();
+          if (errGet || !prod) return;
+          var nuevaCantidad = (prod.cantidad || 0) + delta;
+          if (nuevaCantidad < 0) nuevaCantidad = 0;
+          await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', prod.id);
+        } catch (e) {
+          console.error('Error ajustando inventario para código ' + codigo + ':', e);
+        }
+      }
+
+      // Aplica el movimiento completo de una OC al inventario: signo +1
+      // (al pagarse) suma la cantidad de cada línea con código al stock;
+      // signo -1 (al revertir el pago) la resta.
+      async function aplicarMovimientoInventarioOC(productosOC, signo) {
+        if (!Array.isArray(productosOC)) return;
+        for (var i = 0; i < productosOC.length; i++) {
+          var linea = productosOC[i];
+          var codigo = (linea.codigo || '').trim();
+          var cantidadLinea = Number(linea.cantidad) || 0;
+          if (!codigo || cantidadLinea <= 0) continue;
+          await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea);
+        }
+        if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
+      }
+
+      // Calcula, por código, la diferencia de cantidades entre la versión
+      // anterior y la nueva versión de los productos de una OC ya pagada
+      // (usado cuando el Administrador agrega/quita/modifica productos).
+      function calcularDeltaInventarioOC(productosViejos, productosNuevos) {
+        var mapa = {};
+        (productosViejos || []).forEach(function(p) {
+          var cod = (p.codigo || '').trim();
+          if (!cod) return;
+          mapa[cod] = (mapa[cod] || 0) - (Number(p.cantidad) || 0);
+        });
+        (productosNuevos || []).forEach(function(p) {
+          var cod = (p.codigo || '').trim();
+          if (!cod) return;
+          mapa[cod] = (mapa[cod] || 0) + (Number(p.cantidad) || 0);
+        });
+        return mapa;
+      }
+
+      async function aplicarDeltaInventarioOC(mapaDeltas) {
+        var codigos = Object.keys(mapaDeltas);
+        for (var i = 0; i < codigos.length; i++) {
+          var codigo = codigos[i];
+          if (mapaDeltas[codigo]) await ajustarInventarioPorCodigo(codigo, mapaDeltas[codigo]);
+        }
+        if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
+      }
+
+      function parsearProductosOC(oc) {
+        var productosOC = oc ? oc.productos : [];
+        if (typeof productosOC === 'string') {
+          try { productosOC = JSON.parse(productosOC); } catch (e) { productosOC = []; }
+        }
+        return Array.isArray(productosOC) ? productosOC : [];
+      }
+
       window.marcarPagada = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
@@ -7014,6 +7173,11 @@
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PAGADA';
+
+        // Al pagarse la OC, se suman al inventario los productos que
+        // tengan código de catálogo capturado.
+        await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1);
+
         render();
         actualizarTotalesMenuPrincipal();
         alert('✅ OC marcada como PAGADA.');
@@ -7055,6 +7219,11 @@
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PENDIENTE';
+
+        // Al revertir el pago, se resta del inventario lo que se había
+        // sumado al marcarla como pagada.
+        await aplicarMovimientoInventarioOC(parsearProductosOC(oc), -1);
+
         render();
       };
 
@@ -8130,11 +8299,12 @@
         }
         var p = productosCatalogoCache[parseInt(select.value, 10)];
         if (!p) return;
-        window.agregarFilaProducto(p.numero_parte || '', p.descripcion || '', p.udm || 'PZA', 1, p.precio_referencia || 0, 0, 0);
+        window.agregarFilaProducto(p.codigo || '', p.numero_parte || '', p.descripcion || '', p.udm || 'PZA', 1, p.precio_referencia || 0, 0, 0);
         select.value = '';
       };
 
-      window.agregarFilaProducto = function(parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
+      window.agregarFilaProducto = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
+        codigo = codigo || '';
         parte = parte || '';
         descripcion = descripcion || '';
         udm = udm || 'PZA';
@@ -8146,7 +8316,7 @@
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:90px;width:100px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Código"></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:90px;width:100px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -8424,6 +8594,7 @@
               if (rol === 'Administrador') {
                 var textoPausa = o.pausada ? '▶️ Reanudar' : '⏸️ Pausar';
                 acciones += '<button class="btn-warning" onclick="window.togglePausarOC(' + idxOriginal + ')">' + textoPausa + '</button>';
+                acciones += '<button class="btn-editar" onclick="window.editarOC(' + idxOriginal + ')">✏️ Editar Productos</button>';
                 acciones += '<button class="btn-danger" onclick="window.eliminarOC(' + idxOriginal + ')">🗑️ Eliminar</button>';
               }
 
@@ -8656,10 +8827,178 @@
         actualizarTotalesMenuPrincipal();
       }
 
+      // ============================================================
+      // EDITAR PRODUCTOS DE UNA OC YA CREADA (solo Administrador)
+      // ============================================================
+      var editandoOCIndex = null;
+
       window.editarOC = function(index) {
+        if (!actual || actual.rol !== 'Administrador') {
+          return alert('⚠️ Solo el Administrador puede editar los productos de una OC.');
+        }
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
-        alert('✏️ Editar OC: ' + oc.codigo + ' (Función en desarrollo)');
+        editandoOCIndex = index;
+
+        var elCodigo = document.getElementById('editarProductosOCCodigo');
+        if (elCodigo) elCodigo.textContent = oc.codigo || '';
+
+        var productosOC = parsearProductosOC(oc);
+        var cuerpo = document.getElementById('cuerpoEditarProductosOC');
+        cuerpo.innerHTML = '';
+        if (productosOC.length === 0) {
+          window.agregarFilaEditarProductosOC();
+        } else {
+          productosOC.forEach(function(p) {
+            window.agregarFilaEditarProductosOC(p.codigo, p.parte, p.descripcion, p.udm, p.cantidad, p.precioUnitario, p.descuento, p.impuesto);
+          });
+        }
+
+        var msg = document.getElementById('msgEditarProductosOC');
+        if (msg) msg.innerHTML = '';
+        document.getElementById('editarProductosOCModal').classList.add('active');
+      };
+
+      window.agregarFilaEditarProductosOC = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
+        codigo = codigo || '';
+        parte = parte || '';
+        descripcion = descripcion || '';
+        udm = udm || 'PZA';
+        cantidad = cantidad || 1;
+        precio = precio || 0;
+        descuento = descuento || 0;
+        impuesto = impuesto || 0;
+        var tbody = document.getElementById('cuerpoEditarProductosOC');
+        var fila = document.createElement('tr');
+        var idx = tbody.children.length + 1;
+        var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
+        fila.innerHTML = '<td class="indice">' + idx + '</td>' +
+          '<td><input class="codigo" type="text" value="' + String(codigo).toUpperCase() + '" placeholder="Código"></td>' +
+          '<td><input class="part" type="text" value="' + String(parte).toUpperCase() + '" placeholder="Núm. Parte"></td>' +
+          '<td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFilaEditarOC(this)">' + String(descripcion).toUpperCase() + '</textarea></td>' +
+          '<td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
+          '<td><select class="udm" onchange="window.recalcularFilaEditarOC(this)">' + udmOptions + '</select></td>' +
+          '<td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
+          '<td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
+          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
+          '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly></td>' +
+          '<td><button class="danger" onclick="window.eliminarFilaEditarProductosOC(this)">🗑️</button></td>';
+        tbody.appendChild(fila);
+        window.recalcularFilaEditarOC(fila);
+        window.recalcularTotalEditarOC();
+      };
+
+      window.eliminarFilaEditarProductosOC = function(boton) {
+        var fila = boton.closest('tr');
+        fila.remove();
+        window.recalcularTotalEditarOC();
+        var tbody = document.getElementById('cuerpoEditarProductosOC');
+        Array.prototype.forEach.call(tbody.children, function(f, i) {
+          var celdaIndice = f.querySelector('.indice');
+          if (celdaIndice) celdaIndice.textContent = i + 1;
+        });
+      };
+
+      window.recalcularFilaEditarOC = function(el) {
+        var fila = el.closest ? el.closest('tr') : el;
+        if (!fila) return;
+        var cantidad = parseNumero(fila.querySelector('.cantidad') ? fila.querySelector('.cantidad').value : '0');
+        var precio = parseNumero(fila.querySelector('.precio') ? fila.querySelector('.precio').value : '0');
+        var descuento = parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0;
+        var impuesto = parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0;
+        var subtotal = cantidad * precio;
+        var conDescuento = subtotal * (1 - descuento / 100);
+        var importe = conDescuento * (1 + impuesto / 100);
+        var celdaImporte = fila.querySelector('.importe');
+        if (celdaImporte) celdaImporte.value = importe.toFixed(2);
+        window.recalcularTotalEditarOC();
+      };
+
+      window.recalcularTotalEditarOC = function() {
+        var filas = document.querySelectorAll('#cuerpoEditarProductosOC tr');
+        var total = 0;
+        filas.forEach(function(fila) {
+          total += parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
+        });
+        var celdaTotal = document.getElementById('totalEditarProductosOC');
+        if (celdaTotal) celdaTotal.textContent = formatoMoneda(total, 'MXN');
+        return total;
+      };
+
+      window.cerrarEditarProductosOC = function() {
+        editandoOCIndex = null;
+        document.getElementById('editarProductosOCModal').classList.remove('active');
+      };
+
+      window.guardarEdicionProductosOC = async function() {
+        if (editandoOCIndex === null) return;
+        var oc = ordenes[editandoOCIndex];
+        if (!oc) return;
+        var msg = document.getElementById('msgEditarProductosOC');
+
+        var filas = document.querySelectorAll('#cuerpoEditarProductosOC tr');
+        if (filas.length === 0) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Agrega al menos un producto.</div>';
+          return;
+        }
+
+        var productosNuevos = [];
+        var invalido = false;
+        filas.forEach(function(fila) {
+          var descripcion = (fila.querySelector('.desc') ? fila.querySelector('.desc').value : '').trim().toUpperCase();
+          var cantidad = parseNumero(fila.querySelector('.cantidad') ? fila.querySelector('.cantidad').value : '0');
+          var precioUnitario = parseNumero(fila.querySelector('.precio') ? fila.querySelector('.precio').value : '0');
+          var importe = parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
+          if (!descripcion || cantidad <= 0 || precioUnitario <= 0) invalido = true;
+          productosNuevos.push({
+            codigo: (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase(),
+            parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
+            descripcion: descripcion,
+            cantidad: cantidad,
+            udm: fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA',
+            precioUnitario: precioUnitario,
+            descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
+            impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
+            importe: importe
+          });
+        });
+        if (invalido) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Revisa los productos: descripción, cantidad y precio deben ser válidos.</div>';
+          return;
+        }
+
+        var productosViejos = parsearProductosOC(oc);
+        var nuevoTotal = productosNuevos.reduce(function(s, p) { return s + p.importe; }, 0);
+        var tipoCambio = oc.tipocambio || 1;
+        var nuevoMontoMXN = oc.moneda === 'USD' ? nuevoTotal * tipoCambio : nuevoTotal;
+
+        try {
+          var updates = { productos: productosNuevos, montototal: nuevoTotal, montomxn: nuevoMontoMXN };
+          var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          if (error) throw error;
+
+          // El inventario SOLO se ajusta si la OC ya estaba pagada (ya se
+          // le había sumado el inventario al pagarla). Si aún no está
+          // pagada, el cambio de productos no debe tocar el inventario
+          // todavía; eso pasará cuando se marque como pagada.
+          var inventarioAjustado = false;
+          if (oc.estadopago === 'PAGADA') {
+            var deltas = calcularDeltaInventarioOC(productosViejos, productosNuevos);
+            await aplicarDeltaInventarioOC(deltas);
+            inventarioAjustado = true;
+          }
+
+          oc.productos = productosNuevos;
+          oc.montototal = nuevoTotal;
+          oc.montomxn = nuevoMontoMXN;
+
+          window.cerrarEditarProductosOC();
+          render();
+          alert('✅ Productos de la OC actualizados' + (inventarioAjustado ? ' e inventario ajustado automáticamente.' : '.'));
+        } catch (e) {
+          console.error('Error guardando edición de productos de la OC:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+        }
       };
 
       // ============================================================
@@ -10038,8 +10377,8 @@
           return '<tr style="' + filaEstilo + '">' +
             '<td data-label="Folio"><code>' + o.folio + '</code></td>' +
             '<td data-label="Fecha">' + (o.fecha || '') + '</td>' +
-            '<td data-label="Empresa">' + (o.empresa || '') + '</td>' +
-            '<td data-label="Depto">' + mostrarDepto(o.departamento) + '</td>' +
+            '<td data-label="Empresa">' + (getAbreviaturaEmpresa(o.empresa) || o.empresa || '') + '</td>' +
+            '<td data-label="Depto">' + mostrarDepto(getAbreviaturaDepartamento(o.departamento, o.empresa) || o.departamento) + '</td>' +
             '<td data-label="Razón Social">' + o.razon_social + '</td>' +
             '<td data-label="Responsable">' + (o.responsable || '-') + '</td>' +
             '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
@@ -10493,6 +10832,7 @@
           var importe = parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
           if (!descripcion || cantidad <= 0 || precioUnitario <= 0) { productoInvalido = true; }
           productos.push({
+            codigo: (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase(),
             parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
             descripcion: descripcion,
             cantidad: cantidad,
@@ -11518,7 +11858,7 @@
         var headers = ['Folio', 'Fecha', 'Empresa', 'Depto', 'Razón Social', 'Responsable', 'Folio Factura', 'Moneda', 'Monto', 'Estado'];
         var rows = ofs.map(function(o) {
           return [
-            o.folio, o.fecha || '', o.empresa || '', o.departamento, o.razon_social,
+            o.folio, o.fecha || '', (getAbreviaturaEmpresa(o.empresa) || o.empresa || ''), (getAbreviaturaDepartamento(o.departamento, o.empresa) || o.departamento || ''), o.razon_social,
             o.responsable || '-', o.folio_factura || '-', o.moneda,
             formatoMoneda(o.monto || o.suma || 0, o.moneda || 'MXN'), o.estado
           ];
