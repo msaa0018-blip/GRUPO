@@ -1160,7 +1160,7 @@
   }
 
   /* ===== MODAL: EDITAR PRODUCTOS DE UNA OC (solo Administrador) ===== */
-  #editarProductosOCModal, #almacenesDashboardModal {
+  #editarProductosOCModal, #almacenesDashboardModal, #almacenProductosModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1174,8 +1174,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #editarProductosOCModal.active, #almacenesDashboardModal.active { display: flex }
-  #editarProductosOCModal .modal-content, #almacenesDashboardModal .modal-content {
+  #editarProductosOCModal.active, #almacenesDashboardModal.active, #almacenProductosModal.active { display: flex }
+  #editarProductosOCModal .modal-content, #almacenesDashboardModal .modal-content, #almacenProductosModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1186,7 +1186,7 @@
     flex-direction: column;
     box-sizing: border-box;
   }
-  #editarProductosOCModal .modal-header, #almacenesDashboardModal .modal-header {
+  #editarProductosOCModal .modal-header, #almacenesDashboardModal .modal-header, #almacenProductosModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1194,9 +1194,9 @@
     flex-wrap: wrap;
     gap: 8px;
   }
-  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3 { margin: 0; font-size: 1.1rem }
-  #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
-  #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body { overflow: auto; }
+  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group, #almacenProductosModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body, #almacenProductosModal .modal-body { overflow: auto; }
 
   .almacen-kpi-card {
     background: var(--gray-100);
@@ -2973,48 +2973,107 @@
 
       <!-- ===== MÓDULO ALMACENES (exclusivo Administrador) ===== -->
       <div id="panelAlmacenes" class="card hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <h2 style="margin:0;">🏭 Almacenes</h2>
-          <button class="success" onclick="window.abrirDashboardAlmacenes()">📊 Dashboard</button>
+        <h2>🏭 Almacenes</h2>
+
+        <!-- Sección exclusiva de Administrador: crear/editar/eliminar almacenes + KPIs globales -->
+        <div id="almacenesAdminSection">
+          <p class="text-muted" style="margin-bottom:12px;">Crea almacenes y asígnalos a una empresa/departamento y nave. Los usuarios verán, en Productos, solo los almacenes que les correspondan.</p>
+          <div class="table-wrapper">
+            <table id="tablaAlmacenes">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Empresa</th>
+                  <th>Departamento</th>
+                  <th>Nave</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="cuerpoAlmacenes"></tbody>
+              <tfoot>
+                <tr>
+                  <td><input id="nvoAlmNombre" placeholder="Nombre *"></td>
+                  <td>
+                    <select id="nvoAlmEmpresa" onchange="window.actualizarDeptosNuevoAlmacen()">
+                      <option value="">Sin asignar (todas)</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select id="nvoAlmDepartamento">
+                      <option value="">Sin asignar (toda la empresa)</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select id="nvoAlmNave">
+                      <option value="NAVE 1">NAVE 1</option>
+                      <option value="NAVE 2">NAVE 2</option>
+                    </select>
+                  </td>
+                  <td><button class="success" onclick="window.agregarAlmacen()">➕</button></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div id="msgAlmacenes"></div>
+
+          <h3 style="margin-top:20px;">📈 Indicadores Globales</h3>
+          <div id="almacenesKpisGlobales" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;"></div>
         </div>
-        <p class="text-muted" style="margin-bottom:12px;">Crea almacenes y asígnalos a una empresa/departamento y nave. Los usuarios verán, en Productos, solo los almacenes que les correspondan.</p>
-        <div class="table-wrapper">
-          <table id="tablaAlmacenes">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Empresa</th>
-                <th>Departamento</th>
-                <th>Nave</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="cuerpoAlmacenes"></tbody>
-            <tfoot>
-              <tr>
-                <td><input id="nvoAlmNombre" placeholder="Nombre *"></td>
-                <td>
-                  <select id="nvoAlmEmpresa" onchange="window.actualizarDeptosNuevoAlmacen()">
-                    <option value="">Sin asignar (todas)</option>
-                  </select>
-                </td>
-                <td>
-                  <select id="nvoAlmDepartamento">
-                    <option value="">Sin asignar (toda la empresa)</option>
-                  </select>
-                </td>
-                <td>
-                  <select id="nvoAlmNave">
-                    <option value="NAVE 1">NAVE 1</option>
-                    <option value="NAVE 2">NAVE 2</option>
-                  </select>
-                </td>
-                <td><button class="success" onclick="window.agregarAlmacen()">➕</button></td>
-              </tr>
-            </tfoot>
-          </table>
+
+        <!-- Sección de solo lectura para usuarios con acceso limitado (ej. IQA):
+             solo ven sus almacenes asignados, en tabla resumen + KPIs propios. -->
+        <div id="almacenesUsuarioSection" class="hidden">
+          <p class="text-muted" style="margin-bottom:12px;">Resumen de tu(s) almacén(es) asignado(s).</p>
+          <div class="table-wrapper">
+            <table id="tablaAlmacenesUsuario">
+              <thead>
+                <tr>
+                  <th>Almacén</th>
+                  <th>Productos distintos</th>
+                  <th>Piezas Nuevo</th>
+                  <th>Piezas Usado</th>
+                  <th>Piezas Total</th>
+                  <th>Marca principal</th>
+                  <th>Valoración Nuevo</th>
+                  <th>Valoración Usado</th>
+                  <th>Valoración Total</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="cuerpoAlmacenesUsuario"></tbody>
+            </table>
+          </div>
+          <div id="almacenesKpisUsuario" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;"></div>
         </div>
-        <div id="msgAlmacenes"></div>
+      </div>
+
+      <!-- ===== MODAL: PRODUCTOS DE UN ALMACÉN ===== -->
+      <div id="almacenProductosModal">
+        <div class="modal-content" style="max-width:1000px;">
+          <div class="modal-header">
+            <h3>📦 Productos — <span id="almacenProductosTitulo"></span></h3>
+            <button class="danger btn-modal-x" onclick="window.cerrarProductosAlmacen()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Núm. Parte</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Condición</th>
+                    <th>Ubicación</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoAlmacenProductosModal"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ===== MODAL: OPCIONES DE ALMACÉN (Editar/Eliminar) ===== -->
@@ -3069,31 +3128,13 @@
 
       <!-- ===== MODAL: DASHBOARD DE ALMACENES ===== -->
       <div id="almacenesDashboardModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:640px;">
           <div class="modal-header">
-            <h3>📊 Dashboard de Almacenes</h3>
+            <h3>📊 Dashboard — <span id="almacenesDashboardTitulo">Almacén</span></h3>
             <button class="danger btn-modal-x" onclick="window.cerrarDashboardAlmacenes()">✕</button>
           </div>
           <div class="modal-body">
-            <div id="almacenesDashboardResumen" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;"></div>
-            <div class="table-wrapper">
-              <table id="almacenesDashboardTabla">
-                <thead>
-                  <tr>
-                    <th>Almacén</th>
-                    <th>Productos distintos</th>
-                    <th>Piezas Nuevo</th>
-                    <th>Piezas Usado</th>
-                    <th>Piezas Total</th>
-                    <th>Marca principal</th>
-                    <th>Valoración Nuevo</th>
-                    <th>Valoración Usado</th>
-                    <th>Valoración Total</th>
-                  </tr>
-                </thead>
-                <tbody id="almacenesDashboardCuerpo"></tbody>
-              </table>
-            </div>
+            <div id="almacenesDashboardResumen" style="display:flex; gap:12px; flex-wrap:wrap;"></div>
           </div>
         </div>
       </div>
@@ -5367,8 +5408,8 @@
                 alert('⚠️ No tienes permisos para acceder a este módulo.');
               }
             } else if (modulo === 'almacenes') {
-              // ALMACENES es exclusivo del rol Administrador.
-              if (actual && actual.rol === 'Administrador') {
+              // ALMACENES: Administrador (control total) o IQA (solo lectura de su almacén).
+              if (usuarioPuedeAltaRegistros(actual)) {
                 window.mostrarModulo('almacenes');
               } else {
                 alert('⚠️ No tienes permisos para acceder a este módulo.');
@@ -5700,51 +5741,190 @@
           almacenesCache = [];
         }
 
-        // Refrescar la tabla del módulo ALMACENES (si está visible).
-        var cuerpo = document.getElementById('cuerpoAlmacenes');
-        if (cuerpo) {
-          cuerpo.innerHTML = '';
-          almacenesCache.forEach(function(a) {
-            var fila = document.createElement('tr');
-            fila.innerHTML =
-              '<td>' + escapeHTML(a.nombre) + '</td>' +
-              '<td>' + escapeHTML(a.empresa || 'Todas') + '</td>' +
-              '<td>' + escapeHTML(a.departamento || 'Toda la empresa') + '</td>' +
-              '<td>' + escapeHTML(a.nave) + '</td>' +
-              '<td style="text-align:center;">' +
-                '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesAlmacen(' + a.id + ')">' +
-                  '<span></span><span></span><span></span>' +
-                '</button>' +
-              '</td>';
-            cuerpo.appendChild(fila);
-          });
-        }
+        var esAdmin = actual && actual.rol === 'Administrador';
+        var seccionAdmin = document.getElementById('almacenesAdminSection');
+        var seccionUsuario = document.getElementById('almacenesUsuarioSection');
+        if (seccionAdmin) seccionAdmin.classList.toggle('hidden', !esAdmin);
+        if (seccionUsuario) seccionUsuario.classList.toggle('hidden', esAdmin);
 
-        // Poblar el selector de empresa del formulario de alta de almacén.
-        var selEmpresa = document.getElementById('nvoAlmEmpresa');
-        if (selEmpresa && !selEmpresa.dataset.poblado) {
-          getEmpresasCatalogo().forEach(function(e) {
-            var opt = document.createElement('option');
-            opt.value = e.nombre;
-            opt.textContent = e.nombre;
-            selEmpresa.appendChild(opt);
-          });
-          selEmpresa.dataset.poblado = '1';
-        }
-        var selEmpresaEd = document.getElementById('edAlmEmpresa');
-        if (selEmpresaEd && !selEmpresaEd.dataset.poblado) {
-          getEmpresasCatalogo().forEach(function(e) {
-            var opt = document.createElement('option');
-            opt.value = e.nombre;
-            opt.textContent = e.nombre;
-            selEmpresaEd.appendChild(opt);
-          });
-          selEmpresaEd.dataset.poblado = '1';
+        if (esAdmin) {
+          // Refrescar la tabla de administración del módulo ALMACENES.
+          var cuerpo = document.getElementById('cuerpoAlmacenes');
+          if (cuerpo) {
+            cuerpo.innerHTML = '';
+            almacenesCache.forEach(function(a) {
+              var fila = document.createElement('tr');
+              fila.innerHTML =
+                '<td>' + escapeHTML(a.nombre) + '</td>' +
+                '<td>' + escapeHTML(a.empresa || 'Todas') + '</td>' +
+                '<td>' + escapeHTML(a.departamento || 'Toda la empresa') + '</td>' +
+                '<td>' + escapeHTML(a.nave) + '</td>' +
+                '<td style="text-align:center;">' +
+                  '<div style="display:flex; gap:6px; justify-content:center; align-items:center;">' +
+                  '<button class="success" style="padding:6px 10px;" title="Dashboard de este almacén" onclick="window.abrirDashboardAlmacenes(' + a.id + ')">📊</button>' +
+                  '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesAlmacen(' + a.id + ')">' +
+                    '<span></span><span></span><span></span>' +
+                  '</button>' +
+                  '</div>' +
+                '</td>';
+              cuerpo.appendChild(fila);
+            });
+          }
+
+          // Poblar el selector de empresa del formulario de alta de almacén.
+          var selEmpresa = document.getElementById('nvoAlmEmpresa');
+          if (selEmpresa && !selEmpresa.dataset.poblado) {
+            getEmpresasCatalogo().forEach(function(e) {
+              var opt = document.createElement('option');
+              opt.value = e.nombre;
+              opt.textContent = e.nombre;
+              selEmpresa.appendChild(opt);
+            });
+            selEmpresa.dataset.poblado = '1';
+          }
+          var selEmpresaEd = document.getElementById('edAlmEmpresa');
+          if (selEmpresaEd && !selEmpresaEd.dataset.poblado) {
+            getEmpresasCatalogo().forEach(function(e) {
+              var opt = document.createElement('option');
+              opt.value = e.nombre;
+              opt.textContent = e.nombre;
+              selEmpresaEd.appendChild(opt);
+            });
+            selEmpresaEd.dataset.poblado = '1';
+          }
+
+          // Refrescar los KPI globales debajo de la tabla de Almacenes.
+          window.cargarKPIsGlobalesAlmacenes();
+        } else {
+          // Usuarios con acceso limitado (ej. IQA): solo ven sus propios
+          // almacenes en una tabla de solo lectura + sus propios KPIs.
+          window.renderAlmacenesUsuario();
         }
 
         // Refrescar el selector/filtro de almacén dentro de Productos.
         window.actualizarSelectorAlmacenProductos();
         window.actualizarFiltroAlmacenProductos();
+      };
+
+      // Vista de solo lectura para usuarios con acceso limitado a
+      // ALMACENES (ej. IQA): tabla resumen + KPIs, solo de sus almacenes.
+      window.renderAlmacenesUsuario = async function() {
+        var cuerpo = document.getElementById('cuerpoAlmacenesUsuario');
+        var kpis = document.getElementById('almacenesKpisUsuario');
+        if (!cuerpo) return;
+
+        var disponibles = obtenerAlmacenesDisponibles(actual);
+        if (disponibles.length === 0) {
+          cuerpo.innerHTML = '<tr><td colspan="10">No tienes ningún almacén asignado.</td></tr>';
+          if (kpis) kpis.innerHTML = '';
+          return;
+        }
+
+        cuerpo.innerHTML = '<tr><td colspan="10">Cargando…</td></tr>';
+        try {
+          var idsDisponibles = disponibles.map(function(a) { return a.id; });
+          var { data: productos, error } = await supabase.from('productos').select('*').in('almacen_id', idsDisponibles);
+          if (error) throw error;
+
+          var statsPorAlmacen = {};
+          disponibles.forEach(function(a) {
+            statsPorAlmacen[a.id] = { productosDistintos: 0, piezasNuevo: 0, piezasUsado: 0, marcas: {}, valorNuevo: 0, valorUsado: 0 };
+          });
+          (productos || []).forEach(function(p) {
+            var s = statsPorAlmacen[p.almacen_id];
+            if (!s) return;
+            s.productosDistintos += 1;
+            var cantidad = Number(p.cantidad) || 0;
+            var precio = Number(p.precio_referencia) || 0;
+            var valor = cantidad * precio;
+            var esUsado = (p.condicion || 'Nuevo') === 'Usado';
+            if (esUsado) { s.piezasUsado += cantidad; s.valorUsado += valor; }
+            else { s.piezasNuevo += cantidad; s.valorNuevo += valor; }
+            if (p.marca) {
+              var marcaNorm = p.marca.trim().toUpperCase();
+              if (marcaNorm) s.marcas[marcaNorm] = (s.marcas[marcaNorm] || 0) + cantidad;
+            }
+          });
+
+          var filas = disponibles.map(function(a) {
+            var s = statsPorAlmacen[a.id];
+            var marcaPrincipal = '—', maxCant = 0;
+            Object.keys(s.marcas).forEach(function(m) { if (s.marcas[m] > maxCant) { maxCant = s.marcas[m]; marcaPrincipal = m; } });
+            var piezasTotal = s.piezasNuevo + s.piezasUsado;
+            var valorTotal = s.valorNuevo + s.valorUsado;
+            return {
+              id: a.id, nombre: a.nombre, productosDistintos: s.productosDistintos,
+              piezasNuevo: s.piezasNuevo, piezasUsado: s.piezasUsado, piezasTotal: piezasTotal,
+              marcaPrincipal: marcaPrincipal, valorNuevo: s.valorNuevo, valorUsado: s.valorUsado, valorTotal: valorTotal
+            };
+          });
+
+          cuerpo.innerHTML = filas.map(function(f) {
+            return '<tr>' +
+              '<td>' + escapeHTML(f.nombre) + '</td>' +
+              '<td style="text-align:center;">' + f.productosDistintos + '</td>' +
+              '<td style="text-align:center;">' + f.piezasNuevo + '</td>' +
+              '<td style="text-align:center;">' + f.piezasUsado + '</td>' +
+              '<td style="text-align:center;font-weight:600;">' + f.piezasTotal + '</td>' +
+              '<td>' + escapeHTML(f.marcaPrincipal) + '</td>' +
+              '<td>' + formatoMoneda(f.valorNuevo, 'MXN') + '</td>' +
+              '<td>' + formatoMoneda(f.valorUsado, 'MXN') + '</td>' +
+              '<td style="font-weight:600;">' + formatoMoneda(f.valorTotal, 'MXN') + '</td>' +
+              '<td><button class="btn-visualizar" onclick="window.verProductosAlmacen(' + f.id + ')">📦 Ver Productos</button></td>' +
+              '</tr>';
+          }).join('');
+
+          var totalProductos = filas.reduce(function(s, f) { return s + f.productosDistintos; }, 0);
+          var totalPiezas = filas.reduce(function(s, f) { return s + f.piezasTotal; }, 0);
+          var totalValor = filas.reduce(function(s, f) { return s + f.valorTotal; }, 0);
+          if (kpis) {
+            kpis.innerHTML =
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">📦 Productos distintos</div><div class="almacen-kpi-valor">' + totalProductos + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas totales</div><div class="almacen-kpi-valor">' + totalPiezas + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración total estimada</div><div class="almacen-kpi-valor">' + formatoMoneda(totalValor, 'MXN') + '</div></div>';
+          }
+        } catch (e) {
+          console.error('Error cargando almacenes del usuario:', e);
+          cuerpo.innerHTML = '<tr><td colspan="10">❌ Error al cargar tus almacenes.</td></tr>';
+        }
+      };
+
+      // Modal: lista de productos de un almacén específico.
+      window.verProductosAlmacen = async function(almacenId) {
+        var modal = document.getElementById('almacenProductosModal');
+        var titulo = document.getElementById('almacenProductosTitulo');
+        var cuerpo = document.getElementById('cuerpoAlmacenProductosModal');
+        var almacen = almacenesCache.find(function(a) { return a.id === almacenId; });
+        titulo.textContent = almacen ? almacen.nombre : '';
+        cuerpo.innerHTML = '<tr><td colspan="8">Cargando…</td></tr>';
+        modal.classList.add('active');
+        try {
+          var { data, error } = await supabase.from('productos').select('*').eq('almacen_id', almacenId).order('descripcion');
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            cuerpo.innerHTML = '<tr><td colspan="8">Este almacén no tiene productos registrados.</td></tr>';
+            return;
+          }
+          cuerpo.innerHTML = data.map(function(p) {
+            return '<tr>' +
+              '<td>' + escapeHTML(p.codigo) + '</td>' +
+              '<td>' + escapeHTML(p.numero_parte) + '</td>' +
+              '<td>' + escapeHTML(p.marca) + '</td>' +
+              '<td>' + escapeHTML(p.modelo) + '</td>' +
+              '<td>' + escapeHTML(p.descripcion) + '</td>' +
+              '<td style="text-align:center;">' + (p.cantidad || 0) + '</td>' +
+              '<td>' + escapeHTML(p.condicion || 'Nuevo') + '</td>' +
+              '<td>' + escapeHTML(p.ubicacion) + '</td>' +
+              '</tr>';
+          }).join('');
+        } catch (e) {
+          console.error('Error cargando productos del almacén:', e);
+          cuerpo.innerHTML = '<tr><td colspan="8">❌ Error al cargar los productos.</td></tr>';
+        }
+      };
+
+      window.cerrarProductosAlmacen = function() {
+        document.getElementById('almacenProductosModal').classList.remove('active');
       };
 
       window.actualizarDeptosNuevoAlmacen = function() {
@@ -5900,108 +6080,116 @@
         }
       };
 
-      // ===== DASHBOARD DE ALMACENES =====
-      // "Almacén con más movimientos" se aproxima con el total de piezas
-      // en existencia, ya que el sistema todavía no lleva una bitácora de
-      // entradas/salidas por almacén.
-      window.abrirDashboardAlmacenes = async function() {
+      // ===== DASHBOARD POR ALMACÉN =====
+      window.abrirDashboardAlmacenes = async function(almacenId) {
         var modal = document.getElementById('almacenesDashboardModal');
         var resumen = document.getElementById('almacenesDashboardResumen');
-        var cuerpo = document.getElementById('almacenesDashboardCuerpo');
+        var titulo = document.getElementById('almacenesDashboardTitulo');
+        var almacen = almacenesCache.find(function(a) { return a.id === almacenId; });
+        titulo.textContent = almacen ? almacen.nombre : 'Almacén';
         resumen.innerHTML = '<p>Cargando…</p>';
-        cuerpo.innerHTML = '';
         modal.classList.add('active');
 
         try {
-          if (!almacenesCache || !almacenesCache.length) await window.cargarAlmacenes();
-          var { data: productos, error } = await supabase.from('productos').select('*');
+          var { data: productos, error } = await supabase.from('productos').select('*').eq('almacen_id', almacenId);
           if (error) throw error;
 
-          var statsPorAlmacen = {};
+          var productosDistintos = 0, piezasNuevo = 0, piezasUsado = 0, valorNuevo = 0, valorUsado = 0;
+          var marcas = {};
           (productos || []).forEach(function(p) {
-            var almId = p.almacen_id || 'sin_asignar';
-            if (!statsPorAlmacen[almId]) {
-              statsPorAlmacen[almId] = { productosDistintos: 0, piezasNuevo: 0, piezasUsado: 0, marcas: {}, valorNuevo: 0, valorUsado: 0 };
-            }
-            var s = statsPorAlmacen[almId];
-            s.productosDistintos += 1;
+            productosDistintos += 1;
             var cantidad = Number(p.cantidad) || 0;
             var precio = Number(p.precio_referencia) || 0;
             var valor = cantidad * precio;
             var esUsado = (p.condicion || 'Nuevo') === 'Usado';
-            if (esUsado) {
-              s.piezasUsado += cantidad;
-              s.valorUsado += valor;
-            } else {
-              s.piezasNuevo += cantidad;
-              s.valorNuevo += valor;
-            }
+            if (esUsado) { piezasUsado += cantidad; valorUsado += valor; }
+            else { piezasNuevo += cantidad; valorNuevo += valor; }
             if (p.marca) {
               var marcaNorm = p.marca.trim().toUpperCase();
-              if (marcaNorm) s.marcas[marcaNorm] = (s.marcas[marcaNorm] || 0) + cantidad;
+              if (marcaNorm) marcas[marcaNorm] = (marcas[marcaNorm] || 0) + cantidad;
             }
           });
 
-          var filas = Object.keys(statsPorAlmacen).map(function(almId) {
-            var s = statsPorAlmacen[almId];
-            var almacen = almacenesCache.find(function(a) { return String(a.id) === String(almId); });
-            var nombre = almacen ? almacen.nombre : 'Sin almacén asignado';
-            var marcaPrincipal = '—';
-            var maxCantidad = 0;
-            Object.keys(s.marcas).forEach(function(m) {
-              if (s.marcas[m] > maxCantidad) { maxCantidad = s.marcas[m]; marcaPrincipal = m; }
-            });
-            var piezasTotal = s.piezasNuevo + s.piezasUsado;
-            var valorTotal = s.valorNuevo + s.valorUsado;
-            return {
-              nombre: nombre, productosDistintos: s.productosDistintos,
-              piezasNuevo: s.piezasNuevo, piezasUsado: s.piezasUsado, piezasTotal: piezasTotal,
-              marcaPrincipal: marcaPrincipal,
-              valorNuevo: s.valorNuevo, valorUsado: s.valorUsado, valorTotal: valorTotal
-            };
+          var marcaPrincipal = '—';
+          var maxCantidad = 0;
+          Object.keys(marcas).forEach(function(m) {
+            if (marcas[m] > maxCantidad) { maxCantidad = marcas[m]; marcaPrincipal = m; }
           });
+          var piezasTotal = piezasNuevo + piezasUsado;
+          var valorTotal = valorNuevo + valorUsado;
 
-          filas.sort(function(a, b) { return a.nombre.localeCompare(b.nombre); });
-
-          cuerpo.innerHTML = filas.map(function(f) {
-            return '<tr>' +
-              '<td>' + escapeHTML(f.nombre) + '</td>' +
-              '<td style="text-align:center;">' + f.productosDistintos + '</td>' +
-              '<td style="text-align:center;">' + f.piezasNuevo + '</td>' +
-              '<td style="text-align:center;">' + f.piezasUsado + '</td>' +
-              '<td style="text-align:center;font-weight:600;">' + f.piezasTotal + '</td>' +
-              '<td>' + escapeHTML(f.marcaPrincipal) + '</td>' +
-              '<td>' + formatoMoneda(f.valorNuevo, 'MXN') + '</td>' +
-              '<td>' + formatoMoneda(f.valorUsado, 'MXN') + '</td>' +
-              '<td style="font-weight:600;">' + formatoMoneda(f.valorTotal, 'MXN') + '</td>' +
-              '</tr>';
-          }).join('');
-
-          if (filas.length === 0) {
-            resumen.innerHTML = '<p>No hay productos registrados todavía.</p>';
+          if (productosDistintos === 0) {
+            resumen.innerHTML = '<p>Este almacén todavía no tiene productos registrados.</p>';
           } else {
-            var masMovimientos = filas.reduce(function(max, f) { return f.piezasTotal > max.piezasTotal ? f : max; }, filas[0]);
-            var mayorCosto = filas.reduce(function(max, f) { return f.valorTotal > max.valorTotal ? f : max; }, filas[0]);
-            var totalProductosGeneral = filas.reduce(function(s, f) { return s + f.productosDistintos; }, 0);
-            var totalPiezasGeneral = filas.reduce(function(s, f) { return s + f.piezasTotal; }, 0);
-            var totalValorGeneral = filas.reduce(function(s, f) { return s + f.valorTotal; }, 0);
-
             resumen.innerHTML =
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">📦 Productos distintos (todos)</div><div class="almacen-kpi-valor">' + totalProductosGeneral + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas totales (todos)</div><div class="almacen-kpi-valor">' + totalPiezasGeneral + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración total estimada</div><div class="almacen-kpi-valor">' + formatoMoneda(totalValorGeneral, 'MXN') + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🚚 Almacén con más movimientos*</div><div class="almacen-kpi-valor">' + escapeHTML(masMovimientos.nombre) + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💎 Almacén de mayor costo estimado</div><div class="almacen-kpi-valor">' + escapeHTML(mayorCosto.nombre) + '</div></div>' +
-              '<p style="width:100%;font-size:11px;color:var(--gray-500);margin:4px 0 0;">*Aproximado con el total de piezas en existencia, ya que aún no se registra un historial de entradas/salidas por almacén.</p>';
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">📦 Productos distintos</div><div class="almacen-kpi-valor">' + productosDistintos + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Nuevo</div><div class="almacen-kpi-valor">' + piezasNuevo + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Usado</div><div class="almacen-kpi-valor">' + piezasUsado + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Total</div><div class="almacen-kpi-valor">' + piezasTotal + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🏷️ Marca principal</div><div class="almacen-kpi-valor">' + escapeHTML(marcaPrincipal) + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración Nuevo</div><div class="almacen-kpi-valor">' + formatoMoneda(valorNuevo, 'MXN') + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración Usado</div><div class="almacen-kpi-valor">' + formatoMoneda(valorUsado, 'MXN') + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración Total</div><div class="almacen-kpi-valor">' + formatoMoneda(valorTotal, 'MXN') + '</div></div>';
           }
         } catch (e) {
-          console.error('Error cargando dashboard de almacenes:', e);
+          console.error('Error cargando dashboard del almacén:', e);
           resumen.innerHTML = '<div class="alert">❌ No se pudo cargar el dashboard: ' + escapeHTML(e.message) + '</div>';
         }
       };
 
       window.cerrarDashboardAlmacenes = function() {
         document.getElementById('almacenesDashboardModal').classList.remove('active');
+      };
+
+      // ===== KPI GLOBALES (debajo de la tabla de Almacenes) =====
+      // "Almacén con más movimientos" se aproxima con el total de piezas
+      // en existencia, ya que el sistema todavía no lleva una bitácora de
+      // entradas/salidas por almacén.
+      window.cargarKPIsGlobalesAlmacenes = async function() {
+        var contenedor = document.getElementById('almacenesKpisGlobales');
+        if (!contenedor) return;
+        contenedor.innerHTML = '<p>Cargando…</p>';
+        try {
+          var { data: productos, error } = await supabase.from('productos').select('*');
+          if (error) throw error;
+
+          var statsPorAlmacen = {};
+          (productos || []).forEach(function(p) {
+            var almId = p.almacen_id || 'sin_asignar';
+            if (!statsPorAlmacen[almId]) statsPorAlmacen[almId] = { piezasTotal: 0, valorTotal: 0 };
+            var cantidad = Number(p.cantidad) || 0;
+            var precio = Number(p.precio_referencia) || 0;
+            statsPorAlmacen[almId].piezasTotal += cantidad;
+            statsPorAlmacen[almId].valorTotal += cantidad * precio;
+          });
+
+          var grupos = Object.keys(statsPorAlmacen).map(function(almId) {
+            var almacen = almacenesCache.find(function(a) { return String(a.id) === String(almId); });
+            return {
+              nombre: almacen ? almacen.nombre : 'Sin almacén asignado',
+              piezasTotal: statsPorAlmacen[almId].piezasTotal,
+              valorTotal: statsPorAlmacen[almId].valorTotal
+            };
+          });
+
+          if (grupos.length === 0) {
+            contenedor.innerHTML = '<p>No hay productos registrados todavía.</p>';
+            return;
+          }
+
+          var valoracionGlobal = grupos.reduce(function(s, g) { return s + g.valorTotal; }, 0);
+          var masMovimientos = grupos.reduce(function(max, g) { return g.piezasTotal > max.piezasTotal ? g : max; }, grupos[0]);
+          var mayorCosto = grupos.reduce(function(max, g) { return g.valorTotal > max.valorTotal ? g : max; }, grupos[0]);
+
+          contenedor.innerHTML =
+            '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración total global de almacenes</div><div class="almacen-kpi-valor">' + formatoMoneda(valoracionGlobal, 'MXN') + '</div></div>' +
+            '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🚚 Almacén con más movimientos*</div><div class="almacen-kpi-valor">' + escapeHTML(masMovimientos.nombre) + '</div></div>' +
+            '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💎 Almacén de mayor costo estimado</div><div class="almacen-kpi-valor">' + escapeHTML(mayorCosto.nombre) + '</div></div>' +
+            '<p style="width:100%;font-size:11px;color:var(--gray-500);margin:4px 0 0;">*Aproximado con el total de piezas en existencia, ya que aún no se registra un historial de entradas/salidas por almacén.</p>';
+        } catch (e) {
+          console.error('Error cargando KPIs globales de almacenes:', e);
+          contenedor.innerHTML = '<div class="alert">❌ No se pudieron cargar los indicadores: ' + escapeHTML(e.message) + '</div>';
+        }
       };
 
       // ===== ALMACÉN/NAVE dentro del formulario de alta de Productos =====
@@ -6425,7 +6613,7 @@
             return;
           }
         } else if (modulo === 'almacenes') {
-          if (actual && actual.rol === 'Administrador') {
+          if (usuarioPuedeAltaRegistros(actual)) {
             if (panelAlmacenes) panelAlmacenes.classList.remove('hidden');
             window.cargarAlmacenes();
           } else {
@@ -7437,7 +7625,7 @@
 
           var almacenesBtn = document.getElementById('menuAlmacenesBtn');
           if (almacenesBtn) {
-            if (actual && actual.rol === 'Administrador') {
+            if (usuarioPuedeAltaRegistros(actual)) {
               almacenesBtn.style.display = 'flex';
             } else {
               almacenesBtn.style.display = 'none';
@@ -10210,7 +10398,7 @@
 
           var almacenesBtnLogin = document.getElementById('menuAlmacenesBtn');
           if (almacenesBtnLogin) {
-            if (actual && actual.rol === 'Administrador') {
+            if (usuarioPuedeAltaRegistros(actual)) {
               almacenesBtnLogin.style.display = 'flex';
             } else {
               almacenesBtnLogin.style.display = 'none';
