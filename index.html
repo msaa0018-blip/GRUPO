@@ -1261,7 +1261,7 @@
   }
 
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
-  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal {
+  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1275,8 +1275,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active { display: flex }
-  #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content {
+  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active, #almacenAccionesModal.active, #editarAlmacenModal.active { display: flex }
+  #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content, #almacenAccionesModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1284,7 +1284,7 @@
     max-width: 420px;
     box-sizing: border-box;
   }
-  #editarProveedorModal .modal-content {
+  #editarProveedorModal .modal-content, #editarAlmacenModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1294,15 +1294,15 @@
     overflow: auto;
     box-sizing: border-box;
   }
-  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header {
+  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header, #almacenAccionesModal .modal-header, #editarAlmacenModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
     gap: 8px;
   }
-  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3 { margin: 0; font-size: 1.05rem }
-  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group {
+  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3 { margin: 0; font-size: 1.05rem }
+  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group, #almacenAccionesModal .modal-header .pdfPreview-btn-group, #editarAlmacenModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
@@ -2686,6 +2686,12 @@
           <span class="modulo-leyenda">INVENTARIO</span>
           <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Próximamente</div>
         </div>
+        <!-- Módulo ALMACENES - visible solo para el rol Administrador -->
+        <div class="modulo-item" id="menuAlmacenesBtn" data-modulo="almacenes" style="display:none;">
+          <div class="modulo-cuadro funcional">🏭</div>
+          <span class="modulo-leyenda">ALMACENES</span>
+          <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Gestión de almacenes</div>
+        </div>
       </div>
     </div>
 
@@ -2876,17 +2882,28 @@
       <!-- ===== ALTA DE REGISTROS: PRODUCTOS ===== -->
       <div id="panelProductos" class="card hidden">
         <h2>📦 Productos</h2>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px;font-weight:600;color:var(--gray-600);">Filtrar por almacén:</label>
+          <select id="filtroAlmacenProductos" onchange="window.cargarProductosCatalogo()" style="max-width:260px;">
+            <option value="">Todos los almacenes</option>
+          </select>
+        </div>
         <div class="table-wrapper productos-tabla">
           <table id="tablaProductosCatalogo">
             <thead>
               <tr>
                 <th>Código</th>
                 <th>Número de Parte</th>
+                <th>Marca</th>
+                <th>Modelo</th>
                 <th>Descripción</th>
                 <th>Unidad de Medida</th>
                 <th>Precio de Referencia</th>
                 <th>Moneda</th>
                 <th>Cantidad</th>
+                <th>Ubicación</th>
+                <th>Almacén</th>
+                <th>Nave</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -2895,6 +2912,8 @@
               <tr>
                 <td><input id="nvoProdCodigo" placeholder="Código"></td>
                 <td><input id="nvoProdNumeroParte" placeholder="Número de parte"></td>
+                <td><input id="nvoProdMarca" placeholder="Marca"></td>
+                <td><input id="nvoProdModelo" placeholder="Modelo"></td>
                 <td><input id="nvoProdDescripcion" placeholder="Descripción *"></td>
                 <td>
                   <select id="nvoProdUdm">
@@ -2921,12 +2940,108 @@
                   </select>
                 </td>
                 <td><input id="nvoProdCantidad" type="number" step="1" min="0" placeholder="Cantidad"></td>
+                <td><input id="nvoProdUbicacion" placeholder="Ubicación"></td>
+                <td id="nvoProdAlmacenCelda"><select id="nvoProdAlmacen" onchange="window.actualizarNaveDesdeAlmacen()"><option value="">Sin almacenes</option></select></td>
+                <td><input id="nvoProdNave" placeholder="Nave" readonly style="background:var(--gray-100);"></td>
                 <td><button class="success" onclick="window.agregarProductoCatalogo()">➕ Agregar</button></td>
               </tr>
             </tfoot>
           </table>
         </div>
         <div id="msgProductos"></div>
+      </div>
+
+      <!-- ===== MÓDULO ALMACENES (exclusivo Administrador) ===== -->
+      <div id="panelAlmacenes" class="card hidden">
+        <h2>🏭 Almacenes</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Crea almacenes y asígnalos a una empresa/departamento y nave. Los usuarios verán, en Productos, solo los almacenes que les correspondan.</p>
+        <div class="table-wrapper">
+          <table id="tablaAlmacenes">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Empresa</th>
+                <th>Departamento</th>
+                <th>Nave</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoAlmacenes"></tbody>
+            <tfoot>
+              <tr>
+                <td><input id="nvoAlmNombre" placeholder="Nombre *"></td>
+                <td>
+                  <select id="nvoAlmEmpresa" onchange="window.actualizarDeptosNuevoAlmacen()">
+                    <option value="">Sin asignar (todas)</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="nvoAlmDepartamento">
+                    <option value="">Sin asignar (toda la empresa)</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="nvoAlmNave">
+                    <option value="NAVE 1">NAVE 1</option>
+                    <option value="NAVE 2">NAVE 2</option>
+                  </select>
+                </td>
+                <td><button class="success" onclick="window.agregarAlmacen()">➕</button></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div id="msgAlmacenes"></div>
+      </div>
+
+      <!-- ===== MODAL: OPCIONES DE ALMACÉN (Editar/Eliminar) ===== -->
+      <div id="almacenAccionesModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>🏭 <span id="almacenAccionesNombre">Almacén</span></h3>
+            <div class="pdfPreview-btn-group">
+              <button class="danger" onclick="window.cerrarModalAccionesAlmacen()">✕</button>
+              <button class="success" onclick="window.confirmarAccionAlmacen()">✔️</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionAlmacen('editar')">✏️ Editar</button>
+              <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionAlmacen('eliminar')">🗑️ Eliminar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: EDITAR ALMACÉN ===== -->
+      <div id="editarAlmacenModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>✏️ Editar Almacén</h3>
+            <div class="pdfPreview-btn-group">
+              <button class="danger btn-modal-x" onclick="window.cancelarEdicionAlmacen()">✕</button>
+              <button class="success btn-modal-x" onclick="window.guardarEdicionAlmacen()">➜</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div class="cxc-form-row">
+              <input id="edAlmNombre" placeholder="Nombre *">
+            </div>
+            <div class="cxc-form-row">
+              <select id="edAlmEmpresa" onchange="window.actualizarDeptosEditarAlmacen()">
+                <option value="">Sin asignar (todas)</option>
+              </select>
+              <select id="edAlmDepartamento">
+                <option value="">Sin asignar (toda la empresa)</option>
+              </select>
+              <select id="edAlmNave">
+                <option value="NAVE 1">NAVE 1</option>
+                <option value="NAVE 2">NAVE 2</option>
+              </select>
+            </div>
+            <div id="msgEditarAlmacen"></div>
+          </div>
+        </div>
       </div>
 
       <!-- ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== -->
@@ -5196,6 +5311,13 @@
               } else {
                 alert('⚠️ No tienes permisos para acceder a este módulo.');
               }
+            } else if (modulo === 'almacenes') {
+              // ALMACENES es exclusivo del rol Administrador.
+              if (actual && actual.rol === 'Administrador') {
+                window.mostrarModulo('almacenes');
+              } else {
+                alert('⚠️ No tienes permisos para acceder a este módulo.');
+              }
             }
           });
         }
@@ -5483,24 +5605,315 @@
 
       // ===== CATÁLOGO DE PRODUCTOS =====
       var productosCatalogoCache = [];
+      var almacenesCache = [];
+
+      // ===== ALMACENES: helpers de visibilidad para usuarios normales =====
+      // Un almacén sin empresa asignada es "general" y lo ve cualquier
+      // usuario. Si tiene empresa (y opcionalmente depto), solo lo ven el
+      // Administrador o los usuarios cuyo permiso coincide.
+      function usuarioPuedeVerAlmacen(usuario, almacen) {
+        if (!usuario) return false;
+        if (usuario.rol === 'Administrador') return true;
+        if (!almacen.empresa) return true;
+        if (!usuario.permisos || !usuario.permisos.length) return false;
+        return usuario.permisos.some(function(p) {
+          if (normalizar(p.empresa) !== normalizar(almacen.empresa)) return false;
+          if (!almacen.departamento) return true;
+          return deptoParaComparar(p.empresa, p.depto) === deptoParaComparar(almacen.empresa, almacen.departamento);
+        });
+      }
+
+      function obtenerAlmacenesDisponibles(usuario) {
+        return (almacenesCache || []).filter(function(a) {
+          return a.activo !== false && usuarioPuedeVerAlmacen(usuario, a);
+        });
+      }
+
+      window.cargarAlmacenes = async function() {
+        try {
+          var { data, error } = await supabase.from('almacenes').select('*').order('nombre');
+          if (error) throw error;
+          almacenesCache = data || [];
+        } catch (e) {
+          console.error('Error cargando almacenes:', e);
+          almacenesCache = [];
+        }
+
+        // Refrescar la tabla del módulo ALMACENES (si está visible).
+        var cuerpo = document.getElementById('cuerpoAlmacenes');
+        if (cuerpo) {
+          cuerpo.innerHTML = '';
+          almacenesCache.forEach(function(a) {
+            var fila = document.createElement('tr');
+            fila.innerHTML =
+              '<td>' + escapeHTML(a.nombre) + '</td>' +
+              '<td>' + escapeHTML(a.empresa || 'Todas') + '</td>' +
+              '<td>' + escapeHTML(a.departamento || 'Toda la empresa') + '</td>' +
+              '<td>' + escapeHTML(a.nave) + '</td>' +
+              '<td style="text-align:center;">' +
+                '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesAlmacen(' + a.id + ')">' +
+                  '<span></span><span></span><span></span>' +
+                '</button>' +
+              '</td>';
+            cuerpo.appendChild(fila);
+          });
+        }
+
+        // Poblar el selector de empresa del formulario de alta de almacén.
+        var selEmpresa = document.getElementById('nvoAlmEmpresa');
+        if (selEmpresa && !selEmpresa.dataset.poblado) {
+          getEmpresasCatalogo().forEach(function(e) {
+            var opt = document.createElement('option');
+            opt.value = e.nombre;
+            opt.textContent = e.nombre;
+            selEmpresa.appendChild(opt);
+          });
+          selEmpresa.dataset.poblado = '1';
+        }
+        var selEmpresaEd = document.getElementById('edAlmEmpresa');
+        if (selEmpresaEd && !selEmpresaEd.dataset.poblado) {
+          getEmpresasCatalogo().forEach(function(e) {
+            var opt = document.createElement('option');
+            opt.value = e.nombre;
+            opt.textContent = e.nombre;
+            selEmpresaEd.appendChild(opt);
+          });
+          selEmpresaEd.dataset.poblado = '1';
+        }
+
+        // Refrescar el selector/filtro de almacén dentro de Productos.
+        window.actualizarSelectorAlmacenProductos();
+        window.actualizarFiltroAlmacenProductos();
+      };
+
+      window.actualizarDeptosNuevoAlmacen = function() {
+        var empresa = document.getElementById('nvoAlmEmpresa').value;
+        var selDepto = document.getElementById('nvoAlmDepartamento');
+        selDepto.innerHTML = '<option value="">Sin asignar (toda la empresa)</option>';
+        getDepartamentosPorEmpresa(empresa).forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d.nombre;
+          opt.textContent = d.nombre;
+          selDepto.appendChild(opt);
+        });
+      };
+
+      window.actualizarDeptosEditarAlmacen = function() {
+        var empresa = document.getElementById('edAlmEmpresa').value;
+        var selDepto = document.getElementById('edAlmDepartamento');
+        selDepto.innerHTML = '<option value="">Sin asignar (toda la empresa)</option>';
+        getDepartamentosPorEmpresa(empresa).forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d.nombre;
+          opt.textContent = d.nombre;
+          selDepto.appendChild(opt);
+        });
+      };
+
+      window.agregarAlmacen = async function() {
+        var msg = document.getElementById('msgAlmacenes');
+        var nombre = document.getElementById('nvoAlmNombre').value.trim();
+        if (!nombre) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del almacén es obligatorio.</div>';
+          return;
+        }
+        var nuevo = {
+          nombre: nombre.toUpperCase(),
+          empresa: document.getElementById('nvoAlmEmpresa').value || null,
+          departamento: document.getElementById('nvoAlmDepartamento').value || null,
+          nave: document.getElementById('nvoAlmNave').value,
+          activo: true
+        };
+        try {
+          var { error } = await supabase.from('almacenes').insert([nuevo]);
+          if (error) throw error;
+          document.getElementById('nvoAlmNombre').value = '';
+          document.getElementById('nvoAlmEmpresa').value = '';
+          window.actualizarDeptosNuevoAlmacen();
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Almacén agregado.</div>';
+          window.cargarAlmacenes();
+        } catch (e) {
+          console.error('Error agregando almacén:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo agregar: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.eliminarAlmacen = async function(id) {
+        if (!confirm('¿Eliminar este almacén?')) return;
+        try {
+          var { error } = await supabase.from('almacenes').delete().eq('id', id);
+          if (error) throw error;
+          window.cargarAlmacenes();
+        } catch (e) {
+          console.error('Error eliminando almacén:', e);
+          alert('❌ No se pudo eliminar: ' + e.message);
+        }
+      };
+
+      var almacenEditandoId = null;
+
+      window.editarAlmacenCatalogo = function(id) {
+        var a = almacenesCache.find(function(x) { return x.id === id; });
+        if (!a) return;
+        document.getElementById('edAlmNombre').value = a.nombre || '';
+        document.getElementById('edAlmEmpresa').value = a.empresa || '';
+        window.actualizarDeptosEditarAlmacen();
+        document.getElementById('edAlmDepartamento').value = a.departamento || '';
+        document.getElementById('edAlmNave').value = a.nave || 'NAVE 1';
+        almacenEditandoId = id;
+        var msg = document.getElementById('msgEditarAlmacen');
+        if (msg) msg.innerHTML = '';
+        document.getElementById('editarAlmacenModal').classList.add('active');
+      };
+
+      window.cancelarEdicionAlmacen = function() {
+        almacenEditandoId = null;
+        document.getElementById('editarAlmacenModal').classList.remove('active');
+      };
+
+      window.guardarEdicionAlmacen = async function() {
+        var msg = document.getElementById('msgEditarAlmacen');
+        if (!almacenEditandoId) return;
+        var nombre = document.getElementById('edAlmNombre').value.trim();
+        if (!nombre) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del almacén es obligatorio.</div>';
+          return;
+        }
+        var datos = {
+          nombre: nombre.toUpperCase(),
+          empresa: document.getElementById('edAlmEmpresa').value || null,
+          departamento: document.getElementById('edAlmDepartamento').value || null,
+          nave: document.getElementById('edAlmNave').value
+        };
+        try {
+          var { error } = await supabase.from('almacenes').update(datos).eq('id', almacenEditandoId);
+          if (error) throw error;
+          almacenEditandoId = null;
+          document.getElementById('editarAlmacenModal').classList.remove('active');
+          window.cargarAlmacenes();
+          var msgAlmacenes = document.getElementById('msgAlmacenes');
+          if (msgAlmacenes) msgAlmacenes.innerHTML = '<div class="success-msg">✅ Almacén actualizado.</div>';
+        } catch (e) {
+          console.error('Error actualizando almacén:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      // ===== MODAL DE OPCIONES DE ALMACÉN (hamburguesa: Editar/Eliminar) =====
+      var accionAlmacenActual = null;
+
+      window.abrirModalAccionesAlmacen = function(id) {
+        var a = almacenesCache.find(function(x) { return x.id === id; });
+        if (!a) return;
+        accionAlmacenActual = { id: id, accion: null };
+        document.getElementById('almacenAccionesNombre').textContent = a.nombre || 'Almacén';
+        document.querySelectorAll('#almacenAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
+        document.getElementById('almacenAccionesModal').classList.add('active');
+      };
+
+      window.seleccionarAccionAlmacen = function(accion) {
+        if (!accionAlmacenActual) return;
+        accionAlmacenActual.accion = accion;
+        document.querySelectorAll('#almacenAccionesModal .btn-accion-producto').forEach(function(b) {
+          b.classList.toggle('seleccionado', b.dataset.accion === accion);
+        });
+      };
+
+      window.cerrarModalAccionesAlmacen = function() {
+        accionAlmacenActual = null;
+        document.getElementById('almacenAccionesModal').classList.remove('active');
+      };
+
+      window.confirmarAccionAlmacen = function() {
+        if (!accionAlmacenActual || !accionAlmacenActual.accion) {
+          alert('⚠️ Selecciona una opción: Editar o Eliminar.');
+          return;
+        }
+        var id = accionAlmacenActual.id;
+        var accion = accionAlmacenActual.accion;
+        window.cerrarModalAccionesAlmacen();
+        if (accion === 'eliminar') {
+          window.eliminarAlmacen(id);
+        } else if (accion === 'editar') {
+          window.editarAlmacenCatalogo(id);
+        }
+      };
+
+      // ===== ALMACÉN/NAVE dentro del formulario de alta de Productos =====
+      // Si el usuario tiene acceso a un solo almacén, el campo queda
+      // bloqueado con ese almacén ya asignado. Si tiene varios, puede
+      // elegir. El Administrador siempre ve el listado completo. La Nave
+      // siempre se rellena sola según el almacén elegido.
+      window.actualizarSelectorAlmacenProductos = function() {
+        var celda = document.getElementById('nvoProdAlmacenCelda');
+        var naveInput = document.getElementById('nvoProdNave');
+        if (!celda) return;
+        var disponibles = obtenerAlmacenesDisponibles(actual);
+
+        if (!actual) { celda.innerHTML = '<select id="nvoProdAlmacen" disabled><option>Inicia sesión</option></select>'; return; }
+
+        if (actual.rol === 'Administrador') {
+          celda.innerHTML = '<select id="nvoProdAlmacen" onchange="window.actualizarNaveDesdeAlmacen()"><option value="">Selecciona un almacén</option>' +
+            disponibles.map(function(a) { return '<option value="' + a.id + '">' + escapeHTML(a.nombre) + '</option>'; }).join('') + '</select>';
+        } else if (disponibles.length === 0) {
+          celda.innerHTML = '<select id="nvoProdAlmacen" disabled><option value="">Sin almacén asignado</option></select>';
+        } else if (disponibles.length === 1) {
+          celda.innerHTML = '<select id="nvoProdAlmacen" disabled><option value="' + disponibles[0].id + '">' + escapeHTML(disponibles[0].nombre) + '</option></select>' +
+            '<input type="hidden" id="nvoProdAlmacenValor" value="' + disponibles[0].id + '">';
+          if (naveInput) naveInput.value = disponibles[0].nave || '';
+        } else {
+          celda.innerHTML = '<select id="nvoProdAlmacen" onchange="window.actualizarNaveDesdeAlmacen()"><option value="">Selecciona un almacén</option>' +
+            disponibles.map(function(a) { return '<option value="' + a.id + '">' + escapeHTML(a.nombre) + '</option>'; }).join('') + '</select>';
+        }
+      };
+
+      window.actualizarNaveDesdeAlmacen = function() {
+        var select = document.getElementById('nvoProdAlmacen');
+        var naveInput = document.getElementById('nvoProdNave');
+        if (!select || !naveInput) return;
+        var almacen = almacenesCache.find(function(a) { return String(a.id) === String(select.value); });
+        naveInput.value = almacen ? (almacen.nave || '') : '';
+      };
+
+      window.actualizarFiltroAlmacenProductos = function() {
+        var select = document.getElementById('filtroAlmacenProductos');
+        if (!select) return;
+        var disponibles = obtenerAlmacenesDisponibles(actual);
+        var valorActual = select.value;
+        select.innerHTML = '<option value="">Todos los almacenes</option>' +
+          disponibles.map(function(a) { return '<option value="' + a.id + '">' + escapeHTML(a.nombre) + '</option>'; }).join('');
+        select.value = valorActual;
+      };
+
       window.cargarProductosCatalogo = async function() {
         var cuerpo = document.getElementById('cuerpoProductosCatalogo');
         if (!cuerpo) return;
         try {
-          var { data, error } = await supabase.from('productos').select('*').order('descripcion');
+          var query = supabase.from('productos').select('*').order('descripcion');
+          var filtroAlmacen = document.getElementById('filtroAlmacenProductos');
+          if (filtroAlmacen && filtroAlmacen.value) {
+            query = query.eq('almacen_id', filtroAlmacen.value);
+          }
+          var { data, error } = await query;
           if (error) throw error;
           productosCatalogoCache = data || [];
           cuerpo.innerHTML = '';
           (data || []).forEach(function(p) {
+            var almacen = almacenesCache.find(function(a) { return a.id === p.almacen_id; });
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(p.codigo) + '</td>' +
               '<td>' + escapeHTML(p.numero_parte) + '</td>' +
+              '<td>' + escapeHTML(p.marca) + '</td>' +
+              '<td>' + escapeHTML(p.modelo) + '</td>' +
               '<td>' + escapeHTML(p.descripcion) + '</td>' +
               '<td>' + escapeHTML(p.udm) + '</td>' +
               '<td>' + formatoMoneda(p.precio_referencia || 0, p.moneda || 'MXN') + '</td>' +
               '<td>' + (p.moneda === 'USD' ? 'Dólares (USD)' : 'Pesos (MXN)') + '</td>' +
               '<td style="text-align:center;font-weight:600;">' + (p.cantidad || 0) + '</td>' +
+              '<td>' + escapeHTML(p.ubicacion) + '</td>' +
+              '<td>' + escapeHTML(almacen ? almacen.nombre : (p.almacen_id ? 'Almacén eliminado' : '—')) + '</td>' +
+              '<td>' + escapeHTML(p.nave) + '</td>' +
               '<td style="text-align:center;">' +
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesProducto(' + p.id + ')">' +
                   '<span></span><span></span><span></span>' +
@@ -5588,20 +6001,33 @@
         var nuevo = {
           codigo: codigo,
           numero_parte: numeroParte,
+          marca: document.getElementById('nvoProdMarca').value.trim().toUpperCase(),
+          modelo: document.getElementById('nvoProdModelo').value.trim().toUpperCase(),
           descripcion: descripcion,
           udm: document.getElementById('nvoProdUdm').value,
           precio_referencia: isNaN(precio) ? 0 : precio,
           moneda: document.getElementById('nvoProdMoneda').value,
-          cantidad: cantidad
+          cantidad: cantidad,
+          ubicacion: document.getElementById('nvoProdUbicacion').value.trim().toUpperCase(),
+          almacen_id: (function() {
+            var selAlm = document.getElementById('nvoProdAlmacen');
+            var valorOculto = document.getElementById('nvoProdAlmacenValor');
+            var v = valorOculto ? valorOculto.value : (selAlm ? selAlm.value : '');
+            return v ? parseInt(v, 10) : null;
+          })(),
+          nave: document.getElementById('nvoProdNave').value
         };
         try {
           var { error } = await supabase.from('productos').insert([nuevo]);
           if (error) throw error;
           document.getElementById('nvoProdCodigo').value = '';
           document.getElementById('nvoProdNumeroParte').value = '';
+          document.getElementById('nvoProdMarca').value = '';
+          document.getElementById('nvoProdModelo').value = '';
           document.getElementById('nvoProdDescripcion').value = '';
           document.getElementById('nvoProdPrecio').value = '';
           document.getElementById('nvoProdCantidad').value = '';
+          document.getElementById('nvoProdUbicacion').value = '';
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Producto agregado.</div>';
           window.cargarProductosCatalogo();
         } catch (e) {
@@ -5699,9 +6125,11 @@
         var ocModalToolbar = document.getElementById('ocModalToolbar');
         var panelProveedores = document.getElementById('panelProveedores');
         var panelProductos = document.getElementById('panelProductos');
+        var panelAlmacenes = document.getElementById('panelAlmacenes');
 
         panelProveedores.classList.add('hidden');
         panelProductos.classList.add('hidden');
+        if (panelAlmacenes) panelAlmacenes.classList.add('hidden');
         panelOC.classList.add('hidden');
         panelProyecto.classList.add('hidden');
         tablaProyectosCard.classList.add('hidden');
@@ -5823,9 +6251,18 @@
         } else if (modulo === 'productos') {
           if (usuarioPuedeAltaRegistros(actual)) {
             panelProductos.classList.remove('hidden');
-            window.cargarProductosCatalogo();
+            window.cargarAlmacenes().then(function() { window.cargarProductosCatalogo(); });
           } else {
             alert('⚠️ No tienes permiso para acceder a Productos.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'almacenes') {
+          if (actual && actual.rol === 'Administrador') {
+            if (panelAlmacenes) panelAlmacenes.classList.remove('hidden');
+            window.cargarAlmacenes();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Almacenes.');
             window.mostrarMenuInterno();
             return;
           }
@@ -6828,6 +7265,15 @@
               inventarioBtn.style.display = 'flex';
             } else {
               inventarioBtn.style.display = 'none';
+            }
+          }
+
+          var almacenesBtn = document.getElementById('menuAlmacenesBtn');
+          if (almacenesBtn) {
+            if (actual && actual.rol === 'Administrador') {
+              almacenesBtn.style.display = 'flex';
+            } else {
+              almacenesBtn.style.display = 'none';
             }
           }
 
@@ -9591,6 +10037,15 @@
               inventarioBtnLogin.style.display = 'flex';
             } else {
               inventarioBtnLogin.style.display = 'none';
+            }
+          }
+
+          var almacenesBtnLogin = document.getElementById('menuAlmacenesBtn');
+          if (almacenesBtnLogin) {
+            if (actual && actual.rol === 'Administrador') {
+              almacenesBtnLogin.style.display = 'flex';
+            } else {
+              almacenesBtnLogin.style.display = 'none';
             }
           }
 
