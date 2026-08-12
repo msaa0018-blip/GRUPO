@@ -2924,7 +2924,7 @@
             <tbody id="cuerpoProductosCatalogo"></tbody>
             <tfoot>
               <tr>
-                <td><input id="nvoProdCodigo" placeholder="Código"></td>
+                <td><input id="nvoProdCodigo" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se genera automáticamente y es consecutivo. No se puede editar."></td>
                 <td><input id="nvoProdNumeroParte" placeholder="Número de parte"></td>
                 <td><input id="nvoProdMarca" placeholder="Marca"></td>
                 <td><input id="nvoProdModelo" placeholder="Modelo"></td>
@@ -6343,18 +6343,16 @@
         var cantidadInput = parseFloat(document.getElementById('nvoProdCantidad').value);
         var cantidad = isNaN(cantidadInput) ? 0 : cantidadInput;
         var numeroParte = document.getElementById('nvoProdNumeroParte').value.trim();
-        var codigo = document.getElementById('nvoProdCodigo').value.trim();
 
         // Si el producto ya existe en el catálogo, no se crea otro
         // registro: se ofrece sumar/restar la cantidad al ya existente.
-        var existente = buscarProductoExistente(numeroParte, codigo, descripcion);
+        var existente = buscarProductoExistente(numeroParte, '', descripcion);
         if (existente) {
           mostrarOpcionAjusteProducto(existente, cantidad);
           return;
         }
 
         var nuevo = {
-          codigo: codigo,
           numero_parte: numeroParte,
           marca: document.getElementById('nvoProdMarca').value.trim().toUpperCase(),
           modelo: document.getElementById('nvoProdModelo').value.trim().toUpperCase(),
@@ -6374,9 +6372,17 @@
           nave: document.getElementById('nvoProdNave').value
         };
         try {
-          var { error } = await supabase.from('productos').insert([nuevo]);
+          // El código es consecutivo y automático: nadie lo captura ni lo
+          // puede editar. Se genera a partir del id autoincremental que
+          // asigna la base de datos al insertar (garantiza orden real y
+          // evita colisiones si dos personas agregan productos a la vez).
+          var { data, error } = await supabase.from('productos').insert([nuevo]).select();
           if (error) throw error;
-          document.getElementById('nvoProdCodigo').value = '';
+          var nuevoId = data[0].id;
+          var codigoGenerado = 'PROD-' + String(nuevoId).padStart(5, '0');
+          var { error: errorCodigo } = await supabase.from('productos').update({ codigo: codigoGenerado }).eq('id', nuevoId);
+          if (errorCodigo) throw errorCodigo;
+
           document.getElementById('nvoProdNumeroParte').value = '';
           document.getElementById('nvoProdMarca').value = '';
           document.getElementById('nvoProdModelo').value = '';
@@ -6384,7 +6390,7 @@
           document.getElementById('nvoProdPrecio').value = '';
           document.getElementById('nvoProdCantidad').value = '';
           document.getElementById('nvoProdUbicacion').value = '';
-          if (msg) msg.innerHTML = '<div class="success-msg">✅ Producto agregado.</div>';
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Producto agregado con código ' + escapeHTML(codigoGenerado) + '.</div>';
           window.cargarProductosCatalogo();
         } catch (e) {
           console.error('Error agregando producto:', e);
