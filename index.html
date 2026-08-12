@@ -2755,6 +2755,7 @@
             <thead>
               <tr>
                 <th>Nombre</th>
+                <th>Sucursal</th>
                 <th>RFC</th>
                 <th>Contacto</th>
                 <th>Teléfono</th>
@@ -2774,6 +2775,7 @@
             <tfoot>
               <tr>
                 <td><input id="nvoProvNombre" placeholder="Nombre *"></td>
+                <td><input id="nvoProvSucursal" placeholder="Sucursal"></td>
                 <td><input id="nvoProvRFC" placeholder="RFC"></td>
                 <td><input id="nvoProvContacto" placeholder="Contacto"></td>
                 <td><input id="nvoProvTelefono" placeholder="Teléfono"></td>
@@ -2832,6 +2834,7 @@
           <div class="modal-body">
             <div class="cxc-form-row">
               <input id="edProvNombre" placeholder="Nombre *">
+              <input id="edProvSucursal" placeholder="Sucursal">
               <input id="edProvRFC" placeholder="RFC">
             </div>
             <div class="cxc-form-row">
@@ -5423,6 +5426,7 @@
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(p.nombre) + '</td>' +
+              '<td>' + escapeHTML(p.sucursal) + '</td>' +
               '<td>' + escapeHTML(p.rfc) + '</td>' +
               '<td>' + escapeHTML(p.contacto) + '</td>' +
               '<td>' + escapeHTML(p.telefono) + '</td>' +
@@ -5458,6 +5462,7 @@
         }
         var datosProveedor = {
           nombre: nombre,
+          sucursal: document.getElementById('nvoProvSucursal').value.trim(),
           rfc: document.getElementById('nvoProvRFC').value.trim(),
           contacto: document.getElementById('nvoProvContacto').value.trim(),
           telefono: document.getElementById('nvoProvTelefono').value.trim(),
@@ -5475,7 +5480,7 @@
           var { error } = await supabase.from('proveedores').insert([datosProveedor]);
           if (error) throw error;
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor agregado.</div>';
-          ['nvoProvNombre','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion','nvoProvCP','nvoProvCuentaBancaria','nvoProvBanco','nvoProvClave','nvoProvSwift','nvoProvCIE'].forEach(function(id) {
+          ['nvoProvNombre','nvoProvSucursal','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion','nvoProvCP','nvoProvCuentaBancaria','nvoProvBanco','nvoProvClave','nvoProvSwift','nvoProvCIE'].forEach(function(id) {
             document.getElementById(id).value = '';
           });
           window.cargarProveedoresCatalogo();
@@ -5503,6 +5508,7 @@
         var p = proveedoresCatalogoCache.find(function(x) { return x.id === id; });
         if (!p) return;
         document.getElementById('edProvNombre').value = p.nombre || '';
+        document.getElementById('edProvSucursal').value = p.sucursal || '';
         document.getElementById('edProvRFC').value = p.rfc || '';
         document.getElementById('edProvContacto').value = p.contacto || '';
         document.getElementById('edProvTelefono').value = p.telefono || '';
@@ -5536,6 +5542,7 @@
         }
         var datosProveedor = {
           nombre: nombre,
+          sucursal: document.getElementById('edProvSucursal').value.trim(),
           rfc: document.getElementById('edProvRFC').value.trim(),
           contacto: document.getElementById('edProvContacto').value.trim(),
           telefono: document.getElementById('edProvTelefono').value.trim(),
