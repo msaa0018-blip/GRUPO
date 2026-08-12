@@ -1160,7 +1160,7 @@
   }
 
   /* ===== MODAL: EDITAR PRODUCTOS DE UNA OC (solo Administrador) ===== */
-  #editarProductosOCModal {
+  #editarProductosOCModal, #almacenesDashboardModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1174,8 +1174,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #editarProductosOCModal.active { display: flex }
-  #editarProductosOCModal .modal-content {
+  #editarProductosOCModal.active, #almacenesDashboardModal.active { display: flex }
+  #editarProductosOCModal .modal-content, #almacenesDashboardModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1186,7 +1186,7 @@
     flex-direction: column;
     box-sizing: border-box;
   }
-  #editarProductosOCModal .modal-header {
+  #editarProductosOCModal .modal-header, #almacenesDashboardModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1194,9 +1194,19 @@
     flex-wrap: wrap;
     gap: 8px;
   }
-  #editarProductosOCModal .modal-header h3 { margin: 0; font-size: 1.1rem }
-  #editarProductosOCModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
-  #editarProductosOCModal .modal-body { overflow: auto; }
+  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body { overflow: auto; }
+
+  .almacen-kpi-card {
+    background: var(--gray-100);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-width: 180px;
+    flex: 1 1 200px;
+  }
+  .almacen-kpi-card .almacen-kpi-titulo { font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
+  .almacen-kpi-card .almacen-kpi-valor { font-size: 16px; font-weight: 700; color: var(--primary); }
 
   /* ===== MODAL: NUEVA CUENTA POR COBRAR (CXC) ===== */
   #agregarCXCModal {
@@ -2307,11 +2317,11 @@
     font-size: 9px;
     margin-top: 2px;
   }
-  /* En la cuadrícula 4×4 de la izquierda todas las tarjetas ocupan una
-     sola celda (uniformes), incluidas Compras/Ventas del mes. */
+  /* Compras del mes / Ventas del mes ocupan el doble de ancho horizontal
+     que el resto de las tarjetas de la cuadrícula de la izquierda. */
   .indicadores-kpi-col .kpi-card.kpi-compras-mes,
   .indicadores-kpi-col .kpi-card.kpi-ventas-mes {
-    grid-column: span 1;
+    grid-column: span 2;
   }
   .indicadores-radar-col {
     display: flex;
@@ -2904,6 +2914,7 @@
                 <th>Precio de Referencia</th>
                 <th>Moneda</th>
                 <th>Cantidad</th>
+                <th>Condición</th>
                 <th>Ubicación</th>
                 <th>Almacén</th>
                 <th>Nave</th>
@@ -2943,6 +2954,12 @@
                   </select>
                 </td>
                 <td><input id="nvoProdCantidad" type="number" step="1" min="0" placeholder="Cantidad"></td>
+                <td>
+                  <select id="nvoProdCondicion">
+                    <option value="Nuevo">Nuevo</option>
+                    <option value="Usado">Usado</option>
+                  </select>
+                </td>
                 <td><input id="nvoProdUbicacion" placeholder="Ubicación"></td>
                 <td id="nvoProdAlmacenCelda"><select id="nvoProdAlmacen" onchange="window.actualizarNaveDesdeAlmacen()"><option value="">Sin almacenes</option></select></td>
                 <td><input id="nvoProdNave" placeholder="Nave" readonly style="background:var(--gray-100);"></td>
@@ -2956,7 +2973,10 @@
 
       <!-- ===== MÓDULO ALMACENES (exclusivo Administrador) ===== -->
       <div id="panelAlmacenes" class="card hidden">
-        <h2>🏭 Almacenes</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">🏭 Almacenes</h2>
+          <button class="success" onclick="window.abrirDashboardAlmacenes()">📊 Dashboard</button>
+        </div>
         <p class="text-muted" style="margin-bottom:12px;">Crea almacenes y asígnalos a una empresa/departamento y nave. Los usuarios verán, en Productos, solo los almacenes que les correspondan.</p>
         <div class="table-wrapper">
           <table id="tablaAlmacenes">
@@ -3043,6 +3063,37 @@
               </select>
             </div>
             <div id="msgEditarAlmacen"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: DASHBOARD DE ALMACENES ===== -->
+      <div id="almacenesDashboardModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>📊 Dashboard de Almacenes</h3>
+            <button class="danger btn-modal-x" onclick="window.cerrarDashboardAlmacenes()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div id="almacenesDashboardResumen" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;"></div>
+            <div class="table-wrapper">
+              <table id="almacenesDashboardTabla">
+                <thead>
+                  <tr>
+                    <th>Almacén</th>
+                    <th>Productos distintos</th>
+                    <th>Piezas Nuevo</th>
+                    <th>Piezas Usado</th>
+                    <th>Piezas Total</th>
+                    <th>Marca principal</th>
+                    <th>Valoración Nuevo</th>
+                    <th>Valoración Usado</th>
+                    <th>Valoración Total</th>
+                  </tr>
+                </thead>
+                <tbody id="almacenesDashboardCuerpo"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -3232,6 +3283,7 @@
           <div class="flex">
             <input id="proveedor" list="listaProveedoresOC" placeholder="Proveedor *" style="flex:1.5;" autocomplete="off">
             <datalist id="listaProveedoresOC"></datalist>
+            <input id="sucursal" placeholder="Sucursal (opcional)" style="flex:1;">
             <input id="rfc" placeholder="RFC (opcional)" style="flex:1;">
             <input id="direccion" placeholder="Dirección *" style="flex:1.5;">
           </div>
@@ -5848,6 +5900,110 @@
         }
       };
 
+      // ===== DASHBOARD DE ALMACENES =====
+      // "Almacén con más movimientos" se aproxima con el total de piezas
+      // en existencia, ya que el sistema todavía no lleva una bitácora de
+      // entradas/salidas por almacén.
+      window.abrirDashboardAlmacenes = async function() {
+        var modal = document.getElementById('almacenesDashboardModal');
+        var resumen = document.getElementById('almacenesDashboardResumen');
+        var cuerpo = document.getElementById('almacenesDashboardCuerpo');
+        resumen.innerHTML = '<p>Cargando…</p>';
+        cuerpo.innerHTML = '';
+        modal.classList.add('active');
+
+        try {
+          if (!almacenesCache || !almacenesCache.length) await window.cargarAlmacenes();
+          var { data: productos, error } = await supabase.from('productos').select('*');
+          if (error) throw error;
+
+          var statsPorAlmacen = {};
+          (productos || []).forEach(function(p) {
+            var almId = p.almacen_id || 'sin_asignar';
+            if (!statsPorAlmacen[almId]) {
+              statsPorAlmacen[almId] = { productosDistintos: 0, piezasNuevo: 0, piezasUsado: 0, marcas: {}, valorNuevo: 0, valorUsado: 0 };
+            }
+            var s = statsPorAlmacen[almId];
+            s.productosDistintos += 1;
+            var cantidad = Number(p.cantidad) || 0;
+            var precio = Number(p.precio_referencia) || 0;
+            var valor = cantidad * precio;
+            var esUsado = (p.condicion || 'Nuevo') === 'Usado';
+            if (esUsado) {
+              s.piezasUsado += cantidad;
+              s.valorUsado += valor;
+            } else {
+              s.piezasNuevo += cantidad;
+              s.valorNuevo += valor;
+            }
+            if (p.marca) {
+              var marcaNorm = p.marca.trim().toUpperCase();
+              if (marcaNorm) s.marcas[marcaNorm] = (s.marcas[marcaNorm] || 0) + cantidad;
+            }
+          });
+
+          var filas = Object.keys(statsPorAlmacen).map(function(almId) {
+            var s = statsPorAlmacen[almId];
+            var almacen = almacenesCache.find(function(a) { return String(a.id) === String(almId); });
+            var nombre = almacen ? almacen.nombre : 'Sin almacén asignado';
+            var marcaPrincipal = '—';
+            var maxCantidad = 0;
+            Object.keys(s.marcas).forEach(function(m) {
+              if (s.marcas[m] > maxCantidad) { maxCantidad = s.marcas[m]; marcaPrincipal = m; }
+            });
+            var piezasTotal = s.piezasNuevo + s.piezasUsado;
+            var valorTotal = s.valorNuevo + s.valorUsado;
+            return {
+              nombre: nombre, productosDistintos: s.productosDistintos,
+              piezasNuevo: s.piezasNuevo, piezasUsado: s.piezasUsado, piezasTotal: piezasTotal,
+              marcaPrincipal: marcaPrincipal,
+              valorNuevo: s.valorNuevo, valorUsado: s.valorUsado, valorTotal: valorTotal
+            };
+          });
+
+          filas.sort(function(a, b) { return a.nombre.localeCompare(b.nombre); });
+
+          cuerpo.innerHTML = filas.map(function(f) {
+            return '<tr>' +
+              '<td>' + escapeHTML(f.nombre) + '</td>' +
+              '<td style="text-align:center;">' + f.productosDistintos + '</td>' +
+              '<td style="text-align:center;">' + f.piezasNuevo + '</td>' +
+              '<td style="text-align:center;">' + f.piezasUsado + '</td>' +
+              '<td style="text-align:center;font-weight:600;">' + f.piezasTotal + '</td>' +
+              '<td>' + escapeHTML(f.marcaPrincipal) + '</td>' +
+              '<td>' + formatoMoneda(f.valorNuevo, 'MXN') + '</td>' +
+              '<td>' + formatoMoneda(f.valorUsado, 'MXN') + '</td>' +
+              '<td style="font-weight:600;">' + formatoMoneda(f.valorTotal, 'MXN') + '</td>' +
+              '</tr>';
+          }).join('');
+
+          if (filas.length === 0) {
+            resumen.innerHTML = '<p>No hay productos registrados todavía.</p>';
+          } else {
+            var masMovimientos = filas.reduce(function(max, f) { return f.piezasTotal > max.piezasTotal ? f : max; }, filas[0]);
+            var mayorCosto = filas.reduce(function(max, f) { return f.valorTotal > max.valorTotal ? f : max; }, filas[0]);
+            var totalProductosGeneral = filas.reduce(function(s, f) { return s + f.productosDistintos; }, 0);
+            var totalPiezasGeneral = filas.reduce(function(s, f) { return s + f.piezasTotal; }, 0);
+            var totalValorGeneral = filas.reduce(function(s, f) { return s + f.valorTotal; }, 0);
+
+            resumen.innerHTML =
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">📦 Productos distintos (todos)</div><div class="almacen-kpi-valor">' + totalProductosGeneral + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas totales (todos)</div><div class="almacen-kpi-valor">' + totalPiezasGeneral + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración total estimada</div><div class="almacen-kpi-valor">' + formatoMoneda(totalValorGeneral, 'MXN') + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🚚 Almacén con más movimientos*</div><div class="almacen-kpi-valor">' + escapeHTML(masMovimientos.nombre) + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💎 Almacén de mayor costo estimado</div><div class="almacen-kpi-valor">' + escapeHTML(mayorCosto.nombre) + '</div></div>' +
+              '<p style="width:100%;font-size:11px;color:var(--gray-500);margin:4px 0 0;">*Aproximado con el total de piezas en existencia, ya que aún no se registra un historial de entradas/salidas por almacén.</p>';
+          }
+        } catch (e) {
+          console.error('Error cargando dashboard de almacenes:', e);
+          resumen.innerHTML = '<div class="alert">❌ No se pudo cargar el dashboard: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.cerrarDashboardAlmacenes = function() {
+        document.getElementById('almacenesDashboardModal').classList.remove('active');
+      };
+
       // ===== ALMACÉN/NAVE dentro del formulario de alta de Productos =====
       // Si el usuario tiene acceso a un solo almacén, el campo queda
       // bloqueado con ese almacén ya asignado. Si tiene varios, puede
@@ -5920,6 +6076,7 @@
               '<td>' + formatoMoneda(p.precio_referencia || 0, p.moneda || 'MXN') + '</td>' +
               '<td>' + (p.moneda === 'USD' ? 'Dólares (USD)' : 'Pesos (MXN)') + '</td>' +
               '<td style="text-align:center;font-weight:600;">' + (p.cantidad || 0) + '</td>' +
+              '<td>' + escapeHTML(p.condicion || 'Nuevo') + '</td>' +
               '<td>' + escapeHTML(p.ubicacion) + '</td>' +
               '<td>' + escapeHTML(almacen ? almacen.nombre : (p.almacen_id ? 'Almacén eliminado' : '—')) + '</td>' +
               '<td>' + escapeHTML(p.nave) + '</td>' +
@@ -6017,6 +6174,7 @@
           precio_referencia: isNaN(precio) ? 0 : precio,
           moneda: document.getElementById('nvoProdMoneda').value,
           cantidad: cantidad,
+          condicion: document.getElementById('nvoProdCondicion').value,
           ubicacion: document.getElementById('nvoProdUbicacion').value.trim().toUpperCase(),
           almacen_id: (function() {
             var selAlm = document.getElementById('nvoProdAlmacen');
@@ -9051,7 +9209,8 @@
           cuenta: match.cuenta_bancaria,
           clabe: match.clave,
           swift: match.swift,
-          cie: match.cie
+          cie: match.cie,
+          sucursal: match.sucursal
         };
         Object.keys(campos).forEach(function(id) {
           var el = document.getElementById(id);
@@ -11559,6 +11718,7 @@
             departamento: proyecto.departamento,
             proyectonombre: oc.proyecto,
             proveedor: oc.proveedor,
+            sucursal: oc.sucursal || '',
             rfc: oc.rfc || 'NA',
             direccion: oc.direccion,
             usocfdi: oc.usocfdi,
@@ -11718,6 +11878,7 @@
           proyectonombre: proyecto.nombre,
           cliente: proyecto.cliente,
           proveedor: proveedor,
+          sucursal: (document.getElementById('sucursal').value || '').trim().toUpperCase(),
           rfc: (document.getElementById('rfc').value || '').trim().toUpperCase(),
           direccion: direccion,
           usocfdi: document.getElementById('usoCFDI').value,
@@ -11783,6 +11944,7 @@
           codigo: codigo,
           proyecto: datos.proyectonombre,
           proveedor: datos.proveedor,
+          sucursal: datos.sucursal || null,
           rfc: datos.rfc,
           direccion: datos.direccion,
           usocfdi: datos.usocfdi,
@@ -11871,6 +12033,7 @@
           codigo: codigo,
           proyecto: datos.proyectonombre,
           proveedor: datos.proveedor,
+          sucursal: datos.sucursal || null,
           rfc: datos.rfc,
           direccion: datos.direccion,
           usocfdi: datos.usocfdi,
@@ -11953,6 +12116,7 @@
             departamento: proyecto.departamento,
             proyectonombre: oc.proyecto,
             proveedor: oc.proveedor,
+            sucursal: oc.sucursal || '',
             rfc: oc.rfc || 'NA',
             direccion: oc.direccion,
             usocfdi: oc.usocfdi,
@@ -12119,12 +12283,14 @@
 
         var camposProveedor = [
           { label: 'Razón Social:', value: datos.proveedor },
+          { label: 'Sucursal:', value: datos.sucursal || 'N/A' },
           { label: 'RFC:', value: datos.rfc },
           { label: 'Código Postal:', value: datos.cp || '' }
         ];
         var camposEntrega = [
           { label: 'Dirección de Entrega: ', value: datos.direccionentrega },
-          { label: 'Solicitante:', value: datos.solicitante || 'No especificado' }
+          { label: 'Solicitante:', value: datos.solicitante || 'No especificado' },
+          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' }
         ];
 
         function alturaCampos(campos, maxWidth) {
@@ -12246,8 +12412,7 @@
           { label: 'Banco:', value: datos.banco || 'No especificado' },
           { label: 'CLABE:', value: datos.clabe || 'N/A' },
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-          { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') },
-          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' }
+          { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') }
         ];
         var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
 
