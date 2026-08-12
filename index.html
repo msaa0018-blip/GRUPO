@@ -4369,6 +4369,14 @@
         return false;
       }
 
+      // ALTA DE REGISTROS (Proveedores/Productos): acceso exclusivo del
+      // rol Administrador, más el usuario IQA (mismos permisos que Admin
+      // en este módulo específico).
+      function usuarioPuedeAltaRegistros(usuario) {
+        if (!usuario) return false;
+        return usuario.rol === 'Administrador' || usuario.usuario === 'IQA';
+      }
+
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
         // Finanzas/Administrador (gestionan aprobaciones y pagos) y Director
@@ -4960,7 +4968,7 @@
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
           }
         } else if (tipo === 'alta_registros') {
-          if (actual && actual.rol === 'Administrador') {
+          if (usuarioPuedeAltaRegistros(actual)) {
             modulos.push({ id: 'proveedores', icono: '🏢', nombre: 'Proveedores' });
             modulos.push({ id: 'productos', icono: '📦', nombre: 'Productos' });
           }
@@ -5114,7 +5122,7 @@
             } else if (modulo === 'ingresos') {
               window.mostrarMenuMaestro('ingresos', 'INGRESOS');
             } else if (modulo === 'alta_registros') {
-              if (actual && actual.rol === 'Administrador') {
+              if (usuarioPuedeAltaRegistros(actual)) {
                 window.mostrarMenuMaestro('alta_registros', 'ALTA DE REGISTROS');
               } else {
                 alert('⚠️ No tienes permisos para acceder a este menú.');
@@ -5720,7 +5728,7 @@
             return;
           }
         } else if (modulo === 'proveedores') {
-          if (actual && actual.rol === 'Administrador') {
+          if (usuarioPuedeAltaRegistros(actual)) {
             panelProveedores.classList.remove('hidden');
             window.cargarProveedoresCatalogo();
           } else {
@@ -5729,7 +5737,7 @@
             return;
           }
         } else if (modulo === 'productos') {
-          if (actual && actual.rol === 'Administrador') {
+          if (usuarioPuedeAltaRegistros(actual)) {
             panelProductos.classList.remove('hidden');
             window.cargarProductosCatalogo();
           } else {
@@ -6723,7 +6731,7 @@
 
           var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
           if (accesoUnicoBtn) {
-            if (actual && actual.rol === 'Administrador') {
+            if (usuarioPuedeAltaRegistros(actual)) {
               accesoUnicoBtn.style.display = 'flex';
             } else {
               accesoUnicoBtn.style.display = 'none';
@@ -9485,7 +9493,7 @@
 
           var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
           if (accesoUnicoBtn) {
-            if (actual && actual.rol === 'Administrador') {
+            if (usuarioPuedeAltaRegistros(actual)) {
               accesoUnicoBtn.style.display = 'flex';
             } else {
               accesoUnicoBtn.style.display = 'none';
