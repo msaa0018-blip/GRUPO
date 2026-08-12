@@ -5608,13 +5608,15 @@
       var almacenesCache = [];
 
       // ===== ALMACENES: helpers de visibilidad para usuarios normales =====
-      // Un almacén sin empresa asignada es "general" y lo ve cualquier
-      // usuario. Si tiene empresa (y opcionalmente depto), solo lo ven el
-      // Administrador o los usuarios cuyo permiso coincide.
+      // Cada usuario (que no sea Administrador) solo ve los almacenes que
+      // coincidan exactamente con alguno de sus permisos de empresa/depto.
+      // Los almacenes sin empresa/departamento asignado NO se muestran a
+      // nadie más que al Administrador (hay que asignarlos explícitamente
+      // para que un usuario los vea).
       function usuarioPuedeVerAlmacen(usuario, almacen) {
         if (!usuario) return false;
         if (usuario.rol === 'Administrador') return true;
-        if (!almacen.empresa) return true;
+        if (!almacen.empresa) return false;
         if (!usuario.permisos || !usuario.permisos.length) return false;
         return usuario.permisos.some(function(p) {
           if (normalizar(p.empresa) !== normalizar(almacen.empresa)) return false;
