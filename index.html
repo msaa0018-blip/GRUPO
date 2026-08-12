@@ -1261,7 +1261,7 @@
   }
 
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
-  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal {
+  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1275,7 +1275,7 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active { display: flex }
+  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active { display: flex }
   #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content {
     background: white;
     border-radius: 16px;
@@ -1284,15 +1284,25 @@
     max-width: 420px;
     box-sizing: border-box;
   }
-  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header {
+  #editarProveedorModal .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 92vh;
+    overflow: auto;
+    box-sizing: border-box;
+  }
+  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
     gap: 8px;
   }
-  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3 { margin: 0; font-size: 1.05rem }
-  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group {
+  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3 { margin: 0; font-size: 1.05rem }
+  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
@@ -2799,6 +2809,51 @@
               <button type="button" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionProveedor('editar')">✏️ Editar</button>
               <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionProveedor('eliminar')">🗑️ Eliminar</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: EDITAR PROVEEDOR ===== -->
+      <div id="editarProveedorModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>✏️ Editar Proveedor</h3>
+            <div class="pdfPreview-btn-group">
+              <button class="danger btn-modal-x" onclick="window.cancelarEdicionProveedor()">✕</button>
+              <button class="success btn-modal-x" onclick="window.guardarEdicionProveedor()">➜</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div class="cxc-form-row">
+              <input id="edProvNombre" placeholder="Nombre *">
+              <input id="edProvRFC" placeholder="RFC">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProvContacto" placeholder="Contacto">
+              <input id="edProvTelefono" placeholder="Teléfono">
+              <input id="edProvEmail" placeholder="Email">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProvDireccion" placeholder="Dirección">
+              <input id="edProvCP" placeholder="CP">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProvCuentaBancaria" placeholder="Cuenta bancaria">
+              <input id="edProvBanco" placeholder="Banco">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProvClave" placeholder="Clave">
+              <input id="edProvSwift" placeholder="Swift">
+              <input id="edProvCIE" placeholder="CIE">
+            </div>
+            <div class="cxc-form-row">
+              <select id="edProvCondiciones">
+                <option value="Anticipado">Anticipado</option>
+                <option value="Contado">Contado</option>
+                <option value="Aplazado">Aplazado</option>
+              </select>
+            </div>
+            <div id="msgEditarProveedor"></div>
           </div>
         </div>
       </div>
@@ -5294,19 +5349,10 @@
           cie: document.getElementById('nvoProvCIE').value.trim(),
           condiciones_comerciales: document.getElementById('nvoProvCondiciones').value
         };
-        var btnAgregar = document.getElementById('btnAgregarProveedor');
         try {
-          if (proveedorEditandoId) {
-            var { error } = await supabase.from('proveedores').update(datosProveedor).eq('id', proveedorEditandoId);
-            if (error) throw error;
-            if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor actualizado.</div>';
-            proveedorEditandoId = null;
-            if (btnAgregar) btnAgregar.textContent = '➕';
-          } else {
-            var { error } = await supabase.from('proveedores').insert([datosProveedor]);
-            if (error) throw error;
-            if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor agregado.</div>';
-          }
+          var { error } = await supabase.from('proveedores').insert([datosProveedor]);
+          if (error) throw error;
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor agregado.</div>';
           ['nvoProvNombre','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion','nvoProvCP','nvoProvCuentaBancaria','nvoProvBanco','nvoProvClave','nvoProvSwift','nvoProvCIE'].forEach(function(id) {
             document.getElementById(id).value = '';
           });
@@ -5329,32 +5375,70 @@
         }
       };
 
-      // Prellena el formulario de alta con los datos del proveedor
-      // seleccionado y pone el catálogo en modo edición (el botón
-      // "Agregar" pasa a actualizar ese registro en vez de crear uno nuevo).
+      // Abre la ventana modal "Editar Proveedor" con los datos
+      // precargados del proveedor seleccionado.
       window.editarProveedorCatalogo = function(id) {
         var p = proveedoresCatalogoCache.find(function(x) { return x.id === id; });
         if (!p) return;
-        document.getElementById('nvoProvNombre').value = p.nombre || '';
-        document.getElementById('nvoProvRFC').value = p.rfc || '';
-        document.getElementById('nvoProvContacto').value = p.contacto || '';
-        document.getElementById('nvoProvTelefono').value = p.telefono || '';
-        document.getElementById('nvoProvEmail').value = p.email || '';
-        document.getElementById('nvoProvDireccion').value = p.direccion || '';
-        document.getElementById('nvoProvCP').value = p.cp || '';
-        document.getElementById('nvoProvCuentaBancaria').value = p.cuenta_bancaria || '';
-        document.getElementById('nvoProvBanco').value = p.banco || '';
-        document.getElementById('nvoProvClave').value = p.clave || '';
-        document.getElementById('nvoProvSwift').value = p.swift || '';
-        document.getElementById('nvoProvCIE').value = p.cie || '';
-        if (p.condiciones_comerciales) document.getElementById('nvoProvCondiciones').value = p.condiciones_comerciales;
+        document.getElementById('edProvNombre').value = p.nombre || '';
+        document.getElementById('edProvRFC').value = p.rfc || '';
+        document.getElementById('edProvContacto').value = p.contacto || '';
+        document.getElementById('edProvTelefono').value = p.telefono || '';
+        document.getElementById('edProvEmail').value = p.email || '';
+        document.getElementById('edProvDireccion').value = p.direccion || '';
+        document.getElementById('edProvCP').value = p.cp || '';
+        document.getElementById('edProvCuentaBancaria').value = p.cuenta_bancaria || '';
+        document.getElementById('edProvBanco').value = p.banco || '';
+        document.getElementById('edProvClave').value = p.clave || '';
+        document.getElementById('edProvSwift').value = p.swift || '';
+        document.getElementById('edProvCIE').value = p.cie || '';
+        document.getElementById('edProvCondiciones').value = p.condiciones_comerciales || 'Contado';
         proveedorEditandoId = id;
-        var btnAgregar = document.getElementById('btnAgregarProveedor');
-        if (btnAgregar) btnAgregar.textContent = '💾';
-        var msg = document.getElementById('msgProveedores');
-        if (msg) msg.innerHTML = '<div class="success-msg">✏️ Editando "' + escapeHTML(p.nombre) + '". Modifica los campos y presiona "Guardar Cambios".</div>';
-        var panel = document.getElementById('panelProveedores');
-        if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var msg = document.getElementById('msgEditarProveedor');
+        if (msg) msg.innerHTML = '';
+        document.getElementById('editarProveedorModal').classList.add('active');
+      };
+
+      window.cancelarEdicionProveedor = function() {
+        proveedorEditandoId = null;
+        document.getElementById('editarProveedorModal').classList.remove('active');
+      };
+
+      window.guardarEdicionProveedor = async function() {
+        var msg = document.getElementById('msgEditarProveedor');
+        if (!proveedorEditandoId) return;
+        var nombre = document.getElementById('edProvNombre').value.trim();
+        if (!nombre) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del proveedor es obligatorio.</div>';
+          return;
+        }
+        var datosProveedor = {
+          nombre: nombre,
+          rfc: document.getElementById('edProvRFC').value.trim(),
+          contacto: document.getElementById('edProvContacto').value.trim(),
+          telefono: document.getElementById('edProvTelefono').value.trim(),
+          email: document.getElementById('edProvEmail').value.trim(),
+          direccion: document.getElementById('edProvDireccion').value.trim(),
+          cp: document.getElementById('edProvCP').value.trim(),
+          cuenta_bancaria: document.getElementById('edProvCuentaBancaria').value.trim(),
+          banco: document.getElementById('edProvBanco').value.trim(),
+          clave: document.getElementById('edProvClave').value.trim(),
+          swift: document.getElementById('edProvSwift').value.trim(),
+          cie: document.getElementById('edProvCIE').value.trim(),
+          condiciones_comerciales: document.getElementById('edProvCondiciones').value
+        };
+        try {
+          var { error } = await supabase.from('proveedores').update(datosProveedor).eq('id', proveedorEditandoId);
+          if (error) throw error;
+          proveedorEditandoId = null;
+          document.getElementById('editarProveedorModal').classList.remove('active');
+          window.cargarProveedoresCatalogo();
+          var msgProveedores = document.getElementById('msgProveedores');
+          if (msgProveedores) msgProveedores.innerHTML = '<div class="success-msg">✅ Proveedor actualizado.</div>';
+        } catch (e) {
+          console.error('Error actualizando proveedor:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+        }
       };
 
       // ===== MODAL DE OPCIONES DE PROVEEDOR (hamburguesa: Editar/Eliminar) =====
