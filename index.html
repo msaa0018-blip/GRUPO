@@ -1183,6 +1183,44 @@
   #editarProductosOCModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #editarProductosOCModal .modal-body { overflow: auto; }
 
+  /* ===== MODAL: NUEVA CUENTA POR COBRAR (CXC) ===== */
+  #agregarCXCModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, .6);
+    z-index: 2100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  #agregarCXCModal.active { display: flex }
+  #agregarCXCModal .modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 92vh;
+    overflow: auto;
+    box-sizing: border-box;
+  }
+  #agregarCXCModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #agregarCXCModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #agregarCXCModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #agregarCXCModal .cxc-form-row { margin-bottom: 10px; }
+
   /* ===== BOTÓN HAMBURGUESA (opciones de producto) ===== */
   .btn-hamburguesa {
     width: 34px;
@@ -3069,7 +3107,10 @@
       </div>
 
       <div id="panelCXC" class="card hidden">
-        <h2>💳 Cuentas por Cobrar (CXC)</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">💳 Cuentas por Cobrar (CXC)</h2>
+          <button class="success" onclick="window.abrirAgregarCXC()">➕ Agregar</button>
+        </div>
         <p class="text-muted" style="margin-bottom:12px;">Gestión de cuentas por cobrar por cliente, empresa y departamento.</p>
         <div class="cxp-filtros">
           <select id="cxcFiltroEmpresa"><option value="">Todas las empresas</option></select>
@@ -3091,26 +3132,6 @@
           </div>
           <button class="btn-cxc" onclick="window.renderCXC()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXC()">🖨️ Previsualizar Reporte</button>
-        </div>
-
-        <div class="card" style="margin:12px 0; padding:14px 16px;">
-          <h4>➕ Nueva Cuenta por Cobrar</h4>
-          <div class="cxc-form-row">
-            <input id="cxcCliente" placeholder="Cliente *" required>
-            <input id="cxcOCContrato" placeholder="OC / Contrato *" required>
-            <input id="cxcConcepto" placeholder="Concepto *" required>
-          </div>
-          <div class="cxc-form-row">
-            <input id="cxcFolioFactura" placeholder="Folio Factura *" required>
-            <input id="cxcFechaEmision" type="date" required>
-            <input id="cxcFechaPago" type="date" required>
-          </div>
-          <div class="cxc-form-row">
-            <input id="cxcImporte" type="number" step="0.01" placeholder="Importe *" required>
-            <select id="cxcMoneda"><option value="MXN">MXN</option><option value="USD">USD</option></select>
-            <button onclick="window.agregarCXC()" class="btn-cxc" style="flex:0.5; min-width:120px;">➕ Agregar</button>
-          </div>
-          <div id="msgCXC"></div>
         </div>
 
         <div id="cxcResumen" class="cxc-resumen"></div>
@@ -3475,9 +3496,35 @@
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Previsualización del Reporte</h3><button class="danger" onclick="window.cerrarPreviewCXP()">✕</button></div>
       <div class="modal-body"><iframe id="cxpPreviewFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;"></iframe></div>
-      <div class="modal-footer">
-        <button class="danger" onclick="window.cerrarPreviewCXP()">Cancelar</button>
-        <button class="success" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: NUEVA CUENTA POR COBRAR (CXC) ===== -->
+  <div id="agregarCXCModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💳 Nueva Cuenta por Cobrar</h3>
+        <div class="pdfPreview-btn-group">
+          <button class="danger" onclick="window.cerrarAgregarCXC()">✕</button>
+          <button class="success" onclick="window.agregarCXC()">✔️</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="cxc-form-row">
+          <input id="cxcCliente" placeholder="Cliente *" required>
+          <input id="cxcOCContrato" placeholder="OC / Contrato">
+          <input id="cxcConcepto" placeholder="Concepto *" required>
+        </div>
+        <div class="cxc-form-row">
+          <input id="cxcFolioFactura" placeholder="Folio Factura">
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">F. Emisión<input id="cxcFechaEmision" type="date" style="width:100%;margin-top:4px;"></label>
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">F. Pago<input id="cxcFechaPago" type="date" style="width:100%;margin-top:4px;"></label>
+        </div>
+        <div class="cxc-form-row">
+          <input id="cxcImporte" type="number" step="0.01" placeholder="Importe *" required>
+          <select id="cxcMoneda"><option value="MXN">MXN</option><option value="USD">USD</option></select>
+        </div>
+        <div id="msgCXC"></div>
       </div>
     </div>
   </div>
@@ -5712,7 +5759,7 @@
           // 2. Ventas del mes (CXC pagadas en el mes)
           var ventasMes = cuentasCXC.filter(function(c) {
             if (c.estado !== 'PAGADO') return false;
-            var fecha = new Date(c.fechapago);
+            var fecha = new Date(c.fecha_pago);
             return fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual;
           });
           var totalVentasMes = ventasMes.reduce(function(s, c) { return s + (c.importe || 0); }, 0);
@@ -7785,7 +7832,7 @@
       }
 
       function obtenerInfoProyectoCXC(cxc) {
-        var orden = ordenes.find(function(o) { return o.codigo === cxc.occontrato; });
+        var orden = ordenes.find(function(o) { return o.codigo === cxc.oc_contrato; });
         if (!orden) return { empresa: null, departamento: null };
         var proyecto = proyectos.find(function(p) { return p.nombre === orden.proyecto; });
         return { empresa: proyecto ? proyecto.empresa : null, departamento: proyecto ? proyecto.departamento : null };
@@ -7794,7 +7841,7 @@
       function estadoRealCXC(c) {
         if (c.estado === 'PAGADO') return 'PAGADO';
         var hoy = new Date();
-        var fPago = new Date(c.fechapago);
+        var fPago = new Date(c.fecha_pago);
         if (fPago < hoy) return 'VENCIDO';
         return 'PENDIENTE';
       }
@@ -7874,18 +7921,29 @@
 
         if (fechaInicio) {
           var fechaInicioObj = new Date(fechaInicio);
-          cuentas = cuentas.filter(function(c) { return new Date(c.fechapago) >= fechaInicioObj; });
+          cuentas = cuentas.filter(function(c) { return new Date(c.fecha_pago) >= fechaInicioObj; });
         }
         if (fechaFin) {
           var fechaFinObj = new Date(fechaFin);
           fechaFinObj.setHours(23, 59, 59, 999);
-          cuentas = cuentas.filter(function(c) { return new Date(c.fechapago) <= fechaFinObj; });
+          cuentas = cuentas.filter(function(c) { return new Date(c.fecha_pago) <= fechaFinObj; });
         }
 
         if (filtroEstado) cuentas = cuentas.filter(function(c) { return estadoRealCXC(c) === filtroEstado; });
 
         return cuentas;
       }
+
+      // ===== MODAL: NUEVA CUENTA POR COBRAR (CXC) =====
+      window.abrirAgregarCXC = function() {
+        var msgDiv = document.getElementById('msgCXC');
+        if (msgDiv) msgDiv.innerHTML = '';
+        document.getElementById('agregarCXCModal').classList.add('active');
+      };
+
+      window.cerrarAgregarCXC = function() {
+        document.getElementById('agregarCXCModal').classList.remove('active');
+      };
 
       window.agregarCXC = async function() {
         var msgDiv = document.getElementById('msgCXC');
@@ -7900,18 +7958,20 @@
         var importe = parseFloat(document.getElementById('cxcImporte').value);
         var moneda = document.getElementById('cxcMoneda').value;
 
-        if (!cliente || !occontrato || !concepto || !foliofactura || !fechaemision || !fechapago || !importe || isNaN(importe)) {
-          msgDiv.innerHTML = '<div class="alert">⚠️ TODOS LOS CAMPOS MARCADOS CON * SON OBLIGATORIOS.</div>';
+        // Obligatorios: Cliente, Concepto, Moneda e Importe. El resto
+        // (OC/Contrato, Folio Factura, F.Emisión, F.Pago) es opcional.
+        if (!cliente || !concepto || !moneda || !importe || isNaN(importe)) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ CLIENTE, CONCEPTO, MONEDA E IMPORTE SON OBLIGATORIOS.</div>';
           return;
         }
 
         var nuevaCuenta = {
           cliente: cliente.toUpperCase(),
-          occontrato: occontrato.toUpperCase(),
+          oc_contrato: occontrato.toUpperCase(),
           concepto: concepto,
-          foliofactura: foliofactura.toUpperCase(),
-          fechaemision: fechaemision,
-          fechapago: fechapago,
+          folio_factura: foliofactura.toUpperCase(),
+          fecha_emision: fechaemision || null,
+          fecha_pago: fechapago || null,
           importe: importe,
           moneda: moneda,
           estado: 'PENDIENTE'
@@ -7930,10 +7990,11 @@
           document.getElementById('cxcFechaPago').value = '';
           document.getElementById('cxcImporte').value = '';
 
-          msgDiv.innerHTML = '<div class="success-msg">✅ Cuenta por cobrar registrada correctamente.</div>';
           cargarFiltrosCXC();
           window.renderCXC();
           actualizarTotalesMenuPrincipal();
+          window.cerrarAgregarCXC();
+          alert('✅ Cuenta por cobrar registrada correctamente.');
         } catch (error) {
           console.error('❌ Error al agregar CXC:', error);
           msgDiv.innerHTML = '<div class="alert">⚠️ ERROR AL GUARDAR: ' + (error.message || 'DESCONOCIDO') + '</div>';
@@ -8044,11 +8105,11 @@
           tbody.innerHTML +=
             '<tr>' +
             '<td data-label="Cliente">' + c.cliente + '</td>' +
-            '<td data-label="OC/Contrato">' + c.occontrato + '</td>' +
+            '<td data-label="OC/Contrato">' + c.oc_contrato + '</td>' +
             '<td data-label="Concepto">' + c.concepto + '</td>' +
-            '<td data-label="Folio Factura">' + c.foliofactura + '</td>' +
-            '<td data-label="F.Emisión">' + new Date(c.fechaemision).toLocaleDateString() + '</td>' +
-            '<td data-label="F.Pago">' + new Date(c.fechapago).toLocaleDateString() + '</td>' +
+            '<td data-label="Folio Factura">' + c.folio_factura + '</td>' +
+            '<td data-label="F.Emisión">' + new Date(c.fecha_emision).toLocaleDateString() + '</td>' +
+            '<td data-label="F.Pago">' + new Date(c.fecha_pago).toLocaleDateString() + '</td>' +
             '<td data-label="Moneda">' + c.moneda + '</td>' +
             '<td data-label="Importe">' + formatoMoneda(c.importe, c.moneda) + '</td>' +
             '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoReal + '</span></td>' +
@@ -11798,8 +11859,8 @@
         var headers = ['Cliente', 'OC/Contrato', 'Concepto', 'Folio Factura', 'F.Emisión', 'F.Pago', 'Moneda', 'Importe', 'Estado'];
         var rows = cuentas.map(function(c) {
           return [
-            c.cliente, c.occontrato, c.concepto, c.foliofactura,
-            new Date(c.fechaemision).toLocaleDateString(), new Date(c.fechapago).toLocaleDateString(),
+            c.cliente, c.oc_contrato, c.concepto, c.folio_factura,
+            new Date(c.fecha_emision).toLocaleDateString(), new Date(c.fecha_pago).toLocaleDateString(),
             c.moneda, formatoMoneda(c.importe, c.moneda), estadoRealCXC(c)
           ];
         });
