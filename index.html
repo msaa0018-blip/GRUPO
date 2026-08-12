@@ -1336,6 +1336,67 @@
     gap: 8px
   }
   #visualizarModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+
+  /* ===== STEPPER: FLUJO DE LA OC (modal Visualizar OC) ===== */
+  .stepper-oc {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 14px 6px 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .stepper-oc .stepper-oc-paso {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1 1 0;
+    position: relative;
+    min-width: 0;
+  }
+  .stepper-oc .stepper-oc-linea {
+    position: absolute;
+    top: 13px;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--gray-300);
+    z-index: 0;
+  }
+  .stepper-oc .stepper-oc-paso:first-child .stepper-oc-linea { display: none; }
+  .stepper-oc .stepper-oc-linea.completada { background: #2e7d32; }
+  .stepper-oc .stepper-oc-circulo {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--gray-300);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .stepper-oc .stepper-oc-circulo.completado { background: #2e7d32; }
+  .stepper-oc .stepper-oc-titulo {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-500);
+    text-align: center;
+    margin-top: 6px;
+    line-height: 1.2;
+  }
+  .stepper-oc .stepper-oc-titulo.completado { color: #2e7d32; }
+  .stepper-oc .stepper-oc-sub {
+    font-size: 9.5px;
+    color: var(--gray-400);
+    text-align: center;
+    margin-top: 2px;
+  }
+  .stepper-oc .stepper-oc-sub.completado { color: #2e7d32; }
+
   #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; }
   #visualizarModal .modal-body iframe {
     width: 100%;
@@ -3441,6 +3502,7 @@
   <div id="visualizarModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Visualizar Orden de Compra</h3><button class="danger" onclick="window.cerrarVisualizar()">✕</button></div>
+      <div id="visualizarStepperOC" class="stepper-oc"></div>
       <div class="modal-body"><iframe id="visualizarFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
     </div>
   </div>
@@ -10102,6 +10164,9 @@
             frame.style.display = 'block';
           }
 
+          var stepperOF = document.getElementById('visualizarStepperOC');
+          if (stepperOF) stepperOF.innerHTML = '';
+
           document.getElementById('visualizarModal').classList.add('active');
         } catch (error) {
           console.error('❌ Error al visualizar la OF:', error);
@@ -10760,6 +10825,40 @@
         } catch (error) { alert('❌ Error: ' + error.message); }
       };
 
+      // ---------- STEPPER HTML: FLUJO DE LA OC (modal Visualizar OC) ----------
+      function calcularPasoActualOC(estado, estadopago) {
+        var paso = 1;
+        if (['APROBADA_SOLICITANTE', 'PENDIENTE_PARIDAD', 'PENDIENTE_DIRECTOR', 'AUTORIZADA', 'CONCLUIDA'].indexOf(estado) !== -1) paso = 2;
+        if (['AUTORIZADA', 'CONCLUIDA'].indexOf(estado) !== -1) paso = 3;
+        if (estadopago === 'PAGADA') paso = 4;
+        if (estado === 'CONCLUIDA') paso = 5;
+        return paso;
+      }
+
+      function renderStepperOC(oc) {
+        var contenedor = document.getElementById('visualizarStepperOC');
+        if (!contenedor) return;
+        var pasos = [
+          { titulo: 'Elaboración', sub: 'CREADA' },
+          { titulo: 'Autorización Jefe Dpto', sub: 'APROBADA SOLICITANTE' },
+          { titulo: 'Autorización LJGR', sub: 'PENDIENTE DIRECTOR · AUTORIZADA' },
+          { titulo: 'Pagada', sub: 'ESTADO PAGO: PAGADA' },
+          { titulo: 'Facturación / Cierre', sub: 'CONCLUIDA' }
+        ];
+        var pasoActual = calcularPasoActualOC(oc.estado, oc.estadopago);
+        var html = '';
+        pasos.forEach(function(p, i) {
+          var completado = (i + 1) <= pasoActual;
+          html += '<div class="stepper-oc-paso">' +
+            '<div class="stepper-oc-linea' + (completado ? ' completada' : '') + '"></div>' +
+            '<div class="stepper-oc-circulo' + (completado ? ' completado' : '') + '">' + (i + 1) + '</div>' +
+            '<div class="stepper-oc-titulo' + (completado ? ' completado' : '') + '">' + p.titulo + '</div>' +
+            '<div class="stepper-oc-sub' + (completado ? ' completado' : '') + '">' + p.sub + '</div>' +
+            '</div>';
+        });
+        contenedor.innerHTML = html;
+      }
+
       window.visualizarOC = async function(index) {
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
@@ -10816,6 +10915,8 @@
             frame.src = pdfUrl;
             frame.style.display = 'block';
           }
+
+          renderStepperOC(oc);
 
           document.getElementById('visualizarModal').classList.add('active');
         } catch (error) {
@@ -11312,56 +11413,6 @@
         doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 29, { align: 'right' });
 
         y += headerH + 5;
-
-        // ---------- 1.5 FLUJO DE LA OC (stepper coloreado según avance) ----------
-        function calcularPasoActualOC(estado, estadopago) {
-          var paso = 1;
-          if (['APROBADA_SOLICITANTE', 'PENDIENTE_PARIDAD', 'PENDIENTE_DIRECTOR', 'AUTORIZADA', 'CONCLUIDA'].indexOf(estado) !== -1) paso = 2;
-          if (['AUTORIZADA', 'CONCLUIDA'].indexOf(estado) !== -1) paso = 3;
-          if (estadopago === 'PAGADA') paso = 4;
-          if (estado === 'CONCLUIDA') paso = 5;
-          return paso;
-        }
-
-        var estadoOCActual = (ocExistente && ocExistente.estado) || datos.estado;
-        var estadopagoOCActual = (ocExistente && ocExistente.estadopago) || datos.estadopago;
-        var pasoActualOC = calcularPasoActualOC(estadoOCActual, estadopagoOCActual);
-        var pasosOC = ['Elaboración', 'Autorización Jefe Dpto', 'Autorización LJGR', 'Pagada', 'Facturación / Cierre'];
-        var verdeStep = [46, 125, 50];
-        var grisStep = [200, 200, 200];
-        var grisTextoStep = [140, 140, 140];
-        var circR = 9;
-        var stepperAncho = pageWidth - 2 * margin;
-        var espacioEntre = stepperAncho / (pasosOC.length - 1);
-        var stepperY = y + circR + 2;
-
-        for (var iPaso = 0; iPaso < pasosOC.length; iPaso++) {
-          var cx = margin + espacioEntre * iPaso;
-          var completado = (iPaso + 1) <= pasoActualOC;
-
-          if (iPaso > 0) {
-            var cxPrev = margin + espacioEntre * (iPaso - 1);
-            var lineaCompletada = iPaso <= pasoActualOC;
-            if (lineaCompletada) { doc.setDrawColor(verdeStep[0], verdeStep[1], verdeStep[2]); } else { doc.setDrawColor(grisStep[0], grisStep[1], grisStep[2]); }
-            doc.setLineWidth(1.5);
-            doc.line(cxPrev + circR, stepperY, cx - circR, stepperY);
-          }
-
-          if (completado) { doc.setFillColor(verdeStep[0], verdeStep[1], verdeStep[2]); } else { doc.setFillColor(grisStep[0], grisStep[1], grisStep[2]); }
-          doc.circle(cx, stepperY, circR, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor(255, 255, 255);
-          doc.text(String(iPaso + 1), cx, stepperY + 3, { align: 'center' });
-
-          doc.setFont('helvetica', completado ? 'bold' : 'normal');
-          doc.setFontSize(7.5);
-          if (completado) { doc.setTextColor(verdeStep[0], verdeStep[1], verdeStep[2]); } else { doc.setTextColor(grisTextoStep[0], grisTextoStep[1], grisTextoStep[2]); }
-          var lineasLabelStep = doc.splitTextToSize(pasosOC[iPaso], espacioEntre - 4);
-          doc.text(lineasLabelStep, cx, stepperY + circR + 10, { align: 'center' });
-        }
-
-        y = stepperY + circR + 24;
 
         // ---------- 2. INFORMACIÓN GENERAL (dos tarjetas) ----------
         function dibujarCampoLinea(x, yPos, label, value, maxWidth) {
