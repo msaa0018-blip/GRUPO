@@ -1319,7 +1319,7 @@
   }
 
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
-  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal {
+  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal, #editarProductoModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1333,7 +1333,7 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active, #almacenAccionesModal.active, #editarAlmacenModal.active { display: flex }
+  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active, #almacenAccionesModal.active, #editarAlmacenModal.active, #editarProductoModal.active { display: flex }
   #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content, #almacenAccionesModal .modal-content {
     background: white;
     border-radius: 16px;
@@ -1342,7 +1342,7 @@
     max-width: 420px;
     box-sizing: border-box;
   }
-  #editarProveedorModal .modal-content, #editarAlmacenModal .modal-content {
+  #editarProveedorModal .modal-content, #editarAlmacenModal .modal-content, #editarProductoModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1352,15 +1352,15 @@
     overflow: auto;
     box-sizing: border-box;
   }
-  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header, #almacenAccionesModal .modal-header, #editarAlmacenModal .modal-header {
+  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header, #almacenAccionesModal .modal-header, #editarAlmacenModal .modal-header, #editarProductoModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
     gap: 8px;
   }
-  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3 { margin: 0; font-size: 1.05rem }
-  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group, #almacenAccionesModal .modal-header .pdfPreview-btn-group, #editarAlmacenModal .modal-header .pdfPreview-btn-group {
+  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3, #editarProductoModal .modal-header h3 { margin: 0; font-size: 1.05rem }
+  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group, #almacenAccionesModal .modal-header .pdfPreview-btn-group, #editarAlmacenModal .modal-header .pdfPreview-btn-group, #editarProductoModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
@@ -3186,8 +3186,77 @@
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="btn-accion-producto" data-accion="agregar" onclick="window.seleccionarAccionProducto('agregar')">➕ Agregar</button>
               <button type="button" class="btn-accion-producto" data-accion="quitar" onclick="window.seleccionarAccionProducto('quitar')">➖ Quitar</button>
+              <button type="button" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionProducto('editar')">✏️ Editar</button>
               <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionProducto('eliminar')">🗑️ Eliminar</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: EDITAR PRODUCTO ===== -->
+      <div id="editarProductoModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>✏️ Editar Producto</h3>
+            <div class="pdfPreview-btn-group">
+              <button class="danger btn-modal-x" onclick="window.cancelarEdicionProducto()">✕</button>
+              <button class="success btn-modal-x" onclick="window.guardarEdicionProducto()">➜</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px;">
+              <div id="edProdFotoDropzone" class="foto-dropzone" style="width:96px;height:96px;" onclick="document.getElementById('edProdFotoInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFotoEditar(event, this)">
+                <span id="edProdFotoDropzoneTexto">📷 Arrastra o toca</span>
+                <img id="edProdFotoPreview" class="hidden" alt="Previsualización">
+              </div>
+              <input type="file" id="edProdFotoInput" accept="image/*" class="hidden" onchange="window.manejarSeleccionFotoEditar(this)">
+              <div style="flex:1;min-width:200px;font-size:12px;color:var(--gray-600);align-self:center;">
+                Toca o arrastra una imagen para cambiar la foto del producto. Si no seleccionas ninguna, se conserva la foto actual.
+              </div>
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProdNumeroParte" placeholder="Número de parte">
+              <input id="edProdMarca" placeholder="Marca">
+              <input id="edProdModelo" placeholder="Modelo">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProdDescripcion" placeholder="Descripción *">
+            </div>
+            <div class="cxc-form-row">
+              <select id="edProdUdm">
+                <option value="PZA">PZA</option>
+                <option value="SERVICIO">SERVICIO</option>
+                <option value="KG">KG</option>
+                <option value="LT">LT</option>
+                <option value="MT">MT</option>
+                <option value="CAJA">CAJA</option>
+                <option value="LOTE">LOTE</option>
+                <option value="ROLLO">ROLLO</option>
+                <option value="TOTEM">TOTEM</option>
+                <option value="PAR">PAR</option>
+                <option value="PARES">PARES</option>
+                <option value="MTR">MTR</option>
+                <option value="KM">KM</option>
+              </select>
+              <input id="edProdPrecio" type="number" step="0.01" placeholder="Precio">
+              <select id="edProdMoneda">
+                <option value="MXN">Pesos (MXN)</option>
+                <option value="USD">Dólares (USD)</option>
+              </select>
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProdCantidad" type="number" step="1" min="0" placeholder="Cantidad">
+              <select id="edProdCondicion">
+                <option value="Nuevo">Nuevo</option>
+                <option value="Usado">Usado</option>
+              </select>
+              <input id="edProdUbicacion" placeholder="Ubicación">
+            </div>
+            <div class="cxc-form-row">
+              <div id="edProdAlmacenCelda" style="flex:1;"><select id="edProdAlmacen" onchange="window.actualizarNaveDesdeAlmacenEditar()"><option value="">Sin almacenes</option></select></div>
+              <input id="edProdNave" placeholder="Nave" readonly style="background:var(--gray-100);">
+            </div>
+            <div id="msgEditarProducto"></div>
           </div>
         </div>
       </div>
@@ -6202,8 +6271,8 @@
             resumen.innerHTML =
               '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">📦 Productos distintos</div><div class="almacen-kpi-valor">' + productosDistintos + '</div></div>' +
               '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Nuevo</div><div class="almacen-kpi-valor">' + piezasNuevo + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Usado</div><div class="almacen-kpi-valor">' + piezasUsado + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Total</div><div class="almacen-kpi-valor">' + piezasTotal + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Usadas</div><div class="almacen-kpi-valor">' + piezasUsado + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Piezas Totales</div><div class="almacen-kpi-valor">' + piezasTotal + '</div></div>' +
               '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🏷️ Marca principal</div><div class="almacen-kpi-valor">' + escapeHTML(marcaPrincipal) + '</div></div>' +
               '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración Nuevo</div><div class="almacen-kpi-valor">' + formatoMoneda(valorNuevo, 'MXN') + '</div></div>' +
               '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Valoración Usado</div><div class="almacen-kpi-valor">' + formatoMoneda(valorUsado, 'MXN') + '</div></div>' +
@@ -6481,6 +6550,171 @@
         }
       }
 
+      // ===== EDITAR PRODUCTO (incluye poder cambiar la foto) =====
+      var productoEditandoId = null;
+      var edProdFotoArchivo = null;
+
+      window.actualizarSelectorAlmacenProductosEditar = function(valorActual) {
+        var celda = document.getElementById('edProdAlmacenCelda');
+        var naveInput = document.getElementById('edProdNave');
+        if (!celda) return;
+        var disponibles = obtenerAlmacenesDisponibles(actual);
+
+        if (!actual) { celda.innerHTML = '<select id="edProdAlmacen" disabled><option>Inicia sesión</option></select>'; return; }
+
+        if (actual.rol === 'Administrador') {
+          celda.innerHTML = '<select id="edProdAlmacen" onchange="window.actualizarNaveDesdeAlmacenEditar()"><option value="">Selecciona un almacén</option>' +
+            disponibles.map(function(a) { return '<option value="' + a.id + '"' + (String(a.id) === String(valorActual) ? ' selected' : '') + '>' + escapeHTML(a.nombre) + '</option>'; }).join('') + '</select>';
+        } else if (disponibles.length === 0) {
+          celda.innerHTML = '<select id="edProdAlmacen" disabled><option value="">Sin almacén asignado</option></select>';
+        } else if (disponibles.length === 1) {
+          celda.innerHTML = '<select id="edProdAlmacen" disabled><option value="' + disponibles[0].id + '">' + escapeHTML(disponibles[0].nombre) + '</option></select>' +
+            '<input type="hidden" id="edProdAlmacenValor" value="' + disponibles[0].id + '">';
+          if (naveInput) naveInput.value = disponibles[0].nave || '';
+        } else {
+          celda.innerHTML = '<select id="edProdAlmacen" onchange="window.actualizarNaveDesdeAlmacenEditar()"><option value="">Selecciona un almacén</option>' +
+            disponibles.map(function(a) { return '<option value="' + a.id + '"' + (String(a.id) === String(valorActual) ? ' selected' : '') + '>' + escapeHTML(a.nombre) + '</option>'; }).join('') + '</select>';
+        }
+        window.actualizarNaveDesdeAlmacenEditar();
+      };
+
+      window.actualizarNaveDesdeAlmacenEditar = function() {
+        var select = document.getElementById('edProdAlmacen');
+        var naveInput = document.getElementById('edProdNave');
+        if (!select || !naveInput) return;
+        var almacen = almacenesCache.find(function(a) { return String(a.id) === String(select.value); });
+        naveInput.value = almacen ? (almacen.nave || '') : '';
+      };
+
+      function mostrarPreviewFotoEditar(archivo) {
+        var texto = document.getElementById('edProdFotoDropzoneTexto');
+        var preview = document.getElementById('edProdFotoPreview');
+        var lector = new FileReader();
+        lector.onload = function(e) {
+          preview.src = e.target.result;
+          preview.classList.remove('hidden');
+          if (texto) texto.classList.add('hidden');
+        };
+        lector.readAsDataURL(archivo);
+      }
+
+      window.manejarSeleccionFotoEditar = function(input) {
+        if (!input.files || !input.files[0]) return;
+        edProdFotoArchivo = input.files[0];
+        mostrarPreviewFotoEditar(edProdFotoArchivo);
+      };
+
+      window.manejarDropFotoEditar = function(event, el) {
+        event.preventDefault();
+        el.classList.remove('arrastrando');
+        var archivos = event.dataTransfer.files;
+        if (!archivos || !archivos[0]) return;
+        if (archivos[0].type.indexOf('image/') !== 0) {
+          alert('⚠️ Solo se aceptan imágenes.');
+          return;
+        }
+        edProdFotoArchivo = archivos[0];
+        mostrarPreviewFotoEditar(edProdFotoArchivo);
+      };
+
+      window.editarProductoCatalogo = function(id) {
+        var p = productosCatalogoCache.find(function(x) { return x.id === id; });
+        if (!p) return;
+        productoEditandoId = id;
+        edProdFotoArchivo = null;
+
+        document.getElementById('edProdNumeroParte').value = p.numero_parte || '';
+        document.getElementById('edProdMarca').value = p.marca || '';
+        document.getElementById('edProdModelo').value = p.modelo || '';
+        document.getElementById('edProdDescripcion').value = p.descripcion || '';
+        document.getElementById('edProdUdm').value = p.udm || 'PZA';
+        document.getElementById('edProdPrecio').value = p.precio_referencia || '';
+        document.getElementById('edProdMoneda').value = p.moneda || 'MXN';
+        document.getElementById('edProdCantidad').value = p.cantidad || 0;
+        document.getElementById('edProdCondicion').value = p.condicion || 'Nuevo';
+        document.getElementById('edProdUbicacion').value = p.ubicacion || '';
+
+        window.actualizarSelectorAlmacenProductosEditar(p.almacen_id);
+
+        var preview = document.getElementById('edProdFotoPreview');
+        var texto = document.getElementById('edProdFotoDropzoneTexto');
+        var input = document.getElementById('edProdFotoInput');
+        if (input) input.value = '';
+        if (p.foto_url) {
+          preview.src = p.foto_url;
+          preview.classList.remove('hidden');
+          if (texto) texto.classList.add('hidden');
+        } else {
+          preview.src = '';
+          preview.classList.add('hidden');
+          if (texto) texto.classList.remove('hidden');
+        }
+
+        var msg = document.getElementById('msgEditarProducto');
+        if (msg) msg.innerHTML = '';
+        document.getElementById('editarProductoModal').classList.add('active');
+      };
+
+      window.cancelarEdicionProducto = function() {
+        productoEditandoId = null;
+        edProdFotoArchivo = null;
+        document.getElementById('editarProductoModal').classList.remove('active');
+      };
+
+      window.guardarEdicionProducto = async function() {
+        var msg = document.getElementById('msgEditarProducto');
+        if (!productoEditandoId) return;
+        var descripcion = document.getElementById('edProdDescripcion').value.trim();
+        if (!descripcion) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ La descripción es obligatoria.</div>';
+          return;
+        }
+        var precio = parseFloat(document.getElementById('edProdPrecio').value);
+        var cantidad = parseFloat(document.getElementById('edProdCantidad').value);
+
+        var datos = {
+          numero_parte: document.getElementById('edProdNumeroParte').value.trim().toUpperCase(),
+          marca: document.getElementById('edProdMarca').value.trim().toUpperCase(),
+          modelo: document.getElementById('edProdModelo').value.trim().toUpperCase(),
+          descripcion: descripcion.toUpperCase(),
+          udm: document.getElementById('edProdUdm').value,
+          precio_referencia: isNaN(precio) ? 0 : precio,
+          moneda: document.getElementById('edProdMoneda').value,
+          cantidad: isNaN(cantidad) ? 0 : cantidad,
+          condicion: document.getElementById('edProdCondicion').value,
+          ubicacion: document.getElementById('edProdUbicacion').value.trim().toUpperCase(),
+          almacen_id: (function() {
+            var selAlm = document.getElementById('edProdAlmacen');
+            var valorOculto = document.getElementById('edProdAlmacenValor');
+            var v = valorOculto ? valorOculto.value : (selAlm ? selAlm.value : '');
+            return v ? parseInt(v, 10) : null;
+          })(),
+          nave: document.getElementById('edProdNave').value || null
+        };
+
+        try {
+          if (edProdFotoArchivo) {
+            var pOriginal = productosCatalogoCache.find(function(x) { return x.id === productoEditandoId; });
+            var codigoParaFoto = (pOriginal && pOriginal.codigo) ? pOriginal.codigo : ('PROD-' + productoEditandoId);
+            var urlFoto = await subirFotoProducto(edProdFotoArchivo, codigoParaFoto);
+            if (urlFoto) datos.foto_url = urlFoto;
+          }
+
+          var { error } = await supabase.from('productos').update(datos).eq('id', productoEditandoId);
+          if (error) throw error;
+
+          productoEditandoId = null;
+          edProdFotoArchivo = null;
+          document.getElementById('editarProductoModal').classList.remove('active');
+          window.cargarProductosCatalogo();
+          var msgProductos = document.getElementById('msgProductos');
+          if (msgProductos) msgProductos.innerHTML = '<div class="success-msg">✅ Producto actualizado.</div>';
+        } catch (e) {
+          console.error('Error actualizando producto:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
       window.agregarProductoCatalogo = async function() {
         var descripcion = document.getElementById('nvoProdDescripcion').value.trim();
         var msg = document.getElementById('msgProductos');
@@ -6598,7 +6832,7 @@
 
       window.confirmarAccionProducto = async function() {
         if (!accionProductoActual || !accionProductoActual.accion) {
-          alert('⚠️ Selecciona una opción: Agregar, Quitar o Eliminar.');
+          alert('⚠️ Selecciona una opción: Agregar, Quitar, Editar o Eliminar.');
           return;
         }
         var id = accionProductoActual.id;
@@ -6607,6 +6841,12 @@
         if (accion === 'eliminar') {
           window.cerrarModalAccionesProducto();
           await window.eliminarProductoCatalogo(id);
+          return;
+        }
+
+        if (accion === 'editar') {
+          window.cerrarModalAccionesProducto();
+          window.editarProductoCatalogo(id);
           return;
         }
 
