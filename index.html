@@ -6038,11 +6038,19 @@
       };
 
       window.eliminarAlmacen = async function(id) {
-        if (!confirm('¿Eliminar este almacén?')) return;
+        if (!confirm('¿Eliminar este almacén? Los productos asignados a él quedarán sin almacén ni nave.')) return;
         try {
+          // La columna almacen_id en productos ya tiene ON DELETE SET NULL,
+          // pero "nave" es un valor copiado (no se recalcula solo), así que
+          // hay que limpiarlo aparte para que no quede una nave "huérfana"
+          // apuntando a un almacén que ya no existe.
+          var { error: errorLimpieza } = await supabase.from('productos').update({ nave: null }).eq('almacen_id', id);
+          if (errorLimpieza) throw errorLimpieza;
+
           var { error } = await supabase.from('almacenes').delete().eq('id', id);
           if (error) throw error;
           window.cargarAlmacenes();
+          window.cargarProductosCatalogo();
         } catch (e) {
           console.error('Error eliminando almacén:', e);
           alert('❌ No se pudo eliminar: ' + e.message);
@@ -6085,11 +6093,23 @@
           nave: document.getElementById('edAlmNave').value
         };
         try {
+          var almacenAnterior = almacenesCache.find(function(a) { return a.id === almacenEditandoId; });
           var { error } = await supabase.from('almacenes').update(datos).eq('id', almacenEditandoId);
           if (error) throw error;
+
+          // La "nave" que se guarda en cada producto es una copia, no una
+          // referencia en vivo: si cambió la nave del almacén, hay que
+          // propagar el cambio a todos los productos que ya estaban
+          // asignados a ese almacén para que no queden desincronizados.
+          if (almacenAnterior && almacenAnterior.nave !== datos.nave) {
+            var { error: errorSync } = await supabase.from('productos').update({ nave: datos.nave }).eq('almacen_id', almacenEditandoId);
+            if (errorSync) console.error('No se pudo sincronizar la nave en productos:', errorSync);
+          }
+
           almacenEditandoId = null;
           document.getElementById('editarAlmacenModal').classList.remove('active');
           window.cargarAlmacenes();
+          window.cargarProductosCatalogo();
           var msgAlmacenes = document.getElementById('msgAlmacenes');
           if (msgAlmacenes) msgAlmacenes.innerHTML = '<div class="success-msg">✅ Almacén actualizado.</div>';
         } catch (e) {
