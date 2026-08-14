@@ -5127,7 +5127,17 @@
           if (dataSup) {
             var tipoSup = dataSup.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
             console.log('🖼️ Membrete superior: tipo=' + tipoSup + ', tamaño=' + dataSup.length + ' caracteres');
-            doc.addImage(dataSup, tipoSup, 0, 0, pageWidth, alturaFranja);
+            if (formato === '8') {
+              // Formato 8: la imagen superior se reduce 1/8 respecto al
+              // tamaño que normalmente ocupa (ancho completo × 1/8 de
+              // alto de página), y se centra horizontalmente.
+              var anchoSup8 = pageWidth * (7 / 8);
+              var altoSup8 = alturaFranja * (7 / 8);
+              var xSup8 = (pageWidth - anchoSup8) / 2;
+              doc.addImage(dataSup, tipoSup, xSup8, 0, anchoSup8, altoSup8);
+            } else {
+              doc.addImage(dataSup, tipoSup, 0, 0, pageWidth, alturaFranja);
+            }
           } else {
             console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen superior (formato ' + formato + ')');
           }
@@ -6902,8 +6912,7 @@
       var VSC_CATALOGO_SELECT = {
         proveedor: 'valeProveedor',
         cliente: 'valeCliente',
-        centro_negocio: 'valeCentroNegocio',
-        proyecto: 'valeProyectoOC'
+        centro_negocio: 'valeCentroNegocio'
       };
 
       window.cargarVscCatalogos = async function() {
@@ -7245,6 +7254,31 @@
         });
         sel.innerHTML = '<option value="" disabled selected hidden>Selecciona vehículo *</option>' +
           disponibles.map(function(v) { return '<option value="' + v.id + '">' + escapeHTML(v.nombre) + (v.placas ? ' (' + escapeHTML(v.placas) + ')' : '') + '</option>'; }).join('');
+
+        window.actualizarProyectosNuevoVale(empresa, depto);
+      };
+
+      // "Selecciona proyecto / contrato / OC" muestra los proyectos reales
+      // (módulo Proyectos) de la empresa y departamento del solicitante,
+      // no un catálogo aparte.
+      window.actualizarProyectosNuevoVale = function(empresa, depto) {
+        var sel = document.getElementById('valeProyectoOC');
+        if (!sel) return;
+        if (empresa === undefined) {
+          var empresaSel = document.getElementById('valeEmpresa');
+          var empresaOculto = document.getElementById('valeEmpresaValor');
+          empresa = empresaOculto ? empresaOculto.value : (empresaSel ? empresaSel.value : '');
+          var deptoSel = document.getElementById('valeDepartamento');
+          var deptoOculto = document.getElementById('valeDepartamentoValor');
+          depto = deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '');
+        }
+        var coincidencias = (proyectos || []).filter(function(p) {
+          if (normalizar(p.empresa) !== normalizar(empresa)) return false;
+          if (!depto) return true;
+          return deptoParaComparar(p.empresa, p.departamento) === deptoParaComparar(empresa, depto);
+        });
+        sel.innerHTML = '<option value="" disabled selected hidden>Selecciona proyecto / contrato / OC</option>' +
+          coincidencias.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + (p.codigo ? ' (' + escapeHTML(p.codigo) + ')' : '') + '</option>'; }).join('');
       };
 
       window.agregarValeGasolina = async function() {
@@ -14743,6 +14777,10 @@
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
         doc.setLineHeightFactor(1.05);
+        // El nombre del documento (lo que el navegador sugiere al guardar
+        // desde la previsualización) debe ser el código de la OC.
+        var codigoParaTitulo = (ocExistente && ocExistente.codigo) || datos.codigo || 'Orden_de_Compra';
+        doc.setProperties({ title: codigoParaTitulo });
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
         var margin = 40;
@@ -14763,9 +14801,9 @@
           logoTipo = 'PNG';
         }
 
-        // El formato 7 no lleva logo de empresa/departamento superpuesto:
-        // solo la imagen de membrete definida para ese formato.
-        if (formatoElegido !== '7') {
+        // Los formatos 7 y 8 no llevan logo de empresa/departamento
+        // superpuesto: solo la(s) imagen(es) de membrete de ese formato.
+        if (formatoElegido !== '7' && formatoElegido !== '8') {
         try {
           var response = await fetch(logoUrl);
           if (response.ok) {
