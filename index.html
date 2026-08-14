@@ -3218,24 +3218,24 @@
             <div id="valeDepartamentoCelda"><select id="valeDepartamento" disabled><option value="">Cargando…</option></select></div>
           </div>
           <select id="valeVehiculo">
-            <option value="">Selecciona vehículo *</option>
+            <option value="" disabled selected hidden>Selecciona vehículo *</option>
           </select>
         </div>
         <div class="cxc-form-row">
-          <select id="valeProveedor"><option value="">Selecciona proveedor</option></select>
-          <select id="valeCliente"><option value="">Selecciona cliente</option></select>
-          <select id="valeCentroNegocio"><option value="">Selecciona centro de negocio / sucursal</option></select>
-          <select id="valeProyectoOC"><option value="">Selecciona proyecto / contrato / OC</option></select>
+          <select id="valeProveedor"><option value="" disabled selected hidden>Selecciona proveedor</option></select>
+          <select id="valeCliente"><option value="" disabled selected hidden>Selecciona cliente</option></select>
+          <select id="valeCentroNegocio"><option value="" disabled selected hidden>Selecciona centro de negocio / sucursal</option></select>
+          <select id="valeProyectoOC"><option value="" disabled selected hidden>Selecciona proyecto / contrato / OC</option></select>
         </div>
         <div class="cxc-form-row">
           <select id="valeCombustible">
-            <option value="">Selecciona combustible *</option>
+            <option value="" disabled selected hidden>Selecciona combustible *</option>
             <option value="Gasolina Magna">Gasolina Magna</option>
             <option value="Gasolina Premium">Gasolina Premium</option>
             <option value="Diesel">Diesel</option>
           </select>
           <select id="valeNivelTanque">
-            <option value="">Nivel de tanque actual</option>
+            <option value="" disabled selected hidden>Nivel de tanque actual</option>
             <option value="Vacío">Vacío</option>
             <option value="1/4">1/4</option>
             <option value="1/2">1/2</option>
@@ -3243,13 +3243,6 @@
             <option value="Lleno">Lleno</option>
           </select>
           <input id="valeLitros" type="number" step="0.01" placeholder="Cantidad solicitada (litros) *">
-        </div>
-        <p class="text-muted" style="margin:12px 0 4px;">Datos adicionales (opcionales)</p>
-        <div class="cxc-form-row">
-          <input id="valeMonto" type="number" step="0.01" placeholder="Monto">
-          <input id="valeFolio" placeholder="Folio">
-          <input id="valeKmActual" type="number" step="1" placeholder="Kilometraje actual">
-          <input id="valeKmNuevo" type="number" step="1" placeholder="Kilometraje nuevo">
         </div>
         <div class="cxc-form-row">
           <button class="success" onclick="window.agregarValeGasolina()">➕ Registrar Vale</button>
@@ -7003,9 +6996,9 @@
         var permisos = (actual.permisos && actual.permisos.length) ? actual.permisos : [];
 
         if (permisos.length === 0) {
-          celdaEmpresa.innerHTML = '<select id="valeEmpresa" onchange="window.actualizarDeptosLibreVale()"><option value="">Selecciona empresa *</option>' +
+          celdaEmpresa.innerHTML = '<select id="valeEmpresa" onchange="window.actualizarDeptosLibreVale()"><option value="" disabled selected hidden>Selecciona empresa *</option>' +
             getEmpresasCatalogo().map(function(e) { return '<option value="' + escapeHTML(e.nombre) + '">' + escapeHTML(e.nombre) + '</option>'; }).join('') + '</select>';
-          celdaDepto.innerHTML = '<select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()"><option value="">Selecciona departamento</option></select>';
+          celdaDepto.innerHTML = '<select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()"><option value="" disabled selected hidden>Selecciona departamento</option></select>';
           return;
         }
 
@@ -7023,16 +7016,16 @@
         var empresasPropias = permisos.filter(function(p, i, arr) {
           return arr.findIndex(function(x) { return x.empresa === p.empresa; }) === i;
         });
-        celdaEmpresa.innerHTML = '<select id="valeEmpresa" onchange="window.actualizarDeptoSegunPermisoVale()"><option value="">Selecciona empresa *</option>' +
+        celdaEmpresa.innerHTML = '<select id="valeEmpresa" onchange="window.actualizarDeptoSegunPermisoVale()"><option value="" disabled selected hidden>Selecciona empresa *</option>' +
           empresasPropias.map(function(p) { return '<option value="' + escapeHTML(p.empresa) + '">' + escapeHTML(p.empresa) + '</option>'; }).join('') + '</select>';
-        celdaDepto.innerHTML = '<select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()"><option value="">Selecciona departamento</option></select>';
+        celdaDepto.innerHTML = '<select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()"><option value="" disabled selected hidden>Selecciona departamento</option></select>';
       };
 
       window.actualizarDeptoSegunPermisoVale = function() {
         var empresa = document.getElementById('valeEmpresa').value;
         var permisos = ((actual && actual.permisos) || []).filter(function(p) { return p.empresa === empresa; });
         var sel = document.getElementById('valeDepartamento');
-        sel.innerHTML = '<option value="">Selecciona departamento</option>' +
+        sel.innerHTML = '<option value="" disabled selected hidden>Selecciona departamento</option>' +
           permisos.map(function(p) { return '<option value="' + escapeHTML(p.depto) + '">' + escapeHTML(p.depto) + '</option>'; }).join('');
         window.actualizarVehiculosNuevoVale();
       };
@@ -7040,7 +7033,7 @@
       window.actualizarDeptosLibreVale = function() {
         var empresa = document.getElementById('valeEmpresa').value;
         var sel = document.getElementById('valeDepartamento');
-        sel.innerHTML = '<option value="">Selecciona departamento</option>';
+        sel.innerHTML = '<option value="" disabled selected hidden>Selecciona departamento</option>';
         getDepartamentosPorEmpresa(empresa).forEach(function(d) {
           var opt = document.createElement('option');
           opt.value = d.nombre;
@@ -7064,7 +7057,7 @@
           if (!v.departamento) return true;
           return deptoParaComparar(v.empresa, v.departamento) === deptoParaComparar(empresa, depto);
         });
-        sel.innerHTML = '<option value="">Selecciona vehículo *</option>' +
+        sel.innerHTML = '<option value="" disabled selected hidden>Selecciona vehículo *</option>' +
           disponibles.map(function(v) { return '<option value="' + v.id + '">' + escapeHTML(v.nombre) + (v.placas ? ' (' + escapeHTML(v.placas) + ')' : '') + '</option>'; }).join('');
       };
 
@@ -7083,16 +7076,11 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, vehículo, combustible y cantidad solicitada (mayor a 0) son obligatorios.</div>';
           return;
         }
-        var monto = parseFloat(document.getElementById('valeMonto').value);
-        var kmActual = parseFloat(document.getElementById('valeKmActual').value);
-        var kmNuevo = parseFloat(document.getElementById('valeKmNuevo').value);
         var nuevo = {
           empresa: empresa,
           departamento: depto || null,
           vehiculo_id: parseInt(vehiculoId, 10),
           litros: litros,
-          monto: isNaN(monto) ? null : monto,
-          folio: document.getElementById('valeFolio').value.trim(),
           fecha: document.getElementById('valePeriodoInicio').value || document.getElementById('valeFechaCarga').value || null,
           fecha_carga: document.getElementById('valeFechaCarga').value || null,
           periodo_inicio: document.getElementById('valePeriodoInicio').value || null,
@@ -7103,8 +7091,6 @@
           proyecto_oc: document.getElementById('valeProyectoOC').value || null,
           combustible: combustible,
           nivel_tanque: document.getElementById('valeNivelTanque').value || null,
-          kilometraje_actual: isNaN(kmActual) ? null : kmActual,
-          kilometraje_nuevo: isNaN(kmNuevo) ? null : kmNuevo,
           responsable: actual ? actual.usuario : null,
           elaborador: actual ? actual.usuario : null,
           estado: 'CREADA'
@@ -7117,8 +7103,6 @@
           await supabase.from('vales_gasolina').update({ codigo: codigoGenerado }).eq('id', nuevoId);
 
           document.getElementById('valeLitros').value = '';
-          document.getElementById('valeMonto').value = '';
-          document.getElementById('valeFolio').value = '';
           document.getElementById('valeFechaCarga').value = '';
           document.getElementById('valePeriodoInicio').value = '';
           document.getElementById('valePeriodoFin').value = '';
@@ -7128,8 +7112,6 @@
           document.getElementById('valeProyectoOC').value = '';
           document.getElementById('valeCombustible').value = '';
           document.getElementById('valeNivelTanque').value = '';
-          document.getElementById('valeKmActual').value = '';
-          document.getElementById('valeKmNuevo').value = '';
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.</div>';
           window.cargarValesGasolina();
         } catch (e) {
