@@ -12209,6 +12209,9 @@
               if (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA') {
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
+              if (o.estado === 'CONCLUIDA' && o.factura_url) {
+                acciones += '<button class="btn-imprimir" onclick="window.open(\'' + o.factura_url + '\', \'_blank\')">📎 Ver Factura</button>';
+              }
 
               if (!acciones) acciones = '—';
 
@@ -12218,6 +12221,9 @@
               var puedeImprimir = o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA' || o.estado === 'PAGADA';
               if (puedeImprimir) {
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
+              }
+              if (o.estado === 'CONCLUIDA' && o.factura_url) {
+                acciones += '<button class="btn-imprimir" onclick="window.open(\'' + o.factura_url + '\', \'_blank\')">📎 Ver Factura</button>';
               }
 
               if (!o.pausada) {
