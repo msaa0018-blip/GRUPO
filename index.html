@@ -1104,7 +1104,7 @@
     .card.modal-card.abierta { width: 96%; max-height: 92vh; }
   }
 
-  #pdfPreviewModal {
+  #pdfPreviewModal, #facturaVerModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1118,8 +1118,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #pdfPreviewModal.active { display: flex }
-  #pdfPreviewModal .modal-content {
+  #pdfPreviewModal.active, #facturaVerModal.active { display: flex }
+  #pdfPreviewModal .modal-content, #facturaVerModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 16px;
@@ -1130,7 +1130,7 @@
     flex-direction: column;
     box-sizing: border-box;
   }
-  #pdfPreviewModal .modal-header {
+  #pdfPreviewModal .modal-header, #facturaVerModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1138,15 +1138,15 @@
     flex-wrap: wrap;
     gap: 8px
   }
-  #pdfPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem }
-  #pdfPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
-  #pdfPreviewModal .modal-body iframe {
+  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #pdfPreviewModal .modal-body, #facturaVerModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
+  #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe {
     width: 100%;
     height: 400px;
     border: 1px solid var(--gray-300);
     border-radius: 8px
   }
-  #pdfPreviewModal .modal-header .pdfPreview-btn-group {
+  #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     max-width: 50%;
@@ -3652,6 +3652,20 @@
             <input type="file" id="facturaInput" accept=".pdf,image/*" class="hidden" onchange="window.manejarSeleccionFactura(this)">
             <div id="msgAdjuntarFactura"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: VER FACTURA DE UNA OC CONCLUIDA ===== -->
+      <div id="facturaVerModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>📎 Factura</h3>
+            <div class="pdfPreview-btn-group">
+              <a id="facturaVerDescargarBtn" class="success" href="#" target="_blank" download style="text-decoration:none;">⬇️ Descargar</a>
+              <button class="danger btn-modal-x" onclick="window.cerrarFacturaOC()">✕</button>
+            </div>
+          </div>
+          <div class="modal-body"><iframe id="facturaVerFrame"></iframe></div>
         </div>
       </div>
 
@@ -8348,6 +8362,24 @@
         if (img) img.src = '';
       };
 
+      // ===== VER FACTURA DE UNA OC CONCLUIDA (modal, no pestaña nueva) =====
+      window.verFacturaOC = function(url) {
+        var modal = document.getElementById('facturaVerModal');
+        var frame = document.getElementById('facturaVerFrame');
+        var btnDescargar = document.getElementById('facturaVerDescargarBtn');
+        if (!modal || !frame) return;
+        frame.src = url;
+        if (btnDescargar) btnDescargar.href = url;
+        modal.classList.add('active');
+      };
+
+      window.cerrarFacturaOC = function() {
+        var modal = document.getElementById('facturaVerModal');
+        var frame = document.getElementById('facturaVerFrame');
+        if (modal) modal.classList.remove('active');
+        if (frame) frame.src = '';
+      };
+
       // ===== EDITAR PRODUCTO (incluye poder cambiar la foto) =====
       var productoEditandoId = null;
       var edProdFotoArchivo = null;
@@ -12210,7 +12242,7 @@
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
-                acciones += '<button class="btn-imprimir" onclick="window.open(\'' + o.factura_url + '\', \'_blank\')">📎 Ver Factura</button>';
+                acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(\'' + o.factura_url + '\')">📎 Ver Factura</button>';
               }
 
               if (!acciones) acciones = '—';
@@ -12223,7 +12255,7 @@
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
-                acciones += '<button class="btn-imprimir" onclick="window.open(\'' + o.factura_url + '\', \'_blank\')">📎 Ver Factura</button>';
+                acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(\'' + o.factura_url + '\')">📎 Ver Factura</button>';
               }
 
               if (!o.pausada) {
@@ -15736,3 +15768,4 @@
   </script>
 </body>
 </html>
+          
