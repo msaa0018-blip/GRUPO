@@ -3176,27 +3176,78 @@
             </table>
           </div>
           <div id="msgVehiculos"></div>
+
+          <h3 style="margin-top:16px;">🗂️ Catálogos VSC (Proveedor / Cliente / Centro de Negocio / Proyecto-Contrato-OC)</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Tipo</th><th>Nombre</th><th>Acciones</th></tr></thead>
+              <tbody id="cuerpoVscCatalogos"></tbody>
+              <tfoot>
+                <tr>
+                  <td>
+                    <select id="nvoVscCatTipo">
+                      <option value="proveedor">Proveedor</option>
+                      <option value="cliente">Cliente</option>
+                      <option value="centro_negocio">Centro de Negocio / Sucursal</option>
+                      <option value="proyecto">Proyecto / Contrato / OC</option>
+                    </select>
+                  </td>
+                  <td><input id="nvoVscCatNombre" placeholder="Nombre *"></td>
+                  <td><button class="success" onclick="window.agregarVscCatalogo()">➕</button></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div id="msgVscCatalogos"></div>
         </div>
 
         <h3 style="margin-top:20px;">➕ Nuevo Vale de Gasolina</h3>
         <div class="cxc-form-row">
-          <select id="valeEmpresa" onchange="window.actualizarDeptosNuevoVale()">
-            <option value="">Selecciona empresa *</option>
-          </select>
-          <select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()">
-            <option value="">Selecciona departamento</option>
-          </select>
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha de carga<input id="valeFechaCarga" type="date" style="width:100%;margin-top:4px;"></label>
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Periodo consumo — inicio<input id="valePeriodoInicio" type="date" style="width:100%;margin-top:4px;"></label>
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Periodo consumo — fin<input id="valePeriodoFin" type="date" style="width:100%;margin-top:4px;"></label>
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Usuario solicitante (chofer)<input id="valeSolicitante" readonly style="width:100%;margin-top:4px;background:var(--gray-100);"></label>
+        </div>
+        <div class="cxc-form-row">
+          <div style="flex:1;">
+            <label style="font-size:12px;font-weight:500;color:var(--gray-600);">Empresa</label>
+            <div id="valeEmpresaCelda"><select id="valeEmpresa" disabled><option value="">Cargando…</option></select></div>
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:12px;font-weight:500;color:var(--gray-600);">Departamento</label>
+            <div id="valeDepartamentoCelda"><select id="valeDepartamento" disabled><option value="">Cargando…</option></select></div>
+          </div>
           <select id="valeVehiculo">
             <option value="">Selecciona vehículo *</option>
           </select>
         </div>
         <div class="cxc-form-row">
-          <input id="valeLitros" type="number" step="0.01" placeholder="Litros *">
-          <input id="valeMonto" type="number" step="0.01" placeholder="Monto *">
-          <input id="valeFolio" placeholder="Folio">
+          <select id="valeProveedor"><option value="">Selecciona proveedor</option></select>
+          <select id="valeCliente"><option value="">Selecciona cliente</option></select>
+          <select id="valeCentroNegocio"><option value="">Selecciona centro de negocio / sucursal</option></select>
+          <select id="valeProyectoOC"><option value="">Selecciona proyecto / contrato / OC</option></select>
         </div>
         <div class="cxc-form-row">
-          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha<input id="valeFecha" type="date" style="width:100%;margin-top:4px;"></label>
+          <select id="valeCombustible">
+            <option value="">Selecciona combustible *</option>
+            <option value="Gasolina Magna">Gasolina Magna</option>
+            <option value="Gasolina Premium">Gasolina Premium</option>
+            <option value="Diesel">Diesel</option>
+          </select>
+          <select id="valeNivelTanque">
+            <option value="">Nivel de tanque actual</option>
+            <option value="Vacío">Vacío</option>
+            <option value="1/4">1/4</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="Lleno">Lleno</option>
+          </select>
+          <input id="valeLitros" type="number" step="0.01" placeholder="Cantidad solicitada (litros) *">
+        </div>
+        <p class="text-muted" style="margin:12px 0 4px;">Datos adicionales (opcionales)</p>
+        <div class="cxc-form-row">
+          <input id="valeMonto" type="number" step="0.01" placeholder="Monto">
+          <input id="valeFolio" placeholder="Folio">
           <input id="valeKmActual" type="number" step="1" placeholder="Kilometraje actual">
           <input id="valeKmNuevo" type="number" step="1" placeholder="Kilometraje nuevo">
         </div>
@@ -6650,8 +6701,100 @@
         var seccionVehiculos = document.getElementById('vscVehiculosSection');
         if (seccionVehiculos) seccionVehiculos.classList.toggle('hidden', !esAdmin);
 
+        var campoSolicitante = document.getElementById('valeSolicitante');
+        if (campoSolicitante) campoSolicitante.value = actual ? actual.usuario : '';
+
         await window.cargarVehiculos();
+        await window.cargarVscCatalogos();
+        window.configurarEmpresaDeptoVale();
         await window.cargarValesGasolina();
+      };
+
+      // ===== Catálogos VSC (Proveedor / Cliente / Centro de Negocio / Proyecto-Contrato-OC) =====
+      // Solo el Administrador puede darlos de alta; el resto de usuarios
+      // únicamente los seleccionan al registrar un vale.
+      var vscCatalogosCache = [];
+      var VSC_CATALOGO_ETIQUETAS = {
+        proveedor: 'Proveedor',
+        cliente: 'Cliente',
+        centro_negocio: 'Centro de Negocio / Sucursal',
+        proyecto: 'Proyecto / Contrato / OC'
+      };
+      var VSC_CATALOGO_SELECT = {
+        proveedor: 'valeProveedor',
+        cliente: 'valeCliente',
+        centro_negocio: 'valeCentroNegocio',
+        proyecto: 'valeProyectoOC'
+      };
+
+      window.cargarVscCatalogos = async function() {
+        try {
+          var { data, error } = await supabase.from('vsc_catalogos').select('*').eq('activo', true).order('nombre');
+          if (error) throw error;
+          vscCatalogosCache = data || [];
+        } catch (e) {
+          console.error('Error cargando catálogos VSC:', e);
+          vscCatalogosCache = [];
+        }
+
+        var cuerpo = document.getElementById('cuerpoVscCatalogos');
+        if (cuerpo) {
+          cuerpo.innerHTML = '';
+          vscCatalogosCache.forEach(function(c) {
+            var fila = document.createElement('tr');
+            fila.innerHTML =
+              '<td>' + escapeHTML(VSC_CATALOGO_ETIQUETAS[c.tipo] || c.tipo) + '</td>' +
+              '<td>' + escapeHTML(c.nombre) + '</td>' +
+              '<td style="text-align:center;"><button class="danger" style="padding:4px 10px;" onclick="window.eliminarVscCatalogo(' + c.id + ')">🗑️</button></td>';
+            cuerpo.appendChild(fila);
+          });
+        }
+
+        Object.keys(VSC_CATALOGO_SELECT).forEach(function(tipo) {
+          var sel = document.getElementById(VSC_CATALOGO_SELECT[tipo]);
+          if (!sel) return;
+          var valorActual = sel.value;
+          var opciones = vscCatalogosCache.filter(function(c) { return c.tipo === tipo; });
+          sel.innerHTML = sel.options[0].outerHTML +
+            opciones.map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
+          sel.value = valorActual;
+        });
+      };
+
+      window.agregarVscCatalogo = async function() {
+        var msg = document.getElementById('msgVscCatalogos');
+        var nombre = document.getElementById('nvoVscCatNombre').value.trim();
+        if (!nombre) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El nombre es obligatorio.</div>';
+          return;
+        }
+        var nuevo = {
+          tipo: document.getElementById('nvoVscCatTipo').value,
+          nombre: nombre.toUpperCase(),
+          activo: true
+        };
+        try {
+          var { error } = await supabase.from('vsc_catalogos').insert([nuevo]);
+          if (error) throw error;
+          document.getElementById('nvoVscCatNombre').value = '';
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Agregado.</div>';
+          window.cargarVscCatalogos();
+        } catch (e) {
+          console.error('Error agregando catálogo VSC:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo agregar: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.eliminarVscCatalogo = async function(id) {
+        if (!confirm('¿Eliminar este elemento del catálogo?')) return;
+        try {
+          var { error } = await supabase.from('vsc_catalogos').delete().eq('id', id);
+          if (error) throw error;
+          window.cargarVscCatalogos();
+        } catch (e) {
+          console.error('Error eliminando catálogo VSC:', e);
+          alert('❌ No se pudo eliminar: ' + e.message);
+        }
       };
 
       window.cargarVehiculos = async function() {
@@ -6846,7 +6989,55 @@
       };
 
       // ===== Alta de Vale de Gasolina =====
-      window.actualizarDeptosNuevoVale = function() {
+      // La Empresa y el Departamento se bloquean automáticamente según
+      // el/los permisos del usuario que genera el vale (igual que en
+      // Almacenes): un solo permiso -> bloqueado; varios permisos -> solo
+      // puede elegir entre SUS propias asignaciones; sin permisos (ej.
+      // cuenta de Administrador puro) -> selects libres sobre todo el
+      // catálogo organizacional.
+      window.configurarEmpresaDeptoVale = function() {
+        var celdaEmpresa = document.getElementById('valeEmpresaCelda');
+        var celdaDepto = document.getElementById('valeDepartamentoCelda');
+        if (!celdaEmpresa || !celdaDepto || !actual) return;
+
+        var permisos = (actual.permisos && actual.permisos.length) ? actual.permisos : [];
+
+        if (permisos.length === 0) {
+          celdaEmpresa.innerHTML = '<select id="valeEmpresa" onchange="window.actualizarDeptosLibreVale()"><option value="">Selecciona empresa *</option>' +
+            getEmpresasCatalogo().map(function(e) { return '<option value="' + escapeHTML(e.nombre) + '">' + escapeHTML(e.nombre) + '</option>'; }).join('') + '</select>';
+          celdaDepto.innerHTML = '<select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()"><option value="">Selecciona departamento</option></select>';
+          return;
+        }
+
+        if (permisos.length === 1) {
+          var p = permisos[0];
+          celdaEmpresa.innerHTML = '<select id="valeEmpresa" disabled><option>' + escapeHTML(p.empresa) + '</option></select>' +
+            '<input type="hidden" id="valeEmpresaValor" value="' + escapeHTML(p.empresa) + '">';
+          celdaDepto.innerHTML = '<select id="valeDepartamento" disabled><option>' + escapeHTML(p.depto) + '</option></select>' +
+            '<input type="hidden" id="valeDepartamentoValor" value="' + escapeHTML(p.depto) + '">';
+          window.actualizarVehiculosNuevoVale();
+          return;
+        }
+
+        // Varios permisos: elige entre sus propias empresas/departamentos asignados.
+        var empresasPropias = permisos.filter(function(p, i, arr) {
+          return arr.findIndex(function(x) { return x.empresa === p.empresa; }) === i;
+        });
+        celdaEmpresa.innerHTML = '<select id="valeEmpresa" onchange="window.actualizarDeptoSegunPermisoVale()"><option value="">Selecciona empresa *</option>' +
+          empresasPropias.map(function(p) { return '<option value="' + escapeHTML(p.empresa) + '">' + escapeHTML(p.empresa) + '</option>'; }).join('') + '</select>';
+        celdaDepto.innerHTML = '<select id="valeDepartamento" onchange="window.actualizarVehiculosNuevoVale()"><option value="">Selecciona departamento</option></select>';
+      };
+
+      window.actualizarDeptoSegunPermisoVale = function() {
+        var empresa = document.getElementById('valeEmpresa').value;
+        var permisos = ((actual && actual.permisos) || []).filter(function(p) { return p.empresa === empresa; });
+        var sel = document.getElementById('valeDepartamento');
+        sel.innerHTML = '<option value="">Selecciona departamento</option>' +
+          permisos.map(function(p) { return '<option value="' + escapeHTML(p.depto) + '">' + escapeHTML(p.depto) + '</option>'; }).join('');
+        window.actualizarVehiculosNuevoVale();
+      };
+
+      window.actualizarDeptosLibreVale = function() {
         var empresa = document.getElementById('valeEmpresa').value;
         var sel = document.getElementById('valeDepartamento');
         sel.innerHTML = '<option value="">Selecciona departamento</option>';
@@ -6860,8 +7051,12 @@
       };
 
       window.actualizarVehiculosNuevoVale = function() {
-        var empresa = document.getElementById('valeEmpresa').value;
-        var depto = document.getElementById('valeDepartamento').value;
+        var empresaSel = document.getElementById('valeEmpresa');
+        var empresaOculto = document.getElementById('valeEmpresaValor');
+        var empresa = empresaOculto ? empresaOculto.value : (empresaSel ? empresaSel.value : '');
+        var deptoSel = document.getElementById('valeDepartamento');
+        var deptoOculto = document.getElementById('valeDepartamentoValor');
+        var depto = deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '');
         var sel = document.getElementById('valeVehiculo');
         var disponibles = vehiculosCache.filter(function(v) {
           if (!v.empresa) return true;
@@ -6875,24 +7070,39 @@
 
       window.agregarValeGasolina = async function() {
         var msg = document.getElementById('msgVales');
-        var empresa = document.getElementById('valeEmpresa').value;
+        var empresaSel = document.getElementById('valeEmpresa');
+        var empresaOculto = document.getElementById('valeEmpresaValor');
+        var empresa = empresaOculto ? empresaOculto.value : (empresaSel ? empresaSel.value : '');
+        var deptoSel = document.getElementById('valeDepartamento');
+        var deptoOculto = document.getElementById('valeDepartamentoValor');
+        var depto = deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '');
         var vehiculoId = document.getElementById('valeVehiculo').value;
+        var combustible = document.getElementById('valeCombustible').value;
         var litros = parseFloat(document.getElementById('valeLitros').value);
-        var monto = parseFloat(document.getElementById('valeMonto').value);
-        if (!empresa || !vehiculoId || isNaN(litros) || litros <= 0 || isNaN(monto) || monto <= 0) {
-          if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, vehículo, litros y monto (mayores a 0) son obligatorios.</div>';
+        if (!empresa || !vehiculoId || !combustible || isNaN(litros) || litros <= 0) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, vehículo, combustible y cantidad solicitada (mayor a 0) son obligatorios.</div>';
           return;
         }
+        var monto = parseFloat(document.getElementById('valeMonto').value);
         var kmActual = parseFloat(document.getElementById('valeKmActual').value);
         var kmNuevo = parseFloat(document.getElementById('valeKmNuevo').value);
         var nuevo = {
           empresa: empresa,
-          departamento: document.getElementById('valeDepartamento').value || null,
+          departamento: depto || null,
           vehiculo_id: parseInt(vehiculoId, 10),
           litros: litros,
-          monto: monto,
+          monto: isNaN(monto) ? null : monto,
           folio: document.getElementById('valeFolio').value.trim(),
-          fecha: document.getElementById('valeFecha').value || null,
+          fecha: document.getElementById('valePeriodoInicio').value || document.getElementById('valeFechaCarga').value || null,
+          fecha_carga: document.getElementById('valeFechaCarga').value || null,
+          periodo_inicio: document.getElementById('valePeriodoInicio').value || null,
+          periodo_fin: document.getElementById('valePeriodoFin').value || null,
+          proveedor: document.getElementById('valeProveedor').value || null,
+          cliente: document.getElementById('valeCliente').value || null,
+          centro_negocio: document.getElementById('valeCentroNegocio').value || null,
+          proyecto_oc: document.getElementById('valeProyectoOC').value || null,
+          combustible: combustible,
+          nivel_tanque: document.getElementById('valeNivelTanque').value || null,
           kilometraje_actual: isNaN(kmActual) ? null : kmActual,
           kilometraje_nuevo: isNaN(kmNuevo) ? null : kmNuevo,
           responsable: actual ? actual.usuario : null,
@@ -6909,7 +7119,15 @@
           document.getElementById('valeLitros').value = '';
           document.getElementById('valeMonto').value = '';
           document.getElementById('valeFolio').value = '';
-          document.getElementById('valeFecha').value = '';
+          document.getElementById('valeFechaCarga').value = '';
+          document.getElementById('valePeriodoInicio').value = '';
+          document.getElementById('valePeriodoFin').value = '';
+          document.getElementById('valeProveedor').value = '';
+          document.getElementById('valeCliente').value = '';
+          document.getElementById('valeCentroNegocio').value = '';
+          document.getElementById('valeProyectoOC').value = '';
+          document.getElementById('valeCombustible').value = '';
+          document.getElementById('valeNivelTanque').value = '';
           document.getElementById('valeKmActual').value = '';
           document.getElementById('valeKmNuevo').value = '';
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.</div>';
