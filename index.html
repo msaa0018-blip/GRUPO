@@ -1118,6 +1118,9 @@
     padding: 16px;
     box-sizing: border-box;
   }
+  /* Debe quedar por encima de la Bandeja de Órdenes de Compra (modal-card,
+     z-index: 2000), ya que "Ver Factura" se abre desde dentro de ella. */
+  #facturaVerModal { z-index: 2200; }
   #pdfPreviewModal.active, #facturaVerModal.active { display: flex }
   #pdfPreviewModal .modal-content, #facturaVerModal .modal-content {
     background: white;
@@ -12242,7 +12245,7 @@
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
-                acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(\'' + o.factura_url + '\')">📎 Ver Factura</button>';
+                acciones += '<button class="btn-imprimir" data-url="' + escapeHTML(o.factura_url) + '" onclick="window.verFacturaOC(this.dataset.url)">📎 Ver Factura</button>';
               }
 
               if (!acciones) acciones = '—';
@@ -12255,7 +12258,7 @@
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
-                acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(\'' + o.factura_url + '\')">📎 Ver Factura</button>';
+                acciones += '<button class="btn-imprimir" data-url="' + escapeHTML(o.factura_url) + '" onclick="window.verFacturaOC(this.dataset.url)">📎 Ver Factura</button>';
               }
 
               if (!o.pausada) {
@@ -15768,4 +15771,3 @@
   </script>
 </body>
 </html>
-          
