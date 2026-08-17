@@ -881,12 +881,21 @@
     background: var(--color-rojo);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
+    height: 36px;
+    width: 36px;
+    min-height: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    padding: 0;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     margin-bottom: 16px;
-    font-size: 16px
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* ===== LOGIN ===== */
@@ -2758,12 +2767,6 @@
           <span class="modulo-leyenda">ALMACENES</span>
           <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Gestión de almacenes</div>
         </div>
-        <!-- Módulo VALES DE GASOLINA (VSC) -->
-        <div class="modulo-item" id="menuVSCBtn" data-modulo="vsc">
-          <div class="modulo-cuadro funcional">⛽</div>
-          <span class="modulo-leyenda">VALES DE GASOLINA</span>
-          <div class="modulo-total" id="totalVSC" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">VSC</div>
-        </div>
       </div>
     </div>
 
@@ -3144,6 +3147,67 @@
           </table>
         </div>
         <div id="msgClientes"></div>
+      </div>
+
+      <!-- ===== MÓDULO INVENTARIO (exclusivo Administrador) ===== -->
+      <div id="panelInventario" class="card hidden">
+        <h2>📦 Inventario — Entradas y Salidas</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Historial de movimientos de inventario por producto, filtrable por fecha.</p>
+
+        <div class="card" style="margin:12px 0; padding:14px 16px;">
+          <h4>➕ Registrar Entrada / Salida</h4>
+          <div class="grupo-formulario">
+            <div class="flex">
+              <input id="inventarioMovCodigo" placeholder="Código de producto *" style="flex:1;">
+              <select id="inventarioMovTipo" style="flex:1;">
+                <option value="ENTRADA">⬆️ Entrada</option>
+                <option value="SALIDA">⬇️ Salida</option>
+              </select>
+              <input id="inventarioMovCantidad" type="number" placeholder="Cantidad *" style="flex:1;">
+              <input id="inventarioMovMotivo" placeholder="Motivo / referencia *" style="flex:1.5;">
+              <button class="success" onclick="window.registrarMovimientoManualInventario()">➕ Registrar</button>
+            </div>
+          </div>
+          <div id="msgInventarioMovimiento"></div>
+        </div>
+
+        <div class="cxp-filtros">
+          <div class="filtro-fecha">
+            <label style="font-size:12px;font-weight:500;white-space:nowrap;">Desde:</label>
+            <input type="date" id="inventarioFechaInicio">
+          </div>
+          <div class="filtro-fecha">
+            <label style="font-size:12px;font-weight:500;white-space:nowrap;">Hasta:</label>
+            <input type="date" id="inventarioFechaFin">
+          </div>
+          <select id="inventarioFiltroTipo">
+            <option value="">Todos los movimientos</option>
+            <option value="ENTRADA">Solo entradas</option>
+            <option value="SALIDA">Solo salidas</option>
+          </select>
+          <input id="inventarioFiltroTexto" placeholder="Buscar por código, producto o almacén">
+          <button class="btn-cxp" onclick="window.renderMovimientosInventario()">📊 Aplicar Filtros</button>
+          <button class="btn-imprimir" onclick="window.limpiarFiltrosInventario()">🧹 Limpiar Filtros</button>
+        </div>
+
+        <div id="inventarioResumenMovimientos" class="cxp-resumen"></div>
+
+        <div class="table-wrapper">
+          <table id="tablaMovimientosInventario">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Almacén</th>
+                <th>Tipo</th>
+                <th>Cantidad</th>
+                <th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoMovimientosInventario"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- ===== MODAL: OPCIONES DE CLIENTE (Editar/Eliminar/Ver Proyectos) ===== -->
@@ -3641,19 +3705,52 @@
       <div id="adjuntarFacturaModal">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>📎 Adjuntar Factura</h3>
+            <h3>📎 Comprobar Factura de OC <span id="facturaOCCodigo" style="font-weight:400;font-size:13px;color:var(--gray-500);"></span></h3>
             <div class="pdfPreview-btn-group">
               <button class="danger" onclick="window.cancelarAdjuntarFactura()">✕</button>
-              <button class="success" onclick="window.confirmarConclusionOC()">✔️ Confirmar</button>
             </div>
           </div>
           <div class="modal-body">
-            <p class="text-muted" style="margin-bottom:12px;">El monto coincide con el total de la OC. Adjunta el documento de la factura para marcar la orden como <strong>CONCLUIDA</strong>.</p>
-            <div id="facturaDropzone" class="foto-dropzone" style="width:100%;height:140px;" onclick="document.getElementById('facturaInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFactura(event, this)">
-              <span id="facturaDropzoneTexto">📄 Arrastra el documento aquí, o toca para elegirlo desde el escritorio</span>
+            <div id="facturaListaAgregadas" style="margin-bottom:12px;"></div>
+
+            <div id="facturaFormularioContainer">
+              <div class="grupo-formulario">
+                <label style="font-weight:500;">Folio UUID de la factura *</label>
+                <input id="facturaUUIDInput" placeholder="UUID de la factura" style="width:100%;">
+              </div>
+              <div class="grupo-formulario">
+                <label style="font-weight:500;">Monto de la factura (misma moneda de la OC) *</label>
+                <input id="facturaMontoInput" type="number" placeholder="Monto" style="width:100%;">
+              </div>
+              <div class="grupo-formulario">
+                <label style="font-weight:500;">Tipo de factura *</label>
+                <select id="facturaTipoSelect" style="width:100%;" onchange="window.actualizarUITipoFactura()">
+                  <option value="PUE">PUE - Pago en una sola exhibición</option>
+                  <option value="PPD">PPD - Pago en parcialidades o diferido</option>
+                </select>
+              </div>
+              <div class="grupo-formulario hidden" id="facturaNotaContainer">
+                <label style="font-weight:500;">Nota (obligatoria para facturas PPD) *</label>
+                <textarea id="facturaNotaInput" placeholder="Motivo / seguimiento de esta factura PPD" style="width:100%;min-height:60px;"></textarea>
+              </div>
+              <div class="grupo-formulario">
+                <label style="font-weight:500;">Adjuntar factura (PDF) *</label>
+                <div id="facturaDropzone" class="foto-dropzone" style="width:100%;height:140px;" onclick="document.getElementById('facturaInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFactura(event, this)">
+                  <span id="facturaDropzoneTexto">📄 Arrastra el PDF aquí, o toca para elegirlo desde el escritorio</span>
+                </div>
+                <input type="file" id="facturaInput" accept=".pdf,application/pdf" class="hidden" onchange="window.manejarSeleccionFactura(this)">
+              </div>
+              <div id="msgAdjuntarFactura"></div>
+              <button class="success full-width" id="btnAccionFactura" onclick="window.agregarFacturaOC()" style="margin-top:8px;">✔️ Comprobar Factura</button>
             </div>
-            <input type="file" id="facturaInput" accept=".pdf,image/*" class="hidden" onchange="window.manejarSeleccionFactura(this)">
-            <div id="msgAdjuntarFactura"></div>
+
+            <div id="facturaSiguientePasoContainer" class="hidden" style="margin-top:16px;text-align:center;">
+              <p style="margin-bottom:10px;">✅ Factura registrada. ¿Deseas agregar otra factura a esta OC?</p>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                <button class="warning" id="btnContinuarFactura" onclick="window.continuarAgregandoFactura()">➕ Continuar (agregar otra)</button>
+                <button class="success" onclick="window.finalizarProcesoFacturaOC()">🏁 Proceso Completo</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3861,6 +3958,7 @@
           <input id="empresaProyecto" placeholder="Empresa" disabled style="background:var(--gray-200);">
           <input id="departamentoProyecto" placeholder="Departamento" disabled style="background:var(--gray-200);">
           <input id="nombreProyecto" placeholder="Nombre del Proyecto *">
+          <input id="centroTrabajoProyecto" placeholder="Centro de trabajo *">
           <input id="cliente" placeholder="Cliente *">
           <input id="presupuesto" type="number" placeholder="Presupuesto *">
           <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
@@ -3874,9 +3972,9 @@
       <div class="card modal-card hidden" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important;">
         <div style="display:flex; justify-content:space-between; align-items:center; padding-left:18px; padding-right:18px; gap:10px; flex-wrap:wrap;">
           <h2 style="margin:0;">📊 Control por Proyecto</h2>
-          <div style="display:flex; gap:10px;">
-            <button class="success cerrar-modal-btn" id="btnAgregarProyectoModal" onclick="window.irACrearProyectoDesdeControl()">AGREGAR</button>
-            <button class="danger cerrar-modal-btn" onclick="window.cerrarControlProyecto()">✕</button>
+          <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
+            <button class="success cerrar-modal-btn" id="btnAgregarProyectoModal" onclick="window.irACrearProyectoDesdeControl()" style="white-space:nowrap; flex-shrink:0;">AGREGAR</button>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarControlProyecto()">✕</button>
           </div>
         </div>
         <div id="adminActions" class="hidden" style="margin-bottom:10px; padding-left:18px; padding-right:18px;">
@@ -3884,19 +3982,23 @@
         </div>
         <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
           <table style="min-width:100% !important; width:100% !important;">
-            <thead><tr><th>Código</th><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Centro de trabajo</th><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>Acciones</th></tr></thead>
             <tbody id="tablaProyectos"></tbody>
           </table>
         </div>
       </div>
 
       <div id="ocModalToolbar" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+        <button id="btnAbrirCrearOC" class="hidden" onclick="window.abrirPanelOC()">📄 Crear Orden de Compra</button>
         <button onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de OC</button>
         <button onclick="window.abrirModalCard('tablaProyectosCard')">📊 Control por Proyecto</button>
       </div>
 
-      <div id="panelOC" class="card hidden">
-        <h2>📄 Crear Orden de Compra</h2>
+      <div id="panelOC" class="card modal-card hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h2 style="margin:0;">📄 Crear Orden de Compra</h2>
+          <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('panelOC')">✕</button>
+        </div>
         <div class="grupo-formulario">
           <div class="flex">
             <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1.5;"></select>
@@ -4058,6 +4160,7 @@
           <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXP()">🖨️ Previsualizar Reporte</button>
           <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de Órdenes de Compra</button>
+          <button class="btn-visualizar" onclick="window.abrirModalCard('cxpDetalleProyectoCard')">📋 Detalle por Proyecto</button>
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
 
@@ -4067,15 +4170,22 @@
             <canvas id="cxpChartPolar" height="280"></canvas>
           </div>
         </div>
-        <h3>📋 Detalle por Proyecto</h3>
-        <div id="cxpTablaProyectos" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
-          <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
-            <table style="min-width:100% !important; width:100% !important;">
-              <thead><tr><th>Empresa</th><th>DPTO</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Vencido</th><th>% Uso</th><th>Acciones</th></tr></thead>
-              <tbody id="cxpCuerpoProyectos"></tbody>
-            </table>
+
+        <div class="card modal-card hidden" id="cxpDetalleProyectoCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h3 style="margin:0;">📋 Detalle por Proyecto</h3>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('cxpDetalleProyectoCard')">✕</button>
+          </div>
+          <div id="cxpTablaProyectos" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
+            <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
+              <table style="min-width:100% !important; width:100% !important;">
+                <thead><tr><th>Empresa</th><th>DPTO</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Vencido</th><th>% Uso</th><th>Acciones</th></tr></thead>
+                <tbody id="cxpCuerpoProyectos"></tbody>
+              </table>
+            </div>
           </div>
         </div>
+
         <h3>📄 Órdenes de Compra</h3>
         <div id="cxpTablaOC" style="padding-left:0 !important; padding-right:0 !important; overflow-x:auto !important;">
           <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
@@ -4148,11 +4258,15 @@
           <button class="btn-of" onclick="window.renderOF()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXF()">🖨️ Reporte CXF</button>
           <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOFCard')">📋 Bandeja de OF</button>
+          <button class="btn-visualizar" onclick="window.abrirModalCard('ofFormularioNuevo')">➕ Nueva Orden de Facturación</button>
         </div>
         <div id="ofResumenCXF" style="margin:10px 0;"></div>
 
-        <div class="card" id="ofFormularioNuevo" style="margin:12px 0; padding:14px 16px;">
-          <h4>➕ Nueva Orden de Facturación</h4>
+        <div class="card modal-card hidden" id="ofFormularioNuevo" style="padding:14px 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">➕ Nueva Orden de Facturación</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('ofFormularioNuevo')">✕</button>
+          </div>
           <div class="grupo-formulario">
             <div class="flex">
               <input id="ofEmpresa" placeholder="Empresa" disabled style="background:var(--gray-200); flex:1;" oninput="window.actualizarResponsablesOF()">
@@ -4262,9 +4376,9 @@
             <button onclick="window.agregarFilaPartidaOF()" class="success" style="margin-top:8px;">➕ Agregar Partida</button>
           </div>
 
-          <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
-            <button onclick="window.previsualizarOF()" class="success">👁️ Previsualizar</button>
-            <button onclick="window.guardarOF()" class="warning">✅ Generar y Guardar OF</button>
+          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">
+            <button onclick="window.previsualizarOF()" class="success" style="width:100%;">👁️ Previsualizar</button>
+            <button onclick="window.guardarOF()" class="warning" style="width:100%;">✅ Generar y Guardar OF</button>
           </div>
           <div id="msgOF"></div>
         </div>
@@ -4411,7 +4525,7 @@
     <div id="dashboardContent"></div>
   </div>
 
-  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard');"></div>
+  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarModalCard('panelOC'); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo');"></div>
 
   <div id="pdfPreviewModal">
     <div class="modal-content">
@@ -5889,9 +6003,13 @@
             modulos.push({ id: 'proyectos', icono: '🏗️', nombre: 'PROYECTO' });
           }
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
+            modulos.push({ id: 'spm', icono: '📆', nombre: 'SPM' });
+            modulos.push({ id: 'vales', icono: '🎫', nombre: 'VALES' });
+          }
+        } else if (tipo === 'vales') {
+          if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
             modulos.push({ id: 'vc', icono: '💵', nombre: 'VC' });
             modulos.push({ id: 'vi', icono: '🛣️', nombre: 'VI' });
-            modulos.push({ id: 'spm', icono: '📆', nombre: 'SPM' });
             modulos.push({ id: 'vsc', icono: '⛽', nombre: 'VSC' });
           }
         } else if (tipo === 'ingresos') {
@@ -5947,7 +6065,11 @@
               window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes') {
               window.mostrarModulo(modulo);
-            } else if (modulo === 'vc' || modulo === 'vi' || modulo === 'spm' || modulo === 'vsc') {
+            } else if (modulo === 'spm') {
+              window.mostrarModulo(modulo);
+            } else if (modulo === 'vales') {
+              window.mostrarMenuMaestro('vales', 'VALES');
+            } else if (modulo === 'vc' || modulo === 'vi' || modulo === 'vsc') {
               window.mostrarModulo(modulo);
             }
           });
@@ -5973,8 +6095,9 @@
       };
 
       window.volverAlMenuMaestro = function() {
-        if (moduloActual === 'cxp' || moduloActual === 'oc' || moduloActual === 'proyectos' || moduloActual === 'egresos' ||
-            moduloActual === 'vc' || moduloActual === 'vi' || moduloActual === 'spm' || moduloActual === 'vsc') {
+        if (moduloActual === 'vc' || moduloActual === 'vi' || moduloActual === 'vsc' || moduloActual === 'vales') {
+          window.mostrarMenuMaestro('vales', 'VALES');
+        } else if (moduloActual === 'cxp' || moduloActual === 'oc' || moduloActual === 'proyectos' || moduloActual === 'egresos' || moduloActual === 'spm') {
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
         } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'ingresos') {
           window.mostrarMenuMaestro('ingresos', 'INGRESOS');
@@ -6078,7 +6201,7 @@
             } else if (modulo === 'inventario') {
               // INVENTARIO es exclusivo del rol Administrador.
               if (actual && actual.rol === 'Administrador') {
-                mostrarConstruccion();
+                window.mostrarModulo('inventario');
               } else {
                 alert('⚠️ No tienes permisos para acceder a este módulo.');
               }
@@ -6166,6 +6289,17 @@
         if (panel) panel.classList.remove('hidden');
         volverAControlProyectoTrasCrear = true;
         actualizarCamposEmpresaDeptoProyecto();
+      };
+
+      // Abre la ventana modal "Crear Orden de Compra" y asegura que exista
+      // al menos una fila de producto en el formulario.
+      window.abrirPanelOC = function() {
+        window.abrirModalCard('panelOC');
+        var cuerpo = document.getElementById('cuerpoProductos');
+        if (cuerpo && cuerpo.children.length === 0) {
+          window.agregarFilaProducto();
+        }
+        if (typeof window.actualizarDatosOC === 'function') window.actualizarDatosOC();
       };
 
       // Escapa texto antes de insertarlo en HTML, para evitar que un nombre
@@ -8260,18 +8394,27 @@
       window.ajustarCantidadProducto = async function(id, delta) {
         var msg = document.getElementById('msgProductos');
         try {
-          var { data: prodActual, error: errGet } = await supabase.from('productos').select('cantidad').eq('id', id).single();
+          var { data: prodActual, error: errGet } = await supabase.from('productos').select('cantidad, codigo, descripcion, almacen').eq('id', id).single();
           if (errGet) throw errGet;
           var nuevaCantidad = (prodActual.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
           var { error } = await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', id);
           if (error) throw error;
+          await registrarMovimientoInventario({
+            producto_id: id,
+            codigo: prodActual.codigo || '',
+            descripcion: prodActual.descripcion || '',
+            almacen: prodActual.almacen || '',
+            cantidad: delta,
+            motivo: 'Ajuste manual desde catálogo de Productos'
+          });
           ['nvoProdCodigo', 'nvoProdNumeroParte', 'nvoProdDescripcion', 'nvoProdPrecio', 'nvoProdCantidad'].forEach(function(elId) {
             var el = document.getElementById(elId);
             if (el) el.value = '';
           });
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Cantidad actualizada (stock: ' + nuevaCantidad + ').</div>';
           window.cargarProductosCatalogo();
+          if (typeof window.cargarMovimientosInventario === 'function') window.cargarMovimientosInventario();
         } catch (e) {
           console.error('Error ajustando cantidad:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo actualizar la cantidad: ' + escapeHTML(e.message) + '</div>';
@@ -8723,6 +8866,7 @@
         var panelVSC = document.getElementById('panelVSC');
         var panelDocCXP = document.getElementById('panelDocCXP');
         var panelClientes = document.getElementById('panelClientes');
+        var panelInventario = document.getElementById('panelInventario');
 
         panelProveedores.classList.add('hidden');
         panelProductos.classList.add('hidden');
@@ -8730,7 +8874,9 @@
         if (panelVSC) panelVSC.classList.add('hidden');
         if (panelDocCXP) panelDocCXP.classList.add('hidden');
         if (panelClientes) panelClientes.classList.add('hidden');
+        if (panelInventario) panelInventario.classList.add('hidden');
         panelOC.classList.add('hidden');
+        panelOC.classList.remove('abierta');
         panelProyecto.classList.add('hidden');
         tablaProyectosCard.classList.add('hidden');
         tablaProyectosCard.classList.remove('abierta');
@@ -8788,7 +8934,8 @@
 
         if (modulo === 'oc') {
           ocModalToolbar.classList.remove('hidden');
-          if (puedeCrearOC) panelOC.classList.remove('hidden');
+          var btnAbrirCrearOC = document.getElementById('btnAbrirCrearOC');
+          if (btnAbrirCrearOC) btnAbrirCrearOC.classList.toggle('hidden', !puedeCrearOC);
           window.cargarSelectorProductosCatalogo();
           window.cargarListaProveedoresOC();
           // Bandeja de OC y Control por Proyecto ya no se muestran en línea
@@ -8819,20 +8966,24 @@
         } else if (modulo === 'of') {
           if (puedeVerOFReal) {
             panelOF.classList.remove('hidden');
-            panelOF.querySelectorAll('.card').forEach(function(card) { card.classList.remove('hidden'); });
-            // La Bandeja de OF es una ventana modal (se abre con el botón
-            // "📋 Bandeja de OF"), no debe quedar visible por defecto.
+            // La Bandeja de OF y "Nueva Orden de Facturación" son ventanas
+            // modales (se abren con los botones "📋 Bandeja de OF" /
+            // "➕ Nueva Orden de Facturación"), no deben quedar visibles por defecto.
             var bandejaOFCard = document.getElementById('bandejaOFCard');
             if (bandejaOFCard) {
               bandejaOFCard.classList.add('hidden');
               bandejaOFCard.classList.remove('abierta');
             }
-            // El Director General solo debe ver el reporte CXF dentro de OF,
-            // no el formulario de alta de nueva Orden de Facturación.
             var formularioNuevaOF = document.getElementById('ofFormularioNuevo');
             if (formularioNuevaOF) {
-              formularioNuevaOF.classList.toggle('hidden', actual && actual.rol === 'Director General');
+              formularioNuevaOF.classList.add('hidden');
+              formularioNuevaOF.classList.remove('abierta');
             }
+            // El Director General solo debe ver el reporte CXF dentro de OF,
+            // no el formulario de alta de nueva Orden de Facturación.
+            var puedeAbrirNuevaOF = !(actual && actual.rol === 'Director General');
+            var btnAbrirNuevaOF = panelOF.querySelector('.cxp-filtros button[onclick*="ofFormularioNuevo"]');
+            if (btnAbrirNuevaOF) btnAbrirNuevaOF.classList.toggle('hidden', !puedeAbrirNuevaOF);
             window.renderOF();
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
@@ -8864,6 +9015,15 @@
             window.cargarClientes();
           } else {
             alert('⚠️ No tienes permiso para acceder a Clientes.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'inventario') {
+          if (actual && actual.rol === 'Administrador') {
+            if (panelInventario) panelInventario.classList.remove('hidden');
+            window.cargarMovimientosInventario();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Inventario.');
             window.mostrarMenuInterno();
             return;
           }
@@ -10400,7 +10560,15 @@
 
         if (!confirm('¿Estás seguro de CANCELAR la OC ' + oc.codigo + '?')) return;
 
-        var updates = { estado: 'CANCELADA' };
+        var motivoCancelacion = prompt('Indica el motivo de la cancelación (obligatorio, para trazabilidad):');
+        if (motivoCancelacion === null) return;
+        motivoCancelacion = motivoCancelacion.trim();
+        if (!motivoCancelacion) {
+          alert('⚠️ Debes indicar el motivo de la cancelación.');
+          return;
+        }
+
+        var updates = { estado: 'CANCELADA', motivo_cancelacion: motivoCancelacion, cancelado_por: actual.u, fecha_cancelacion: new Date().toISOString() };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
@@ -10453,15 +10621,169 @@
       async function ajustarInventarioPorCodigo(codigo, delta) {
         if (!codigo || !delta) return;
         try {
-          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad').eq('codigo', codigo).maybeSingle();
+          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen').eq('codigo', codigo).maybeSingle();
           if (errGet || !prod) return;
           var nuevaCantidad = (prod.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
           await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', prod.id);
+          await registrarMovimientoInventario({
+            producto_id: prod.id,
+            codigo: codigo,
+            descripcion: prod.descripcion || '',
+            almacen: prod.almacen || '',
+            cantidad: delta,
+            motivo: 'Movimiento por Orden de Compra'
+          });
         } catch (e) {
           console.error('Error ajustando inventario para código ' + codigo + ':', e);
         }
       }
+
+      // ============================================================
+      // MÓDULO INVENTARIO — Registro de entradas y salidas de productos,
+      // filtrable por rango de fechas.
+      // ============================================================
+      var movimientosInventarioCache = [];
+
+      async function registrarMovimientoInventario(datos) {
+        try {
+          await supabase.from('movimientos_inventario').insert([{
+            producto_id: datos.producto_id || null,
+            codigo: datos.codigo || null,
+            descripcion: datos.descripcion || '',
+            almacen: datos.almacen || '',
+            tipo: (Number(datos.cantidad) >= 0) ? 'ENTRADA' : 'SALIDA',
+            cantidad: Math.abs(Number(datos.cantidad) || 0),
+            motivo: datos.motivo || '',
+            usuario: (actual && actual.usuario) || '',
+            fecha: new Date().toISOString()
+          }]);
+        } catch (e) {
+          console.error('Error registrando movimiento de inventario:', e);
+        }
+      }
+
+      window.cargarMovimientosInventario = async function() {
+        try {
+          var { data, error } = await supabase.from('movimientos_inventario').select('*').order('fecha', { ascending: false });
+          if (error) throw error;
+          movimientosInventarioCache = data || [];
+        } catch (e) {
+          console.error('Error cargando movimientos de inventario:', e);
+          movimientosInventarioCache = [];
+        }
+        window.renderMovimientosInventario();
+      };
+
+      window.renderMovimientosInventario = function() {
+        var cuerpo = document.getElementById('cuerpoMovimientosInventario');
+        if (!cuerpo) return;
+
+        var desde = document.getElementById('inventarioFechaInicio').value;
+        var hasta = document.getElementById('inventarioFechaFin').value;
+        var tipoFiltro = document.getElementById('inventarioFiltroTipo').value;
+        var texto = (document.getElementById('inventarioFiltroTexto').value || '').trim().toUpperCase();
+
+        var lista = movimientosInventarioCache.filter(function(m) {
+          var fechaMov = (m.fecha || '').slice(0, 10);
+          if (desde && fechaMov < desde) return false;
+          if (hasta && fechaMov > hasta) return false;
+          if (tipoFiltro && m.tipo !== tipoFiltro) return false;
+          if (texto) {
+            var campo = ((m.codigo || '') + ' ' + (m.descripcion || '') + ' ' + (m.almacen || '')).toUpperCase();
+            if (campo.indexOf(texto) === -1) return false;
+          }
+          return true;
+        });
+
+        if (lista.length === 0) {
+          cuerpo.innerHTML = '<tr><td colspan="7" class="mensaje-sin-datos">No hay movimientos de inventario en el rango seleccionado</td></tr>';
+        } else {
+          cuerpo.innerHTML = lista.map(function(m) {
+            var colorTipo = m.tipo === 'ENTRADA' ? '#2e7d32' : 'var(--color-rojo)';
+            var fechaTxt = m.fecha ? new Date(m.fecha).toLocaleString('es-MX') : '';
+            return '<tr>' +
+              '<td>' + fechaTxt + '</td>' +
+              '<td><code>' + escapeHTML(m.codigo || '') + '</code></td>' +
+              '<td>' + escapeHTML(m.descripcion || '') + '</td>' +
+              '<td>' + escapeHTML(m.almacen || '—') + '</td>' +
+              '<td><span style="color:' + colorTipo + ';font-weight:600">' + (m.tipo === 'ENTRADA' ? '⬆️ ENTRADA' : '⬇️ SALIDA') + '</span></td>' +
+              '<td>' + (m.cantidad || 0) + '</td>' +
+              '<td>' + escapeHTML(m.motivo || '') + '</td>' +
+              '</tr>';
+          }).join('');
+        }
+
+        var resumen = document.getElementById('inventarioResumenMovimientos');
+        if (resumen) {
+          var totalEntradas = lista.filter(function(m) { return m.tipo === 'ENTRADA'; }).reduce(function(s, m) { return s + (m.cantidad || 0); }, 0);
+          var totalSalidas = lista.filter(function(m) { return m.tipo === 'SALIDA'; }).reduce(function(s, m) { return s + (m.cantidad || 0); }, 0);
+          resumen.innerHTML = '<span><strong>Movimientos:</strong> ' + lista.length + '</span>' +
+            '<span><strong>Entradas:</strong> ' + totalEntradas + '</span>' +
+            '<span><strong>Salidas:</strong> ' + totalSalidas + '</span>';
+        }
+      };
+
+      window.limpiarFiltrosInventario = function() {
+        document.getElementById('inventarioFechaInicio').value = '';
+        document.getElementById('inventarioFechaFin').value = '';
+        document.getElementById('inventarioFiltroTipo').value = '';
+        document.getElementById('inventarioFiltroTexto').value = '';
+        window.renderMovimientosInventario();
+      };
+
+      window.registrarMovimientoManualInventario = async function() {
+        var msg = document.getElementById('msgInventarioMovimiento');
+        var codigo = document.getElementById('inventarioMovCodigo').value.trim().toUpperCase();
+        var tipo = document.getElementById('inventarioMovTipo').value;
+        var cantidad = Number(document.getElementById('inventarioMovCantidad').value);
+        var motivo = document.getElementById('inventarioMovMotivo').value.trim();
+
+        if (!codigo) {
+          if (msg) msg.innerHTML = '<div class="alert">⚠️ Ingresa el código del producto.</div>';
+          return;
+        }
+        if (!cantidad || cantidad <= 0) {
+          if (msg) msg.innerHTML = '<div class="alert">⚠️ La cantidad debe ser mayor a 0.</div>';
+          return;
+        }
+        if (!motivo) {
+          if (msg) msg.innerHTML = '<div class="alert">⚠️ Indica el motivo del movimiento.</div>';
+          return;
+        }
+
+        try {
+          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen').eq('codigo', codigo).maybeSingle();
+          if (errGet || !prod) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ No se encontró ningún producto con ese código.</div>';
+            return;
+          }
+          var delta = tipo === 'SALIDA' ? -cantidad : cantidad;
+          var nuevaCantidad = (prod.cantidad || 0) + delta;
+          if (nuevaCantidad < 0) {
+            if (msg) msg.innerHTML = '<div class="alert">⚠️ No hay suficiente stock para registrar esta salida.</div>';
+            return;
+          }
+          await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', prod.id);
+          await registrarMovimientoInventario({
+            producto_id: prod.id,
+            codigo: codigo,
+            descripcion: prod.descripcion || '',
+            almacen: prod.almacen || '',
+            cantidad: delta,
+            motivo: motivo
+          });
+          document.getElementById('inventarioMovCodigo').value = '';
+          document.getElementById('inventarioMovCantidad').value = '';
+          document.getElementById('inventarioMovMotivo').value = '';
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Movimiento registrado (stock actual: ' + nuevaCantidad + ').</div>';
+          window.cargarProductosCatalogo();
+          window.cargarMovimientosInventario();
+        } catch (e) {
+          console.error('Error registrando movimiento manual de inventario:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo registrar el movimiento: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
 
       // Aplica el movimiento completo de una OC al inventario: signo +1
       // (al pagarse) suma la cantidad de cada línea con código al stock;
@@ -10540,39 +10862,87 @@
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
-        var uuid = prompt('Ingrese el folio UUID de la factura:');
-        if (uuid === null) return;
-        if (!uuid.trim()) { alert('El UUID es obligatorio.'); return; }
-        var montoFactura = prompt('Ingrese el monto de la factura (en la misma moneda de la OC):');
-        if (montoFactura === null) return;
-        var monto = parseFloat(montoFactura);
-        if (!monto || monto <= 0) { alert('Monto inválido.'); return; }
-        if (Math.abs(monto - oc.montototal) > 0.01) {
-          alert('El monto de la factura (' + monto.toFixed(2) + ') no coincide con el total de la OC (' + oc.montototal.toFixed(2) + ').');
-          return;
-        }
-        // El monto coincide: en vez de concluir la OC de inmediato, se
-        // pide adjuntar el documento de la factura (arrastrar o elegir
-        // desde el escritorio) antes de marcarla como CONCLUIDA.
-        window.abrirAdjuntarFactura(oc, uuid.trim().toUpperCase(), monto);
+        // El proceso completo (UUID, monto, tipo de factura, nota si es
+        // PPD y documento PDF) se captura dentro de la ventana modal
+        // "Comprobar Factura de OC", permitiendo adjuntar hasta 3 facturas
+        // a la misma OC antes de marcarla como CONCLUIDA.
+        await window.abrirAdjuntarFactura(oc);
       };
 
-      // ===== MODAL: Adjuntar factura y concluir la OC =====
-      var ocConclusionPendiente = null; // { oc, uuid, monto }
+      // ===== MODAL: Comprobar factura(s) y concluir la OC =====
+      var MAX_FACTURAS_POR_OC = 3;
+      var ocConclusionPendiente = null; // { oc, facturas: [...] }
       var facturaArchivoPendiente = null;
 
-      window.abrirAdjuntarFactura = function(oc, uuid, monto) {
-        ocConclusionPendiente = { oc: oc, uuid: uuid, monto: monto };
+      window.abrirAdjuntarFactura = async function(oc) {
+        ocConclusionPendiente = { oc: oc, facturas: [] };
+        facturaArchivoPendiente = null;
+
+        // Recupera facturas ya comprobadas previamente para esta OC (por
+        // si el usuario cerró el proceso a la mitad en una sesión anterior).
+        try {
+          var { data } = await supabase.from('facturas_oc').select('*').eq('oc_id', oc.id).order('fecha', { ascending: true });
+          ocConclusionPendiente.facturas = data || [];
+        } catch (e) {
+          console.error('Error cargando facturas previas de la OC:', e);
+        }
+
+        var codigoEl = document.getElementById('facturaOCCodigo');
+        if (codigoEl) codigoEl.textContent = '— ' + (oc.codigo || ('OC-' + oc.id));
+
+        window.limpiarFormularioFactura();
+        window.renderFacturasAgregadasOC();
+
+        document.getElementById('facturaFormularioContainer').classList.remove('hidden');
+        document.getElementById('facturaSiguientePasoContainer').classList.add('hidden');
+
+        document.getElementById('adjuntarFacturaModal').classList.add('active');
+      };
+
+      window.limpiarFormularioFactura = function() {
         facturaArchivoPendiente = null;
         var dropzone = document.getElementById('facturaDropzone');
         var texto = document.getElementById('facturaDropzoneTexto');
         var input = document.getElementById('facturaInput');
         if (input) input.value = '';
-        if (texto) texto.textContent = '📄 Arrastra el documento aquí, o toca para elegirlo desde el escritorio';
+        if (texto) texto.textContent = '📄 Arrastra el PDF aquí, o toca para elegirlo desde el escritorio';
         if (dropzone) dropzone.classList.remove('arrastrando');
+        var uuidInput = document.getElementById('facturaUUIDInput');
+        if (uuidInput) uuidInput.value = '';
+        var montoInput = document.getElementById('facturaMontoInput');
+        if (montoInput) montoInput.value = '';
+        var tipoSelect = document.getElementById('facturaTipoSelect');
+        if (tipoSelect) tipoSelect.value = 'PUE';
+        var notaInput = document.getElementById('facturaNotaInput');
+        if (notaInput) notaInput.value = '';
         var msg = document.getElementById('msgAdjuntarFactura');
         if (msg) msg.innerHTML = '';
-        document.getElementById('adjuntarFacturaModal').classList.add('active');
+        window.actualizarUITipoFactura();
+      };
+
+      window.actualizarUITipoFactura = function() {
+        var tipoSelect = document.getElementById('facturaTipoSelect');
+        var notaContainer = document.getElementById('facturaNotaContainer');
+        var btn = document.getElementById('btnAccionFactura');
+        var esPPD = tipoSelect && tipoSelect.value === 'PPD';
+        if (notaContainer) notaContainer.classList.toggle('hidden', !esPPD);
+        if (btn) btn.textContent = esPPD ? '📌 Marcar PENDIENTE PPD' : '✔️ Comprobar Factura';
+      };
+
+      window.renderFacturasAgregadasOC = function() {
+        var cont = document.getElementById('facturaListaAgregadas');
+        if (!cont || !ocConclusionPendiente) return;
+        var facturas = ocConclusionPendiente.facturas;
+        if (!facturas || facturas.length === 0) {
+          cont.innerHTML = '';
+          return;
+        }
+        var html = '<div style="background:var(--gray-50);border-radius:8px;padding:10px;margin-bottom:10px;"><strong>Facturas comprobadas (' + facturas.length + '/' + MAX_FACTURAS_POR_OC + '):</strong><ul style="margin:6px 0 0 18px;padding:0;">';
+        facturas.forEach(function(f) {
+          html += '<li>' + escapeHTML(f.uuid || '') + ' — ' + formatoMoneda(f.monto || 0, ocConclusionPendiente.oc.moneda || 'MXN') + ' — ' + f.tipo + (f.tipo === 'PPD' ? ' (' + (f.estado === 'PENDIENTE_PPD' ? 'PENDIENTE PPD' : f.estado) + ')' : '') + '</li>';
+        });
+        html += '</ul></div>';
+        cont.innerHTML = html;
       };
 
       window.cancelarAdjuntarFactura = function() {
@@ -10600,6 +10970,12 @@
         mostrarArchivoElegidoFactura(archivos[0]);
       };
 
+      function esArchivoPDF(archivo) {
+        if (!archivo) return false;
+        if (archivo.type === 'application/pdf') return true;
+        return /\.pdf$/i.test(archivo.name || '');
+      }
+
       async function subirDocumentoFactura(archivo, codigoOC) {
         if (!archivo) return null;
         try {
@@ -10615,19 +10991,99 @@
         }
       }
 
-      window.confirmarConclusionOC = async function() {
+      // Comprueba (agrega) una factura a la OC en curso. Hasta
+      // MAX_FACTURAS_POR_OC facturas pueden adjuntarse a la misma OC.
+      window.agregarFacturaOC = async function() {
         var msg = document.getElementById('msgAdjuntarFactura');
+        if (msg) msg.innerHTML = '';
         if (!ocConclusionPendiente) return;
-        if (!facturaArchivoPendiente) {
-          if (msg) msg.innerHTML = '<div class="alert">❌ Adjunta el documento de la factura para continuar.</div>';
+        var oc = ocConclusionPendiente.oc;
+
+        var uuid = (document.getElementById('facturaUUIDInput').value || '').trim().toUpperCase();
+        var monto = parseFloat(document.getElementById('facturaMontoInput').value);
+        var tipo = document.getElementById('facturaTipoSelect').value;
+        var nota = (document.getElementById('facturaNotaInput').value || '').trim();
+
+        if (!uuid) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Ingresa el folio UUID de la factura.</div>';
           return;
         }
-        var oc = ocConclusionPendiente.oc;
-        var updates = { uuidfactura: ocConclusionPendiente.uuid, montofactura: ocConclusionPendiente.monto, estado: 'CONCLUIDA' };
-        try {
-          var urlFactura = await subirDocumentoFactura(facturaArchivoPendiente, oc.codigo || ('OC-' + oc.id));
-          if (urlFactura) updates.factura_url = urlFactura;
+        if (!monto || monto <= 0) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Ingresa un monto de factura válido (misma moneda de la OC).</div>';
+          return;
+        }
+        if (tipo === 'PPD' && !nota) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Toda factura PPD requiere una nota.</div>';
+          return;
+        }
+        if (!facturaArchivoPendiente) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Adjunta el documento de la factura (PDF) para poder comprobar.</div>';
+          return;
+        }
+        if (!esArchivoPDF(facturaArchivoPendiente)) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El documento adjunto debe ser un PDF.</div>';
+          return;
+        }
 
+        try {
+          var urlFactura = await subirDocumentoFactura(facturaArchivoPendiente, (oc.codigo || ('OC-' + oc.id)) + '-F' + (ocConclusionPendiente.facturas.length + 1));
+
+          var nuevaFactura = {
+            oc_id: oc.id,
+            uuid: uuid,
+            monto: monto,
+            tipo: tipo,
+            estado: tipo === 'PPD' ? 'PENDIENTE_PPD' : 'REGISTRADA',
+            nota: tipo === 'PPD' ? nota : '',
+            factura_url: urlFactura,
+            usuario: actual ? actual.u : '',
+            fecha: new Date().toISOString()
+          };
+
+          var { data, error } = await supabase.from('facturas_oc').insert([nuevaFactura]).select();
+          if (error) throw error;
+
+          ocConclusionPendiente.facturas.push((data && data[0]) || nuevaFactura);
+
+          // Compatibilidad: la última factura comprobada también se
+          // refleja en la propia OC (uuidfactura/montofactura/factura_url).
+          var updatesOC = { uuidfactura: uuid, montofactura: monto };
+          if (urlFactura) updatesOC.factura_url = urlFactura;
+          await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
+          Object.assign(oc, updatesOC);
+
+          window.renderFacturasAgregadasOC();
+
+          document.getElementById('facturaFormularioContainer').classList.add('hidden');
+          document.getElementById('facturaSiguientePasoContainer').classList.remove('hidden');
+          var btnContinuar = document.getElementById('btnContinuarFactura');
+          if (btnContinuar) btnContinuar.disabled = ocConclusionPendiente.facturas.length >= MAX_FACTURAS_POR_OC;
+        } catch (e) {
+          console.error('Error comprobando la factura:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo comprobar la factura: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      // El usuario elige seguir agregando facturas a la misma OC
+      // (hasta MAX_FACTURAS_POR_OC en total).
+      window.continuarAgregandoFactura = function() {
+        if (!ocConclusionPendiente) return;
+        if (ocConclusionPendiente.facturas.length >= MAX_FACTURAS_POR_OC) {
+          alert('⚠️ Ya se comprobaron el máximo de ' + MAX_FACTURAS_POR_OC + ' facturas para esta OC.');
+          return;
+        }
+        window.limpiarFormularioFactura();
+        document.getElementById('facturaFormularioContainer').classList.remove('hidden');
+        document.getElementById('facturaSiguientePasoContainer').classList.add('hidden');
+      };
+
+      // El usuario indica que el proceso de comprobación de facturas de
+      // esta OC está completo: se marca la OC como CONCLUIDA.
+      window.finalizarProcesoFacturaOC = async function() {
+        if (!ocConclusionPendiente) return;
+        var oc = ocConclusionPendiente.oc;
+        try {
+          var updates = { estado: 'CONCLUIDA' };
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
           Object.assign(oc, updates);
@@ -10636,10 +11092,10 @@
           facturaArchivoPendiente = null;
           document.getElementById('adjuntarFacturaModal').classList.remove('active');
           render();
-          alert('✅ Factura registrada y OC marcada como CONCLUIDA.');
+          alert('✅ Proceso de facturación completo. OC marcada como CONCLUIDA.');
         } catch (e) {
           console.error('Error concluyendo la OC:', e);
-          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+          alert('❌ No se pudo concluir la OC: ' + e.message);
         }
       };
 
@@ -12439,7 +12895,7 @@
             if (esDirectorProyecto) botones += '<button class="warning" onclick="window.aumentarSaldoProyecto(' + proyectos.indexOf(p) + ')">💰 Aumentar Saldo</button>';
             if (esDirectorProyecto) botones += '<button class="danger" onclick="window.eliminarProyecto(' + proyectos.indexOf(p) + ')">🗑️ Eliminar</button>';
 
-            tablaProyectos.innerHTML += '<tr><td data-label="Código">' + (p.codigo || '—') + '</td><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+            tablaProyectos.innerHTML += '<tr><td data-label="Centro de trabajo">' + (p.centro_trabajo || '—') + '</td><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite 60%">' + formatoMoneda(p.limite, p.moneda) + '</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
@@ -12731,6 +13187,7 @@
         }
 
         var nombre = document.getElementById('nombreProyecto').value.trim().toUpperCase();
+        var centroTrabajo = document.getElementById('centroTrabajoProyecto').value.trim().toUpperCase();
         var cliente = document.getElementById('cliente').value.trim().toUpperCase();
         var presupuesto = Number(document.getElementById('presupuesto').value);
         var moneda = document.getElementById('monedaProyecto').value;
@@ -12738,7 +13195,7 @@
         var fechaTermino = document.getElementById('fechaTermino').value;
         var msgDiv = document.getElementById('msgProyecto');
 
-        if (!empresa || !departamento || !nombre || !cliente || presupuesto <= 0 || !fechaInicio || !fechaTermino) {
+        if (!empresa || !departamento || !nombre || !centroTrabajo || !cliente || presupuesto <= 0 || !fechaInicio || !fechaTermino) {
           msgDiv.innerHTML = '<div class="alert">⚠️ TODOS LOS CAMPOS SON OBLIGATORIOS Y PRESUPUESTO > 0.</div>';
           return;
         }
@@ -12761,6 +13218,7 @@
           empresa: empresa,
           departamento: departamento,
           nombre: nombre,
+          centro_trabajo: centroTrabajo,
           cliente: cliente,
           presupuesto: presupuesto,
           moneda: moneda,
@@ -12786,6 +13244,7 @@
 
           msgDiv.innerHTML = '<div class="success-msg">✅ PROYECTO CREADO' + (errorCodigo ? '' : ' — CÓDIGO ' + codigoProyecto) + '.</div>';
           document.getElementById('nombreProyecto').value = '';
+          document.getElementById('centroTrabajoProyecto').value = '';
           document.getElementById('cliente').value = '';
           document.getElementById('presupuesto').value = '';
           if (data && data.length > 0) proyectos.push(data[0]);
@@ -13027,7 +13486,8 @@
             var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
             var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
-            if (puedeCrearOC) document.getElementById('panelOC').classList.remove('hidden');
+            var btnAbrirCrearOCTg = document.getElementById('btnAbrirCrearOC');
+            if (btnAbrirCrearOCTg) btnAbrirCrearOCTg.classList.toggle('hidden', !puedeCrearOC);
             if (puedeCrearProyecto) document.getElementById('panelProyecto').classList.remove('hidden');
             if (puedeVerCXP) document.getElementById('panelCXP').classList.remove('hidden');
             if (puedeVerCXC) document.getElementById('panelCXC').classList.remove('hidden');
@@ -13125,7 +13585,8 @@
           var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
           document.getElementById('panelProyecto').classList.toggle('hidden', !puedeCrearProyecto);
-          document.getElementById('panelOC').classList.toggle('hidden', !puedeCrearOC);
+          var btnAbrirCrearOCLogin = document.getElementById('btnAbrirCrearOC');
+          if (btnAbrirCrearOCLogin) btnAbrirCrearOCLogin.classList.toggle('hidden', !puedeCrearOC);
           document.getElementById('panelCXP').classList.toggle('hidden', !puedeVerCXP);
           document.getElementById('panelCXC').classList.toggle('hidden', !puedeVerCXC);
           document.getElementById('panelOF').classList.toggle('hidden', !puedeVerOF);
@@ -15607,6 +16068,57 @@
         return doc;
       }
 
+      // Estado de paginación de la tabla "Órdenes de Compra del Proyecto"
+      // dentro del Dashboard del Proyecto.
+      var dashboardProyectoPaginacion = { ocs: [], paginaActual: 1, porPagina: 10 };
+
+      function renderFilasOCDashboardProyecto() {
+        var st = dashboardProyectoPaginacion;
+        var totalPaginas = Math.max(1, Math.ceil(st.ocs.length / st.porPagina));
+        if (st.paginaActual > totalPaginas) st.paginaActual = totalPaginas;
+        if (st.paginaActual < 1) st.paginaActual = 1;
+
+        var inicio = (st.paginaActual - 1) * st.porPagina;
+        var pagina = st.ocs.slice(inicio, inicio + st.porPagina);
+
+        var filasOC = pagina.map(function(o) {
+          var estadoPagoTxt = o.estadopago === 'PAGADA' ? 'PAGADA' : 'PENDIENTE';
+          var colorEstado = o.estadopago === 'PAGADA' ? '#2e7d32' : '#b8860b';
+          return '<tr>' +
+            '<td><code>' + (o.codigo || '') + '</code></td>' +
+            '<td>' + (o.proveedor || '') + '</td>' +
+            '<td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
+            '<td>' + (o.estado || '') + '</td>' +
+            '<td><span style="color:' + colorEstado + ';font-weight:600">' + estadoPagoTxt + '</span></td>' +
+            '</tr>';
+        }).join('');
+
+        if (!filasOC) {
+          filasOC = '<tr><td colspan="5" class="mensaje-sin-datos">Este proyecto no tiene órdenes de compra registradas</td></tr>';
+        }
+
+        var cuerpo = document.getElementById('dashboardProyectoOCCuerpo');
+        if (cuerpo) cuerpo.innerHTML = filasOC;
+
+        var paginacionDiv = document.getElementById('dashboardProyectoOCPaginacion');
+        if (paginacionDiv) {
+          if (st.ocs.length <= st.porPagina) {
+            paginacionDiv.innerHTML = '';
+          } else {
+            var botones = '';
+            botones += '<button' + (st.paginaActual === 1 ? ' disabled' : '') + ' onclick="window.dashboardProyectoCambiarPagina(' + (st.paginaActual - 1) + ')">‹ Anterior</button>';
+            botones += '<span style="margin:0 10px;font-size:12px;color:var(--gray-600);">Página ' + st.paginaActual + ' de ' + totalPaginas + ' (' + st.ocs.length + ' OC)</span>';
+            botones += '<button' + (st.paginaActual === totalPaginas ? ' disabled' : '') + ' onclick="window.dashboardProyectoCambiarPagina(' + (st.paginaActual + 1) + ')">Siguiente ›</button>';
+            paginacionDiv.innerHTML = botones;
+          }
+        }
+      }
+
+      window.dashboardProyectoCambiarPagina = function(pagina) {
+        dashboardProyectoPaginacion.paginaActual = pagina;
+        renderFilasOCDashboardProyecto();
+      };
+
       window.mostrarDashboard = function(index) {
         // Al abrir el Dashboard del proyecto se cierra la ventana modal
         // "Control por Proyecto" para que no quede debajo tapando el flujo.
@@ -15630,21 +16142,7 @@
         var pagadas = ocsProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).length;
         var pendientes = ocsProyecto.filter(function(o) { return o.estadopago !== 'PAGADA'; }).length;
 
-        var filasOC = ocsProyecto.map(function(o) {
-          var estadoPagoTxt = o.estadopago === 'PAGADA' ? 'PAGADA' : 'PENDIENTE';
-          var colorEstado = o.estadopago === 'PAGADA' ? '#2e7d32' : '#b8860b';
-          return '<tr>' +
-            '<td><code>' + (o.codigo || '') + '</code></td>' +
-            '<td>' + (o.proveedor || '') + '</td>' +
-            '<td>' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
-            '<td>' + (o.estado || '') + '</td>' +
-            '<td><span style="color:' + colorEstado + ';font-weight:600">' + estadoPagoTxt + '</span></td>' +
-            '</tr>';
-        }).join('');
-
-        if (!filasOC) {
-          filasOC = '<tr><td colspan="5" class="mensaje-sin-datos">Este proyecto no tiene órdenes de compra registradas</td></tr>';
-        }
+        dashboardProyectoPaginacion = { ocs: ocsProyecto, paginaActual: 1, porPagina: 10 };
 
         var deptoColor = getColorByEmpresa(p.empresa);
 
@@ -15678,12 +16176,14 @@
           '<h3 style="margin-bottom:12px;">Órdenes de Compra del Proyecto</h3>' +
           '<table style="width:100%;border-collapse:collapse;">' +
           '<thead><tr><th style="text-align:left;padding:8px;">Código</th><th style="text-align:left;padding:8px;">Proveedor</th><th style="text-align:left;padding:8px;">Monto MXN</th><th style="text-align:left;padding:8px;">Estado</th><th style="text-align:left;padding:8px;">Pago</th></tr></thead>' +
-          '<tbody>' + filasOC + '</tbody>' +
+          '<tbody id="dashboardProyectoOCCuerpo"></tbody>' +
           '</table>' +
+          '<div id="dashboardProyectoOCPaginacion" class="cxp-paginacion" style="margin-top:12px;"></div>' +
           '</div>';
 
         document.getElementById('dashboardContent').innerHTML = html;
         document.getElementById('dashboardOverlay').classList.add('active');
+        renderFilasOCDashboardProyecto();
       };
 
       window.cerrarDashboard = function() {
