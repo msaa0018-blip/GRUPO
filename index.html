@@ -15753,7 +15753,21 @@
             var dataFondoExtingue = await obtenerImagenComoDataURL('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg');
             if (dataFondoExtingue) {
               var tipoFondoExtingue = dataFondoExtingue.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
+              var gStateFondoExtingue = null;
+              try {
+                gStateFondoExtingue = new doc.GState({ opacity: 0.95 });
+                doc.setGState(gStateFondoExtingue);
+              } catch (eOpacidad) {
+                console.warn('No se pudo aplicar opacidad al fondo (GState no disponible):', eOpacidad);
+              }
               doc.addImage(dataFondoExtingue, tipoFondoExtingue, 0, franjas.yInicio, pageWidth, franjas.yFin - franjas.yInicio);
+              if (gStateFondoExtingue) {
+                try {
+                  doc.setGState(new doc.GState({ opacity: 1 }));
+                } catch (eRestaurar) {
+                  console.warn('No se pudo restaurar la opacidad tras el fondo:', eRestaurar);
+                }
+              }
             } else {
               console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen de fondo (GRUPO INDUSTRIAL EXTINGUE)');
             }
