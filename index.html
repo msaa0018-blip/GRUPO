@@ -1113,7 +1113,7 @@
     .card.modal-card.abierta { width: 96%; max-height: 92vh; }
   }
 
-  #pdfPreviewModal, #facturaVerModal {
+  #pdfPreviewModal, #facturaVerModal, #facturaSeleccionModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1130,8 +1130,9 @@
   /* Debe quedar por encima de la Bandeja de Órdenes de Compra (modal-card,
      z-index: 2000), ya que "Ver Factura" se abre desde dentro de ella. */
   #facturaVerModal { z-index: 2200; }
-  #pdfPreviewModal.active, #facturaVerModal.active { display: flex }
-  #pdfPreviewModal .modal-content, #facturaVerModal .modal-content {
+  #facturaSeleccionModal { z-index: 2300; }
+  #pdfPreviewModal.active, #facturaVerModal.active, #facturaSeleccionModal.active { display: flex }
+  #pdfPreviewModal .modal-content, #facturaVerModal .modal-content, #facturaSeleccionModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 16px;
@@ -1142,7 +1143,7 @@
     flex-direction: column;
     box-sizing: border-box;
   }
-  #pdfPreviewModal .modal-header, #facturaVerModal .modal-header {
+  #pdfPreviewModal .modal-header, #facturaVerModal .modal-header, #facturaSeleccionModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1150,7 +1151,7 @@
     flex-wrap: wrap;
     gap: 8px
   }
-  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3 { margin: 0; font-size: 1.1rem }
   #pdfPreviewModal .modal-body, #facturaVerModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
   #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe {
     width: 100%;
@@ -1158,7 +1159,7 @@
     border: 1px solid var(--gray-300);
     border-radius: 8px
   }
-  #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group {
+  #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group, #facturaSeleccionModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     max-width: 50%;
@@ -3745,10 +3746,10 @@
             </div>
 
             <div id="facturaSiguientePasoContainer" class="hidden" style="margin-top:16px;text-align:center;">
-              <p style="margin-bottom:10px;">✅ Factura registrada. ¿Deseas agregar otra factura a esta OC?</p>
+              <p id="facturaSiguientePasoTexto" style="margin-bottom:10px;">✅ Factura registrada. ¿Deseas agregar otra factura a esta OC?</p>
               <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
                 <button class="warning" id="btnContinuarFactura" onclick="window.continuarAgregandoFactura()">➕ Continuar (agregar otra)</button>
-                <button class="success" onclick="window.finalizarProcesoFacturaOC()">🏁 Proceso Completo</button>
+                <button class="success" id="btnCompletarFactura" onclick="window.finalizarProcesoFacturaOC()">🏁 Proceso Completo</button>
               </div>
             </div>
           </div>
@@ -3766,6 +3767,22 @@
             </div>
           </div>
           <div class="modal-body"><iframe id="facturaVerFrame"></iframe></div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: Selección de factura (cuando la OC tiene más de 1) ===== -->
+      <div id="facturaSeleccionModal">
+        <div class="modal-content" style="max-width:520px;">
+          <div class="modal-header">
+            <h3>📎 Facturas de la OC</h3>
+            <div class="pdfPreview-btn-group">
+              <button class="danger btn-modal-x" onclick="window.cerrarSeleccionFacturaOC()">✕</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted" style="margin-bottom:10px;">Esta OC tiene varias facturas comprobadas. Selecciona cuál deseas ver:</p>
+            <div id="facturaSeleccionLista"></div>
+          </div>
         </div>
       </div>
 
@@ -3958,8 +3975,8 @@
           <input id="empresaProyecto" placeholder="Empresa" disabled style="background:var(--gray-200);">
           <input id="departamentoProyecto" placeholder="Departamento" disabled style="background:var(--gray-200);">
           <input id="nombreProyecto" placeholder="Nombre del Proyecto *">
-          <input id="centroTrabajoProyecto" placeholder="Centro de trabajo *">
-          <input id="cliente" placeholder="Cliente *">
+          <select id="cliente" onchange="window.actualizarCentroTrabajoDesdeCliente()"><option value="">Selecciona un cliente *</option></select>
+          <input id="centroTrabajoProyecto" placeholder="Centro de trabajo (según cliente)" disabled style="background:var(--gray-200);">
           <input id="presupuesto" type="number" placeholder="Presupuesto *">
           <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
           <input id="fechaInicio" type="date">
@@ -3969,18 +3986,18 @@
         <div id="msgProyecto"></div>
       </div>
 
-      <div class="card modal-card hidden" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important;">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding-left:18px; padding-right:18px; gap:10px; flex-wrap:wrap;">
-          <h2 style="margin:0;">📊 Control por Proyecto</h2>
-          <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
-            <button class="success cerrar-modal-btn" id="btnAgregarProyectoModal" onclick="window.irACrearProyectoDesdeControl()" style="white-space:nowrap; flex-shrink:0;">AGREGAR</button>
+      <div class="card modal-card hidden" id="tablaProyectosCard" style="padding-left:0 !important; padding-right:0 !important; box-sizing:border-box; overflow-x:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-left:18px; padding-right:18px; gap:8px; flex-wrap:nowrap; box-sizing:border-box; max-width:100%;">
+          <h2 style="margin:0; font-size:16px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 auto;">📊 Control por Proyecto</h2>
+          <div style="display:flex; gap:8px; align-items:center; flex:0 0 auto; justify-content:flex-end;">
+            <button class="success cerrar-modal-btn" id="btnAgregarProyectoModal" onclick="window.irACrearProyectoDesdeControl()" style="white-space:nowrap; flex-shrink:0; padding:8px 12px; font-size:13px;">AGREGAR</button>
             <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarControlProyecto()">✕</button>
           </div>
         </div>
         <div id="adminActions" class="hidden" style="margin-bottom:10px; padding-left:18px; padding-right:18px;">
           <button class="danger" onclick="window.eliminarTodosProyectos()">🗑️ Eliminar todos los proyectos y OC</button>
         </div>
-        <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:0 !important;">
+        <div class="table-wrapper" style="margin-left:0 !important; margin-right:0 !important; padding-left:0 !important; padding-right:18px !important; box-sizing:border-box;">
           <table style="min-width:100% !important; width:100% !important;">
             <thead><tr><th>Centro de trabajo</th><th>Empresa</th><th>Departamento</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Límite 60%</th><th>Pagado</th><th>Disponible</th><th>Acciones</th></tr></thead>
             <tbody id="tablaProyectos"></tbody>
@@ -4047,6 +4064,8 @@
               <option value="6">Formato 6 (Rojo)</option>
               <option value="7">Formato 7</option>
               <option value="8">Formato 8</option>
+              <option value="9">Membrete Dálmata</option>
+              <option value="10">Membrete Formal</option>
             </select>
           </div>
         </div>
@@ -4119,12 +4138,14 @@
               </tfoot>
             </table>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center;">
-            <select id="selectorProductoCatalogo" style="flex:1; min-width:220px;">
+          <div style="margin-top:8px;">
+            <select id="selectorProductoCatalogo" style="width:100%;">
               <option value="">-- Selecciona un producto del catálogo --</option>
             </select>
-            <button onclick="window.agregarProductoDesdeCatalogo()" class="btn-visualizar">📦 Agregar desde catálogo</button>
-            <button onclick="window.agregarFilaProducto()" class="success">➕ Agregar Producto (manual)</button>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; margin-top:8px;">
+            <button onclick="window.agregarProductoDesdeCatalogo()" class="btn-visualizar" style="width:100%;">📦 Agregar desde catálogo</button>
+            <button onclick="window.agregarFilaProducto()" class="success" style="width:100%;">➕ Agregar Producto (manual)</button>
           </div>
         </div>
         <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
@@ -4671,7 +4692,7 @@
           <select id="docCxpEmpresa" onchange="window.actualizarDeptosDocumentoCXP()">
             <option value="">Selecciona empresa *</option>
           </select>
-          <select id="docCxpDepartamento">
+          <select id="docCxpDepartamento" onchange="window.actualizarDependientesDocumentoCXP()">
             <option value="">Selecciona departamento</option>
           </select>
         </div>
@@ -4686,6 +4707,22 @@
         <div class="cxc-form-row">
           <input id="docCxpMonto" type="number" step="0.01" placeholder="Monto *" required>
           <select id="docCxpMoneda"><option value="MXN">MXN</option><option value="USD">USD</option></select>
+        </div>
+        <div class="cxc-form-row">
+          <select id="docCxpCliente">
+            <option value="">Selecciona cliente</option>
+          </select>
+          <select id="docCxpProyecto">
+            <option value="">Selecciona proyecto</option>
+          </select>
+        </div>
+        <div class="cxc-form-row">
+          <select id="docCxpSolicitante">
+            <option value="">Selecciona solicitante</option>
+          </select>
+          <select id="docCxpAutoriza">
+            <option value="">Selecciona quién autoriza</option>
+          </select>
         </div>
         <div id="msgDocumentoCXP"></div>
       </div>
@@ -5224,6 +5261,14 @@
         '8': {
           superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20GERMAN%20UP.png', tipo: 'PNG' },
           inferior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20GERMAN%20DOWN%20.png', tipo: 'PNG' }
+        },
+        '9': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20PERRO.jpg', tipo: 'JPEG' },
+          inferior: null
+        },
+        '10': {
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20BASE.jpg', tipo: 'JPEG' },
+          inferior: null
         }
       };
 
@@ -5242,7 +5287,7 @@
         // lleva franja inferior (solo se definió una imagen para este
         // formato) ni logo de empresa/departamento (eso se controla
         // aparte, en generarPDFParaPreview).
-        if (formato === '7') {
+        if (formato === '7' || formato === '9' || formato === '10') {
           var CM_A_PT = 28.3464567;
           var margenLateral7 = 1.5 * CM_A_PT;
           var margenSuperior7 = 1 * CM_A_PT;
@@ -6289,6 +6334,37 @@
         if (panel) panel.classList.remove('hidden');
         volverAControlProyectoTrasCrear = true;
         actualizarCamposEmpresaDeptoProyecto();
+        window.cargarClientesParaProyecto();
+      };
+
+      // Carga el catálogo de Clientes (si no está ya en caché) y llena el
+      // selector de "Cliente" en Crear Proyecto. El Centro de trabajo del
+      // proyecto se asigna automáticamente según el cliente elegido — el
+      // usuario no puede capturarlo manualmente.
+      window.cargarClientesParaProyecto = async function() {
+        if (!clientesCache || clientesCache.length === 0) {
+          try {
+            var { data, error } = await supabase.from('clientes').select('*').order('nombre');
+            if (!error) clientesCache = data || [];
+          } catch (e) {
+            console.error('Error cargando clientes para Crear Proyecto:', e);
+          }
+        }
+        var sel = document.getElementById('cliente');
+        if (!sel) return;
+        var valorActual = sel.value;
+        sel.innerHTML = '<option value="">Selecciona un cliente *</option>' +
+          clientesCache.map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '" data-centro-trabajo="' + escapeHTML(c.centro_negocio || '') + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
+        sel.value = valorActual;
+        window.actualizarCentroTrabajoDesdeCliente();
+      };
+
+      window.actualizarCentroTrabajoDesdeCliente = function() {
+        var sel = document.getElementById('cliente');
+        var centroInput = document.getElementById('centroTrabajoProyecto');
+        if (!sel || !centroInput) return;
+        var opcion = sel.options[sel.selectedIndex];
+        centroInput.value = (opcion && opcion.dataset.centroTrabajo) ? opcion.dataset.centroTrabajo : '';
       };
 
       // Abre la ventana modal "Crear Orden de Compra" y asegura que exista
@@ -8394,7 +8470,7 @@
       window.ajustarCantidadProducto = async function(id, delta) {
         var msg = document.getElementById('msgProductos');
         try {
-          var { data: prodActual, error: errGet } = await supabase.from('productos').select('cantidad, codigo, descripcion, almacen').eq('id', id).single();
+          var { data: prodActual, error: errGet } = await supabase.from('productos').select('cantidad, codigo, descripcion, almacen_id').eq('id', id).single();
           if (errGet) throw errGet;
           var nuevaCantidad = (prodActual.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
@@ -8404,7 +8480,7 @@
             producto_id: id,
             codigo: prodActual.codigo || '',
             descripcion: prodActual.descripcion || '',
-            almacen: prodActual.almacen || '',
+            almacen: nombreAlmacenPorId(prodActual.almacen_id),
             cantidad: delta,
             motivo: 'Ajuste manual desde catálogo de Productos'
           });
@@ -8509,7 +8585,43 @@
       };
 
       // ===== VER FACTURA DE UNA OC CONCLUIDA (modal, no pestaña nueva) =====
-      window.verFacturaOC = function(url) {
+      // Si la OC tiene más de una factura comprobada, primero se muestra
+      // un selector; si solo tiene una (o no se pudo consultar el
+      // historial), se abre directamente.
+      window.verFacturaOC = async function(ocId, urlLegado) {
+        var facturas = [];
+        try {
+          var { data, error } = await supabase.from('facturas_oc').select('*').eq('oc_id', ocId).order('fecha', { ascending: true });
+          if (!error) facturas = data || [];
+        } catch (e) {
+          console.error('Error consultando facturas de la OC:', e);
+        }
+
+        if (facturas.length <= 1) {
+          var url = facturas.length === 1 ? facturas[0].factura_url : urlLegado;
+          if (url) window.abrirFacturaVer(url);
+          return;
+        }
+
+        var lista = document.getElementById('facturaSeleccionLista');
+        if (lista) {
+          lista.innerHTML = facturas.map(function(f, i) {
+            var etiquetaTipo = f.tipo === 'PPD' ? ('PPD' + (f.estado === 'PENDIENTE_PPD' ? ' — PENDIENTE PPD' : '')) : 'PUE';
+            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-200);">' +
+              '<div><strong>Factura ' + (i + 1) + '</strong><br><span style="font-size:12px;color:var(--gray-600);">' + escapeHTML(f.uuid || '') + ' — ' + formatoMoneda(f.monto || 0, 'MXN') + ' — ' + etiquetaTipo + '</span></div>' +
+              '<button class="btn-imprimir" onclick="window.abrirFacturaVer(\'' + escapeHTML(f.factura_url || '') + '\')">👁️ Ver</button>' +
+              '</div>';
+          }).join('');
+        }
+        document.getElementById('facturaSeleccionModal').classList.add('active');
+      };
+
+      window.cerrarSeleccionFacturaOC = function() {
+        document.getElementById('facturaSeleccionModal').classList.remove('active');
+      };
+
+      window.abrirFacturaVer = function(url) {
+        if (!url) return;
         var modal = document.getElementById('facturaVerModal');
         var frame = document.getElementById('facturaVerFrame');
         var btnDescargar = document.getElementById('facturaVerDescargarBtn');
@@ -8669,8 +8781,9 @@
         };
 
         try {
+          var pOriginal = productosCatalogoCache.find(function(x) { return x.id === productoEditandoId; });
+
           if (edProdFotoArchivo) {
-            var pOriginal = productosCatalogoCache.find(function(x) { return x.id === productoEditandoId; });
             var codigoParaFoto = (pOriginal && pOriginal.codigo) ? pOriginal.codigo : ('PROD-' + productoEditandoId);
             var urlFoto = await subirFotoProducto(edProdFotoArchivo, codigoParaFoto);
             if (urlFoto) datos.foto_url = urlFoto;
@@ -8679,10 +8792,28 @@
           var { error } = await supabase.from('productos').update(datos).eq('id', productoEditandoId);
           if (error) throw error;
 
+          // Si la edición cambió la cantidad en stock, se registra el
+          // movimiento (entrada/salida) para que quede reflejado en el
+          // módulo de Inventario, sin importar qué usuario lo haga.
+          if (pOriginal && typeof pOriginal.cantidad === 'number') {
+            var deltaCantidad = datos.cantidad - pOriginal.cantidad;
+            if (deltaCantidad !== 0) {
+              await registrarMovimientoInventario({
+                producto_id: productoEditandoId,
+                codigo: pOriginal.codigo || '',
+                descripcion: datos.descripcion || '',
+                almacen: nombreAlmacenPorId(datos.almacen_id),
+                cantidad: deltaCantidad,
+                motivo: 'Edición de producto (ajuste de cantidad)'
+              });
+            }
+          }
+
           productoEditandoId = null;
           edProdFotoArchivo = null;
           document.getElementById('editarProductoModal').classList.remove('active');
           window.cargarProductosCatalogo();
+          if (typeof window.cargarMovimientosInventario === 'function') window.cargarMovimientosInventario();
           var msgProductos = document.getElementById('msgProductos');
           if (msgProductos) msgProductos.innerHTML = '<div class="success-msg">✅ Producto actualizado.</div>';
         } catch (e) {
@@ -8750,6 +8881,20 @@
 
           var { error: errorCodigo } = await supabase.from('productos').update(updates).eq('id', nuevoId);
           if (errorCodigo) throw errorCodigo;
+
+          // Si el producto se dio de alta con existencia inicial, se
+          // registra como entrada de inventario para trazabilidad.
+          if (cantidad > 0) {
+            await registrarMovimientoInventario({
+              producto_id: nuevoId,
+              codigo: codigoGenerado,
+              descripcion: descripcion,
+              almacen: nombreAlmacenPorId(nuevo.almacen_id),
+              cantidad: cantidad,
+              motivo: 'Alta de producto (existencia inicial)'
+            });
+          }
+          if (typeof window.cargarMovimientosInventario === 'function') window.cargarMovimientosInventario();
 
           document.getElementById('nvoProdNumeroParte').value = '';
           document.getElementById('nvoProdMarca').value = '';
@@ -8948,6 +9093,7 @@
         } else if (modulo === 'proyectos') {
           if (puedeCrearProyecto) {
             panelProyecto.classList.remove('hidden');
+            window.cargarClientesParaProyecto();
           }
           window.abrirModalCard('tablaProyectosCard');
         } else if (modulo === 'cxp') {
@@ -10621,7 +10767,7 @@
       async function ajustarInventarioPorCodigo(codigo, delta) {
         if (!codigo || !delta) return;
         try {
-          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen').eq('codigo', codigo).maybeSingle();
+          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id').eq('codigo', codigo).maybeSingle();
           if (errGet || !prod) return;
           var nuevaCantidad = (prod.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
@@ -10630,7 +10776,7 @@
             producto_id: prod.id,
             codigo: codigo,
             descripcion: prod.descripcion || '',
-            almacen: prod.almacen || '',
+            almacen: nombreAlmacenPorId(prod.almacen_id),
             cantidad: delta,
             motivo: 'Movimiento por Orden de Compra'
           });
@@ -10644,6 +10790,12 @@
       // filtrable por rango de fechas.
       // ============================================================
       var movimientosInventarioCache = [];
+
+      function nombreAlmacenPorId(id) {
+        if (!id) return '';
+        var a = almacenesCache.find(function(x) { return x.id === id; });
+        return a ? (a.nombre || '') : '';
+      }
 
       async function registrarMovimientoInventario(datos) {
         try {
@@ -10753,7 +10905,7 @@
         }
 
         try {
-          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen').eq('codigo', codigo).maybeSingle();
+          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id').eq('codigo', codigo).maybeSingle();
           if (errGet || !prod) {
             if (msg) msg.innerHTML = '<div class="alert">❌ No se encontró ningún producto con ese código.</div>';
             return;
@@ -10769,7 +10921,7 @@
             producto_id: prod.id,
             codigo: codigo,
             descripcion: prod.descripcion || '',
-            almacen: prod.almacen || '',
+            almacen: nombreAlmacenPorId(prod.almacen_id),
             cantidad: delta,
             motivo: motivo
           });
@@ -10870,7 +11022,7 @@
       };
 
       // ===== MODAL: Comprobar factura(s) y concluir la OC =====
-      var MAX_FACTURAS_POR_OC = 3;
+      var MAX_FACTURAS_POR_OC = 4;
       var ocConclusionPendiente = null; // { oc, facturas: [...] }
       var facturaArchivoPendiente = null;
 
@@ -10991,8 +11143,26 @@
         }
       }
 
+      var TOLERANCIA_MONTO_FACTURA = 0.01;
+
+      function sumaFacturasOC() {
+        if (!ocConclusionPendiente) return 0;
+        return ocConclusionPendiente.facturas.reduce(function(s, f) { return s + (Number(f.monto) || 0); }, 0);
+      }
+
       // Comprueba (agrega) una factura a la OC en curso. Hasta
       // MAX_FACTURAS_POR_OC facturas pueden adjuntarse a la misma OC.
+      //
+      // Reglas de monto:
+      // - PUE: el monto de la factura debe coincidir con el total de la
+      //   OC. Si no coincide, se rechaza con el mensaje "Factura
+      //   ingresada no coincide con monto." y no se permite concluir. Si
+      //   coincide, el proceso se concluye de inmediato.
+      // - PPD: se permiten montos parciales. Mientras la suma de todas
+      //   las facturas comprobadas no alcance el total de la OC, se debe
+      //   seguir agregando facturas (hasta MAX_FACTURAS_POR_OC); si se
+      //   llega al límite sin completar el monto, no se permite concluir
+      //   el proceso.
       window.agregarFacturaOC = async function() {
         var msg = document.getElementById('msgAdjuntarFactura');
         if (msg) msg.innerHTML = '';
@@ -11025,6 +11195,20 @@
           return;
         }
 
+        // Validación de monto antes de subir/guardar nada.
+        if (tipo === 'PUE') {
+          if (Math.abs(monto - oc.montototal) > TOLERANCIA_MONTO_FACTURA) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ Factura ingresada no coincide con monto.</div>';
+            return;
+          }
+        } else {
+          var sumaPrevia = sumaFacturasOC();
+          if ((sumaPrevia + monto) - oc.montototal > TOLERANCIA_MONTO_FACTURA) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ El monto ingresado excede el saldo pendiente de la OC (' + formatoMoneda(oc.montototal - sumaPrevia, oc.moneda || 'MXN') + ').</div>';
+            return;
+          }
+        }
+
         try {
           var urlFactura = await subirDocumentoFactura(facturaArchivoPendiente, (oc.codigo || ('OC-' + oc.id)) + '-F' + (ocConclusionPendiente.facturas.length + 1));
 
@@ -11054,10 +11238,37 @@
 
           window.renderFacturasAgregadasOC();
 
+          // PUE con monto coincidente: se concluye el proceso de inmediato.
+          if (tipo === 'PUE') {
+            await window.finalizarProcesoFacturaOC();
+            return;
+          }
+
+          // PPD: se decide si ya se puede concluir según el monto acumulado.
+          var sumaActual = sumaFacturasOC();
+          var montoCompleto = (sumaActual - oc.montototal) >= -TOLERANCIA_MONTO_FACTURA;
+          var alcanzoLimite = ocConclusionPendiente.facturas.length >= MAX_FACTURAS_POR_OC;
+
           document.getElementById('facturaFormularioContainer').classList.add('hidden');
           document.getElementById('facturaSiguientePasoContainer').classList.remove('hidden');
+
+          var textoPaso = document.getElementById('facturaSiguientePasoTexto');
           var btnContinuar = document.getElementById('btnContinuarFactura');
-          if (btnContinuar) btnContinuar.disabled = ocConclusionPendiente.facturas.length >= MAX_FACTURAS_POR_OC;
+          var btnCompletar = document.getElementById('btnCompletarFactura');
+
+          if (montoCompleto) {
+            if (textoPaso) textoPaso.textContent = '✅ El monto acumulado (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') cubre el total de la OC. ¿Deseas agregar otra factura o concluir el proceso?';
+            if (btnContinuar) btnContinuar.disabled = alcanzoLimite;
+            if (btnCompletar) { btnCompletar.disabled = false; btnCompletar.classList.remove('hidden'); }
+          } else if (alcanzoLimite) {
+            if (textoPaso) textoPaso.textContent = '⚠️ Se alcanzó el máximo de ' + MAX_FACTURAS_POR_OC + ' facturas y el monto acumulado (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') no cubre el total de la OC (' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') + '). No es posible concluir el proceso; contacta a Finanzas/Administración.';
+            if (btnContinuar) btnContinuar.disabled = true;
+            if (btnCompletar) { btnCompletar.disabled = true; btnCompletar.classList.add('hidden'); }
+          } else {
+            if (textoPaso) textoPaso.textContent = '⚠️ El monto acumulado (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') aún no cubre el total de la OC (' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') + '). Agrega otra factura para continuar.';
+            if (btnContinuar) btnContinuar.disabled = false;
+            if (btnCompletar) { btnCompletar.disabled = true; btnCompletar.classList.add('hidden'); }
+          }
         } catch (e) {
           console.error('Error comprobando la factura:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo comprobar la factura: ' + escapeHTML(e.message) + '</div>';
@@ -11078,10 +11289,22 @@
       };
 
       // El usuario indica que el proceso de comprobación de facturas de
-      // esta OC está completo: se marca la OC como CONCLUIDA.
+      // esta OC está completo: se marca la OC como CONCLUIDA. Para
+      // facturas PPD, solo se permite si el monto acumulado ya cubre el
+      // total de la OC.
       window.finalizarProcesoFacturaOC = async function() {
         if (!ocConclusionPendiente) return;
         var oc = ocConclusionPendiente.oc;
+
+        var ultimoTipo = ocConclusionPendiente.facturas.length ? ocConclusionPendiente.facturas[ocConclusionPendiente.facturas.length - 1].tipo : null;
+        if (ultimoTipo === 'PPD') {
+          var sumaActual = sumaFacturasOC();
+          if ((sumaActual - oc.montototal) < -TOLERANCIA_MONTO_FACTURA) {
+            alert('⚠️ El monto acumulado de las facturas (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') no cubre el total de la OC (' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') + '). No se puede concluir el proceso.');
+            return;
+          }
+        }
+
         try {
           var updates = { estado: 'CONCLUIDA' };
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
@@ -11902,21 +12125,117 @@
           opt.textContent = dp.nombre;
           selDepto.appendChild(opt);
         });
+        window.actualizarDependientesDocumentoCXP();
       };
 
-      window.abrirAgregarDocumentoCXP = function() {
+      // Llena Proyecto / Solicitante / Autoriza según la empresa y
+      // departamento seleccionados (o bloqueados) del documento CXP.
+      window.actualizarDependientesDocumentoCXP = function() {
+        var empresa = document.getElementById('docCxpEmpresa').value;
+        var departamento = document.getElementById('docCxpDepartamento').value;
+
+        var selProyecto = document.getElementById('docCxpProyecto');
+        if (selProyecto) {
+          var valorPrevioProyecto = selProyecto.value;
+          var proyectosFiltrados = (proyectos || []).filter(function(p) {
+            return (!empresa || p.empresa === empresa) && (!departamento || p.departamento === departamento);
+          });
+          selProyecto.innerHTML = '<option value="">Selecciona proyecto</option>' +
+            proyectosFiltrados.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + '</option>'; }).join('');
+          if (proyectosFiltrados.some(function(p) { return p.nombre === valorPrevioProyecto; })) selProyecto.value = valorPrevioProyecto;
+        }
+
+        var selSolicitante = document.getElementById('docCxpSolicitante');
+        if (selSolicitante) {
+          var solicitantes = getSolicitantes().filter(function(u) {
+            return !empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento);
+          });
+          selSolicitante.innerHTML = '<option value="">Selecciona solicitante</option>' +
+            solicitantes.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + '</option>'; }).join('');
+          if (actual && solicitantes.some(function(u) { return u.usuario === actual.usuario; })) selSolicitante.value = actual.usuario;
+        }
+
+        var selAutoriza = document.getElementById('docCxpAutoriza');
+        if (selAutoriza) {
+          var autorizadores = usuariosDB.filter(function(u) {
+            return u.rol === 'Director General' || (u.rol === 'Jefe Departamento' && (!empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento)));
+          });
+          selAutoriza.innerHTML = '<option value="">Selecciona quién autoriza</option>' +
+            autorizadores.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + ' (' + u.rol + ')</option>'; }).join('');
+        }
+      };
+
+      // Bloquea Empresa/Departamento según el usuario que abre el
+      // formulario (igual criterio que en Órdenes de Facturación): los
+      // roles sin empresa/departamento propios (Director, Administrador,
+      // Finanzas) no pueden crear VC/VI; el resto queda fijo a su
+      // empresa/departamento asignado salvo que tenga acceso libre.
+      function configurarCamposDefaultDocCXP() {
+        var selEmpresa = document.getElementById('docCxpEmpresa');
+        var selDepto = document.getElementById('docCxpDepartamento');
+        if (!actual || !selEmpresa || !selDepto) return;
+
+        if (actual.rol === 'Director General' || actual.rol === 'Administrador' || actual.rol === 'Finanzas') {
+          selEmpresa.innerHTML = '<option value="">Sin acceso</option>';
+          selEmpresa.disabled = true;
+          selEmpresa.style.background = 'var(--gray-200)';
+          selDepto.innerHTML = '<option value="">Sin acceso</option>';
+          selDepto.disabled = true;
+          selDepto.style.background = 'var(--gray-200)';
+          return;
+        }
+
+        var defaultData = obtenerEmpresaDeptoDefault(actual);
+        var esAccesoTotal = defaultData.libre === true;
+
+        if (esAccesoTotal) {
+          selEmpresa.disabled = false;
+          selEmpresa.style.background = '';
+          selEmpresa.innerHTML = '<option value="">Selecciona empresa *</option>' +
+            getEmpresasCatalogo().map(function(e) { return '<option value="' + escapeHTML(e.nombre) + '">' + escapeHTML(e.nombre) + '</option>'; }).join('');
+          selDepto.disabled = false;
+          selDepto.style.background = '';
+          window.actualizarDeptosDocumentoCXP();
+        } else if (defaultData.empresa) {
+          selEmpresa.innerHTML = '<option value="' + escapeHTML(defaultData.empresa) + '">' + escapeHTML(defaultData.empresa) + '</option>';
+          selEmpresa.value = defaultData.empresa;
+          selEmpresa.disabled = true;
+          selEmpresa.style.background = 'var(--gray-200)';
+
+          if (defaultData.departamento) {
+            selDepto.innerHTML = '<option value="' + escapeHTML(defaultData.departamento) + '">' + escapeHTML(defaultData.departamento) + '</option>';
+            selDepto.value = defaultData.departamento;
+            selDepto.disabled = true;
+            selDepto.style.background = 'var(--gray-200)';
+          } else {
+            window.actualizarDeptosDocumentoCXP();
+            selDepto.disabled = false;
+            selDepto.style.background = '';
+          }
+          window.actualizarDependientesDocumentoCXP();
+        } else {
+          selEmpresa.innerHTML = '<option value="">Sin acceso</option>';
+          selEmpresa.disabled = true;
+          selDepto.innerHTML = '<option value="">Sin acceso</option>';
+          selDepto.disabled = true;
+        }
+      }
+
+      window.abrirAgregarDocumentoCXP = async function() {
         var msgDiv = document.getElementById('msgDocumentoCXP');
         if (msgDiv) msgDiv.innerHTML = '';
-        var selEmpresa = document.getElementById('docCxpEmpresa');
-        if (selEmpresa && !selEmpresa.dataset.poblado) {
-          getEmpresasCatalogo().forEach(function(e) {
-            var opt = document.createElement('option');
-            opt.value = e.nombre;
-            opt.textContent = e.nombre;
-            selEmpresa.appendChild(opt);
-          });
-          selEmpresa.dataset.poblado = '1';
+
+        if (!clientesCache || clientesCache.length === 0) {
+          try {
+            var { data, error } = await supabase.from('clientes').select('*').order('nombre');
+            if (!error) clientesCache = data || [];
+          } catch (e) {
+            console.error('Error cargando clientes para documento CXP:', e);
+          }
         }
+
+        configurarCamposDefaultDocCXP();
+
         var tipoSelect = document.getElementById('docCxpTipo');
         if (tipoSelect && tipoDocCXPActual) tipoSelect.value = tipoDocCXPActual;
         var tituloModal = document.getElementById('docCxpModalTitulo');
@@ -11929,6 +12248,13 @@
         document.getElementById('docCxpFolio').value = '';
         document.getElementById('docCxpFecha').value = '';
         document.getElementById('docCxpMonto').value = '';
+
+        var selCliente = document.getElementById('docCxpCliente');
+        if (selCliente) {
+          selCliente.innerHTML = '<option value="">Selecciona cliente</option>' +
+            (clientesCache || []).map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
+        }
+
         document.getElementById('agregarDocumentoCXPModal').classList.add('active');
       };
 
@@ -11955,6 +12281,10 @@
           fecha: document.getElementById('docCxpFecha').value || null,
           monto: monto,
           moneda: document.getElementById('docCxpMoneda').value,
+          cliente: document.getElementById('docCxpCliente').value || null,
+          proyecto: document.getElementById('docCxpProyecto').value || null,
+          solicitante: document.getElementById('docCxpSolicitante').value || null,
+          autoriza: document.getElementById('docCxpAutoriza').value || null,
           responsable: actual ? actual.usuario : null,
           elaborador: actual ? actual.usuario : null,
           estado: 'PENDIENTE'
@@ -12701,7 +13031,7 @@
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
-                acciones += '<button class="btn-imprimir" data-url="' + escapeHTML(o.factura_url) + '" onclick="window.verFacturaOC(this.dataset.url)">📎 Ver Factura</button>';
+                acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(' + o.id + ', this.dataset.url)" data-url="' + escapeHTML(o.factura_url) + '">📎 Ver Factura</button>';
               }
 
               if (!acciones) acciones = '—';
@@ -12714,7 +13044,7 @@
                 acciones += '<button class="btn-imprimir" onclick="window.imprimirOC(' + idxOriginal + ')">🖨️ PDF</button>';
               }
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
-                acciones += '<button class="btn-imprimir" data-url="' + escapeHTML(o.factura_url) + '" onclick="window.verFacturaOC(this.dataset.url)">📎 Ver Factura</button>';
+                acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(' + o.id + ', this.dataset.url)" data-url="' + escapeHTML(o.factura_url) + '">📎 Ver Factura</button>';
               }
 
               if (!o.pausada) {
@@ -15409,9 +15739,10 @@
           logoTipo = 'PNG';
         }
 
-        // Los formatos 7 y 8 no llevan logo de empresa/departamento
-        // superpuesto: solo la(s) imagen(es) de membrete de ese formato.
-        if (formatoElegido !== '7' && formatoElegido !== '8') {
+        // Los formatos 7, 8, 9 (Membrete Dálmata) y 10 (Membrete Formal)
+        // no llevan logo de empresa/departamento superpuesto: solo la(s)
+        // imagen(es) de membrete de ese formato.
+        if (formatoElegido !== '7' && formatoElegido !== '8' && formatoElegido !== '9' && formatoElegido !== '10') {
         try {
           var response = await fetch(logoUrl);
           if (response.ok) {
