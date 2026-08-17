@@ -8175,10 +8175,15 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del cliente es obligatorio.</div>';
           return;
         }
+        var centroNegocioNvo = document.getElementById('nvoClienteCentroNegocio').value;
+        if (!centroNegocioNvo) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El Centro de Negocio / Sucursal es obligatorio (se usará para asignar el Centro de trabajo de los proyectos de este cliente).</div>';
+          return;
+        }
         var nuevo = {
           nombre: nombre.toUpperCase(),
           rfc: document.getElementById('nvoClienteRFC').value.trim().toUpperCase(),
-          centro_negocio: document.getElementById('nvoClienteCentroNegocio').value || null
+          centro_negocio: centroNegocioNvo
         };
         try {
           var { error } = await supabase.from('clientes').insert([nuevo]);
@@ -8221,10 +8226,15 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del cliente es obligatorio.</div>';
           return;
         }
+        var centroNegocioEd = document.getElementById('edClienteCentroNegocio').value;
+        if (!centroNegocioEd) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El Centro de Negocio / Sucursal es obligatorio (se usará para asignar el Centro de trabajo de los proyectos de este cliente).</div>';
+          return;
+        }
         var datos = {
           nombre: nombre.toUpperCase(),
           rfc: document.getElementById('edClienteRFC').value.trim().toUpperCase(),
-          centro_negocio: document.getElementById('edClienteCentroNegocio').value || null
+          centro_negocio: centroNegocioEd
         };
         try {
           var { error } = await supabase.from('clientes').update(datos).eq('id', clienteEditandoId);
@@ -9704,6 +9714,13 @@
       // ============================================================
       function renderGraficas() {
         var d = indicadoresData;
+
+        // A los Jefes de Departamento se les ocultan estas 3 tarjetas de KPI/gráfica.
+        var ocultarKPIJefeDepto = actual && actual.rol === 'Jefe Departamento';
+        ['estado_proyectos', 'compras_empresa', 'flujo_autorizaciones'].forEach(function(chartKey) {
+          var card = document.querySelector('.chart-card[data-chart="' + chartKey + '"]');
+          if (card) card.style.display = ocultarKPIJefeDepto ? 'none' : '';
+        });
 
         // Destruir gráficas existentes
         for (var key in chartsInstances) {
@@ -15725,7 +15742,25 @@
 
         var formatoElegido = (ocExistente && ocExistente.formatomembrete) || datos.formatomembrete || '1';
         var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formatoElegido);
-        var y = franjas.yInicio + 25;
+        var y = franjas.yInicio + 6.25;
+
+        // Imagen de fondo exclusiva de las OC de GRUPO INDUSTRIAL EXTINGUE.
+        // Se dibuja primero (como fondo) justo a partir de donde termina
+        // el membrete superior, para que el resto del contenido se
+        // superponga encima.
+        if (datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) {
+          try {
+            var dataFondoExtingue = await obtenerImagenComoDataURL('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg');
+            if (dataFondoExtingue) {
+              var tipoFondoExtingue = dataFondoExtingue.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
+              doc.addImage(dataFondoExtingue, tipoFondoExtingue, 0, franjas.yInicio, pageWidth, franjas.yFin - franjas.yInicio);
+            } else {
+              console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen de fondo (GRUPO INDUSTRIAL EXTINGUE)');
+            }
+          } catch (e) {
+            console.warn('No se pudo cargar la imagen de fondo (GRUPO INDUSTRIAL EXTINGUE):', e.stack || e);
+          }
+        }
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
