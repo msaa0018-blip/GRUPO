@@ -1387,6 +1387,26 @@
   .buzon-msg .buzon-msg-fecha { font-size: 10px; opacity: .65; margin-top: 4px; text-align: right; }
   .buzon-msg.propio { align-self: flex-end; background: var(--primary); color: white; }
   .buzon-msg.ajeno { align-self: flex-start; background: var(--gray-100); color: var(--gray-800); }
+  .buzon-checklist {
+    width: 100%;
+    max-height: 160px;
+    overflow-y: auto;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    margin-bottom: 14px;
+  }
+  .buzon-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 2px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .buzon-checklist-item input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
+  .buzon-checklist-vacio { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
 
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
   #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal, #editarProductoModal, #fotoProductoModal, #docCxpAccionesModal, #clienteAccionesModal, #editarClienteModal, #clienteProyectosModal, #adjuntarFacturaModal {
@@ -3300,7 +3320,7 @@
             <div class="text-muted" style="font-size:11px; margin-bottom:14px;">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar varios.</div>
 
             <label style="font-weight:500; display:block; margin-bottom:6px;">Involucrados (opcional)</label>
-            <select id="buzonNuevoInvolucrados" multiple style="width:100%; min-height:90px; margin-bottom:14px;"></select>
+            <div id="buzonNuevoInvolucrados" class="buzon-checklist"></div>
 
             <label style="font-weight:500; display:block; margin-bottom:6px;">Mensaje *</label>
             <textarea id="buzonNuevoMensaje" rows="4" placeholder="Escribe tu mensaje..." style="width:100%; box-sizing:border-box;"></textarea>
@@ -8453,6 +8473,38 @@
           });
       }
 
+      // "Involucrados" se selecciona con una lista de checkboxes (en vez
+      // de un <select multiple>) para que sea más claro marcar/desmarcar
+      // varios usuarios a la vez.
+      function buzonLlenarChecklistUsuarios(contEl) {
+        if (!contEl) return;
+        contEl.innerHTML = '';
+        var usuarios = (usuariosDB || [])
+          .filter(function(u) { return u.usuario && (!actual || u.usuario !== actual.usuario); })
+          .sort(function(a, b) { return (a.usuario || '').localeCompare(b.usuario || ''); });
+
+        if (usuarios.length === 0) {
+          contEl.innerHTML = '<div class="buzon-checklist-vacio">No hay otros usuarios registrados.</div>';
+          return;
+        }
+
+        usuarios.forEach(function(u) {
+          var label = document.createElement('label');
+          label.className = 'buzon-checklist-item';
+          var chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.value = u.usuario;
+          label.appendChild(chk);
+          label.appendChild(document.createTextNode(u.usuario + (u.rol ? ' (' + u.rol + ')' : '')));
+          contEl.appendChild(label);
+        });
+      }
+
+      function buzonSeleccionadosDeChecklist(contEl) {
+        if (!contEl) return [];
+        return Array.prototype.slice.call(contEl.querySelectorAll('input[type="checkbox"]:checked')).map(function(chk) { return chk.value; });
+      }
+
       window.cargarBuzon = async function() {
         var cont = document.getElementById('buzonListaConversaciones');
         var msg = document.getElementById('msgBuzon');
@@ -8503,7 +8555,7 @@
         document.getElementById('buzonNuevoMensaje').value = '';
         document.getElementById('msgBuzonNueva').innerHTML = '';
         buzonLlenarSelectUsuarios(document.getElementById('buzonNuevoDestinatarios'));
-        buzonLlenarSelectUsuarios(document.getElementById('buzonNuevoInvolucrados'));
+        buzonLlenarChecklistUsuarios(document.getElementById('buzonNuevoInvolucrados'));
         document.getElementById('buzonNuevaModal').classList.add('active');
       };
 
@@ -8521,7 +8573,7 @@
         var asunto = document.getElementById('buzonNuevoAsunto').value.trim();
         var mensaje = document.getElementById('buzonNuevoMensaje').value.trim();
         var destinatarios = buzonSeleccionadosDeSelect(document.getElementById('buzonNuevoDestinatarios'));
-        var involucrados = buzonSeleccionadosDeSelect(document.getElementById('buzonNuevoInvolucrados'));
+        var involucrados = buzonSeleccionadosDeChecklist(document.getElementById('buzonNuevoInvolucrados'));
 
         if (!asunto) {
           if (msg) msg.innerHTML = '<div class="alert">❌ El asunto es obligatorio.</div>';
