@@ -1384,6 +1384,7 @@
   .buzon-conv-item .buzon-conv-ultimo { font-size: 12px; color: var(--gray-600); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .buzon-msg { max-width: 80%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
   .buzon-msg .buzon-msg-autor { font-size: 11px; font-weight: 600; margin-bottom: 2px; opacity: .8; }
+  .buzon-msg .buzon-msg-adjunto { font-size: 12px; margin-top: 4px; }
   .buzon-msg .buzon-msg-fecha { font-size: 10px; opacity: .65; margin-top: 4px; text-align: right; }
   .buzon-msg.propio { align-self: flex-end; background: var(--primary); color: white; }
   .buzon-msg.ajeno { align-self: flex-start; background: var(--gray-100); color: var(--gray-800); }
@@ -3323,7 +3324,11 @@
             <div id="buzonNuevoInvolucrados" class="buzon-checklist"></div>
 
             <label style="font-weight:500; display:block; margin-bottom:6px;">Mensaje *</label>
-            <textarea id="buzonNuevoMensaje" rows="4" placeholder="Escribe tu mensaje..." style="width:100%; box-sizing:border-box;"></textarea>
+            <textarea id="buzonNuevoMensaje" rows="4" placeholder="Escribe tu mensaje..." style="width:100%; box-sizing:border-box; margin-bottom:14px;"></textarea>
+
+            <label style="font-weight:500; display:block; margin-bottom:6px;">📎 Adjuntar documento (opcional)</label>
+            <input type="file" id="buzonNuevoArchivo" onchange="window.mostrarNombreArchivoBuzon(this, 'buzonNuevoArchivoNombre')">
+            <div id="buzonNuevoArchivoNombre" class="text-muted" style="font-size:12px; margin-top:4px;"></div>
 
             <div id="msgBuzonNueva" style="margin-top:10px;"></div>
           </div>
@@ -3339,10 +3344,15 @@
           </div>
           <div class="modal-body">
             <div id="buzonConvParticipantes" class="text-muted" style="margin-bottom:10px; font-size:12px;"></div>
-            <div id="buzonConvHilo" style="max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:14px; padding:4px;"></div>
-            <div style="display:flex; gap:8px;">
-              <textarea id="buzonConvRespuesta" rows="2" placeholder="Escribe una respuesta..." style="flex:1;"></textarea>
-              <button class="success" onclick="window.enviarRespuestaBuzon()">➤ Enviar</button>
+            <div id="buzonConvHilo" style="max-height:340px; min-height:120px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:14px; padding:4px;"></div>
+            <div style="display:flex; gap:8px; align-items:flex-end;">
+              <textarea id="buzonConvRespuesta" rows="2" placeholder="Escribe una respuesta..." style="flex:1 1 auto; min-width:0; width:auto;"></textarea>
+              <button class="success" onclick="window.enviarRespuestaBuzon()" style="flex:0 0 auto; width:auto; white-space:nowrap;">➤ Enviar</button>
+            </div>
+            <div style="margin-top:8px;">
+              <label style="font-weight:500; display:block; margin-bottom:6px; font-size:13px;">📎 Adjuntar documento (opcional)</label>
+              <input type="file" id="buzonConvArchivo" onchange="window.mostrarNombreArchivoBuzon(this, 'buzonConvArchivoNombre')">
+              <div id="buzonConvArchivoNombre" class="text-muted" style="font-size:12px; margin-top:4px;"></div>
             </div>
             <div id="msgBuzonConv" style="margin-top:8px;"></div>
           </div>
@@ -8550,9 +8560,36 @@
         }
       };
 
+      // Muestra el nombre del archivo elegido junto al input type="file"
+      // correspondiente (buzonNuevoArchivo / buzonConvArchivo).
+      window.mostrarNombreArchivoBuzon = function(input, idDestino) {
+        var destino = document.getElementById(idDestino);
+        if (!destino) return;
+        destino.textContent = (input.files && input.files[0]) ? '📎 ' + input.files[0].name : '';
+      };
+
+      // Sube un documento adjunto (cualquier tipo) al bucket "buzon-documentos"
+      // y devuelve su URL pública, o null si no hay archivo / falla la subida.
+      async function subirDocumentoBuzon(archivo) {
+        if (!archivo) return null;
+        try {
+          var extension = (archivo.name.split('.').pop() || 'dat').toLowerCase();
+          var ruta = (actual ? actual.usuario : 'usuario') + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6) + '.' + extension;
+          var { error } = await supabase.storage.from('buzon-documentos').upload(ruta, archivo, { upsert: true });
+          if (error) throw error;
+          var { data } = supabase.storage.from('buzon-documentos').getPublicUrl(ruta);
+          return data ? { url: data.publicUrl, nombre: archivo.name } : null;
+        } catch (e) {
+          console.error('Error subiendo el documento adjunto del buzón:', e);
+          return null;
+        }
+      }
+
       window.abrirNuevaConversacionBuzon = function() {
         document.getElementById('buzonNuevoAsunto').value = '';
         document.getElementById('buzonNuevoMensaje').value = '';
+        document.getElementById('buzonNuevoArchivo').value = '';
+        document.getElementById('buzonNuevoArchivoNombre').textContent = '';
         document.getElementById('msgBuzonNueva').innerHTML = '';
         buzonLlenarSelectUsuarios(document.getElementById('buzonNuevoDestinatarios'));
         buzonLlenarChecklistUsuarios(document.getElementById('buzonNuevoInvolucrados'));
@@ -8574,6 +8611,8 @@
         var mensaje = document.getElementById('buzonNuevoMensaje').value.trim();
         var destinatarios = buzonSeleccionadosDeSelect(document.getElementById('buzonNuevoDestinatarios'));
         var involucrados = buzonSeleccionadosDeChecklist(document.getElementById('buzonNuevoInvolucrados'));
+        var inputArchivo = document.getElementById('buzonNuevoArchivo');
+        var archivo = (inputArchivo.files && inputArchivo.files[0]) || null;
 
         if (!asunto) {
           if (msg) msg.innerHTML = '<div class="alert">❌ El asunto es obligatorio.</div>';
@@ -8604,10 +8643,17 @@
             .single();
           if (errorConv) throw errorConv;
 
+          var adjunto = archivo ? await subirDocumentoBuzon(archivo) : null;
+          if (archivo && !adjunto) {
+            if (msg) msg.innerHTML = '<div class="alert">⚠️ El mensaje se enviará, pero el documento adjunto no se pudo subir.</div>';
+          }
+
           var { error: errorMsg } = await supabase.from('buzon_mensajes').insert([{
             conversacion_id: convCreada.id,
             autor: actual.usuario,
             contenido: mensaje,
+            adjunto_url: adjunto ? adjunto.url : null,
+            adjunto_nombre: adjunto ? adjunto.nombre : null,
             fecha: new Date().toISOString()
           }]);
           if (errorMsg) throw errorMsg;
@@ -8634,6 +8680,8 @@
         var participantes = buzonParticipantes(conv);
         document.getElementById('buzonConvParticipantes').textContent = '👥 Participantes: ' + participantes.join(', ');
         document.getElementById('buzonConvRespuesta').value = '';
+        document.getElementById('buzonConvArchivo').value = '';
+        document.getElementById('buzonConvArchivoNombre').textContent = '';
         document.getElementById('msgBuzonConv').innerHTML = '';
         document.getElementById('buzonConversacionModal').classList.add('active');
         await window.renderHiloBuzon(id);
@@ -8655,9 +8703,14 @@
             var esPropio = actual && m.autor === actual.usuario;
             var burbuja = document.createElement('div');
             burbuja.className = 'buzon-msg ' + (esPropio ? 'propio' : 'ajeno');
+            var htmlAdjunto = '';
+            if (m.adjunto_url) {
+              htmlAdjunto = '<div class="buzon-msg-adjunto"><a href="' + escapeHTML(m.adjunto_url) + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">📎 ' + escapeHTML(m.adjunto_nombre || 'Documento adjunto') + '</a></div>';
+            }
             burbuja.innerHTML =
               '<div class="buzon-msg-autor">' + escapeHTML(m.autor || '') + '</div>' +
               '<div class="buzon-msg-texto">' + escapeHTML(m.contenido || '').replace(/\n/g, '<br>') + '</div>' +
+              htmlAdjunto +
               '<div class="buzon-msg-fecha">' + new Date(m.fecha).toLocaleString() + '</div>';
             hilo.appendChild(burbuja);
           });
@@ -8676,16 +8729,25 @@
       window.enviarRespuestaBuzon = async function() {
         var msg = document.getElementById('msgBuzonConv');
         var texto = document.getElementById('buzonConvRespuesta').value.trim();
+        var inputArchivo = document.getElementById('buzonConvArchivo');
+        var archivo = (inputArchivo.files && inputArchivo.files[0]) || null;
         if (!buzonConversacionAbiertaId) return;
         if (!texto) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Escribe una respuesta antes de enviar.</div>';
           return;
         }
         try {
+          var adjunto = archivo ? await subirDocumentoBuzon(archivo) : null;
+          if (archivo && !adjunto) {
+            if (msg) msg.innerHTML = '<div class="alert">⚠️ La respuesta se enviará, pero el documento adjunto no se pudo subir.</div>';
+          }
+
           var { error: errorMsg } = await supabase.from('buzon_mensajes').insert([{
             conversacion_id: buzonConversacionAbiertaId,
             autor: actual.usuario,
             contenido: texto,
+            adjunto_url: adjunto ? adjunto.url : null,
+            adjunto_nombre: adjunto ? adjunto.nombre : null,
             fecha: new Date().toISOString()
           }]);
           if (errorMsg) throw errorMsg;
@@ -8696,7 +8758,9 @@
             .eq('id', buzonConversacionAbiertaId);
 
           document.getElementById('buzonConvRespuesta').value = '';
-          if (msg) msg.innerHTML = '';
+          document.getElementById('buzonConvArchivo').value = '';
+          document.getElementById('buzonConvArchivoNombre').textContent = '';
+          if (!archivo && msg) msg.innerHTML = '';
           await window.renderHiloBuzon(buzonConversacionAbiertaId);
           window.cargarBuzon();
         } catch (e) {
