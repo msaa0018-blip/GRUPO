@@ -1335,7 +1335,7 @@
   }
 
   /* ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== */
-  #buzonNuevaModal, #buzonConversacionModal {
+  #buzonNuevaModal, #buzonConversacionModal, #ocChatModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1349,8 +1349,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #buzonNuevaModal.active, #buzonConversacionModal.active { display: flex; }
-  #buzonNuevaModal .modal-content, #buzonConversacionModal .modal-content {
+  #buzonNuevaModal.active, #buzonConversacionModal.active, #ocChatModal.active { display: flex; }
+  #buzonNuevaModal .modal-content, #buzonConversacionModal .modal-content, #ocChatModal .modal-content {
     background: white;
     border-radius: 16px;
     padding: 18px;
@@ -1360,15 +1360,15 @@
     overflow: auto;
     box-sizing: border-box;
   }
-  #buzonNuevaModal .modal-header, #buzonConversacionModal .modal-header {
+  #buzonNuevaModal .modal-header, #buzonConversacionModal .modal-header, #ocChatModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
     gap: 8px;
   }
-  #buzonNuevaModal .modal-header h3, #buzonConversacionModal .modal-header h3 { margin: 0; font-size: 1.05rem; }
-  #buzonNuevaModal .modal-header .pdfPreview-btn-group, #buzonConversacionModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #buzonNuevaModal .modal-header h3, #buzonConversacionModal .modal-header h3, #ocChatModal .modal-header h3 { margin: 0; font-size: 1.05rem; }
+  #buzonNuevaModal .modal-header .pdfPreview-btn-group, #buzonConversacionModal .modal-header .pdfPreview-btn-group, #ocChatModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   .buzon-conv-item {
     border: 1px solid var(--gray-300);
     border-radius: 10px;
@@ -3355,6 +3355,21 @@
               <div id="buzonConvArchivoNombre" class="text-muted" style="font-size:12px; margin-top:4px;"></div>
             </div>
             <div id="msgBuzonConv" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: CHAT INDEPENDIENTE DE UNA OC ===== -->
+      <div id="ocChatModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>💬 Chat — OC <span id="ocChatCodigo"></span></h3>
+            <button class="danger btn-modal-x" onclick="window.cerrarChatOC()">✕</button>
+          </div>
+          <div class="modal-body">
+            <button class="success" style="width:100%; margin-bottom:12px;" onclick="window.abrirNuevaConversacionDeOC()">✉️ Nueva conversación</button>
+            <p class="text-muted" style="margin-bottom:10px; font-size:12px;">Conversaciones independientes de esta OC. Selecciona a los usuarios involucrados igual que en el módulo BUZÓN.</p>
+            <div id="ocChatLista"></div>
           </div>
         </div>
       </div>
@@ -8447,6 +8462,17 @@
       // ============================================================
       var buzonConversacionesCache = [];
       var buzonConversacionAbiertaId = null;
+      // Cuando no es null, indica que el módulo BUZÓN de la conversación
+      // actualmente abierta/listada corresponde al chat independiente de
+      // una OC en particular (id + código), en vez del buzón general.
+      var ocChatContexto = null;
+
+      // El rol Administrador tiene acceso total a todas las conversaciones
+      // (incluido su asunto), sin importar si participa o no, y es el
+      // único que puede eliminarlas.
+      function buzonEsAdmin() {
+        return !!(actual && actual.rol === 'Administrador');
+      }
 
       // Ids/nombres de usuario que participan en una conversación
       // (creador + destinatarios + involucrados), sin duplicados.
@@ -8463,7 +8489,9 @@
       }
 
       function buzonUsuarioParticipa(conv, usuario) {
-        if (!conv || !usuario) return false;
+        if (!conv) return false;
+        if (buzonEsAdmin()) return true;
+        if (!usuario) return false;
         return buzonParticipantes(conv).indexOf(usuario) !== -1;
       }
 
@@ -8515,7 +8543,39 @@
         return Array.prototype.slice.call(contEl.querySelectorAll('input[type="checkbox"]:checked')).map(function(chk) { return chk.value; });
       }
 
+      // Dibuja una lista de conversaciones (genéricas del buzón, o de una
+      // OC en particular) dentro de "cont". Compartida por cargarBuzon y
+      // cargarChatsOC para no duplicar la plantilla de cada tarjeta.
+      function buzonRenderListaConversaciones(conversaciones, cont, mensajeVacio) {
+        if (!cont) return;
+        if (conversaciones.length === 0) {
+          cont.innerHTML = '<p class="text-muted">' + mensajeVacio + '</p>';
+          return;
+        }
+        cont.innerHTML = '';
+        conversaciones.forEach(function(conv) {
+          var participantes = buzonParticipantes(conv).filter(function(u) { return u !== (actual ? actual.usuario : null); });
+          var item = document.createElement('div');
+          item.className = 'buzon-conv-item';
+          var htmlBorrar = buzonEsAdmin()
+            ? '<button class="danger" style="padding:4px 8px; font-size:11px; min-height:auto; flex-shrink:0;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️ Eliminar</button>'
+            : '';
+          item.innerHTML =
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
+              '<div class="buzon-conv-asunto">' + escapeHTML(conv.asunto || '(Sin asunto)') + '</div>' +
+              htmlBorrar +
+            '</div>' +
+            '<div class="buzon-conv-meta">' +
+              '<span>👥 ' + escapeHTML(participantes.join(', ') || '—') + '</span>' +
+              '<span>🕒 ' + new Date(conv.ultima_actividad || conv.fecha_creacion).toLocaleString() + '</span>' +
+            '</div>';
+          item.addEventListener('click', function() { window.abrirConversacionBuzon(conv.id); });
+          cont.appendChild(item);
+        });
+      }
+
       window.cargarBuzon = async function() {
+        ocChatContexto = null;
         var cont = document.getElementById('buzonListaConversaciones');
         var msg = document.getElementById('msgBuzon');
         if (msg) msg.innerHTML = '';
@@ -8524,40 +8584,89 @@
           var { data, error } = await supabase
             .from('buzon_conversaciones')
             .select('*')
+            .is('oc_id', null)
             .order('ultima_actividad', { ascending: false });
           if (error) throw error;
 
           // Filtro de privacidad: solo se listan (y se ven, incluido el
-          // asunto) las conversaciones donde el usuario logueado participa.
+          // asunto) las conversaciones donde el usuario logueado participa,
+          // salvo el rol Administrador, que ve todas.
           buzonConversacionesCache = (data || []).filter(function(c) {
             return buzonUsuarioParticipa(c, actual ? actual.usuario : null);
           });
 
-          if (!cont) return;
-          if (buzonConversacionesCache.length === 0) {
-            cont.innerHTML = '<p class="text-muted">No tienes conversaciones todavía. Usa "✉️ Nueva conversación" para iniciar una.</p>';
-            return;
-          }
-
-          cont.innerHTML = '';
-          buzonConversacionesCache.forEach(function(conv) {
-            var participantes = buzonParticipantes(conv).filter(function(u) { return u !== (actual ? actual.usuario : null); });
-            var item = document.createElement('div');
-            item.className = 'buzon-conv-item';
-            item.innerHTML =
-              '<div class="buzon-conv-asunto">' + escapeHTML(conv.asunto || '(Sin asunto)') + '</div>' +
-              '<div class="buzon-conv-meta">' +
-                '<span>👥 ' + escapeHTML(participantes.join(', ') || '—') + '</span>' +
-                '<span>🕒 ' + new Date(conv.ultima_actividad || conv.fecha_creacion).toLocaleString() + '</span>' +
-              '</div>';
-            item.addEventListener('click', function() { window.abrirConversacionBuzon(conv.id); });
-            cont.appendChild(item);
-          });
+          buzonRenderListaConversaciones(buzonConversacionesCache, cont, 'No tienes conversaciones todavía. Usa "✉️ Nueva conversación" para iniciar una.');
         } catch (e) {
           console.error('Error cargando el buzón:', e);
           if (cont) cont.innerHTML = '';
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo cargar el buzón: ' + escapeHTML(e.message) + '</div>';
         }
+      };
+
+      window.eliminarConversacionBuzon = async function(id, ev) {
+        if (ev) ev.stopPropagation();
+        if (!buzonEsAdmin()) return;
+        if (!confirm('¿Eliminar esta conversación y todos sus mensajes? Esta acción no se puede deshacer.')) return;
+        try {
+          var { error } = await supabase.from('buzon_conversaciones').delete().eq('id', id);
+          if (error) throw error;
+          if (ocChatContexto) {
+            await window.cargarChatsOC(ocChatContexto.id, ocChatContexto.codigo);
+          } else {
+            await window.cargarBuzon();
+          }
+        } catch (e) {
+          console.error('Error eliminando la conversación:', e);
+          alert('❌ No se pudo eliminar la conversación: ' + e.message);
+        }
+      };
+
+      // ===== Chat independiente por Orden de Compra =====
+      // Se invoca solo con el id de la OC (desde el botón "💬 Chat" de la
+      // tabla) para no tener que incrustar el código de la OC dentro del
+      // atributo onclick; el código se resuelve aquí contra "ordenes".
+      window.abrirChatOC = function(ocId, ocCodigoDirecto) {
+        var ocCodigo = ocCodigoDirecto;
+        if (!ocCodigo) {
+          var ocRef = ordenes.find(function(o) { return o.id === ocId; });
+          ocCodigo = ocRef ? ocRef.codigo : '';
+        }
+        ocChatContexto = { id: ocId, codigo: ocCodigo };
+        document.getElementById('ocChatCodigo').textContent = ocCodigo || '';
+        document.getElementById('ocChatModal').classList.add('active');
+        window.cargarChatsOC(ocId, ocCodigo);
+      };
+
+      window.cerrarChatOC = function() {
+        document.getElementById('ocChatModal').classList.remove('active');
+        ocChatContexto = null;
+      };
+
+      window.cargarChatsOC = async function(ocId, ocCodigo) {
+        ocChatContexto = { id: ocId, codigo: ocCodigo };
+        var cont = document.getElementById('ocChatLista');
+        if (cont) cont.innerHTML = '<p class="text-muted">Cargando conversaciones...</p>';
+        try {
+          var { data, error } = await supabase
+            .from('buzon_conversaciones')
+            .select('*')
+            .eq('oc_id', ocId)
+            .order('ultima_actividad', { ascending: false });
+          if (error) throw error;
+
+          buzonConversacionesCache = (data || []).filter(function(c) {
+            return buzonUsuarioParticipa(c, actual ? actual.usuario : null);
+          });
+
+          buzonRenderListaConversaciones(buzonConversacionesCache, cont, 'Esta OC todavía no tiene conversaciones. Usa "✉️ Nueva conversación" para iniciar una.');
+        } catch (e) {
+          console.error('Error cargando los chats de la OC:', e);
+          if (cont) cont.innerHTML = '<p class="alert">❌ No se pudieron cargar las conversaciones de esta OC.</p>';
+        }
+      };
+
+      window.abrirNuevaConversacionDeOC = function() {
+        window.abrirNuevaConversacionBuzon();
       };
 
       // Muestra el nombre del archivo elegido junto al input type="file"
@@ -8586,7 +8695,9 @@
       }
 
       window.abrirNuevaConversacionBuzon = function() {
-        document.getElementById('buzonNuevoAsunto').value = '';
+        // Si se abre desde el chat de una OC, se prellena el asunto con
+        // el código de la OC (queda editable).
+        document.getElementById('buzonNuevoAsunto').value = ocChatContexto ? ('OC ' + (ocChatContexto.codigo || '')) : '';
         document.getElementById('buzonNuevoMensaje').value = '';
         document.getElementById('buzonNuevoArchivo').value = '';
         document.getElementById('buzonNuevoArchivoNombre').textContent = '';
@@ -8633,6 +8744,7 @@
             creador: actual.usuario,
             destinatarios: destinatarios,
             involucrados: involucrados,
+            oc_id: ocChatContexto ? ocChatContexto.id : null,
             fecha_creacion: new Date().toISOString(),
             ultima_actividad: new Date().toISOString()
           };
@@ -8659,7 +8771,11 @@
           if (errorMsg) throw errorMsg;
 
           window.cerrarNuevaConversacionBuzon();
-          await window.cargarBuzon();
+          if (ocChatContexto) {
+            await window.cargarChatsOC(ocChatContexto.id, ocChatContexto.codigo);
+          } else {
+            await window.cargarBuzon();
+          }
           window.abrirConversacionBuzon(convCreada.id);
         } catch (e) {
           console.error('Error creando la conversación:', e);
@@ -8724,6 +8840,12 @@
       window.cerrarConversacionBuzon = function() {
         document.getElementById('buzonConversacionModal').classList.remove('active');
         buzonConversacionAbiertaId = null;
+        // Si esta conversación se abrió desde el chat de una OC, se
+        // regresa a la lista de conversaciones de esa OC en vez de
+        // quedarse sin ningún modal (imita "volver atrás").
+        if (ocChatContexto) {
+          window.abrirChatOC(ocChatContexto.id, ocChatContexto.codigo);
+        }
       };
 
       window.enviarRespuestaBuzon = async function() {
@@ -13564,6 +13686,7 @@
               if (o.estado === 'CONCLUIDA' && o.factura_url) {
                 acciones += '<button class="btn-imprimir" onclick="window.verFacturaOC(' + o.id + ', this.dataset.url)" data-url="' + escapeHTML(o.factura_url) + '">📎 Ver Factura</button>';
               }
+              acciones += '<button class="btn-imprimir" onclick="window.abrirChatOC(' + o.id + ')">💬 Chat</button>';
 
               if (!acciones) acciones = '—';
 
@@ -13609,6 +13732,8 @@
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
+
+              acciones += '<button class="btn-imprimir" onclick="window.abrirChatOC(' + o.id + ')">💬 Chat</button>';
 
               if (rol === 'Administrador') {
                 acciones += '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesOC(' + idxOriginal + ')"><span></span><span></span><span></span></button>';
@@ -17165,3 +17290,4 @@
   </script>
 </body>
 </html>
+  
