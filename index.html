@@ -5214,6 +5214,35 @@
         }
       }
 
+      // Igual que obtenerImagenComoDataURL, pero además le quita nitidez
+      // (ligero desenfoque vía <canvas>) para usarla como imagen de fondo
+      // ("marca de agua"): que se note claramente en la hoja pero sin
+      // competir en nitidez con el texto/tablas que van encima.
+      async function obtenerImagenFondoDesenfocada(url, desenfoquePx) {
+        var dataOriginal = await obtenerImagenComoDataURL(url);
+        if (!dataOriginal) return null;
+        try {
+          var img = new Image();
+          img.src = dataOriginal;
+          await new Promise(function(resolve, reject) {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          var canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.filter = 'blur(' + (desenfoquePx || 3) + 'px)';
+          ctx.drawImage(img, 0, 0);
+          return canvas.toDataURL('image/jpeg', 0.92);
+        } catch (e) {
+          console.warn('No se pudo desenfocar la imagen de fondo, se usa la original:', e);
+          return dataOriginal;
+        }
+      }
+
       // Imágenes originales (creadas para esta app, sin dependencias
       // externas) embebidas directamente en el código como data URI,
       // para los formatos 5 y 6.
@@ -15750,12 +15779,12 @@
         // superponga encima.
         if (datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) {
           try {
-            var dataFondoExtingue = await obtenerImagenComoDataURL('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg');
+            var dataFondoExtingue = await obtenerImagenFondoDesenfocada('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg', 3);
             if (dataFondoExtingue) {
               var tipoFondoExtingue = dataFondoExtingue.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
               var gStateFondoExtingue = null;
               try {
-                gStateFondoExtingue = new doc.GState({ opacity: 0.12 });
+                gStateFondoExtingue = new doc.GState({ opacity: 0.3 });
                 doc.setGState(gStateFondoExtingue);
               } catch (eOpacidad) {
                 console.warn('No se pudo aplicar opacidad al fondo (GState no disponible):', eOpacidad);
