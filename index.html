@@ -14,6 +14,11 @@
 <!-- Chart.js para gráficas -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
 </script>
+<!-- Tailwind CDN: usado para el selector de apariencia y componentes nuevos de UI -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
   /* ===== RESET Y BASE ===== */
   * {
@@ -67,6 +72,49 @@
     --color-gris: #C7CDD6;
     --color-rojo: #E53935;
   }
+
+  /* ===== SISTEMA DE DISEÑO PREMIUM PARA MODALES (ejecutivo) ===== */
+  :root, html[data-theme="actual"] {
+    --font-display: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+    --modal-overlay-bg: rgba(9, 14, 24, .62);
+    --modal-overlay-blur: 8px;
+    --modal-surface: #ffffff;
+    --modal-surface-2: #f7f8fa;
+    --modal-border: rgba(15, 23, 42, .09);
+    --modal-radius: 18px;
+    --modal-shadow: 0 28px 64px -16px rgba(11, 26, 51, .38), 0 8px 24px rgba(11, 26, 51, .10);
+    --modal-header-border: rgba(15, 23, 42, .09);
+    --modal-footer-border: rgba(15, 23, 42, .09);
+    --modal-accent: var(--primary);
+    --modal-text: var(--gray-900);
+  }
+  html[data-theme="ejecutivo"] {
+    --font-display: 'Playfair Display', 'Plus Jakarta Sans', 'Segoe UI', serif;
+    --modal-overlay-bg: rgba(6, 8, 12, .74);
+    --modal-overlay-blur: 10px;
+    --modal-surface: #fbf9f3;
+    --modal-surface-2: #f2ede0;
+    --modal-border: rgba(30, 26, 16, .12);
+    --modal-radius: 14px;
+    --modal-shadow: 0 32px 72px -16px rgba(0, 0, 0, .5), 0 10px 28px rgba(0, 0, 0, .2);
+    --modal-header-border: #b08d57;
+    --modal-footer-border: rgba(30, 26, 16, .12);
+    --modal-accent: #9c7a3f;
+    --modal-text: #1c1a14;
+  }
+
+  @keyframes modalOverlayIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes modalContentIn {
+    from { opacity: 0; transform: translateY(16px) scale(.97) }
+    to { opacity: 1; transform: translateY(0) scale(1) }
+  }
+
+  /* Selector de apariencia (flotante) */
+  #temaModalToggle {
+    font-family: var(--font, 'Segoe UI', sans-serif);
+  }
+  #temaModalToggle:active { transform: scale(.96); }
+
   a {
     color: var(--secondary);
     text-decoration: none
@@ -1092,7 +1140,10 @@
   #modalOverlayBackdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 1999;
     display: none;
   }
@@ -1107,10 +1158,26 @@
     width: 95%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
   }
   @media (max-width: 720px) {
     .card.modal-card.abierta { width: 96%; max-height: 92vh; }
+  }
+
+  .card.modal-card.abierta > div:first-child {
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+  .card.modal-card.abierta h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: .2px;
+    color: var(--modal-text);
   }
 
   #pdfPreviewModal, #facturaVerModal, #facturaSeleccionModal {
@@ -1119,7 +1186,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2000;
     display: none;
     align-items: center;
@@ -1133,8 +1203,11 @@
   #facturaSeleccionModal { z-index: 2300; }
   #pdfPreviewModal.active, #facturaVerModal.active, #facturaSeleccionModal.active { display: flex }
   #pdfPreviewModal .modal-content, #facturaVerModal .modal-content, #facturaSeleccionModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 16px;
     width: 100%;
     max-width: 1000px;
@@ -1149,9 +1222,11 @@
     align-items: center;
     margin-bottom: 12px;
     flex-wrap: wrap;
-    gap: 8px
+    gap: 8px;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #pdfPreviewModal .modal-body, #facturaVerModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
   #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe {
     width: 100%;
@@ -1170,7 +1245,9 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    flex-wrap: wrap
+    flex-wrap: wrap;
+    border-top: 1px solid var(--modal-footer-border);
+    margin-top: 4px;
   }
 
   /* ===== MODAL: EDITAR PRODUCTOS DE UNA OC (solo Administrador) ===== */
@@ -1180,7 +1257,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
     align-items: center;
@@ -1190,8 +1270,11 @@
   }
   #editarProductosOCModal.active, #almacenesDashboardModal.active, #almacenProductosModal.active { display: flex }
   #editarProductosOCModal .modal-content, #almacenesDashboardModal .modal-content, #almacenProductosModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 18px;
     width: 100%;
     max-width: 1100px;
@@ -1206,9 +1289,11 @@
     align-items: center;
     margin-bottom: 14px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 8px;;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group, #almacenProductosModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body, #almacenProductosModal .modal-body { overflow: auto; }
 
@@ -1229,7 +1314,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
     align-items: center;
@@ -1239,8 +1327,11 @@
   }
   #agregarCXCModal.active, #agregarDocumentoCXPModal.active, #vehiculoAccionesModal.active, #agregarVehiculoModal.active, #agregarValeGasolinaModal.active, #valeAccionesModal.active, #valesGasolinaDashboardModal.active, #valeVisualizarModal.active, #valeComprobarModal.active, #vscCatalogoAccionesModal.active, #editarVscCatalogoModal.active { display: flex }
   #agregarCXCModal .modal-content, #agregarDocumentoCXPModal .modal-content, #vehiculoAccionesModal .modal-content, #agregarVehiculoModal .modal-content, #agregarValeGasolinaModal .modal-content, #valeAccionesModal .modal-content, #valesGasolinaDashboardModal .modal-content, #valeVisualizarModal .modal-content, #valeComprobarModal .modal-content, #vscCatalogoAccionesModal .modal-content, #editarVscCatalogoModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 18px;
     width: 100%;
     max-width: 720px;
@@ -1254,9 +1345,11 @@
     align-items: center;
     margin-bottom: 14px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 8px;;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #agregarCXCModal .modal-header h3, #agregarDocumentoCXPModal .modal-header h3, #vehiculoAccionesModal .modal-header h3, #agregarVehiculoModal .modal-header h3, #agregarValeGasolinaModal .modal-header h3, #valeAccionesModal .modal-header h3, #valesGasolinaDashboardModal .modal-header h3, #valeVisualizarModal .modal-header h3, #valeComprobarModal .modal-header h3, #vscCatalogoAccionesModal .modal-header h3, #editarVscCatalogoModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #agregarCXCModal .modal-header h3, #agregarDocumentoCXPModal .modal-header h3, #vehiculoAccionesModal .modal-header h3, #agregarVehiculoModal .modal-header h3, #agregarValeGasolinaModal .modal-header h3, #valeAccionesModal .modal-header h3, #valesGasolinaDashboardModal .modal-header h3, #valeVisualizarModal .modal-header h3, #valeComprobarModal .modal-header h3, #vscCatalogoAccionesModal .modal-header h3, #editarVscCatalogoModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #agregarCXCModal .modal-header .pdfPreview-btn-group, #agregarDocumentoCXPModal .modal-header .pdfPreview-btn-group, #vehiculoAccionesModal .modal-header .pdfPreview-btn-group, #agregarVehiculoModal .modal-header .pdfPreview-btn-group, #agregarValeGasolinaModal .modal-header .pdfPreview-btn-group, #valeAccionesModal .modal-header .pdfPreview-btn-group, #valesGasolinaDashboardModal .modal-header .pdfPreview-btn-group, #valeVisualizarModal .modal-header .pdfPreview-btn-group, #valeComprobarModal .modal-header .pdfPreview-btn-group, #vscCatalogoAccionesModal .modal-header .pdfPreview-btn-group, #editarVscCatalogoModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #agregarCXCModal .cxc-form-row, #agregarDocumentoCXPModal .cxc-form-row, #agregarVehiculoModal .cxc-form-row, #agregarValeGasolinaModal .cxc-form-row, #valeComprobarModal .cxc-form-row { margin-bottom: 10px; }
   #valeVisualizarModal .modal-body, #valeComprobarModal .modal-body { max-height: 80vh; overflow: auto; }
@@ -1378,7 +1471,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
     align-items: center;
@@ -1388,8 +1484,11 @@
   }
   #buzonNuevaModal.active, #buzonConversacionModal.active, #ocChatModal.active { display: flex; }
   #buzonNuevaModal .modal-content, #buzonConversacionModal .modal-content, #ocChatModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 18px;
     width: 100%;
     max-width: 600px;
@@ -1402,9 +1501,11 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
-    gap: 8px;
+    gap: 8px;;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #buzonNuevaModal .modal-header h3, #buzonConversacionModal .modal-header h3, #ocChatModal .modal-header h3 { margin: 0; font-size: 1.05rem; }
+  #buzonNuevaModal .modal-header h3, #buzonConversacionModal .modal-header h3, #ocChatModal .modal-header h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #buzonNuevaModal .modal-header .pdfPreview-btn-group, #buzonConversacionModal .modal-header .pdfPreview-btn-group, #ocChatModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   .buzon-conv-item {
     border: 1px solid var(--gray-300);
@@ -1453,7 +1554,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
     align-items: center;
@@ -1463,8 +1567,11 @@
   }
   #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active, #almacenAccionesModal.active, #editarAlmacenModal.active, #editarProductoModal.active, #fotoProductoModal.active, #docCxpAccionesModal.active, #clienteAccionesModal.active, #editarClienteModal.active, #clienteProyectosModal.active, #adjuntarFacturaModal.active, #proyectoAccionesModal.active, #editarProyectoModal.active { display: flex }
   #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content, #almacenAccionesModal .modal-content, #docCxpAccionesModal .modal-content, #clienteAccionesModal .modal-content, #editarClienteModal .modal-content, #clienteProyectosModal .modal-content, #proyectoAccionesModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 18px;
     width: 100%;
     max-width: 420px;
@@ -1473,8 +1580,11 @@
   #editarClienteModal .modal-content, #clienteProyectosModal .modal-content { max-height: 92vh; overflow: auto; }
 
   #editarProveedorModal .modal-content, #editarAlmacenModal .modal-content, #editarProductoModal .modal-content, #fotoProductoModal .modal-content, #adjuntarFacturaModal .modal-content, #editarProyectoModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 18px;
     width: 100%;
     max-width: 720px;
@@ -1487,9 +1597,11 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
-    gap: 8px;
+    gap: 8px;;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3, #editarProductoModal .modal-header h3, #fotoProductoModal .modal-header h3, #docCxpAccionesModal .modal-header h3, #clienteAccionesModal .modal-header h3, #editarClienteModal .modal-header h3, #clienteProyectosModal .modal-header h3, #adjuntarFacturaModal .modal-header h3, #proyectoAccionesModal .modal-header h3, #editarProyectoModal .modal-header h3 { margin: 0; font-size: 1.05rem }
+  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3, #editarProductoModal .modal-header h3, #fotoProductoModal .modal-header h3, #docCxpAccionesModal .modal-header h3, #clienteAccionesModal .modal-header h3, #editarClienteModal .modal-header h3, #clienteProyectosModal .modal-header h3, #adjuntarFacturaModal .modal-header h3, #proyectoAccionesModal .modal-header h3, #editarProyectoModal .modal-header h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group, #almacenAccionesModal .modal-header .pdfPreview-btn-group, #editarAlmacenModal .modal-header .pdfPreview-btn-group, #editarProductoModal .modal-header .pdfPreview-btn-group, #fotoProductoModal .modal-header .pdfPreview-btn-group, #docCxpAccionesModal .modal-header .pdfPreview-btn-group, #clienteAccionesModal .modal-header .pdfPreview-btn-group, #editarClienteModal .modal-header .pdfPreview-btn-group, #clienteProyectosModal .modal-header .pdfPreview-btn-group, #adjuntarFacturaModal .modal-header .pdfPreview-btn-group, #proyectoAccionesModal .modal-header .pdfPreview-btn-group, #editarProyectoModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
@@ -1522,7 +1634,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2001;
     display: none;
     align-items: center;
@@ -1532,8 +1647,11 @@
   }
   #visualizarModal.active { display: flex }
   #visualizarModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 16px;
     width: 100%;
     max-width: 1000px;
@@ -1548,9 +1666,11 @@
     align-items: center;
     margin-bottom: 12px;
     flex-wrap: wrap;
-    gap: 8px
+    gap: 8px;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #visualizarModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #visualizarModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
 
   /* ===== STEPPER: FLUJO DE LA OC (modal Visualizar OC) ===== */
   .stepper-oc {
@@ -1625,7 +1745,9 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    flex-wrap: wrap
+    flex-wrap: wrap;
+    border-top: 1px solid var(--modal-footer-border);
+    margin-top: 4px;
   }
 
   #cxpPreviewModal {
@@ -1634,7 +1756,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2002;
     display: none;
     align-items: center;
@@ -1644,8 +1769,11 @@
   }
   #cxpPreviewModal.active { display: flex; }
   #cxpPreviewModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 16px;
     width: 100%;
     max-width: 1000px;
@@ -1660,9 +1788,11 @@
     align-items: center;
     margin-bottom: 12px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 8px;;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #cxpPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; }
+  #cxpPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #cxpPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px; }
   #cxpPreviewModal .modal-body iframe {
     width: 100%;
@@ -1675,7 +1805,9 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex-wrap: wrap;;
+    border-top: 1px solid var(--modal-footer-border);
+    margin-top: 4px;
   }
 
   #ofDocModal {
@@ -1684,7 +1816,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, .6);
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    -webkit-backdrop-filter: blur(var(--modal-overlay-blur));
+    animation: modalOverlayIn .18s ease both;
     z-index: 2001;
     display: none;
     align-items: center;
@@ -1694,8 +1829,11 @@
   }
   #ofDocModal.active { display: flex }
   #ofDocModal .modal-content {
-    background: white;
-    border-radius: 16px;
+    background: var(--modal-surface);
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border);
+    box-shadow: var(--modal-shadow);
+    animation: modalContentIn .32s cubic-bezier(.16,1,.3,1) both;
     padding: 16px;
     width: 100%;
     max-width: 1000px;
@@ -1710,9 +1848,11 @@
     align-items: center;
     margin-bottom: 12px;
     flex-wrap: wrap;
-    gap: 8px
+    gap: 8px;
+    border-bottom: 2px solid var(--modal-accent);
+    padding-bottom: 12px;
   }
-  #ofDocModal .modal-header h3 { margin: 0; font-size: 1.1rem }
+  #ofDocModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #ofDocModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; }
   #ofDocModal .modal-body iframe {
     width: 100%;
@@ -1726,7 +1866,9 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    flex-wrap: wrap
+    flex-wrap: wrap;
+    border-top: 1px solid var(--modal-footer-border);
+    margin-top: 4px;
   }
 
   .progress-bar { height: 10px; background: var(--gray-200); border-radius: 6px; overflow: hidden; margin-top: 4px }
@@ -5000,6 +5142,13 @@
     <div id="dashboardContent"></div>
   </div>
 
+  <!-- ===== Selector de apariencia (tema de ventanas modales) ===== -->
+  <button id="temaModalToggle" onclick="window.toggleTemaModal()" title="Cambiar apariencia de ventanas"
+    class="fixed bottom-5 right-5 z-[3000] flex items-center gap-2 rounded-full bg-white/95 backdrop-blur px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-lg ring-1 ring-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+    <span id="temaModalIcono">🎩</span>
+    <span id="temaModalTexto">Modo Ejecutivo</span>
+  </button>
+
   <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarModalCard('panelOC'); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
 
   <div id="pdfPreviewModal">
@@ -5197,6 +5346,36 @@
   <script>
     (function() {
       'use strict';
+
+      // ============================================================
+      // SELECTOR DE APARIENCIA DE VENTANAS MODALES (Actual / Ejecutivo)
+      // ============================================================
+      function actualizarBotonTemaModal() {
+        var tema = document.documentElement.getAttribute('data-theme') || 'actual';
+        var icono = document.getElementById('temaModalIcono');
+        var texto = document.getElementById('temaModalTexto');
+        if (!icono || !texto) return;
+        if (tema === 'ejecutivo') {
+          icono.textContent = '✨';
+          texto.textContent = 'Modo Actual';
+        } else {
+          icono.textContent = '🎩';
+          texto.textContent = 'Modo Ejecutivo';
+        }
+      }
+      window.toggleTemaModal = function() {
+        var actual = document.documentElement.getAttribute('data-theme') || 'actual';
+        var nuevo = actual === 'ejecutivo' ? 'actual' : 'ejecutivo';
+        document.documentElement.setAttribute('data-theme', nuevo);
+        try { localStorage.setItem('wf_tema_modal', nuevo); } catch (e) {}
+        actualizarBotonTemaModal();
+      };
+      (function inicializarTemaModal() {
+        var guardado = null;
+        try { guardado = localStorage.getItem('wf_tema_modal'); } catch (e) {}
+        if (guardado === 'ejecutivo') document.documentElement.setAttribute('data-theme', 'ejecutivo');
+        document.addEventListener('DOMContentLoaded', actualizarBotonTemaModal);
+      })();
 
       // ============================================================
       // CONFIGURACIÓN
