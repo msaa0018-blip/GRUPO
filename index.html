@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="ejecutivo">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
@@ -14,8 +14,6 @@
 <!-- Chart.js para gráficas -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
 </script>
-<!-- Tailwind CDN: usado para el selector de apariencia y componentes nuevos de UI -->
-<script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -108,12 +106,6 @@
     from { opacity: 0; transform: translateY(16px) scale(.97) }
     to { opacity: 1; transform: translateY(0) scale(1) }
   }
-
-  /* Selector de apariencia (flotante) */
-  #temaModalToggle {
-    font-family: var(--font, 'Segoe UI', sans-serif);
-  }
-  #temaModalToggle:active { transform: scale(.96); }
 
   a {
     color: var(--secondary);
@@ -5142,13 +5134,6 @@
     <div id="dashboardContent"></div>
   </div>
 
-  <!-- ===== Selector de apariencia (tema de ventanas modales) ===== -->
-  <button id="temaModalToggle" onclick="window.toggleTemaModal()" title="Cambiar apariencia de ventanas"
-    class="fixed bottom-5 right-5 z-[3000] flex items-center gap-2 rounded-full bg-white/95 backdrop-blur px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-lg ring-1 ring-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
-    <span id="temaModalIcono">🎩</span>
-    <span id="temaModalTexto">Modo Ejecutivo</span>
-  </button>
-
   <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarModalCard('panelOC'); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
 
   <div id="pdfPreviewModal">
@@ -5346,36 +5331,6 @@
   <script>
     (function() {
       'use strict';
-
-      // ============================================================
-      // SELECTOR DE APARIENCIA DE VENTANAS MODALES (Actual / Ejecutivo)
-      // ============================================================
-      function actualizarBotonTemaModal() {
-        var tema = document.documentElement.getAttribute('data-theme') || 'actual';
-        var icono = document.getElementById('temaModalIcono');
-        var texto = document.getElementById('temaModalTexto');
-        if (!icono || !texto) return;
-        if (tema === 'ejecutivo') {
-          icono.textContent = '✨';
-          texto.textContent = 'Modo Actual';
-        } else {
-          icono.textContent = '🎩';
-          texto.textContent = 'Modo Ejecutivo';
-        }
-      }
-      window.toggleTemaModal = function() {
-        var actual = document.documentElement.getAttribute('data-theme') || 'actual';
-        var nuevo = actual === 'ejecutivo' ? 'actual' : 'ejecutivo';
-        document.documentElement.setAttribute('data-theme', nuevo);
-        try { localStorage.setItem('wf_tema_modal', nuevo); } catch (e) {}
-        actualizarBotonTemaModal();
-      };
-      (function inicializarTemaModal() {
-        var guardado = null;
-        try { guardado = localStorage.getItem('wf_tema_modal'); } catch (e) {}
-        if (guardado === 'ejecutivo') document.documentElement.setAttribute('data-theme', 'ejecutivo');
-        document.addEventListener('DOMContentLoaded', actualizarBotonTemaModal);
-      })();
 
       // ============================================================
       // CONFIGURACIÓN
