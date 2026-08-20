@@ -1379,7 +1379,7 @@
     background: white;
   }
   .buzon-conv-item:hover { background: var(--gray-50); border-color: var(--primary); }
-  .buzon-conv-item .buzon-conv-asunto { font-weight: 600; margin-bottom: 4px; color: var(--gray-800); }
+  .buzon-conv-item .buzon-conv-asunto { font-weight: 600; margin-bottom: 4px; color: var(--gray-800); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
   .buzon-conv-item .buzon-conv-meta { font-size: 12px; color: var(--gray-500); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .buzon-conv-item .buzon-conv-ultimo { font-size: 12px; color: var(--gray-600); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .buzon-msg { max-width: 80%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
@@ -3221,7 +3221,7 @@
               <tr>
                 <td><input id="nvoClienteNombre" placeholder="Nombre *"></td>
                 <td><input id="nvoClienteRFC" placeholder="RFC"></td>
-                <td><select id="nvoClienteCentroNegocio"><option value="" disabled selected hidden>Centro de negocio / sucursal</option></select></td>
+                <td><input id="nvoClienteCentroNegocio" list="listaCentrosNegocio" placeholder="Centro de negocio / sucursal *" autocomplete="off"><datalist id="listaCentrosNegocio"></datalist></td>
                 <td><button class="success" onclick="window.agregarCliente()">➕</button></td>
               </tr>
             </tfoot>
@@ -4158,12 +4158,138 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="ocPendientesIndicadoresCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">📋 Órdenes de Compra Pendientes</h4>
-            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('ocPendientesIndicadoresCard')">✕</button>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('ocPendientesIndicadoresCard')">↩️ Volver</button>
           </div>
           <div id="tablaOCPendientes">
             <table>
               <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Total</th><th>Estado</th><th>F.Pago</th></tr></thead>
               <tbody id="cuerpoOCPendientes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- KPI "Compras del mes": resumen de OC pagadas del mes/año elegido -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorComprasMesCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">🛒 Compras del mes</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorComprasMesCard')">↩️ Volver</button>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
+            <select id="indicadorComprasMesSelectMes" onchange="window.renderIndicadorComprasMes()"></select>
+            <select id="indicadorComprasMesSelectAnio" onchange="window.renderIndicadorComprasMes()"></select>
+          </div>
+          <div id="indicadorComprasMesResumen" class="cxp-resumen"></div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Total</th><th>F.Pago</th></tr></thead>
+              <tbody id="indicadorComprasMesCuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- KPI "Ventas del mes": resumen de OF pagadas del mes/año elegido -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorVentasMesCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">💵 Ventas del mes</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorVentasMesCard')">↩️ Volver</button>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
+            <select id="indicadorVentasMesSelectMes" onchange="window.renderIndicadorVentasMes()"></select>
+            <select id="indicadorVentasMesSelectAnio" onchange="window.renderIndicadorVentasMes()"></select>
+          </div>
+          <div id="indicadorVentasMesResumen" class="cxp-resumen"></div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Folio</th><th>Empresa</th><th>Razón Social</th><th>Monto</th><th>F.Pago</th></tr></thead>
+              <tbody id="indicadorVentasMesCuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- KPI "Proyectos activos": lista de proyectos activos -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorProyectosActivosCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">📁 Proyectos activos</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorProyectosActivosCard')">↩️ Volver</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Empresa</th><th>Depto</th><th>Proyecto</th><th>Cliente</th><th>Presupuesto</th><th>Gastado</th><th>Disponible</th><th>Termina</th></tr></thead>
+              <tbody id="indicadorProyectosActivosCuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- KPI "Cuentas por pagar": OC autorizadas pendientes de pago -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorCXPCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">💳 Cuentas por pagar — OC pendientes de pago</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorCXPCard')">↩️ Volver</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Total</th><th>F.Pago</th></tr></thead>
+              <tbody id="indicadorCXPCuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- KPI "Clientes": lista con totales por cliente + filtro de OC -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorClientesCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;" id="indicadorClientesTitulo">📋 Clientes</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorClientesCard')">↩️ Volver</button>
+          </div>
+          <div id="indicadorClientesListaWrap" style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Cliente</th><th>Total OC Pagadas</th><th>Total Facturas Pagadas</th><th>Acciones</th></tr></thead>
+              <tbody id="indicadorClientesCuerpo"></tbody>
+            </table>
+          </div>
+          <div id="indicadorClientesDetalleWrap" class="hidden">
+            <button class="btn-visualizar" onclick="window.volverListaClientesIndicador()">← Regresar a la lista de clientes</button>
+            <div style="overflow-x:auto; margin-top:10px;">
+              <table>
+                <thead><tr><th>Código</th><th>Proyecto</th><th>Proveedor</th><th>Total</th><th>Estado</th><th>F.Pago</th></tr></thead>
+                <tbody id="indicadorClientesDetalleCuerpo"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI "Proveedores": lista con totales por proveedor + filtro de OC -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorProveedoresCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;" id="indicadorProveedoresTitulo">🏭 Proveedores</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorProveedoresCard')">↩️ Volver</button>
+          </div>
+          <div id="indicadorProveedoresListaWrap" style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Proveedor</th><th>Total OC Pagadas</th><th>Acciones</th></tr></thead>
+              <tbody id="indicadorProveedoresCuerpo"></tbody>
+            </table>
+          </div>
+          <div id="indicadorProveedoresDetalleWrap" class="hidden">
+            <button class="btn-visualizar" onclick="window.volverListaProveedoresIndicador()">← Regresar a la lista de proveedores</button>
+            <div style="overflow-x:auto; margin-top:10px;">
+              <table>
+                <thead><tr><th>Código</th><th>Proyecto</th><th>Total</th><th>Estado</th><th>F.Pago</th></tr></thead>
+                <tbody id="indicadorProveedoresDetalleCuerpo"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI "Alertas críticas" -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorAlertasCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">⚠️ Alertas Críticas</h4>
+            <button class="danger cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorAlertasCard')">↩️ Volver</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Tipo</th><th>Descripción</th><th>Proyecto</th><th>Estado</th></tr></thead>
+              <tbody id="indicadorAlertasCuerpo"></tbody>
             </table>
           </div>
         </div>
@@ -4394,10 +4520,7 @@
             <label style="font-size:12px;font-weight:500;white-space:nowrap;">Hasta:</label>
             <input type="date" id="cxpFechaFin">
           </div>
-          <button class="btn-cxp" onclick="window.renderCXP()">📊 Aplicar Filtros</button>
-          <button class="btn-imprimir" onclick="window.previsualizarReporteCXP()">🖨️ Previsualizar Reporte</button>
           <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de Órdenes de Compra</button>
-          <button class="btn-visualizar" onclick="window.abrirModalCard('cxpDetalleProyectoCard')">📋 Detalle por Proyecto</button>
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
 
@@ -4762,7 +4885,7 @@
     <div id="dashboardContent"></div>
   </div>
 
-  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarModalCard('panelOC'); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo');"></div>
+  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarModalCard('panelOC'); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
 
   <div id="pdfPreviewModal">
     <div class="modal-content">
@@ -6288,7 +6411,7 @@
           if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
             modulos.push({ id: 'oc', icono: '📄', nombre: 'OC' });
           }
-          if (actual && usuarioPuedeCrearProyectos(actual)) {
+          if (actual && (usuarioPuedeCrearProyectos(actual) || actual.rol === 'Administrador')) {
             modulos.push({ id: 'proyectos', icono: '🏗️', nombre: 'PROYECTO' });
           }
           if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
@@ -6398,6 +6521,11 @@
       };
 
       window.volverAlMenu = function() {
+        if (volverAIndicadoresPendiente) {
+          volverAIndicadoresPendiente = false;
+          window.mostrarModulo('indicadores');
+          return;
+        }
         if (document.getElementById('contenidoApp').classList.contains('visible')) {
           window.volverAlMenuMaestro();
         } else if (document.getElementById('menuInterno').classList.contains('visible')) {
@@ -8406,14 +8534,17 @@
         // Asegura que el catálogo de "Centro de Negocio / Sucursal" (compartido con VSC) esté cargado.
         if (!vscCatalogosCache.length) await window.cargarVscCatalogos();
         var opcionesCentro = vscCatalogosCache.filter(function(c) { return c.tipo === 'centro_negocio'; });
-        ['nvoClienteCentroNegocio', 'edClienteCentroNegocio'].forEach(function(id) {
-          var sel = document.getElementById(id);
-          if (!sel) return;
-          var valorActual = sel.value;
-          sel.innerHTML = sel.options[0].outerHTML +
+        var listaCentros = document.getElementById('listaCentrosNegocio');
+        if (listaCentros) {
+          listaCentros.innerHTML = opcionesCentro.map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">'; }).join('');
+        }
+        var selEditar = document.getElementById('edClienteCentroNegocio');
+        if (selEditar) {
+          var valorActual = selEditar.value;
+          selEditar.innerHTML = selEditar.options[0].outerHTML +
             opcionesCentro.map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
-          sel.value = valorActual;
-        });
+          selEditar.value = valorActual;
+        }
       };
 
       window.agregarCliente = async function() {
@@ -8423,17 +8554,29 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ El nombre del cliente es obligatorio.</div>';
           return;
         }
-        var centroNegocioNvo = document.getElementById('nvoClienteCentroNegocio').value;
+        var centroNegocioNvo = document.getElementById('nvoClienteCentroNegocio').value.trim().toUpperCase();
         if (!centroNegocioNvo) {
           if (msg) msg.innerHTML = '<div class="alert">❌ El Centro de Negocio / Sucursal es obligatorio (se usará para asignar el Centro de trabajo de los proyectos de este cliente).</div>';
           return;
         }
-        var nuevo = {
-          nombre: nombre.toUpperCase(),
-          rfc: document.getElementById('nvoClienteRFC').value.trim().toUpperCase(),
-          centro_negocio: centroNegocioNvo
-        };
         try {
+          // Si el Centro de Negocio / Sucursal escrito no existe todavía en
+          // el catálogo compartido (usado también por VSC y por el Centro
+          // de trabajo de Proyectos), se agrega automáticamente para que
+          // quede disponible de inmediato en el resto de los módulos.
+          if (!vscCatalogosCache.length) await window.cargarVscCatalogos();
+          var yaExiste = vscCatalogosCache.some(function(c) { return c.tipo === 'centro_negocio' && c.nombre === centroNegocioNvo; });
+          if (!yaExiste) {
+            var { error: errorCatalogo } = await supabase.from('vsc_catalogos').insert([{ tipo: 'centro_negocio', nombre: centroNegocioNvo, activo: true }]);
+            if (errorCatalogo) throw errorCatalogo;
+            await window.cargarVscCatalogos();
+          }
+
+          var nuevo = {
+            nombre: nombre.toUpperCase(),
+            rfc: document.getElementById('nvoClienteRFC').value.trim().toUpperCase(),
+            centro_negocio: centroNegocioNvo
+          };
           var { error } = await supabase.from('clientes').insert([nuevo]);
           if (error) throw error;
           document.getElementById('nvoClienteNombre').value = '';
@@ -8613,10 +8756,10 @@
           var item = document.createElement('div');
           item.className = 'buzon-conv-item';
           var htmlBorrar = buzonEsAdmin()
-            ? '<button class="danger" style="padding:4px 8px; font-size:11px; min-height:auto; flex-shrink:0;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️ Eliminar</button>'
+            ? '<button class="danger" style="padding:4px 8px; font-size:11px; min-height:auto; flex-shrink:0; white-space:nowrap;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️ Eliminar</button>'
             : '';
           item.innerHTML =
-            '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; min-width:0;">' +
               '<div class="buzon-conv-asunto">' + escapeHTML(conv.asunto || '(Sin asunto)') + '</div>' +
               htmlBorrar +
             '</div>' +
@@ -10329,28 +10472,28 @@
           label: 'Compras del mes',
           cambio: d.comprasMesCount + ' OC',
           clase: 'border-primary kpi-compras-mes',
-          click: function() { window.mostrarModulo('oc'); }
+          click: function() { window.abrirIndicadorComprasMes(); }
         }, {
           icono: '💵',
           valor: '$' + formatearNumeroMexico(d.ventasMes, true),
           label: 'Ventas del mes',
           cambio: d.ventasMesCount + ' facturas',
           clase: 'border-green kpi-ventas-mes',
-          click: function() { window.mostrarModulo('cxc'); }
+          click: function() { window.abrirIndicadorVentasMes(); }
         }, {
           icono: '📁',
           valor: d.proyectosActivos + ' / ' + d.totalProyectos,
           label: 'Proyectos activos',
           cambio: d.proyectosFinalizados + ' finalizados',
           clase: 'border-green',
-          click: function() { window.mostrarModulo('proyectos'); }
+          click: function() { window.abrirIndicadorProyectosActivos(); }
         }, {
           icono: '⏳',
           valor: d.ocPendientes,
           label: 'OC pendientes',
           cambio: 'Por aprobar',
           clase: d.ocPendientes > 0 ? 'border-yellow' : 'border-green',
-          click: function() { window.mostrarModulo('oc'); }
+          click: function() { window.abrirModalCard('ocPendientesIndicadoresCard'); }
         }, {
           icono: '🏢',
           valor: Object.keys(d.comprasPorEmpresa).length,
@@ -10364,37 +10507,35 @@
           label: 'Cuentas por cobrar',
           cambio: 'Pendiente de cobro',
           clase: d.totalCXC > 0 ? 'border-yellow' : 'border-green',
-          click: function() { window.mostrarModulo('cxc'); }
+          click: function() { window.irAModuloDesdeIndicadores('cxc'); }
         }, {
           icono: '💳',
           valor: '$' + formatearNumeroMexico(d.totalCXP, true),
           label: 'Cuentas por pagar',
           cambio: 'Pendiente de pago',
           clase: d.totalCXP > 0 ? 'border-yellow' : 'border-green',
-          click: function() { window.mostrarModulo('cxp'); }
+          click: function() { window.abrirIndicadorCXP(); }
         }, {
           icono: '📋',
           valor: d.totalClientes,
           label: 'Clientes',
           cambio: 'Activos',
           clase: 'border-primary',
-          click: function() { window.mostrarModulo('cxc'); }
+          click: function() { window.abrirIndicadorClientes(); }
         }, {
           icono: '🏭',
           valor: d.totalProveedores,
           label: 'Proveedores',
           cambio: 'Registrados',
           clase: 'border-primary',
-          click: function() { window.mostrarModulo('oc'); }
+          click: function() { window.abrirIndicadorProveedores(); }
         }, {
           icono: '⚠️',
           valor: d.alertas.length,
           label: 'Alertas críticas',
           cambio: 'Requieren atención',
           clase: d.alertas.length > 0 ? 'border-red' : 'border-green',
-          click: function() {
-            document.getElementById('tablaAlertas').scrollIntoView({ behavior: 'smooth' });
-          }
+          click: function() { window.abrirIndicadorAlertas(); }
         }];
 
         grid.innerHTML = '';
@@ -10413,6 +10554,253 @@
           grid.appendChild(card);
         });
       }
+
+      // ============================================================
+      // MODALES DE LOS KPI DE INDICADORES
+      // ============================================================
+
+      // "Cuentas por cobrar" sigue navegando al módulo CXC completo (no es
+      // una ventana modal), pero al presionar "volver" desde ahí debe
+      // regresar al Centro de Control Ejecutivo en vez del menú general.
+      var volverAIndicadoresPendiente = false;
+      window.irAModuloDesdeIndicadores = function(modulo) {
+        volverAIndicadoresPendiente = true;
+        window.mostrarModulo(modulo);
+      };
+
+      var MESES_INDICADOR = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+      function llenarSelectMesAnio(idMes, idAnio) {
+        var selMes = document.getElementById(idMes);
+        var selAnio = document.getElementById(idAnio);
+        if (!selMes || !selAnio) return;
+        var hoy = new Date();
+        if (!selMes.options.length) {
+          selMes.innerHTML = MESES_INDICADOR.map(function(m, i) { return '<option value="' + i + '">' + m + '</option>'; }).join('');
+        }
+        if (!selAnio.options.length) {
+          var anioActual = hoy.getFullYear();
+          var anios = [];
+          for (var a = anioActual; a >= anioActual - 4; a--) anios.push(a);
+          selAnio.innerHTML = anios.map(function(a) { return '<option value="' + a + '">' + a + '</option>'; }).join('');
+        }
+        selMes.value = String(hoy.getMonth());
+        selAnio.value = String(hoy.getFullYear());
+      }
+
+      // ---- Compras del mes (OC pagadas) ----
+      window.abrirIndicadorComprasMes = function() {
+        llenarSelectMesAnio('indicadorComprasMesSelectMes', 'indicadorComprasMesSelectAnio');
+        window.renderIndicadorComprasMes();
+        window.abrirModalCard('indicadorComprasMesCard');
+      };
+
+      window.renderIndicadorComprasMes = function() {
+        var mes = Number(document.getElementById('indicadorComprasMesSelectMes').value);
+        var anio = Number(document.getElementById('indicadorComprasMesSelectAnio').value);
+        var ocScope = filtrarOCSegunUsuario(actual);
+        var ocMes = ocScope.filter(function(o) {
+          if (o.estadopago !== 'PAGADA' || !o.fechapago) return false;
+          var f = new Date(o.fechapago);
+          return f.getMonth() === mes && f.getFullYear() === anio;
+        });
+        var total = ocMes.reduce(function(s, o) { return s + (o.montototal || 0); }, 0);
+        var resumen = document.getElementById('indicadorComprasMesResumen');
+        if (resumen) {
+          resumen.innerHTML = '<div class="cxp-tarjeta pagado"><div class="numero">' + formatoMoneda(total, 'MXN') + '</div><div class="etiqueta">✅ Total pagado</div></div>' +
+            '<div class="cxp-tarjeta"><div class="numero">' + ocMes.length + '</div><div class="etiqueta">📄 OC pagadas</div></div>';
+        }
+        var cuerpo = document.getElementById('indicadorComprasMesCuerpo');
+        if (cuerpo) {
+          cuerpo.innerHTML = ocMes.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">No hay compras pagadas en ese mes</td></tr>' :
+            ocMes.map(function(o) {
+              return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td></tr>';
+            }).join('');
+        }
+      };
+
+      // ---- Ventas del mes (OF pagadas) ----
+      window.abrirIndicadorVentasMes = function() {
+        llenarSelectMesAnio('indicadorVentasMesSelectMes', 'indicadorVentasMesSelectAnio');
+        window.renderIndicadorVentasMes();
+        window.abrirModalCard('indicadorVentasMesCard');
+      };
+
+      window.renderIndicadorVentasMes = function() {
+        var mes = Number(document.getElementById('indicadorVentasMesSelectMes').value);
+        var anio = Number(document.getElementById('indicadorVentasMesSelectAnio').value);
+        var ofScope = ordenesFacturacion.filter(function(o) { return usuarioPuedeAccederOF(actual, o.empresa, o.departamento); });
+        var ofMes = ofScope.filter(function(o) {
+          if (o.estado !== 'PAGADO' || !o.fecha_pago) return false;
+          var f = new Date(o.fecha_pago);
+          return f.getMonth() === mes && f.getFullYear() === anio;
+        });
+        var total = ofMes.reduce(function(s, o) { return s + (o.monto || o.suma || 0); }, 0);
+        var resumen = document.getElementById('indicadorVentasMesResumen');
+        if (resumen) {
+          resumen.innerHTML = '<div class="cxp-tarjeta pagado"><div class="numero">' + formatoMoneda(total, 'MXN') + '</div><div class="etiqueta">✅ Total pagado</div></div>' +
+            '<div class="cxp-tarjeta"><div class="numero">' + ofMes.length + '</div><div class="etiqueta">📄 Facturas pagadas</div></div>';
+        }
+        var cuerpo = document.getElementById('indicadorVentasMesCuerpo');
+        if (cuerpo) {
+          cuerpo.innerHTML = ofMes.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">No hay ventas pagadas en ese mes</td></tr>' :
+            ofMes.map(function(o) {
+              return '<tr><td data-label="Folio">' + escapeHTML(o.folio || '') + '</td><td data-label="Empresa">' + escapeHTML(o.empresa || '') + '</td><td data-label="Razón Social">' + escapeHTML(o.razon_social || '') + '</td><td data-label="Monto">' + formatoMoneda(o.monto || o.suma || 0, o.moneda || 'MXN') + '</td><td data-label="F.Pago">' + new Date(o.fecha_pago).toLocaleDateString() + '</td></tr>';
+            }).join('');
+        }
+      };
+
+      // ---- Proyectos activos ----
+      window.abrirIndicadorProyectosActivos = function() {
+        var hoy = new Date();
+        var proyectosScope = filtrarProyectosSegunUsuario(actual);
+        var activos = proyectosScope.filter(function(p) {
+          var inicio = new Date(p.fecha_inicio);
+          var fin = new Date(p.fecha_termino);
+          return inicio <= hoy && fin >= hoy;
+        });
+        var cuerpo = document.getElementById('indicadorProyectosActivosCuerpo');
+        if (cuerpo) {
+          cuerpo.innerHTML = activos.length === 0 ? '<tr><td colspan="8" class="mensaje-sin-datos">No hay proyectos activos</td></tr>' :
+            activos.map(function(p) {
+              var gastado = gastoProyectoMoneda(p.nombre);
+              var disponible = p.limite - gastado;
+              return '<tr><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Depto">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + escapeHTML(p.nombre || '') + '</strong></td><td data-label="Cliente">' + escapeHTML(p.cliente || '') + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Gastado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Termina">' + (p.fecha_termino ? new Date(p.fecha_termino).toLocaleDateString() : '—') + '</td></tr>';
+            }).join('');
+        }
+        window.abrirModalCard('indicadorProyectosActivosCard');
+      };
+
+      // ---- Cuentas por pagar: OC autorizadas pendientes de pago ----
+      window.abrirIndicadorCXP = function() {
+        var ocScope = filtrarOCSegunUsuario(actual);
+        var pendientes = ocScope.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA'; });
+        var cuerpo = document.getElementById('indicadorCXPCuerpo');
+        if (cuerpo) {
+          cuerpo.innerHTML = pendientes.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">No hay OC pendientes de pago</td></tr>' :
+            pendientes.map(function(o) {
+              return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="F.Pago">' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
+            }).join('');
+        }
+        window.abrirModalCard('indicadorCXPCard');
+      };
+
+      // ---- Clientes: totales por cliente + filtro de OC de ese cliente ----
+      window.abrirIndicadorClientes = function() {
+        document.getElementById('indicadorClientesListaWrap').classList.remove('hidden');
+        document.getElementById('indicadorClientesDetalleWrap').classList.add('hidden');
+        document.getElementById('indicadorClientesTitulo').textContent = '📋 Clientes';
+
+        var proyectosScope = filtrarProyectosSegunUsuario(actual);
+        var ocScope = filtrarOCSegunUsuario(actual);
+        var cxcScope = cuentasCXC; // cuentas_cxc no tiene empresa/depto en el esquema actual
+
+        var clientesMap = {};
+        proyectosScope.forEach(function(p) {
+          if (!p.cliente) return;
+          if (!clientesMap[p.cliente]) clientesMap[p.cliente] = { totalOC: 0, totalFacturas: 0 };
+        });
+        ocScope.forEach(function(o) {
+          if (o.estadopago !== 'PAGADA') return;
+          var p = proyectosScope.find(function(pr) { return pr.nombre === o.proyecto; });
+          if (!p || !p.cliente) return;
+          if (!clientesMap[p.cliente]) clientesMap[p.cliente] = { totalOC: 0, totalFacturas: 0 };
+          clientesMap[p.cliente].totalOC += (o.montototal || 0);
+        });
+        cxcScope.forEach(function(c) {
+          if (c.estado !== 'PAGADO' || !c.cliente) return;
+          if (!clientesMap[c.cliente]) clientesMap[c.cliente] = { totalOC: 0, totalFacturas: 0 };
+          clientesMap[c.cliente].totalFacturas += (c.importe || 0);
+        });
+
+        var cuerpo = document.getElementById('indicadorClientesCuerpo');
+        var nombres = Object.keys(clientesMap).sort();
+        cuerpo.innerHTML = nombres.length === 0 ? '<tr><td colspan="4" class="mensaje-sin-datos">No hay clientes registrados</td></tr>' :
+          nombres.map(function(nombre) {
+            var c = clientesMap[nombre];
+            return '<tr><td data-label="Cliente">' + escapeHTML(nombre) + '</td><td data-label="Total OC Pagadas">' + formatoMoneda(c.totalOC, 'MXN') + '</td><td data-label="Total Facturas Pagadas">' + formatoMoneda(c.totalFacturas, 'MXN') + '</td><td data-label="Acciones"><button class="btn-visualizar" onclick="window.verOCDeClienteIndicador(\'' + escapeHTML(nombre).replace(/'/g, "\\'") + '\')">👁️ Ver OC</button></td></tr>';
+          }).join('');
+
+        window.abrirModalCard('indicadorClientesCard');
+      };
+
+      window.verOCDeClienteIndicador = function(nombreCliente) {
+        var proyectosScope = filtrarProyectosSegunUsuario(actual);
+        var ocScope = filtrarOCSegunUsuario(actual);
+        var proyectosCliente = {};
+        proyectosScope.forEach(function(p) { if (p.cliente === nombreCliente) proyectosCliente[p.nombre] = true; });
+        var ocCliente = ocScope.filter(function(o) { return proyectosCliente[o.proyecto]; });
+
+        document.getElementById('indicadorClientesTitulo').textContent = '📋 OC de ' + nombreCliente;
+        document.getElementById('indicadorClientesListaWrap').classList.add('hidden');
+        document.getElementById('indicadorClientesDetalleWrap').classList.remove('hidden');
+        var cuerpo = document.getElementById('indicadorClientesDetalleCuerpo');
+        cuerpo.innerHTML = ocCliente.length === 0 ? '<tr><td colspan="6" class="mensaje-sin-datos">Este cliente no tiene OC registradas</td></tr>' :
+          ocCliente.map(function(o) {
+            return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Estado">' + escapeHTML(o.estado || '') + '</td><td data-label="F.Pago">' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
+          }).join('');
+      };
+
+      window.volverListaClientesIndicador = function() {
+        document.getElementById('indicadorClientesTitulo').textContent = '📋 Clientes';
+        document.getElementById('indicadorClientesListaWrap').classList.remove('hidden');
+        document.getElementById('indicadorClientesDetalleWrap').classList.add('hidden');
+      };
+
+      // ---- Proveedores: totales por proveedor + filtro de OC de ese proveedor ----
+      window.abrirIndicadorProveedores = function() {
+        document.getElementById('indicadorProveedoresListaWrap').classList.remove('hidden');
+        document.getElementById('indicadorProveedoresDetalleWrap').classList.add('hidden');
+        document.getElementById('indicadorProveedoresTitulo').textContent = '🏭 Proveedores';
+
+        var ocScope = filtrarOCSegunUsuario(actual);
+        var proveedoresMap = {};
+        ocScope.forEach(function(o) {
+          var prov = o.proveedor || 'Desconocido';
+          if (!proveedoresMap[prov]) proveedoresMap[prov] = 0;
+          if (o.estadopago === 'PAGADA') proveedoresMap[prov] += (o.montototal || 0);
+        });
+
+        var cuerpo = document.getElementById('indicadorProveedoresCuerpo');
+        var nombres = Object.keys(proveedoresMap).sort();
+        cuerpo.innerHTML = nombres.length === 0 ? '<tr><td colspan="3" class="mensaje-sin-datos">No hay proveedores registrados</td></tr>' :
+          nombres.map(function(nombre) {
+            return '<tr><td data-label="Proveedor">' + escapeHTML(nombre) + '</td><td data-label="Total OC Pagadas">' + formatoMoneda(proveedoresMap[nombre], 'MXN') + '</td><td data-label="Acciones"><button class="btn-visualizar" onclick="window.verOCDeProveedorIndicador(\'' + escapeHTML(nombre).replace(/'/g, "\\'") + '\')">👁️ Ver OC</button></td></tr>';
+          }).join('');
+
+        window.abrirModalCard('indicadorProveedoresCard');
+      };
+
+      window.verOCDeProveedorIndicador = function(nombreProveedor) {
+        var ocScope = filtrarOCSegunUsuario(actual);
+        var ocProveedor = ocScope.filter(function(o) { return (o.proveedor || 'Desconocido') === nombreProveedor; });
+
+        document.getElementById('indicadorProveedoresTitulo').textContent = '🏭 OC de ' + nombreProveedor;
+        document.getElementById('indicadorProveedoresListaWrap').classList.add('hidden');
+        document.getElementById('indicadorProveedoresDetalleWrap').classList.remove('hidden');
+        var cuerpo = document.getElementById('indicadorProveedoresDetalleCuerpo');
+        cuerpo.innerHTML = ocProveedor.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">Este proveedor no tiene OC registradas</td></tr>' :
+          ocProveedor.map(function(o) {
+            return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Estado">' + escapeHTML(o.estado || '') + '</td><td data-label="F.Pago">' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
+          }).join('');
+      };
+
+      window.volverListaProveedoresIndicador = function() {
+        document.getElementById('indicadorProveedoresTitulo').textContent = '🏭 Proveedores';
+        document.getElementById('indicadorProveedoresListaWrap').classList.remove('hidden');
+        document.getElementById('indicadorProveedoresDetalleWrap').classList.add('hidden');
+      };
+
+      // ---- Alertas críticas ----
+      window.abrirIndicadorAlertas = function() {
+        var alertas = (indicadoresData && indicadoresData.alertas) || [];
+        var cuerpo = document.getElementById('indicadorAlertasCuerpo');
+        cuerpo.innerHTML = alertas.length === 0 ? '<tr><td colspan="4" class="mensaje-sin-datos">No hay alertas críticas</td></tr>' :
+          alertas.map(function(a) {
+            return '<tr><td data-label="Tipo">' + escapeHTML(a.tipo || '') + '</td><td data-label="Descripción">' + escapeHTML(a.descripcion || '') + '</td><td data-label="Proyecto">' + escapeHTML(a.proyecto || '') + '</td><td data-label="Estado">' + escapeHTML(a.estado || '') + '</td></tr>';
+          }).join('');
+        window.abrirModalCard('indicadorAlertasCard');
+      };
 
       // ============================================================
       // RENDERIZAR GRÁFICAS
@@ -12216,6 +12604,13 @@
         var selectProyecto = document.getElementById('cxpFiltroProyecto');
         var esGlobal = esRolGlobalCXP(actual);
 
+        // Si el usuario (aunque su rol tenga visión global en CXP, p.ej.
+        // Administrador o Finanzas) tiene una única empresa/departamento
+        // asignados en sus permisos, se preseleccionan automáticamente.
+        var permisosUsuario = obtenerOpcionesPermisos(actual);
+        var empresaAutoUsuario = permisosUsuario.length === 1 ? permisosUsuario[0].empresa : null;
+        var deptoAutoUsuario = permisosUsuario.length === 1 ? permisosUsuario[0].depto : null;
+
         // Base de proyectos ya restringida por permisos del usuario
         // (para roles no-globales, filtrarProyectosSegunUsuario ya
         // devuelve únicamente los de su propia empresa/departamento).
@@ -12236,6 +12631,9 @@
 
         if (esGlobal) {
           selectEmpresa.disabled = false;
+          if (empresaAutoUsuario && empresasDisponibles.indexOf(empresaAutoUsuario) !== -1) {
+            selectEmpresa.value = empresaAutoUsuario;
+          }
         } else {
           // Bloqueado: un usuario no-global solo tiene su propia empresa
           selectEmpresa.disabled = true;
@@ -12291,6 +12689,10 @@
         }
 
         poblarDepartamentos();
+        if (esGlobal && deptoAutoUsuario) {
+          var deptosDisponiblesAuto = Array.from(selectDepto.options).map(function(o) { return o.value; });
+          if (deptosDisponiblesAuto.indexOf(deptoAutoUsuario) !== -1) selectDepto.value = deptoAutoUsuario;
+        }
         poblarProyectos();
 
         selectEmpresa.onchange = function() {
