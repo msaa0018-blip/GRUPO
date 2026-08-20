@@ -1334,6 +1334,43 @@
     border-radius: 1px;
   }
 
+  /* ===== MÓDULO OC: toolbar estilo "menú de restaurante" ===== */
+  .oc-menu-restaurante {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .oc-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1 1 160px;
+    min-width: 140px;
+    padding: 18px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--gray-200);
+    background: linear-gradient(180deg, #fff 0%, var(--gray-50, #fafafa) 100%);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    text-align: center;
+  }
+  .oc-menu-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    border-color: var(--color-primario, #2563eb);
+  }
+  .oc-menu-icono { font-size: 30px; line-height: 1; }
+  .oc-menu-titulo { font-weight: 700; font-size: 14px; color: var(--gray-800); }
+  .oc-menu-sub { font-size: 11.5px; color: var(--gray-500); }
+  @media (max-width: 640px) {
+    .oc-menu-item { flex: 1 1 100%; flex-direction: row; justify-content: flex-start; text-align: left; padding: 12px 14px; }
+    .oc-menu-icono { font-size: 22px; }
+  }
+
   /* ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== */
   #buzonNuevaModal, #buzonConversacionModal, #ocChatModal {
     position: fixed;
@@ -2918,11 +2955,16 @@
                 <th>Email</th>
                 <th>Dirección</th>
                 <th>CP</th>
-                <th>Cuenta Bancaria</th>
-                <th>Banco</th>
-                <th>Clave</th>
-                <th>Swift</th>
-                <th>CIE</th>
+                <th>Cuenta Bancaria MXN</th>
+                <th>Banco MXN</th>
+                <th>Clave MXN</th>
+                <th>Swift MXN</th>
+                <th>CIE MXN</th>
+                <th>Cuenta Bancaria USD</th>
+                <th>Banco USD</th>
+                <th>Clave USD</th>
+                <th>Swift USD</th>
+                <th>CIE USD</th>
                 <th>Condiciones Comerciales</th>
                 <th>Acciones</th>
               </tr>
@@ -2938,11 +2980,16 @@
                 <td><input id="nvoProvEmail" placeholder="Email"></td>
                 <td><input id="nvoProvDireccion" placeholder="Dirección"></td>
                 <td><input id="nvoProvCP" placeholder="CP"></td>
-                <td><input id="nvoProvCuentaBancaria" placeholder="Cuenta bancaria"></td>
-                <td><input id="nvoProvBanco" placeholder="Banco"></td>
-                <td><input id="nvoProvClave" placeholder="Clave"></td>
-                <td><input id="nvoProvSwift" placeholder="Swift"></td>
-                <td><input id="nvoProvCIE" placeholder="CIE"></td>
+                <td><input id="nvoProvCuentaBancaria" placeholder="Cuenta bancaria MXN"></td>
+                <td><input id="nvoProvBanco" placeholder="Banco MXN"></td>
+                <td><input id="nvoProvClave" placeholder="Clave MXN"></td>
+                <td><input id="nvoProvSwift" placeholder="Swift MXN"></td>
+                <td><input id="nvoProvCIE" placeholder="CIE MXN"></td>
+                <td><input id="nvoProvCuentaBancariaUSD" placeholder="Cuenta bancaria USD"></td>
+                <td><input id="nvoProvBancoUSD" placeholder="Banco USD"></td>
+                <td><input id="nvoProvClaveUSD" placeholder="Clave USD"></td>
+                <td><input id="nvoProvSwiftUSD" placeholder="Swift USD"></td>
+                <td><input id="nvoProvCIEUSD" placeholder="CIE USD"></td>
                 <td>
                   <select id="nvoProvCondiciones">
                     <option value="Anticipado">Anticipado</option>
@@ -3003,13 +3050,22 @@
               <input id="edProvCP" placeholder="CP">
             </div>
             <div class="cxc-form-row">
-              <input id="edProvCuentaBancaria" placeholder="Cuenta bancaria">
-              <input id="edProvBanco" placeholder="Banco">
+              <input id="edProvCuentaBancaria" placeholder="Cuenta bancaria MXN">
+              <input id="edProvBanco" placeholder="Banco MXN">
             </div>
             <div class="cxc-form-row">
-              <input id="edProvClave" placeholder="Clave">
-              <input id="edProvSwift" placeholder="Swift">
-              <input id="edProvCIE" placeholder="CIE">
+              <input id="edProvClave" placeholder="Clave MXN">
+              <input id="edProvSwift" placeholder="Swift MXN">
+              <input id="edProvCIE" placeholder="CIE MXN">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProvCuentaBancariaUSD" placeholder="Cuenta bancaria USD">
+              <input id="edProvBancoUSD" placeholder="Banco USD">
+            </div>
+            <div class="cxc-form-row">
+              <input id="edProvClaveUSD" placeholder="Clave USD">
+              <input id="edProvSwiftUSD" placeholder="Swift USD">
+              <input id="edProvCIEUSD" placeholder="CIE USD">
             </div>
             <div class="cxc-form-row">
               <select id="edProvCondiciones">
@@ -3204,6 +3260,58 @@
 
       <!-- ===== MÓDULO VALES DE GASOLINA (VSC) ===== -->
       <!-- ===== MÓDULO CLIENTES (exclusivo Administrador) ===== -->
+      <div id="panelVehiculos" class="card hidden">
+        <h2>🚗 Vehículos</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Alta, baja y modificación de vehículos, y catálogos relacionados a Vales de Gasolina (VSC): proveedores (estaciones de gasolina), clientes, centros de negocio/sucursal y proyectos/contrato/OC.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Nombre</th><th>Placas</th><th>Empresa</th><th>Departamento</th><th>Acciones</th></tr></thead>
+            <tbody id="cuerpoVehiculos"></tbody>
+            <tfoot>
+              <tr>
+                <td><input id="nvoVehNombre" placeholder="Nombre *"></td>
+                <td><input id="nvoVehPlacas" placeholder="Placas"></td>
+                <td>
+                  <select id="nvoVehEmpresa" onchange="window.actualizarDeptosNuevoVehiculo()">
+                    <option value="">Selecciona empresa</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="nvoVehDepartamento">
+                    <option value="">Selecciona departamento</option>
+                  </select>
+                </td>
+                <td><button class="success" onclick="window.agregarVehiculo()">➕</button></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div id="msgVehiculos"></div>
+
+        <h3 style="margin-top:24px;">🗂️ Catálogos VSC (Proveedor / Cliente / Centro de Negocio / Proyecto-Contrato-OC)</h3>
+        <p class="text-muted" style="margin-bottom:8px;">Aquí se dan de alta los proveedores de VSC, es decir, las estaciones de gasolina.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Tipo</th><th>Nombre</th><th>Acciones</th></tr></thead>
+            <tbody id="cuerpoVscCatalogos"></tbody>
+            <tfoot>
+              <tr>
+                <td>
+                  <select id="nvoVscCatTipo">
+                    <option value="proveedor">Proveedor (estación de gasolina)</option>
+                    <option value="centro_negocio">Centro de Negocio / Sucursal</option>
+                    <option value="proyecto">Proyecto / Contrato / OC</option>
+                  </select>
+                </td>
+                <td><input id="nvoVscCatNombre" placeholder="Nombre *"></td>
+                <td><button class="success" onclick="window.agregarVscCatalogo()">➕</button></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div id="msgVscCatalogos"></div>
+      </div>
+
       <div id="panelClientes" class="card hidden">
         <h2>🧑‍💼 Clientes</h2>
         <div class="table-wrapper">
@@ -3525,58 +3633,6 @@
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Registro y control de vales de gasolina por vehículo y departamento.</p>
 
-        <!-- Sección exclusiva de Administrador: catálogo de vehículos -->
-        <div id="vscVehiculosSection" class="hidden">
-          <h3>🚗 Vehículos</h3>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Nombre</th><th>Placas</th><th>Empresa</th><th>Departamento</th><th>Acciones</th></tr></thead>
-              <tbody id="cuerpoVehiculos"></tbody>
-              <tfoot>
-                <tr>
-                  <td><input id="nvoVehNombre" placeholder="Nombre *"></td>
-                  <td><input id="nvoVehPlacas" placeholder="Placas"></td>
-                  <td>
-                    <select id="nvoVehEmpresa" onchange="window.actualizarDeptosNuevoVehiculo()">
-                      <option value="">Selecciona empresa</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select id="nvoVehDepartamento">
-                      <option value="">Selecciona departamento</option>
-                    </select>
-                  </td>
-                  <td><button class="success" onclick="window.agregarVehiculo()">➕</button></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <div id="msgVehiculos"></div>
-
-          <h3 style="margin-top:16px;">🗂️ Catálogos VSC (Proveedor / Cliente / Centro de Negocio / Proyecto-Contrato-OC)</h3>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Tipo</th><th>Nombre</th><th>Acciones</th></tr></thead>
-              <tbody id="cuerpoVscCatalogos"></tbody>
-              <tfoot>
-                <tr>
-                  <td>
-                    <select id="nvoVscCatTipo">
-                      <option value="proveedor">Proveedor</option>
-                      <option value="cliente">Cliente</option>
-                      <option value="centro_negocio">Centro de Negocio / Sucursal</option>
-                      <option value="proyecto">Proyecto / Contrato / OC</option>
-                    </select>
-                  </td>
-                  <td><input id="nvoVscCatNombre" placeholder="Nombre *"></td>
-                  <td><button class="success" onclick="window.agregarVscCatalogo()">➕</button></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <div id="msgVscCatalogos"></div>
-        </div>
-
         <h3 style="margin-top:20px;">➕ Nuevo Vale de Gasolina</h3>
         <div class="cxc-form-row">
           <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha de carga<input id="valeFechaCarga" type="date" style="width:100%;margin-top:4px;"></label>
@@ -3599,8 +3655,8 @@
         </div>
         <div class="cxc-form-row">
           <select id="valeProveedor"><option value="" disabled selected hidden>Selecciona proveedor</option></select>
-          <select id="valeCliente"><option value="" disabled selected hidden>Selecciona cliente</option></select>
-          <select id="valeCentroNegocio"><option value="" disabled selected hidden>Selecciona centro de negocio / sucursal</option></select>
+          <select id="valeCliente" onchange="window.actualizarCentroNegocioDesdeClienteVale()"><option value="" disabled selected hidden>Selecciona cliente</option></select>
+          <select id="valeCentroNegocio" onchange="window.actualizarProyectosNuevoVale()"><option value="" disabled selected hidden>Selecciona centro de negocio / sucursal</option></select>
           <select id="valeProyectoOC"><option value="" disabled selected hidden>Selecciona proyecto / contrato / OC</option></select>
         </div>
         <div class="cxc-form-row">
@@ -4315,8 +4371,8 @@
         <div class="flex">
           <input id="empresaProyecto" placeholder="Empresa" disabled style="background:var(--gray-200);">
           <input id="departamentoProyecto" placeholder="Departamento" disabled style="background:var(--gray-200);">
-          <input id="nombreProyecto" placeholder="Nombre del Proyecto *">
           <select id="cliente" onchange="window.actualizarCentroTrabajoDesdeCliente()"><option value="">Selecciona un cliente *</option></select>
+          <input id="nombreProyecto" placeholder="Nombre del Proyecto *">
           <input id="centroTrabajoProyecto" placeholder="Centro de trabajo (según cliente)" disabled style="background:var(--gray-200);">
           <input id="presupuesto" type="number" placeholder="Presupuesto *">
           <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
@@ -4347,10 +4403,22 @@
         </div>
       </div>
 
-      <div id="ocModalToolbar" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
-        <button id="btnAbrirCrearOC" class="hidden" onclick="window.abrirPanelOC()">📄 Crear Orden de Compra</button>
-        <button onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de OC</button>
-        <button onclick="window.abrirModalCard('tablaProyectosCard')">📊 Control por Proyecto</button>
+      <div id="ocModalToolbar" class="hidden oc-menu-restaurante">
+        <button id="btnAbrirCrearOC" class="hidden oc-menu-item" onclick="window.abrirPanelOC()">
+          <span class="oc-menu-icono">📄</span>
+          <span class="oc-menu-titulo">Crear Orden de Compra</span>
+          <span class="oc-menu-sub">Nueva OC</span>
+        </button>
+        <button class="oc-menu-item" onclick="window.abrirModalCard('bandejaOCCard')">
+          <span class="oc-menu-icono">📬</span>
+          <span class="oc-menu-titulo">Bandeja de OC</span>
+          <span class="oc-menu-sub">Ver y gestionar</span>
+        </button>
+        <button class="oc-menu-item" onclick="window.abrirModalCard('tablaProyectosCard')">
+          <span class="oc-menu-icono">📊</span>
+          <span class="oc-menu-titulo">Control por Proyecto</span>
+          <span class="oc-menu-sub">Presupuestos y límites</span>
+        </button>
       </div>
 
       <div id="panelOC" class="card modal-card hidden">
@@ -4383,7 +4451,7 @@
             <select id="usoCFDI"><option value="G01">G01 - ADQUISICION DE MERCANCIAS</option><option value="G03">G03 - GASTOS EN GENERAL</option><option value="I03">I03 - EQUIPO DE TRANSPORTE</option><option value="I04">I04 - EQUIPO DE COMPUTO Y ACCESORIOS</option><option value="I08">I08 - OTRAS MAQUINAS Y EQUIPO</option><option value="P01">P01 - POR DEFINIR</option></select>
             <input id="direccionEntrega" placeholder="Dirección de entrega *">
             <input id="cp" placeholder="Código Postal" style="min-width:100px;">
-            <select id="monedaOC" onchange="window.mostrarParidadInicial()"><option value="MXN">Pesos (MXN)</option><option value="USD">Dólares (USD)</option></select>
+            <select id="monedaOC" onchange="window.mostrarParidadInicial(); window.autocompletarProveedorOC();"><option value="MXN">Pesos (MXN)</option><option value="USD">Dólares (USD)</option></select>
             <input id="paridadInicial" type="number" placeholder="Tipo Cambio" style="display:none;">
             <span id="paridadInicialLabel" class="paridad-label" style="display:none;">(MXN/USD)</span>
           </div>
@@ -4606,8 +4674,8 @@
         <h2>🧾 Órdenes de Facturación (OF)</h2>
         <p class="text-muted" style="margin-bottom:12px;">Generación y autorización de órdenes de facturación por departamento.</p>
         <div class="cxp-filtros">
-          <select id="ofFiltroDepto"><option value="">Todos los departamentos</option></select>
-          <select id="ofFiltroEstado">
+          <select id="ofFiltroDepto" onchange="window.renderOF()"><option value="">Todos los departamentos</option></select>
+          <select id="ofFiltroEstado" onchange="window.renderOF()">
             <option value="">Todos los estados</option>
             <option value="PENDIENTE">Pendiente</option>
             <option value="FACTURADA">Facturada</option>
@@ -4615,7 +4683,6 @@
             <option value="SOL_CANCELACION">Sol. Cancelación</option>
             <option value="CANCELADO">Cancelado</option>
           </select>
-          <button class="btn-of" onclick="window.renderOF()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXF()">🖨️ Reporte CXF</button>
           <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOFCard')">📋 Bandeja de OF</button>
           <button class="btn-visualizar" onclick="window.abrirModalCard('ofFormularioNuevo')">➕ Nueva Orden de Facturación</button>
@@ -4720,6 +4787,7 @@
                     <th style="width:110px;min-width:110px;">PU</th>
                     <th style="width:100px;min-width:100px;">Impuesto (%)</th>
                     <th style="min-width:170px;width:180px;">Importe</th>
+                    <th style="width:130px;min-width:130px;">Código interno (inventario)</th>
                     <th style="width:60px;">Acción</th>
                   </tr>
                 </thead>
@@ -4729,10 +4797,13 @@
                     <td colspan="7" style="text-align:right;font-weight:bold">SUMA:</td>
                     <td id="sumaPartidasOF" style="font-weight:bold;font-size:16px;min-width:170px;width:180px;">$0.00</td>
                     <td></td>
+                    <td></td>
                   </tr>
                 </tfoot>
               </table>
             </div>
+            <datalist id="listaProductosInventarioOF"></datalist>
+            <p class="text-muted" style="font-size:12px;margin-top:6px;">El "Código interno (inventario)" es opcional: solo captúralo si esta partida corresponde a un producto del catálogo de Inventario — al marcar la OF como Pagada, esa cantidad se descontará automáticamente del inventario.</p>
             <button onclick="window.agregarFilaPartidaOF()" class="success" style="margin-top:8px;">➕ Agregar Partida</button>
           </div>
 
@@ -5048,19 +5119,19 @@
           <select id="docCxpMoneda"><option value="MXN">MXN</option><option value="USD">USD</option></select>
         </div>
         <div class="cxc-form-row">
-          <select id="docCxpCliente">
-            <option value="">Selecciona cliente</option>
+          <select id="docCxpCliente" onchange="window.actualizarDependientesDocumentoCXP()">
+            <option value="" disabled selected hidden>Selecciona cliente</option>
           </select>
           <select id="docCxpProyecto">
-            <option value="">Selecciona proyecto</option>
+            <option value="" disabled selected hidden>Selecciona proyecto</option>
           </select>
         </div>
         <div class="cxc-form-row">
           <select id="docCxpSolicitante">
-            <option value="">Selecciona solicitante</option>
+            <option value="" disabled selected hidden>Selecciona solicitante</option>
           </select>
           <select id="docCxpAutoriza">
-            <option value="">Selecciona quién autoriza</option>
+            <option value="" disabled selected hidden>Selecciona quién autoriza</option>
           </select>
         </div>
         <div id="msgDocumentoCXP"></div>
@@ -6439,6 +6510,7 @@
           }
           if (actual && actual.rol === 'Administrador') {
             modulos.push({ id: 'clientes', icono: '🧑\u200d💼', nombre: 'Clientes' });
+            modulos.push({ id: 'vehiculos', icono: '🚗', nombre: 'Vehículos' });
           }
         }
 
@@ -6475,7 +6547,7 @@
               window.mostrarModulo('oc');
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
-            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes') {
+            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos') {
               window.mostrarModulo(modulo);
             } else if (modulo === 'spm') {
               window.mostrarModulo(modulo);
@@ -6794,6 +6866,11 @@
               '<td>' + escapeHTML(p.clave) + '</td>' +
               '<td>' + escapeHTML(p.swift) + '</td>' +
               '<td>' + escapeHTML(p.cie) + '</td>' +
+              '<td>' + escapeHTML(p.cuenta_bancaria_usd) + '</td>' +
+              '<td>' + escapeHTML(p.banco_usd) + '</td>' +
+              '<td>' + escapeHTML(p.clave_usd) + '</td>' +
+              '<td>' + escapeHTML(p.swift_usd) + '</td>' +
+              '<td>' + escapeHTML(p.cie_usd) + '</td>' +
               '<td>' + escapeHTML(p.condiciones_comerciales) + '</td>' +
               '<td style="text-align:center;">' +
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesProveedor(' + p.id + ')">' +
@@ -6830,13 +6907,18 @@
           clave: document.getElementById('nvoProvClave').value.trim(),
           swift: document.getElementById('nvoProvSwift').value.trim(),
           cie: document.getElementById('nvoProvCIE').value.trim(),
+          cuenta_bancaria_usd: document.getElementById('nvoProvCuentaBancariaUSD').value.trim(),
+          banco_usd: document.getElementById('nvoProvBancoUSD').value.trim(),
+          clave_usd: document.getElementById('nvoProvClaveUSD').value.trim(),
+          swift_usd: document.getElementById('nvoProvSwiftUSD').value.trim(),
+          cie_usd: document.getElementById('nvoProvCIEUSD').value.trim(),
           condiciones_comerciales: document.getElementById('nvoProvCondiciones').value
         };
         try {
           var { error } = await supabase.from('proveedores').insert([datosProveedor]);
           if (error) throw error;
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Proveedor agregado.</div>';
-          ['nvoProvNombre','nvoProvSucursal','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion','nvoProvCP','nvoProvCuentaBancaria','nvoProvBanco','nvoProvClave','nvoProvSwift','nvoProvCIE'].forEach(function(id) {
+          ['nvoProvNombre','nvoProvSucursal','nvoProvRFC','nvoProvContacto','nvoProvTelefono','nvoProvEmail','nvoProvDireccion','nvoProvCP','nvoProvCuentaBancaria','nvoProvBanco','nvoProvClave','nvoProvSwift','nvoProvCIE','nvoProvCuentaBancariaUSD','nvoProvBancoUSD','nvoProvClaveUSD','nvoProvSwiftUSD','nvoProvCIEUSD'].forEach(function(id) {
             document.getElementById(id).value = '';
           });
           window.cargarProveedoresCatalogo();
@@ -6876,6 +6958,11 @@
         document.getElementById('edProvClave').value = p.clave || '';
         document.getElementById('edProvSwift').value = p.swift || '';
         document.getElementById('edProvCIE').value = p.cie || '';
+        document.getElementById('edProvCuentaBancariaUSD').value = p.cuenta_bancaria_usd || '';
+        document.getElementById('edProvBancoUSD').value = p.banco_usd || '';
+        document.getElementById('edProvClaveUSD').value = p.clave_usd || '';
+        document.getElementById('edProvSwiftUSD').value = p.swift_usd || '';
+        document.getElementById('edProvCIEUSD').value = p.cie_usd || '';
         document.getElementById('edProvCondiciones').value = p.condiciones_comerciales || 'Contado';
         proveedorEditandoId = id;
         var msg = document.getElementById('msgEditarProveedor');
@@ -6910,6 +6997,11 @@
           clave: document.getElementById('edProvClave').value.trim(),
           swift: document.getElementById('edProvSwift').value.trim(),
           cie: document.getElementById('edProvCIE').value.trim(),
+          cuenta_bancaria_usd: document.getElementById('edProvCuentaBancariaUSD').value.trim(),
+          banco_usd: document.getElementById('edProvBancoUSD').value.trim(),
+          clave_usd: document.getElementById('edProvClaveUSD').value.trim(),
+          swift_usd: document.getElementById('edProvSwiftUSD').value.trim(),
+          cie_usd: document.getElementById('edProvCIEUSD').value.trim(),
           condiciones_comerciales: document.getElementById('edProvCondiciones').value
         };
         try {
@@ -7510,15 +7602,13 @@
       var valesGasolinaCache = [];
 
       window.cargarVSC = async function() {
-        var esAdmin = actual && actual.rol === 'Administrador';
-        var seccionVehiculos = document.getElementById('vscVehiculosSection');
-        if (seccionVehiculos) seccionVehiculos.classList.toggle('hidden', !esAdmin);
-
         var campoSolicitante = document.getElementById('valeSolicitante');
         if (campoSolicitante) campoSolicitante.value = actual ? actual.usuario : '';
 
         await window.cargarVehiculos();
         await window.cargarVscCatalogos();
+        if (!clientesCache || clientesCache.length === 0) await window.cargarClientes();
+        window.actualizarClientesNuevoVale();
         window.configurarEmpresaDeptoVale();
         await window.cargarValesGasolina();
       };
@@ -7534,9 +7624,7 @@
         proyecto: 'Proyecto / Contrato / OC'
       };
       var VSC_CATALOGO_SELECT = {
-        proveedor: 'valeProveedor',
-        cliente: 'valeCliente',
-        centro_negocio: 'valeCentroNegocio'
+        proveedor: 'valeProveedor'
       };
 
       window.cargarVscCatalogos = async function() {
@@ -7882,9 +7970,39 @@
         window.actualizarProyectosNuevoVale(empresa, depto);
       };
 
+      // "Selecciona cliente" del vale de gasolina usa la lista real de
+      // clientes (módulo Clientes), no un catálogo aparte, para poder
+      // ligar el centro de negocio y el proyecto correctos.
+      window.actualizarClientesNuevoVale = function() {
+        var sel = document.getElementById('valeCliente');
+        if (!sel) return;
+        var valorActual = sel.value;
+        sel.innerHTML = '<option value="" disabled hidden>Selecciona cliente</option>' +
+          (clientesCache || []).map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
+        if ((clientesCache || []).some(function(c) { return c.nombre === valorActual; })) sel.value = valorActual;
+        else sel.value = '';
+      };
+
+      // El centro de negocio / sucursal queda ligado al cliente elegido:
+      // solo se muestra el centro de negocio propio de ese cliente.
+      window.actualizarCentroNegocioDesdeClienteVale = function() {
+        var nombreCliente = document.getElementById('valeCliente').value;
+        var selCentro = document.getElementById('valeCentroNegocio');
+        var cliente = (clientesCache || []).find(function(c) { return c.nombre === nombreCliente; });
+        if (!selCentro) return;
+        if (cliente && cliente.centro_negocio) {
+          selCentro.innerHTML = '<option value="' + escapeHTML(cliente.centro_negocio) + '">' + escapeHTML(cliente.centro_negocio) + '</option>';
+          selCentro.value = cliente.centro_negocio;
+        } else {
+          selCentro.innerHTML = '<option value="" disabled selected hidden>Este cliente no tiene centro de negocio</option>';
+          selCentro.value = '';
+        }
+        window.actualizarProyectosNuevoVale();
+      };
+
       // "Selecciona proyecto / contrato / OC" muestra los proyectos reales
       // (módulo Proyectos) de la empresa y departamento del solicitante,
-      // no un catálogo aparte.
+      // ligados además al cliente y centro de negocio / sucursal elegidos.
       window.actualizarProyectosNuevoVale = function(empresa, depto) {
         var sel = document.getElementById('valeProyectoOC');
         if (!sel) return;
@@ -7896,12 +8014,16 @@
           var deptoOculto = document.getElementById('valeDepartamentoValor');
           depto = deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '');
         }
+        var nombreCliente = document.getElementById('valeCliente') ? document.getElementById('valeCliente').value : '';
+        var centroNegocio = document.getElementById('valeCentroNegocio') ? document.getElementById('valeCentroNegocio').value : '';
         var coincidencias = (proyectos || []).filter(function(p) {
           if (normalizar(p.empresa) !== normalizar(empresa)) return false;
-          if (!depto) return true;
-          return deptoParaComparar(p.empresa, p.departamento) === deptoParaComparar(empresa, depto);
+          if (depto && deptoParaComparar(p.empresa, p.departamento) !== deptoParaComparar(empresa, depto)) return false;
+          if (nombreCliente && p.cliente !== nombreCliente) return false;
+          if (centroNegocio && p.centro_trabajo !== centroNegocio) return false;
+          return true;
         });
-        sel.innerHTML = '<option value="" disabled selected hidden>Selecciona proyecto / contrato / OC</option>' +
+        sel.innerHTML = '<option value="" disabled selected hidden>' + (nombreCliente ? 'Selecciona proyecto / contrato / OC' : 'Selecciona primero un cliente') + '</option>' +
           coincidencias.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + (p.codigo ? ' (' + escapeHTML(p.codigo) + ')' : '') + '</option>'; }).join('');
       };
 
@@ -8756,10 +8878,10 @@
           var item = document.createElement('div');
           item.className = 'buzon-conv-item';
           var htmlBorrar = buzonEsAdmin()
-            ? '<button class="danger" style="padding:4px 8px; font-size:11px; min-height:auto; flex-shrink:0; white-space:nowrap;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️ Eliminar</button>'
+            ? '<button class="danger" style="padding:6px 12px; font-size:12.5px; min-height:32px; flex-shrink:0; white-space:nowrap; margin-left:auto;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️ Eliminar</button>'
             : '';
           item.innerHTML =
-            '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; min-width:0;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; min-width:0;">' +
               '<div class="buzon-conv-asunto">' + escapeHTML(conv.asunto || '(Sin asunto)') + '</div>' +
               htmlBorrar +
             '</div>' +
@@ -9280,6 +9402,16 @@
               '</td>';
             cuerpo.appendChild(fila);
           });
+
+          // Datalist de códigos internos, usado en las partidas de OF para
+          // ligar (opcionalmente) una partida facturada a un producto del
+          // inventario y así poder descontarlo al pagarse la OF.
+          var listaOF = document.getElementById('listaProductosInventarioOF');
+          if (listaOF) {
+            listaOF.innerHTML = productosCatalogoCache.map(function(p) {
+              return '<option value="' + escapeHTML(p.codigo) + '">' + escapeHTML(p.descripcion || '') + '</option>';
+            }).join('');
+          }
         } catch (e) {
           console.error('Error cargando productos:', e);
           var msg = document.getElementById('msgProductos');
@@ -9957,7 +10089,11 @@
             cargarFiltrosCXP();
             window.renderCXP();
           }
-          bandejaOCCard.classList.remove('hidden');
+          // La Bandeja de Órdenes de Compra ya no se muestra automáticamente
+          // al entrar a CXP: solo se abre con el botón "📬 Bandeja de
+          // Órdenes de Compra" dentro de Cuentas por Pagar.
+          bandejaOCCard.classList.add('hidden');
+          bandejaOCCard.classList.remove('abierta');
         } else if (modulo === 'cxc') {
           if (puedeVerCXC) {
             panelCXC.classList.remove('hidden');
@@ -10016,6 +10152,17 @@
             window.cargarClientes();
           } else {
             alert('⚠️ No tienes permiso para acceder a Clientes.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'vehiculos') {
+          if (actual && actual.rol === 'Administrador') {
+            var panelVehiculos = document.getElementById('panelVehiculos');
+            if (panelVehiculos) panelVehiculos.classList.remove('hidden');
+            window.cargarVehiculos();
+            window.cargarVscCatalogos();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Vehículos.');
             window.mostrarMenuInterno();
             return;
           }
@@ -12107,10 +12254,6 @@
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PAGADA';
 
-        // Al pagarse la OC, se suman al inventario los productos que
-        // tengan código de catálogo capturado.
-        await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1);
-
         render();
         actualizarTotalesMenuPrincipal();
         alert('✅ OC marcada como PAGADA.');
@@ -12421,6 +12564,11 @@
           if (error) throw error;
           Object.assign(oc, updates);
 
+          // Los productos de la OC se agregan al inventario solo hasta
+          // este momento: cuando ya está pagada (estadopago === 'PAGADA',
+          // verificado en registrarFactura) Y facturada/concluida.
+          await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1);
+
           ocConclusionPendiente = null;
           facturaArchivoPendiente = null;
           document.getElementById('adjuntarFacturaModal').classList.remove('active');
@@ -12441,10 +12589,6 @@
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         oc.estadopago = 'PENDIENTE';
-
-        // Al revertir el pago, se resta del inventario lo que se había
-        // sumado al marcarla como pagada.
-        await aplicarMovimientoInventarioOC(parsearProductosOC(oc), -1);
 
         render();
       };
@@ -13270,19 +13414,109 @@
 
       // Llena Proyecto / Solicitante / Autoriza según la empresa y
       // departamento seleccionados (o bloqueados) del documento CXP.
+      //
+      // Folio automático y bloqueado:
+      // - VC (Vale de Caja): "VC-N", N consecutivo e independiente por
+      //   cada combinación de empresa + departamento.
+      // - VI (Vale de IAVE): misma filosofía que VC — "VI-N", N
+      //   consecutivo e independiente por empresa + departamento.
+      // - SPM (Solicitud de Presupuesto Mensual): consecutivo por MES,
+      //   se genera mes con mes: "SPM-AAAA-MM". Si ya existe una SPM para
+      //   ese mismo mes (misma empresa + departamento), se crea la
+      //   versión B ("SPM-AAAA-MM-B"), luego C, etc. En cuanto el mes es
+      //   distinto, se puede volver a solicitar con folio de mes nuevo
+      //   (sin sufijo de versión).
+      window.actualizarFolioDocumentoCXP = async function() {
+        var tipo = document.getElementById('docCxpTipo').value;
+        var folioInput = document.getElementById('docCxpFolio');
+        if (!folioInput) return;
+
+        if (tipo !== 'VC' && tipo !== 'VI' && tipo !== 'SPM') {
+          folioInput.disabled = false;
+          folioInput.style.background = '';
+          folioInput.placeholder = 'Folio';
+          return;
+        }
+
+        var empresa = document.getElementById('docCxpEmpresa').value;
+        var departamento = document.getElementById('docCxpDepartamento').value;
+        if (!empresa || !departamento) {
+          folioInput.value = '';
+          folioInput.disabled = true;
+          folioInput.style.background = 'var(--gray-200)';
+          folioInput.placeholder = 'Folio (selecciona empresa y departamento)';
+          return;
+        }
+
+        folioInput.disabled = true;
+        folioInput.style.background = 'var(--gray-200)';
+        folioInput.placeholder = 'Folio (automático)';
+
+        if (tipo === 'VC' || tipo === 'VI') {
+          try {
+            var { count, error } = await supabase.from('documentos_cxp')
+              .select('id', { count: 'exact', head: true })
+              .eq('tipo', tipo)
+              .eq('empresa', empresa)
+              .eq('departamento', departamento);
+            if (error) throw error;
+            folioInput.value = tipo + '-' + ((count || 0) + 1);
+          } catch (e) {
+            console.error('Error calculando folio consecutivo de ' + tipo + ':', e);
+            folioInput.value = tipo + '-1';
+          }
+          return;
+        }
+
+        // SPM: consecutivo por mes (AAAA-MM), con sufijo de versión
+        // B/C/... si ya existe una SPM para el mismo mes / empresa /
+        // departamento.
+        try {
+          var hoy = new Date();
+          var aaaaMM = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+          var baseFolio = 'SPM-' + aaaaMM;
+          var { data, error: errorSPM } = await supabase.from('documentos_cxp')
+            .select('folio')
+            .eq('tipo', 'SPM')
+            .eq('empresa', empresa)
+            .eq('departamento', departamento)
+            .like('folio', baseFolio + '%');
+          if (errorSPM) throw errorSPM;
+          var existentes = (data || []).map(function(d) { return d.folio; });
+          if (existentes.indexOf(baseFolio) === -1) {
+            folioInput.value = baseFolio;
+          } else {
+            var LETRAS = 'BCDEFGHIJKLMNOPQRSTUVWXYZ';
+            var letra = '';
+            for (var i = 0; i < LETRAS.length; i++) {
+              var candidato = baseFolio + '-' + LETRAS[i];
+              if (existentes.indexOf(candidato) === -1) { letra = LETRAS[i]; break; }
+            }
+            folioInput.value = baseFolio + (letra ? '-' + letra : '-X');
+          }
+        } catch (e) {
+          console.error('Error calculando folio mensual de SPM:', e);
+          folioInput.value = 'SPM-' + hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+        }
+      };
+
       window.actualizarDependientesDocumentoCXP = function() {
         var empresa = document.getElementById('docCxpEmpresa').value;
         var departamento = document.getElementById('docCxpDepartamento').value;
+        var cliente = document.getElementById('docCxpCliente') ? document.getElementById('docCxpCliente').value : '';
+
+        window.actualizarFolioDocumentoCXP();
 
         var selProyecto = document.getElementById('docCxpProyecto');
         if (selProyecto) {
           var valorPrevioProyecto = selProyecto.value;
           var proyectosFiltrados = (proyectos || []).filter(function(p) {
-            return (!empresa || p.empresa === empresa) && (!departamento || p.departamento === departamento);
+            return (!empresa || p.empresa === empresa) && (!departamento || p.departamento === departamento) && (!cliente || p.cliente === cliente);
           });
-          selProyecto.innerHTML = '<option value="">Selecciona proyecto</option>' +
+          selProyecto.innerHTML = '<option value="" disabled' + (proyectosFiltrados.length ? '' : ' selected') + ' hidden>' + (cliente ? 'Selecciona proyecto' : 'Selecciona primero un cliente') + '</option>' +
             proyectosFiltrados.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + '</option>'; }).join('');
           if (proyectosFiltrados.some(function(p) { return p.nombre === valorPrevioProyecto; })) selProyecto.value = valorPrevioProyecto;
+          else selProyecto.value = '';
         }
 
         var selSolicitante = document.getElementById('docCxpSolicitante');
@@ -13290,18 +13524,22 @@
           var solicitantes = getSolicitantes().filter(function(u) {
             return !empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento);
           });
-          selSolicitante.innerHTML = '<option value="">Selecciona solicitante</option>' +
+          selSolicitante.innerHTML = '<option value="" disabled hidden>Selecciona solicitante</option>' +
             solicitantes.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + '</option>'; }).join('');
           if (actual && solicitantes.some(function(u) { return u.usuario === actual.usuario; })) selSolicitante.value = actual.usuario;
+          else selSolicitante.value = '';
         }
 
         var selAutoriza = document.getElementById('docCxpAutoriza');
         if (selAutoriza) {
+          // "Quien autoriza" un VC/VI/SPM es el Jefe de Departamento
+          // correspondiente a la empresa/departamento del documento.
           var autorizadores = usuariosDB.filter(function(u) {
-            return u.rol === 'Director General' || (u.rol === 'Jefe Departamento' && (!empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento)));
+            return u.rol === 'Jefe Departamento' && (!empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento));
           });
-          selAutoriza.innerHTML = '<option value="">Selecciona quién autoriza</option>' +
+          selAutoriza.innerHTML = '<option value="" disabled hidden>Selecciona quién autoriza</option>' +
             autorizadores.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + ' (' + u.rol + ')</option>'; }).join('');
+          selAutoriza.value = '';
         }
       };
 
@@ -13374,10 +13612,11 @@
           }
         }
 
-        configurarCamposDefaultDocCXP();
-
         var tipoSelect = document.getElementById('docCxpTipo');
         if (tipoSelect && tipoDocCXPActual) tipoSelect.value = tipoDocCXPActual;
+
+        configurarCamposDefaultDocCXP();
+
         var tituloModal = document.getElementById('docCxpModalTitulo');
         if (tituloModal) {
           var info = DOC_CXP_INFO[tipoDocCXPActual] || { nombre: tipoDocCXPActual };
@@ -13385,13 +13624,14 @@
         }
         document.getElementById('docCxpConcepto').value = '';
         document.getElementById('docCxpBeneficiario').value = '';
-        document.getElementById('docCxpFolio').value = '';
         document.getElementById('docCxpFecha').value = '';
         document.getElementById('docCxpMonto').value = '';
+        if (['VC', 'VI', 'SPM'].indexOf(tipoDocCXPActual) === -1) document.getElementById('docCxpFolio').value = '';
+        window.actualizarFolioDocumentoCXP();
 
         var selCliente = document.getElementById('docCxpCliente');
         if (selCliente) {
-          selCliente.innerHTML = '<option value="">Selecciona cliente</option>' +
+          selCliente.innerHTML = '<option value="" disabled selected hidden>Selecciona cliente</option>' +
             (clientesCache || []).map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
         }
 
@@ -13870,20 +14110,34 @@
         });
         if (!match) return;
 
+        // Los datos bancarios que se muestran dependen de la moneda
+        // elegida para la OC: MXN muestra Cuenta/Banco/Clave/Swift/CIE
+        // "normales" (MXN); USD muestra el juego de cuentas en dólares.
+        var monedaOC = document.getElementById('monedaOC');
+        var esUSD = monedaOC && monedaOC.value === 'USD';
+
         var campos = {
           rfc: match.rfc,
           direccion: match.direccion,
           cp: match.cp,
-          banco: match.banco,
-          cuenta: match.cuenta_bancaria,
-          clabe: match.clave,
-          swift: match.swift,
-          cie: match.cie,
+          banco: esUSD ? match.banco_usd : match.banco,
+          cuenta: esUSD ? match.cuenta_bancaria_usd : match.cuenta_bancaria,
+          clabe: esUSD ? match.clave_usd : match.clave,
+          swift: esUSD ? match.swift_usd : match.swift,
+          cie: esUSD ? match.cie_usd : match.cie,
           sucursal: match.sucursal
         };
         Object.keys(campos).forEach(function(id) {
           var el = document.getElementById(id);
-          if (el && campos[id]) el.value = campos[id];
+          if (!el) return;
+          // Los campos bancarios se limpian y se rellenan (o se dejan
+          // vacíos) según la moneda; el resto de campos solo se llenan si
+          // hay dato para no borrar algo ya capturado manualmente.
+          if (['banco', 'cuenta', 'clabe', 'swift', 'cie'].indexOf(id) !== -1) {
+            el.value = campos[id] || '';
+          } else if (campos[id]) {
+            el.value = campos[id];
+          }
         });
 
         var selectCondiciones = document.getElementById('condicionesComercialesOC');
@@ -14603,12 +14857,12 @@
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
 
-          // El inventario SOLO se ajusta si la OC ya estaba pagada (ya se
-          // le había sumado el inventario al pagarla). Si aún no está
-          // pagada, el cambio de productos no debe tocar el inventario
-          // todavía; eso pasará cuando se marque como pagada.
+          // El inventario SOLO se ajusta si la OC ya está pagada Y
+          // facturada (CONCLUIDA) — ya se le había sumado el inventario en
+          // ese momento. Si todavía no llega a CONCLUIDA, el cambio de
+          // productos no debe tocar el inventario todavía.
           var inventarioAjustado = false;
-          if (oc.estadopago === 'PAGADA') {
+          if (oc.estado === 'CONCLUIDA') {
             var deltas = calcularDeltaInventarioOC(productosViejos, productosNuevos);
             await aplicarDeltaInventarioOC(deltas);
             inventarioAjustado = true;
@@ -15327,13 +15581,14 @@
       window.actualizarFiltroProyectos = actualizarFiltroProyectos;
 
       // FUNCIONES PARA OF que faltaban
-      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu, codigoSat, impuesto) {
+      window.agregarFilaPartidaOF = function(concepto, cantidad, um, pu, codigoSat, impuesto, codigoInterno) {
         concepto = concepto || '';
         cantidad = cantidad || 1;
         um = um || 'PZA';
         pu = pu || 0;
         codigoSat = codigoSat || '';
         impuesto = impuesto || 0;
+        codigoInterno = codigoInterno || '';
         var tbody = document.getElementById('cuerpoPartidasOF');
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
@@ -15346,6 +15601,7 @@
           '<td><input class="pu" type="text" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:170px;width:180px;"></td>' +
+          '<td><input class="codigo-interno" type="text" list="listaProductosInventarioOF" value="' + escapeHTML(codigoInterno.toUpperCase()) + '" placeholder="Opcional" style="min-width:110px;width:130px;text-transform:uppercase;"></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaPartidaOF(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFilaOF(fila);
@@ -15415,7 +15671,8 @@
             um: fila.querySelector('.udm').value,
             pu: parseNumero(fila.querySelector('.pu').value || '0'),
             impuesto: parseFloat(fila.querySelector('.impuesto').value) || 0,
-            importe: parseNumero(fila.querySelector('.importe').value || '0')
+            importe: parseNumero(fila.querySelector('.importe').value || '0'),
+            codigo_interno: fila.querySelector('.codigo-interno') ? fila.querySelector('.codigo-interno').value.trim().toUpperCase() : ''
           });
         });
         return partidas;
@@ -15928,6 +16185,24 @@
         if (error) { alert('Error al marcar como pagada la OF: ' + error.message); return; }
 
         Object.assign(of, updates);
+
+        // Las partidas que tengan un "código interno" ligado al catálogo
+        // de Inventario se descuentan del stock al pagarse la OF.
+        var partidasOF = of.partidas;
+        if (typeof partidasOF === 'string') {
+          try { partidasOF = JSON.parse(partidasOF); } catch (e) { partidasOF = []; }
+        }
+        if (Array.isArray(partidasOF)) {
+          for (var i = 0; i < partidasOF.length; i++) {
+            var partida = partidasOF[i];
+            var codigoInterno = (partida.codigo_interno || '').trim();
+            var cantidadPartida = Number(partida.cantidad) || 0;
+            if (codigoInterno && cantidadPartida > 0) {
+              await ajustarInventarioPorCodigo(codigoInterno, -cantidadPartida);
+            }
+          }
+        }
+
         window.renderOF();
         actualizarTotalesMenuPrincipal();
         alert('✅ OF ' + of.folio + ' marcada como pagada.');
@@ -17458,6 +17733,18 @@
           var ofsVisibles = ordenesFacturacion.filter(function(o) {
             return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
           });
+          // Se aplican los mismos filtros de Departamento/Estado que la
+          // tabla de OF (antes esto requería el botón "Aplicar Filtros",
+          // ahora el Reporte CXF respeta directamente lo que esté
+          // seleccionado en esos filtros).
+          var filtroDepto = document.getElementById('ofFiltroDepto');
+          if (filtroDepto && filtroDepto.value) {
+            ofsVisibles = ofsVisibles.filter(function(o) { return o.departamento === filtroDepto.value; });
+          }
+          var filtroEstado = document.getElementById('ofFiltroEstado');
+          if (filtroEstado && filtroEstado.value) {
+            ofsVisibles = ofsVisibles.filter(function(o) { return o.estado === filtroEstado.value; });
+          }
           var doc = generarPDFReporteCXF(ofsVisibles);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXF_' + new Date().toISOString().split('T')[0] + '.pdf';
