@@ -14,6 +14,9 @@
 <!-- Chart.js para gráficas -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
 </script>
+<!-- QRious para generar códigos QR (vales de gasolina VSC) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js">
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -1436,21 +1439,27 @@
     border-radius: 1px;
   }
 
-  /* ===== MÓDULO OC: toolbar estilo "menú de restaurante" ===== */
+  /* ===== MÓDULO OC: toolbar estilo "menú de restaurante" =====
+     Los 3 botones se apilan verticalmente, centrados en la página, y cada
+     uno mide 1/3 de la altura total de la ventana (33.33vh). */
   .oc-menu-restaurante {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
     gap: 12px;
     margin-bottom: 18px;
+    min-height: 100vh;
   }
   .oc-menu-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    flex: 1 1 160px;
-    min-width: 140px;
+    gap: 6px;
+    flex: 0 0 auto;
+    width: 100%;
+    height: 33.333vh;
     padding: 18px 12px;
     border-radius: 14px;
     border: 1px solid var(--gray-200);
@@ -1465,13 +1474,9 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     border-color: var(--color-primario, #2563eb);
   }
-  .oc-menu-icono { font-size: 30px; line-height: 1; }
-  .oc-menu-titulo { font-weight: 700; font-size: 14px; color: var(--gray-800); }
-  .oc-menu-sub { font-size: 11.5px; color: var(--gray-500); }
-  @media (max-width: 640px) {
-    .oc-menu-item { flex: 1 1 100%; flex-direction: row; justify-content: flex-start; text-align: left; padding: 12px 14px; }
-    .oc-menu-icono { font-size: 22px; }
-  }
+  .oc-menu-icono { font-size: 38px; line-height: 1; }
+  .oc-menu-titulo { font-weight: 700; font-size: 17px; color: var(--gray-800); }
+  .oc-menu-sub { font-size: 13px; color: var(--gray-500); }
 
   /* ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== */
   #buzonNuevaModal, #buzonConversacionModal, #ocChatModal {
@@ -3567,10 +3572,30 @@
       <div id="panelBuzon" class="card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
           <h2 style="margin:0;">📥 Buzón</h2>
-          <button class="success" onclick="window.abrirNuevaConversacionBuzon()">✉️ Nueva conversación</button>
+          <button class="success" onclick="window.abrirNuevaConversacionBuzon()" style="padding:8px 12px; font-size:13px; min-height:36px;">✉️ Nueva conversación</button>
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Conversaciones independientes entre los usuarios que participan en cada una. Cada chat es privado: solo tú y quienes fueron agregados como destinatarios/involucrados de esa conversación pueden verlo, incluido su asunto.</p>
         <div id="buzonListaConversaciones"></div>
+        <div id="buzonPaginacionContainer" class="oc-paginacion-container">
+          <div class="oc-paginacion-info">
+            <span id="buzonPaginacionContador">Mostrando 0 - 0 de 0</span>
+            <label class="oc-paginacion-filas-label">
+              Filas por página:
+              <select id="buzonFilasPorPagina">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+          </div>
+          <div class="oc-paginacion-botones">
+            <button id="buzonPaginacionAnterior" onclick="window.paginaAnteriorBuzon()">← Anterior</button>
+            <span id="buzonPaginacionNumeros" class="oc-paginacion-numeros"></span>
+            <button id="buzonPaginacionSiguiente" onclick="window.paginaSiguienteBuzon()">Siguiente →</button>
+          </div>
+        </div>
         <div id="msgBuzon"></div>
       </div>
 
@@ -4609,6 +4634,26 @@
             <tbody id="tablaProyectos"></tbody>
           </table>
         </div>
+        <div id="proyectosPaginacionContainer" class="oc-paginacion-container" style="margin-left:18px; margin-right:18px;">
+          <div class="oc-paginacion-info">
+            <span id="proyectosPaginacionContador">Mostrando 0 - 0 de 0</span>
+            <label class="oc-paginacion-filas-label">
+              Filas por página:
+              <select id="proyectosFilasPorPagina">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+          </div>
+          <div class="oc-paginacion-botones">
+            <button id="proyectosPaginacionAnterior" onclick="window.paginaAnteriorProyectos()">← Anterior</button>
+            <span id="proyectosPaginacionNumeros" class="oc-paginacion-numeros"></span>
+            <button id="proyectosPaginacionSiguiente" onclick="window.paginaSiguienteProyectos()">Siguiente →</button>
+          </div>
+        </div>
       </div>
 
       <div id="ocModalToolbar" class="hidden oc-menu-restaurante">
@@ -4858,7 +4903,6 @@
             <label style="font-size:12px;font-weight:500;white-space:nowrap;">Hasta:</label>
             <input type="date" id="cxcFechaFin">
           </div>
-          <button class="btn-cxc" onclick="window.renderCXC()">📊 Aplicar Filtros</button>
           <button class="btn-imprimir" onclick="window.previsualizarReporteCXC()">🖨️ Previsualizar Reporte</button>
         </div>
 
@@ -5390,6 +5434,7 @@
       var cxpReporteData = null;
       var ocBannerVisible = false;
       var pendingOcId = null;
+      var pendingValeId = null;
       var ofDocPDF = null;
       var ofDocData = null;
       var reportePreviewPDF = null;
@@ -5411,6 +5456,24 @@
         filasPorPagina: 10,
         totalRegistros: 0,
         datosFiltrados: []
+      };
+
+      // Estado de paginación de "Control por Proyecto".
+      var proyectosPaginacion = {
+        paginaActual: 1,
+        filasPorPagina: 10,
+        totalRegistros: 0,
+        datosFiltrados: []
+      };
+
+      // Estado de paginación del Buzón (lista de conversaciones).
+      var buzonPaginacion = {
+        paginaActual: 1,
+        filasPorPagina: 10,
+        totalRegistros: 0,
+        datosFiltrados: [],
+        cont: null,
+        mensajeVacio: ''
       };
       var indicadoresTimer = null;
       var indicadoresData = {};
@@ -6524,6 +6587,25 @@
           console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
           pendingOcId = ocId;
           return ocId;
+        }
+        return null;
+      }
+
+      // ============================================================
+      // FUNCIÓN PARA DETECTAR ENLACE DE VALE DE GASOLINA (QR del VSC)
+      // ============================================================
+      // El QR impreso en cada vale (window.imprimirPDFVale) codifica una
+      // URL con "?vale=ID". Al escanearlo y loguearse, se abre
+      // automáticamente ese vale (Comprobar si aplica, si no Visualizar).
+      function detectarEnlaceVale() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var valeParam = urlParams.get('vale');
+
+        if (valeParam) {
+          var valeId = parseInt(valeParam);
+          console.log('🔗 Enlace de QR de vale detectado, Vale ID:', valeId);
+          pendingValeId = valeId;
+          return valeId;
         }
         return null;
       }
@@ -8635,6 +8717,57 @@
       // la OC, para mantener el alcance manejable). La primera vez que se
       // imprime, se registra fecha_impresion y a partir de ahí aparece el
       // botón "Comprobar".
+      // Formatea una fecha como "JUEVES, 20-08-26" (día de la semana en
+      // español, mayúsculas, y fecha corta dd-mm-aa). Usado en el
+      // documento del vale de gasolina.
+      function formatearFechaVSC(fechaStr) {
+        if (!fechaStr) return '—';
+        var dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+        var f = new Date(fechaStr);
+        if (isNaN(f.getTime())) return '—';
+        var dd = String(f.getDate()).padStart(2, '0');
+        var mm = String(f.getMonth() + 1).padStart(2, '0');
+        var yy = String(f.getFullYear()).slice(-2);
+        return dias[f.getDay()] + ', ' + dd + '-' + mm + '-' + yy;
+      }
+
+      // Dibuja una "caja" con encabezado gris (etiqueta) y una fila de
+      // valor debajo, igual al formato de "Orden de Suministros de
+      // Combustible" (Razón Social, Folio, Fecha de carga, etc.).
+      function dibujarCajaEtiquetaVale(doc, x, y, w, h, etiqueta, valor, opts) {
+        opts = opts || {};
+        var alturaHeader = opts.alturaHeader || 18;
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.7);
+        // Encabezado gris
+        doc.setFillColor(216, 216, 216);
+        doc.rect(x, y, w, alturaHeader, 'FD');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(20, 20, 20);
+        doc.text(etiqueta, x + w / 2, y + alturaHeader / 2 + 3.2, { align: 'center' });
+        // Fila de valor
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x, y + alturaHeader, w, h - alturaHeader, 'FD');
+        doc.setFont(undefined, opts.valorBold ? 'bold' : 'normal');
+        doc.setFontSize(opts.valorSize || 10);
+        if (opts.valorColor) {
+          doc.setTextColor(opts.valorColor[0], opts.valorColor[1], opts.valorColor[2]);
+        } else {
+          doc.setTextColor(20, 20, 20);
+        }
+        var valorMostrado = (valor != null && valor !== '') ? String(valor) : '—';
+        doc.text(valorMostrado, x + w / 2, y + alturaHeader + (h - alturaHeader) / 2 + 3.2, { align: 'center', maxWidth: w - 12 });
+        doc.setTextColor(20, 20, 20);
+        doc.setFont(undefined, 'normal');
+      }
+
+      // Genera el documento del vale con el formato "Orden de Suministros
+      // de Combustible" (header con logo, cajas con Folio/Fecha, Proceso,
+      // Firma del Chofer, QR específico del vale, Usuario solicitante,
+      // Vehículo-Placas y tabla de conceptos). El QR codifica un enlace
+      // directo ("?vale=ID") que, al escanearse y loguearse, abre este
+      // mismo vale en su ventana modal para comprobarlo.
       window.imprimirPDFVale = async function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
@@ -8643,31 +8776,145 @@
         try {
           var { jsPDF } = window.jspdf;
           var doc = new jsPDF('p', 'pt', 'a4');
-          var y = 50;
-          doc.setFontSize(16);
-          doc.text('VALE DE GASOLINA — ' + (v.codigo || ''), 40, y);
-          y += 26;
-          doc.setFontSize(10);
-          var lineas = [
-            'Empresa: ' + (v.empresa || ''),
-            'Departamento: ' + (v.departamento || ''),
-            'Vehículo: ' + (vehiculo ? (vehiculo.nombre + (vehiculo.placas ? ' (' + vehiculo.placas + ')' : '')) : ''),
-            'Solicitante (chofer): ' + (v.responsable || ''),
-            'Combustible: ' + (v.combustible || ''),
-            'Nivel de tanque actual: ' + (v.nivel_tanque || ''),
-            'Cantidad solicitada: ' + (v.cantidad_solicitada || v.litros || ''),
-            'Fecha de carga: ' + (v.fecha_carga ? new Date(v.fecha_carga).toLocaleDateString() : ''),
-            'Periodo de consumo: ' + (v.periodo_inicio ? new Date(v.periodo_inicio).toLocaleDateString() : '') + ' - ' + (v.periodo_fin ? new Date(v.periodo_fin).toLocaleDateString() : ''),
-            'Proveedor: ' + (v.proveedor || ''),
-            'Cliente: ' + (v.cliente || ''),
-            'Centro de negocio / Sucursal: ' + (v.centro_negocio || ''),
-            'Proyecto / Contrato / OC: ' + (v.proyecto_oc || ''),
-            'Aprobado por (Jefe Dpto.): ' + (v.nombre_jefe || '')
+          var margen = 40;
+          var anchoUtil = 595.28 - margen * 2;
+
+          // Borde exterior del documento
+          doc.setDrawColor(30, 30, 30);
+          doc.setLineWidth(1.2);
+          doc.rect(margen - 12, margen - 12, anchoUtil + 24, 700);
+
+          // ===== Encabezado: logo + razón social + título =====
+          var yHeader = margen + 8;
+          try {
+            var logoEmpresa = ORG_CATALOGO.empresas.find(function(e) { return e.nombre.indexOf('EXTINGUE') !== -1 || e.abreviatura === 'GIE'; });
+            var logoUrl = logoEmpresa ? logoEmpresa.logo : 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+            var logoDataUrl = await obtenerImagenComoDataURL(logoUrl);
+            if (logoDataUrl) {
+              doc.addImage(logoDataUrl, 'JPEG', margen, yHeader - 4, 85, 55);
+            }
+          } catch (eLogo) {
+            console.warn('No se pudo cargar el logo para el PDF del vale:', eLogo);
+          }
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(20, 20, 20);
+          doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', margen + 100, yHeader + 14);
+          doc.setFontSize(11.5);
+          doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', margen + 100, yHeader + 32);
+          doc.setFont(undefined, 'normal');
+
+          var y = yHeader + 68;
+          var mitad = (anchoUtil - 16) / 2;
+
+          // ===== Fila 1: Razón Social Proveedor / Num. Cliente Extingue =====
+          dibujarCajaEtiquetaVale(doc, margen, y, mitad, 48, 'Razón Social Proveedor', v.proveedor);
+          dibujarCajaEtiquetaVale(doc, margen + mitad + 16, y, mitad, 48, 'Num. Cliente Extingue', v.cliente);
+          y += 62;
+
+          // ===== Fila 2: Folio / Fecha de carga =====
+          dibujarCajaEtiquetaVale(doc, margen, y, mitad, 48, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 13 });
+          dibujarCajaEtiquetaVale(doc, margen + mitad + 16, y, mitad, 48, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
+          y += 62;
+
+          // ===== Fila 3: Proceso / Firma Chofer / QR =====
+          var col3 = (anchoUtil - 32) / 3;
+          var yFila3 = y;
+          var altoFila3 = 110;
+
+          // Caja "Proceso": checklist de avance del vale
+          doc.setDrawColor(120, 120, 120);
+          doc.setLineWidth(0.7);
+          doc.setFillColor(216, 216, 216);
+          doc.rect(margen, yFila3, col3, 18, 'FD');
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(9.5);
+          doc.setTextColor(20, 20, 20);
+          doc.text('Proceso', margen + col3 / 2, yFila3 + 12.2, { align: 'center' });
+          doc.setFillColor(255, 255, 255);
+          doc.rect(margen, yFila3 + 18, col3, altoFila3 - 18, 'FD');
+          var pasosProceso = [
+            { etiqueta: 'Solicitado', hecho: true },
+            { etiqueta: 'Aprobado Jefe', hecho: ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA'].indexOf(v.estado) !== -1 },
+            { etiqueta: 'Autorizado (impreso)', hecho: !!v.fecha_impresion },
+            { etiqueta: 'Comprobado', hecho: v.estado === 'COMPROBADA' || v.estado === 'CERRADA' }
           ];
-          lineas.forEach(function(linea) {
-            doc.text(linea, 40, y);
-            y += 18;
+          var yPaso = yFila3 + 34;
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(9);
+          pasosProceso.forEach(function(paso) {
+            if (paso.hecho) {
+              doc.setTextColor(34, 139, 74);
+              doc.setFont(undefined, 'bold');
+              doc.text('✓', margen + 10, yPaso);
+            } else {
+              doc.setTextColor(180, 180, 180);
+              doc.setFont(undefined, 'normal');
+              doc.text('○', margen + 10, yPaso);
+            }
+            doc.setTextColor(20, 20, 20);
+            doc.setFont(undefined, 'normal');
+            doc.text(paso.etiqueta, margen + 24, yPaso);
+            yPaso += 17;
           });
+
+          // Caja "Firma Chofer": recuadro en blanco para firmar
+          var xFirma = margen + col3 + 16;
+          doc.setFillColor(216, 216, 216);
+          doc.rect(xFirma, yFila3, col3, 18, 'FD');
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(9.5);
+          doc.text('Firma Chofer', xFirma + col3 / 2, yFila3 + 12.2, { align: 'center' });
+          doc.setFillColor(255, 255, 255);
+          doc.rect(xFirma, yFila3 + 18, col3, altoFila3 - 18, 'FD');
+          doc.setFont(undefined, 'normal');
+
+          // QR específico de este vale: enlaza directo a "?vale=ID" para
+          // abrir la ventana modal de comprobación al escanearlo.
+          var xQR = margen + (col3 + 16) * 2;
+          try {
+            var urlVale = window.location.origin + window.location.pathname + '?vale=' + id;
+            var qrCanvas = document.createElement('canvas');
+            new QRious({ element: qrCanvas, value: urlVale, size: 300, background: 'white', foreground: 'black', level: 'M' });
+            var qrDataUrl = qrCanvas.toDataURL('image/png');
+            var qrLado = Math.min(col3, altoFila3) - 6;
+            doc.addImage(qrDataUrl, 'PNG', xQR + (col3 - qrLado) / 2, yFila3 + 3, qrLado, qrLado);
+          } catch (eQR) {
+            console.warn('No se pudo generar el código QR del vale:', eQR);
+          }
+
+          y = yFila3 + altoFila3 + 14;
+
+          // ===== Usuario solicitante / Chofer =====
+          var usuarioChofer = (v.departamento ? v.departamento + ' / ' : '') + (v.responsable || '');
+          dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 44, 'Usuario solicitante / Chofer', usuarioChofer);
+          y += 58;
+
+          // ===== Vehículo - Placas =====
+          var vehiculoTexto = vehiculo
+            ? (vehiculo.nombre + ' - ' + (vehiculo.placas || 'N/A') + ' - ' + (v.centro_negocio || '—'))
+            : ('Bidón - N/A - ' + (v.centro_negocio || '—'));
+          dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 44, 'Vehículo - Placas', vehiculoTexto);
+          y += 60;
+
+          // ===== Tabla de conceptos =====
+          var filaDatos = [
+            v.combustible || '—',
+            v.litros_autorizados != null ? String(v.litros_autorizados) : (v.cantidad_solicitada != null ? String(v.cantidad_solicitada) : '—'),
+            v.litros_cargados != null ? String(v.litros_cargados) : '',
+            v.precio_unitario != null ? formatoMoneda(v.precio_unitario, 'MXN') : '',
+            v.importe != null ? formatoMoneda(v.importe, 'MXN') : ''
+          ];
+          doc.autoTable({
+            startY: y,
+            margin: { left: margen, right: margen },
+            head: [['Concepto', 'Lts. Autorizados', 'Lts. Cargados', 'P.Unit', 'Importe']],
+            body: [filaDatos, ['', '', '', '', '']],
+            theme: 'grid',
+            styles: { fontSize: 9.5, cellPadding: 6, halign: 'center', lineColor: [120, 120, 120], lineWidth: 0.7 },
+            headStyles: { fillColor: [216, 216, 216], textColor: [20, 20, 20], fontStyle: 'bold' }
+          });
+
           doc.save((v.codigo || 'vale') + '.pdf');
 
           if (!v.fecha_impresion) {
@@ -9234,11 +9481,87 @@
             return buzonUsuarioParticipa(c, actual ? actual.usuario : null);
           });
 
-          buzonRenderListaConversaciones(buzonConversacionesCache, cont, 'No tienes conversaciones todavía. Usa "✉️ Nueva conversación" para iniciar una.');
+          buzonPaginacion.cont = cont;
+          buzonPaginacion.mensajeVacio = 'No tienes conversaciones todavía. Usa "✉️ Nueva conversación" para iniciar una.';
+          buzonPaginacion.datosFiltrados = buzonConversacionesCache;
+          buzonPaginacion.paginaActual = 1;
+          renderBuzonPaginado();
         } catch (e) {
           console.error('Error cargando el buzón:', e);
           if (cont) cont.innerHTML = '';
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo cargar el buzón: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      // ===== Paginación del Buzón (mismo patrón que la Bandeja de OC) =====
+      function renderBuzonPaginado() {
+        var cont = buzonPaginacion.cont;
+        if (!cont) return;
+
+        var datos = buzonPaginacion.datosFiltrados;
+        buzonPaginacion.totalRegistros = datos.length;
+
+        var totalPaginas = Math.max(1, Math.ceil(datos.length / buzonPaginacion.filasPorPagina));
+        if (buzonPaginacion.paginaActual > totalPaginas) buzonPaginacion.paginaActual = totalPaginas;
+        if (buzonPaginacion.paginaActual < 1) buzonPaginacion.paginaActual = 1;
+
+        var inicioPagina = (buzonPaginacion.paginaActual - 1) * buzonPaginacion.filasPorPagina;
+        var pagina = datos.slice(inicioPagina, inicioPagina + buzonPaginacion.filasPorPagina);
+
+        buzonRenderListaConversaciones(pagina, cont, buzonPaginacion.mensajeVacio);
+
+        var contenedorPag = document.getElementById('buzonPaginacionContainer');
+        if (contenedorPag) contenedorPag.style.display = datos.length === 0 ? 'none' : 'flex';
+
+        var contador = document.getElementById('buzonPaginacionContador');
+        if (contador) {
+          if (datos.length === 0) {
+            contador.textContent = 'Sin registros';
+          } else {
+            var inicio = inicioPagina + 1;
+            var fin = Math.min(buzonPaginacion.paginaActual * buzonPaginacion.filasPorPagina, datos.length);
+            contador.textContent = 'Mostrando ' + inicio + ' - ' + fin + ' de ' + datos.length;
+          }
+        }
+
+        var numerosCont = document.getElementById('buzonPaginacionNumeros');
+        if (numerosCont) {
+          var html = '';
+          for (var i = 1; i <= totalPaginas; i++) {
+            html += '<button class="' + (i === buzonPaginacion.paginaActual ? 'activa' : '') + '" onclick="window.irAPaginaBuzon(' + i + ')">' + i + '</button>';
+          }
+          numerosCont.innerHTML = html;
+        }
+
+        var btnAnterior = document.getElementById('buzonPaginacionAnterior');
+        if (btnAnterior) btnAnterior.disabled = buzonPaginacion.paginaActual <= 1;
+
+        var btnSiguiente = document.getElementById('buzonPaginacionSiguiente');
+        if (btnSiguiente) btnSiguiente.disabled = buzonPaginacion.paginaActual >= totalPaginas;
+
+        var selectFilas = document.getElementById('buzonFilasPorPagina');
+        if (selectFilas && String(selectFilas.value) !== String(buzonPaginacion.filasPorPagina)) {
+          selectFilas.value = String(buzonPaginacion.filasPorPagina);
+        }
+      }
+
+      window.irAPaginaBuzon = function(pagina) {
+        buzonPaginacion.paginaActual = pagina;
+        renderBuzonPaginado();
+      };
+
+      window.paginaAnteriorBuzon = function() {
+        if (buzonPaginacion.paginaActual > 1) {
+          buzonPaginacion.paginaActual--;
+          renderBuzonPaginado();
+        }
+      };
+
+      window.paginaSiguienteBuzon = function() {
+        var totalPaginas = Math.max(1, Math.ceil(buzonPaginacion.totalRegistros / buzonPaginacion.filasPorPagina));
+        if (buzonPaginacion.paginaActual < totalPaginas) {
+          buzonPaginacion.paginaActual++;
+          renderBuzonPaginado();
         }
       };
 
@@ -14895,6 +15218,101 @@
         }
       };
 
+      // ===== Paginación de "Control por Proyecto" (mismo patrón que la Bandeja de OC) =====
+      function renderTablaProyectosPaginada() {
+        var tablaProyectos = document.getElementById('tablaProyectos');
+        if (!tablaProyectos) return;
+
+        var datos = proyectosPaginacion.datosFiltrados;
+        proyectosPaginacion.totalRegistros = datos.length;
+
+        var totalPaginas = Math.max(1, Math.ceil(datos.length / proyectosPaginacion.filasPorPagina));
+        if (proyectosPaginacion.paginaActual > totalPaginas) proyectosPaginacion.paginaActual = totalPaginas;
+        if (proyectosPaginacion.paginaActual < 1) proyectosPaginacion.paginaActual = 1;
+
+        var inicioPagina = (proyectosPaginacion.paginaActual - 1) * proyectosPaginacion.filasPorPagina;
+        var pagina = datos.slice(inicioPagina, inicioPagina + proyectosPaginacion.filasPorPagina);
+
+        tablaProyectos.innerHTML = '';
+
+        if (datos.length === 0) {
+          tablaProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>';
+        } else {
+          pagina.forEach(function(p) {
+            var gastado = gastoProyectoMoneda(p.nombre);
+            var disponible = p.limite - gastado;
+            var esAdmin = actual && actual.rol === 'Administrador';
+            var esFinanzas = actual && actual.rol === 'Finanzas';
+            var pctLimiteFila = obtenerPorcentajeLimite(p);
+
+            var botones = '';
+            if (!esFinanzas || esAdmin) botones += '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesProyecto(' + proyectos.indexOf(p) + ')"><span></span><span></span><span></span></button>';
+
+            tablaProyectos.innerHTML += '<tr><td data-label="Centro de trabajo">' + (p.centro_trabajo || '—') + '</td><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite">' + formatoMoneda(p.limite, p.moneda) + ' (' + pctLimiteFila + '%)</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+          });
+        }
+
+        actualizarControlesPaginacionProyectos();
+      }
+
+      function actualizarControlesPaginacionProyectos() {
+        var total = proyectosPaginacion.totalRegistros;
+        var porPagina = proyectosPaginacion.filasPorPagina;
+        var pagina = proyectosPaginacion.paginaActual;
+        var totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+
+        var contador = document.getElementById('proyectosPaginacionContador');
+        if (contador) {
+          if (total === 0) {
+            contador.textContent = 'Sin registros';
+          } else {
+            var inicio = (pagina - 1) * porPagina + 1;
+            var fin = Math.min(pagina * porPagina, total);
+            contador.textContent = 'Mostrando ' + inicio + ' - ' + fin + ' de ' + total;
+          }
+        }
+
+        var numerosCont = document.getElementById('proyectosPaginacionNumeros');
+        if (numerosCont) {
+          var html = '';
+          for (var i = 1; i <= totalPaginas; i++) {
+            html += '<button class="' + (i === pagina ? 'activa' : '') + '" onclick="window.irAPaginaProyectos(' + i + ')">' + i + '</button>';
+          }
+          numerosCont.innerHTML = html;
+        }
+
+        var btnAnterior = document.getElementById('proyectosPaginacionAnterior');
+        if (btnAnterior) btnAnterior.disabled = pagina <= 1;
+
+        var btnSiguiente = document.getElementById('proyectosPaginacionSiguiente');
+        if (btnSiguiente) btnSiguiente.disabled = pagina >= totalPaginas;
+
+        var selectFilas = document.getElementById('proyectosFilasPorPagina');
+        if (selectFilas && String(selectFilas.value) !== String(porPagina)) {
+          selectFilas.value = String(porPagina);
+        }
+      }
+
+      window.irAPaginaProyectos = function(pagina) {
+        proyectosPaginacion.paginaActual = pagina;
+        renderTablaProyectosPaginada();
+      };
+
+      window.paginaAnteriorProyectos = function() {
+        if (proyectosPaginacion.paginaActual > 1) {
+          proyectosPaginacion.paginaActual--;
+          renderTablaProyectosPaginada();
+        }
+      };
+
+      window.paginaSiguienteProyectos = function() {
+        var totalPaginas = Math.max(1, Math.ceil(proyectosPaginacion.totalRegistros / proyectosPaginacion.filasPorPagina));
+        if (proyectosPaginacion.paginaActual < totalPaginas) {
+          proyectosPaginacion.paginaActual++;
+          renderTablaProyectosPaginada();
+        }
+      };
+
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
 
@@ -14924,28 +15342,17 @@
 
         ocPaginacion.datosFiltrados = obtenerOCFiltradas();
 
-        tablaProyectos.innerHTML = '';
         selectProyecto.innerHTML = '';
-
         if (proyectosVisibles.length === 0) {
-          tablaProyectos.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay proyectos disponibles</td></tr>';
           selectProyecto.innerHTML = '<option value="">No hay proyectos disponibles</option>';
         } else {
-          proyectosVisibles.forEach(function(p, idx) {
-            var gastado = gastoProyectoMoneda(p.nombre);
-            var disponible = p.limite - gastado;
-            var porcentaje = p.limite > 0 ? (gastado / p.limite) * 100 : 0;
-            var esAdmin = actual && actual.rol === 'Administrador';
-            var esFinanzas = actual && actual.rol === 'Finanzas';
-            var pctLimiteFila = obtenerPorcentajeLimite(p);
-
-            var botones = '';
-            if (!esFinanzas || esAdmin) botones += '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesProyecto(' + proyectos.indexOf(p) + ')"><span></span><span></span><span></span></button>';
-
-            tablaProyectos.innerHTML += '<tr><td data-label="Centro de trabajo">' + (p.centro_trabajo || '—') + '</td><td data-label="Empresa">' + (getAbreviaturaEmpresa(p.empresa) || p.empresa) + '</td><td data-label="Departamento">' + mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento) + '</td><td data-label="Proyecto"><strong>' + p.nombre + '</strong></td><td data-label="Cliente">' + p.cliente + '</td><td data-label="Presupuesto">' + formatoMoneda(p.presupuesto, p.moneda) + '</td><td data-label="Límite">' + formatoMoneda(p.limite, p.moneda) + ' (' + pctLimiteFila + '%)</td><td data-label="Pagado">' + formatoMoneda(gastado, p.moneda) + '</td><td data-label="Disponible" style="color:' + (disponible < 0 ? 'var(--color-rojo)' : '#2e7d32') + '">' + formatoMoneda(disponible, p.moneda) + '</td><td data-label="Acciones"><div class="actions">' + botones + '</div></td></tr>';
+          proyectosVisibles.forEach(function(p) {
             selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
           });
         }
+
+        proyectosPaginacion.datosFiltrados = proyectosVisibles;
+        renderTablaProyectosPaginada();
 
         if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
@@ -15844,6 +16251,36 @@
             actualizarHeaderLogo();
           }, 200);
 
+          // ===== Enlace de QR de un vale (VSC): abre directamente ese =====
+          // vale en su ventana modal para poder comprobarlo, sin que el
+          // usuario tenga que buscarlo manualmente en la lista.
+          if (pendingValeId) {
+            var valeIdAAbrir = pendingValeId;
+            pendingValeId = null;
+            setTimeout(async function() {
+              try {
+                window.mostrarModulo('vsc');
+                await window.cargarValesGasolina();
+                var v = valesGasolinaCache.find(function(x) { return x.id === valeIdAAbrir; });
+                if (!v) {
+                  alert('⚠️ No se encontró el vale (' + valeIdAAbrir + '). Puede que ya no exista o que no tengas permiso para verlo.');
+                  return;
+                }
+                window.visualizarVale(valeIdAAbrir);
+                // Si el vale ya fue impreso y está pendiente de comprobar,
+                // se abre directamente el modal de "Comprobar" (que es lo
+                // que normalmente se busca al escanear el QR); si no,
+                // se deja abierto el modal de "Visualizar" con sus
+                // acciones disponibles (p.ej. Aprobar, si aplica).
+                if (v.fecha_impresion && v.estado !== 'COMPROBADA' && v.estado !== 'CERRADA') {
+                  window.abrirComprobarVale(valeIdAAbrir);
+                }
+              } catch (e) {
+                console.error('Error abriendo el vale desde el enlace QR:', e);
+              }
+            }, 600);
+          }
+
         } catch (e) {
           console.error('❌ Error inicializando la interfaz después del login (revisa este mensaje en la consola):', e);
           try { window.mostrarMenuMaestroPrincipal(); } catch (e2) { console.error('❌ Error adicional mostrando el menú principal:', e2); }
@@ -15888,6 +16325,7 @@
         }
 
         detectarEnlaceTelegram();
+        detectarEnlaceVale();
 
         var ocFilasPorPagina = document.getElementById('ocFilasPorPagina');
         if (ocFilasPorPagina) {
@@ -15895,6 +16333,24 @@
             ocPaginacion.filasPorPagina = parseInt(this.value, 10) || 10;
             ocPaginacion.paginaActual = 1;
             renderTablaOCPaginada();
+          });
+        }
+
+        var proyectosFilasPorPagina = document.getElementById('proyectosFilasPorPagina');
+        if (proyectosFilasPorPagina) {
+          proyectosFilasPorPagina.addEventListener('change', function() {
+            proyectosPaginacion.filasPorPagina = parseInt(this.value, 10) || 10;
+            proyectosPaginacion.paginaActual = 1;
+            renderTablaProyectosPaginada();
+          });
+        }
+
+        var buzonFilasPorPagina = document.getElementById('buzonFilasPorPagina');
+        if (buzonFilasPorPagina) {
+          buzonFilasPorPagina.addEventListener('change', function() {
+            buzonPaginacion.filasPorPagina = parseInt(this.value, 10) || 10;
+            buzonPaginacion.paginaActual = 1;
+            renderBuzonPaginado();
           });
         }
 
@@ -18048,6 +18504,10 @@
 
       window.previsualizarReporteCXC = function() {
         try {
+          // Refresca la tabla en pantalla con los filtros vigentes (antes
+          // requería el botón "Aplicar Filtros", ahora Previsualizar
+          // Reporte hace esa misma acción antes de generar el PDF).
+          window.renderCXC();
           var cuentas = obtenerDatosCXC();
           var doc = generarPDFReporteCXC(cuentas);
           reportePreviewPDF = doc;
