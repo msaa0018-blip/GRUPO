@@ -1440,16 +1440,15 @@
   }
 
   /* ===== MÓDULO OC: toolbar estilo "menú de restaurante" =====
-     Los 3 botones se apilan verticalmente, centrados en la página, y cada
-     uno mide 1/3 de la altura total de la ventana (33.33vh). */
+     Los 3 botones van en una misma fila, separados entre sí, y cada uno
+     mide 1/3 de la altura total de la ventana (33.33vh). */
   .oc-menu-restaurante {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
-    align-items: stretch;
-    gap: 12px;
+    align-items: center;
+    gap: 16px;
     margin-bottom: 18px;
-    min-height: 100vh;
   }
   .oc-menu-item {
     display: flex;
@@ -1457,8 +1456,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    flex: 0 0 auto;
-    width: 100%;
+    flex: 1 1 0;
     height: 33.333vh;
     padding: 18px 12px;
     border-radius: 14px;
@@ -1477,6 +1475,12 @@
   .oc-menu-icono { font-size: 38px; line-height: 1; }
   .oc-menu-titulo { font-weight: 700; font-size: 17px; color: var(--gray-800); }
   .oc-menu-sub { font-size: 13px; color: var(--gray-500); }
+  @media (max-width: 640px) {
+    .oc-menu-restaurante { flex-wrap: wrap; }
+    .oc-menu-item { flex: 1 1 100%; height: 33.333vh; }
+    .oc-menu-icono { font-size: 30px; }
+    .oc-menu-titulo { font-size: 15px; }
+  }
 
   /* ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== */
   #buzonNuevaModal, #buzonConversacionModal, #ocChatModal {
@@ -8402,24 +8406,16 @@
       };
 
       // "Selecciona proyecto / contrato / OC" muestra los proyectos reales
-      // (módulo Proyectos) de la empresa y departamento del solicitante,
-      // ligados además al cliente y centro de negocio / sucursal elegidos.
+      // (módulo Proyectos) ligados al cliente y centro de trabajo /
+      // negocio elegidos en el vale — sin restringir por empresa o
+      // departamento del solicitante, ya que un mismo cliente/centro de
+      // trabajo puede tener proyectos de distintos departamentos.
       window.actualizarProyectosNuevoVale = function(empresa, depto) {
         var sel = document.getElementById('valeProyectoOC');
         if (!sel) return;
-        if (empresa === undefined) {
-          var empresaSel = document.getElementById('valeEmpresa');
-          var empresaOculto = document.getElementById('valeEmpresaValor');
-          empresa = empresaOculto ? empresaOculto.value : (empresaSel ? empresaSel.value : '');
-          var deptoSel = document.getElementById('valeDepartamento');
-          var deptoOculto = document.getElementById('valeDepartamentoValor');
-          depto = deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '');
-        }
         var nombreCliente = document.getElementById('valeCliente') ? document.getElementById('valeCliente').value : '';
         var centroNegocio = document.getElementById('valeCentroNegocio') ? document.getElementById('valeCentroNegocio').value : '';
         var coincidencias = (proyectos || []).filter(function(p) {
-          if (normalizar(p.empresa) !== normalizar(empresa)) return false;
-          if (depto && deptoParaComparar(p.empresa, p.departamento) !== deptoParaComparar(empresa, depto)) return false;
           if (nombreCliente && p.cliente !== nombreCliente) return false;
           if (centroNegocio && p.centro_trabajo !== centroNegocio) return false;
           return true;
@@ -8759,21 +8755,26 @@
       // Dibuja una "caja" con encabezado gris (etiqueta) y una fila de
       // valor debajo, igual al formato de "Orden de Suministros de
       // Combustible" (Razón Social, Folio, Fecha de carga, etc.).
+      // Dibuja una "caja" con encabezado gris (etiqueta) y una fila de
+      // valor debajo, con esquinas redondeadas (igual al formato de
+      // "Orden de Suministros de Combustible": Razón Social, Folio,
+      // Fecha de carga, etc.).
       function dibujarCajaEtiquetaVale(doc, x, y, w, h, etiqueta, valor, opts) {
         opts = opts || {};
         var alturaHeader = opts.alturaHeader || 14;
+        var radio = 3.5;
         doc.setDrawColor(120, 120, 120);
         doc.setLineWidth(0.6);
-        // Encabezado gris
+        // Encabezado gris (relleno redondeado)
         doc.setFillColor(216, 216, 216);
-        doc.rect(x, y, w, alturaHeader, 'FD');
+        doc.roundedRect(x, y, w, alturaHeader, radio, radio, 'F');
         doc.setFont(undefined, 'bold');
         doc.setFontSize(opts.etiquetaSize || 8.5);
         doc.setTextColor(20, 20, 20);
         doc.text(etiqueta, x + w / 2, y + alturaHeader / 2 + 2.8, { align: 'center' });
-        // Fila de valor
+        // Fila de valor (relleno redondeado)
         doc.setFillColor(255, 255, 255);
-        doc.rect(x, y + alturaHeader, w, h - alturaHeader, 'FD');
+        doc.roundedRect(x, y + alturaHeader, w, h - alturaHeader, radio, radio, 'F');
         doc.setFont(undefined, opts.valorBold ? 'bold' : 'normal');
         doc.setFontSize(opts.valorSize || 9);
         if (opts.valorColor) {
@@ -8785,6 +8786,11 @@
         doc.text(valorMostrado, x + w / 2, y + alturaHeader + (h - alturaHeader) / 2 + 2.8, { align: 'center', maxWidth: w - 10 });
         doc.setTextColor(20, 20, 20);
         doc.setFont(undefined, 'normal');
+        // Contorno completo de la caja (por encima de los rellenos, para
+        // que el borde quede limpio y unificado alrededor de ambas filas)
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(x, y, w, h, radio, radio, 'S');
       }
 
       // Dibuja UNA copia completa del vale (encabezado + cajas + tabla)
@@ -8801,25 +8807,27 @@
         doc.rect(margen - 10, yTop, anchoUtil + 20, ctx.altoTarjeta);
 
         // ===== Encabezado: logo Extingue (izq.) + razón social + título =====
+        // centrado + logo de la empresa del vale (der., si aplica) =====
         var yHeader = yTop + 10;
+        var altoLogo = 46, anchoLogo = 82;
         if (ctx.logoExtingueDataUrl) {
-          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', margen, yHeader - 4, 62, 40);
+          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', margen, yHeader, anchoLogo, altoLogo);
         }
         doc.setFont(undefined, 'bold');
-        doc.setFontSize(11);
+        doc.setFontSize(11.5);
         doc.setTextColor(20, 20, 20);
-        doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', margen + 72, yHeader + 10);
-        doc.setFontSize(9.5);
-        doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', margen + 72, yHeader + 24);
+        var xCentroTitulo = margen + anchoUtil / 2;
+        doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', xCentroTitulo, yHeader + 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', xCentroTitulo, yHeader + 35, { align: 'center' });
         doc.setFont(undefined, 'normal');
 
         // Logo de la empresa del vale (derecha), solo si no es Extingue
         if (ctx.logoEmpresaDataUrl) {
-          var wLogoDer = 62, hLogoDer = 40;
-          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - wLogoDer, yHeader - 4, wLogoDer, hLogoDer);
+          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - anchoLogo, yHeader, anchoLogo, altoLogo);
         }
 
-        var y = yHeader + 42;
+        var y = yHeader + altoLogo + 6;
         var mitad = (anchoUtil - 14) / 2;
 
         // ===== Fila 1: Razón Social Proveedor / Num. Cliente Extingue =====
@@ -8836,17 +8844,19 @@
         var col3 = (anchoUtil - 28) / 3;
         var yFila3 = y;
         var altoFila3 = 76;
+        var radioFila3 = 3.5;
 
         doc.setDrawColor(120, 120, 120);
         doc.setLineWidth(0.6);
         doc.setFillColor(216, 216, 216);
-        doc.rect(margen, yFila3, col3, 14, 'FD');
+        doc.roundedRect(margen, yFila3, col3, 14, radioFila3, radioFila3, 'F');
         doc.setFont(undefined, 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(20, 20, 20);
         doc.text('Proceso', margen + col3 / 2, yFila3 + 9.8, { align: 'center' });
         doc.setFillColor(255, 255, 255);
-        doc.rect(margen, yFila3 + 14, col3, altoFila3 - 14, 'FD');
+        doc.roundedRect(margen, yFila3 + 14, col3, altoFila3 - 14, radioFila3, radioFila3, 'F');
+        doc.roundedRect(margen, yFila3, col3, altoFila3, radioFila3, radioFila3, 'S');
         var pasosProceso = [
           { etiqueta: 'Solicitado', hecho: true },
           { etiqueta: 'Aprobado Jefe', hecho: ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA'].indexOf(v.estado) !== -1 },
@@ -8868,12 +8878,13 @@
         // Caja "Firma Chofer"
         var xFirma = margen + col3 + 14;
         doc.setFillColor(216, 216, 216);
-        doc.rect(xFirma, yFila3, col3, 14, 'FD');
+        doc.roundedRect(xFirma, yFila3, col3, 14, radioFila3, radioFila3, 'F');
         doc.setFont(undefined, 'bold');
         doc.setFontSize(8.5);
         doc.text('Firma Chofer', xFirma + col3 / 2, yFila3 + 9.8, { align: 'center' });
         doc.setFillColor(255, 255, 255);
-        doc.rect(xFirma, yFila3 + 14, col3, altoFila3 - 14, 'FD');
+        doc.roundedRect(xFirma, yFila3 + 14, col3, altoFila3 - 14, radioFila3, radioFila3, 'F');
+        doc.roundedRect(xFirma, yFila3, col3, altoFila3, radioFila3, radioFila3, 'S');
         doc.setFont(undefined, 'normal');
 
         // QR específico de este vale
