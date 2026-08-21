@@ -8731,35 +8731,190 @@
         return dias[f.getDay()] + ', ' + dd + '-' + mm + '-' + yy;
       }
 
+      // Dibuja un pequeño indicador de paso del "Proceso" del vale: un
+      // círculo relleno con palomita (paso cumplido) o un círculo vacío
+      // (paso pendiente), dibujado como vector — nunca como carácter
+      // Unicode (✓/○), que en jsPDF con la fuente estándar puede
+      // renderizarse mal (glifos rotos) según el visor de PDF.
+      function dibujarIndicadorProcesoVale(doc, x, y, hecho) {
+        var r = 3.6;
+        if (hecho) {
+          doc.setDrawColor(34, 139, 74);
+          doc.setFillColor(34, 139, 74);
+          doc.setLineWidth(0.6);
+          doc.circle(x, y - 2.6, r, 'FD');
+          doc.setDrawColor(255, 255, 255);
+          doc.setLineWidth(0.9);
+          doc.line(x - r * 0.5, y - 2.6, x - r * 0.05, y - 2.6 + r * 0.5);
+          doc.line(x - r * 0.05, y - 2.6 + r * 0.5, x + r * 0.55, y - 2.6 - r * 0.5);
+        } else {
+          doc.setDrawColor(180, 180, 180);
+          doc.setFillColor(255, 255, 255);
+          doc.setLineWidth(0.7);
+          doc.circle(x, y - 2.6, r, 'FD');
+        }
+        doc.setDrawColor(120, 120, 120);
+      }
+
       // Dibuja una "caja" con encabezado gris (etiqueta) y una fila de
       // valor debajo, igual al formato de "Orden de Suministros de
       // Combustible" (Razón Social, Folio, Fecha de carga, etc.).
       function dibujarCajaEtiquetaVale(doc, x, y, w, h, etiqueta, valor, opts) {
         opts = opts || {};
-        var alturaHeader = opts.alturaHeader || 18;
+        var alturaHeader = opts.alturaHeader || 14;
         doc.setDrawColor(120, 120, 120);
-        doc.setLineWidth(0.7);
+        doc.setLineWidth(0.6);
         // Encabezado gris
         doc.setFillColor(216, 216, 216);
         doc.rect(x, y, w, alturaHeader, 'FD');
         doc.setFont(undefined, 'bold');
-        doc.setFontSize(9.5);
+        doc.setFontSize(opts.etiquetaSize || 8.5);
         doc.setTextColor(20, 20, 20);
-        doc.text(etiqueta, x + w / 2, y + alturaHeader / 2 + 3.2, { align: 'center' });
+        doc.text(etiqueta, x + w / 2, y + alturaHeader / 2 + 2.8, { align: 'center' });
         // Fila de valor
         doc.setFillColor(255, 255, 255);
         doc.rect(x, y + alturaHeader, w, h - alturaHeader, 'FD');
         doc.setFont(undefined, opts.valorBold ? 'bold' : 'normal');
-        doc.setFontSize(opts.valorSize || 10);
+        doc.setFontSize(opts.valorSize || 9);
         if (opts.valorColor) {
           doc.setTextColor(opts.valorColor[0], opts.valorColor[1], opts.valorColor[2]);
         } else {
           doc.setTextColor(20, 20, 20);
         }
         var valorMostrado = (valor != null && valor !== '') ? String(valor) : '—';
-        doc.text(valorMostrado, x + w / 2, y + alturaHeader + (h - alturaHeader) / 2 + 3.2, { align: 'center', maxWidth: w - 12 });
+        doc.text(valorMostrado, x + w / 2, y + alturaHeader + (h - alturaHeader) / 2 + 2.8, { align: 'center', maxWidth: w - 10 });
         doc.setTextColor(20, 20, 20);
         doc.setFont(undefined, 'normal');
+      }
+
+      // Dibuja UNA copia completa del vale (encabezado + cajas + tabla)
+      // dentro del rectángulo [margen, yTop, anchoUtil, altoTarjeta].
+      // Se usa dos veces por hoja (misma info, para poder recortar/
+      // conservar dos copias del mismo folio).
+      function dibujarValeCompleto(doc, ctx, yTop) {
+        var v = ctx.v, vehiculo = ctx.vehiculo;
+        var margen = ctx.margen, anchoUtil = ctx.anchoUtil;
+
+        // Marco de la tarjeta
+        doc.setDrawColor(30, 30, 30);
+        doc.setLineWidth(1);
+        doc.rect(margen - 10, yTop, anchoUtil + 20, ctx.altoTarjeta);
+
+        // ===== Encabezado: logo Extingue (izq.) + razón social + título =====
+        var yHeader = yTop + 10;
+        if (ctx.logoExtingueDataUrl) {
+          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', margen, yHeader - 4, 62, 40);
+        }
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(20, 20, 20);
+        doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', margen + 72, yHeader + 10);
+        doc.setFontSize(9.5);
+        doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', margen + 72, yHeader + 24);
+        doc.setFont(undefined, 'normal');
+
+        // Logo de la empresa del vale (derecha), solo si no es Extingue
+        if (ctx.logoEmpresaDataUrl) {
+          var wLogoDer = 62, hLogoDer = 40;
+          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - wLogoDer, yHeader - 4, wLogoDer, hLogoDer);
+        }
+
+        var y = yHeader + 42;
+        var mitad = (anchoUtil - 14) / 2;
+
+        // ===== Fila 1: Razón Social Proveedor / Num. Cliente Extingue =====
+        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32, 'Razón Social Proveedor', v.proveedor);
+        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32, 'Num. Cliente Extingue', v.cliente);
+        y += 40;
+
+        // ===== Fila 2: Folio / Fecha de carga =====
+        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 11.5 });
+        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
+        y += 40;
+
+        // ===== Fila 3: Proceso / Firma Chofer / QR =====
+        var col3 = (anchoUtil - 28) / 3;
+        var yFila3 = y;
+        var altoFila3 = 76;
+
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.setFillColor(216, 216, 216);
+        doc.rect(margen, yFila3, col3, 14, 'FD');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(20, 20, 20);
+        doc.text('Proceso', margen + col3 / 2, yFila3 + 9.8, { align: 'center' });
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margen, yFila3 + 14, col3, altoFila3 - 14, 'FD');
+        var pasosProceso = [
+          { etiqueta: 'Solicitado', hecho: true },
+          { etiqueta: 'Aprobado Jefe', hecho: ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA'].indexOf(v.estado) !== -1 },
+          { etiqueta: 'Autorizado (impreso)', hecho: !!v.fecha_impresion },
+          { etiqueta: 'Comprobado', hecho: v.estado === 'COMPROBADA' || v.estado === 'CERRADA' }
+        ];
+        var yPaso = yFila3 + 26;
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        pasosProceso.forEach(function(paso) {
+          dibujarIndicadorProcesoVale(doc, margen + 9, yPaso, paso.hecho);
+          doc.setTextColor(paso.hecho ? 20 : 150, paso.hecho ? 20 : 150, paso.hecho ? 20 : 150);
+          doc.setFont(undefined, 'normal');
+          doc.text(paso.etiqueta, margen + 20, yPaso);
+          yPaso += 13.5;
+        });
+        doc.setTextColor(20, 20, 20);
+
+        // Caja "Firma Chofer"
+        var xFirma = margen + col3 + 14;
+        doc.setFillColor(216, 216, 216);
+        doc.rect(xFirma, yFila3, col3, 14, 'FD');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        doc.text('Firma Chofer', xFirma + col3 / 2, yFila3 + 9.8, { align: 'center' });
+        doc.setFillColor(255, 255, 255);
+        doc.rect(xFirma, yFila3 + 14, col3, altoFila3 - 14, 'FD');
+        doc.setFont(undefined, 'normal');
+
+        // QR específico de este vale
+        var xQR = margen + (col3 + 14) * 2;
+        if (ctx.qrDataUrl) {
+          var qrLado = Math.min(col3, altoFila3) - 4;
+          doc.addImage(ctx.qrDataUrl, 'PNG', xQR + (col3 - qrLado) / 2, yFila3 + 2, qrLado, qrLado);
+        }
+
+        y = yFila3 + altoFila3 + 8;
+
+        // ===== Usuario solicitante / Chofer =====
+        var usuarioChofer = (v.departamento ? v.departamento + ' / ' : '') + (v.responsable || '');
+        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28, 'Usuario solicitante / Chofer', usuarioChofer);
+        y += 34;
+
+        // ===== Vehículo - Placas =====
+        var vehiculoTexto = vehiculo
+          ? (vehiculo.nombre + ' - ' + (vehiculo.placas || 'N/A') + ' - ' + (v.centro_negocio || '—'))
+          : ('Bidón - N/A - ' + (v.centro_negocio || '—'));
+        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28, 'Vehículo - Placas', vehiculoTexto);
+        y += 36;
+
+        // ===== Tabla de conceptos =====
+        var filaDatos = [
+          v.combustible || '—',
+          v.litros_autorizados != null ? String(v.litros_autorizados) : (v.cantidad_solicitada != null ? String(v.cantidad_solicitada) : '—'),
+          v.litros_cargados != null ? String(v.litros_cargados) : '',
+          v.precio_unitario != null ? formatoMoneda(v.precio_unitario, 'MXN') : '',
+          v.importe != null ? formatoMoneda(v.importe, 'MXN') : ''
+        ];
+        doc.autoTable({
+          startY: y,
+          margin: { left: margen, right: margen },
+          head: [['Concepto', 'Lts. Autorizados', 'Lts. Cargados', 'P.Unit', 'Importe']],
+          body: [filaDatos, ['', '', '', '', '']],
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 3.5, halign: 'center', lineColor: [120, 120, 120], lineWidth: 0.6 },
+          headStyles: { fillColor: [216, 216, 216], textColor: [20, 20, 20], fontStyle: 'bold' },
+          tableWidth: anchoUtil
+        });
       }
 
       // Genera el documento del vale con el formato "Orden de Suministros
@@ -8767,7 +8922,9 @@
       // Firma del Chofer, QR específico del vale, Usuario solicitante,
       // Vehículo-Placas y tabla de conceptos). El QR codifica un enlace
       // directo ("?vale=ID") que, al escanearse y loguearse, abre este
-      // mismo vale en su ventana modal para comprobarlo.
+      // mismo vale en su ventana modal para comprobarlo. La misma
+      // información se imprime DOS VECES en la misma hoja (dos copias
+      // del folio, una arriba y otra abajo).
       window.imprimirPDFVale = async function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
@@ -8779,157 +8936,56 @@
           var margen = 40;
           var anchoUtil = 595.28 - margen * 2;
 
-          // Borde exterior del documento
-          doc.setDrawColor(30, 30, 30);
-          doc.setLineWidth(1.2);
-          doc.rect(margen - 12, margen - 12, anchoUtil + 24, 700);
-
-          // ===== Encabezado: logo Extingue (izquierda) + razón social + título =====
-          var yHeader = margen + 8;
+          // Logo de Extingue (izquierda) — se carga una sola vez y se
+          // reutiliza en ambas copias.
+          var logoExtingueDataUrl = null;
           try {
             var logoUrl = getLogoEmpresaCatalogo('GRUPO INDUSTRIAL EXTINGUE') || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
-            var logoDataUrl = await obtenerImagenComoDataURL(logoUrl);
-            if (logoDataUrl) {
-              doc.addImage(logoDataUrl, 'JPEG', margen, yHeader - 4, 85, 55);
-            }
+            logoExtingueDataUrl = await obtenerImagenComoDataURL(logoUrl);
           } catch (eLogo) {
-            console.warn('No se pudo cargar el logo para el PDF del vale:', eLogo);
+            console.warn('No se pudo cargar el logo de Extingue para el PDF del vale:', eLogo);
           }
-          doc.setFont(undefined, 'bold');
-          doc.setFontSize(13);
-          doc.setTextColor(20, 20, 20);
-          doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', margen + 100, yHeader + 14);
-          doc.setFontSize(11.5);
-          doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', margen + 100, yHeader + 32);
-          doc.setFont(undefined, 'normal');
 
-          // ===== Logotipo de la empresa del vale (derecha), solo si es =====
-          // distinta de GRUPO INDUSTRIAL EXTINGUE (evita duplicar el
-          // mismo logo cuando el vale ya pertenece a Extingue).
+          // Logo de la empresa del vale (derecha), solo si es distinta de
+          // GRUPO INDUSTRIAL EXTINGUE (evita duplicar el mismo logo).
+          var logoEmpresaDataUrl = null;
           try {
             var empresaVale = getEmpresaCatalogoPorNombre(v.empresa);
             var esExtingue = empresaVale && (empresaVale.id === 'GIE' || coincideOrg(v.empresa, 'GRUPO INDUSTRIAL EXTINGUE', 'GIE'));
             if (empresaVale && empresaVale.logo && !esExtingue) {
-              var logoEmpresaDataUrl = await obtenerImagenComoDataURL(empresaVale.logo);
-              if (logoEmpresaDataUrl) {
-                var wLogoDer = 85, hLogoDer = 55;
-                doc.addImage(logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - wLogoDer, yHeader - 4, wLogoDer, hLogoDer);
-              }
+              logoEmpresaDataUrl = await obtenerImagenComoDataURL(empresaVale.logo);
             }
           } catch (eLogoDer) {
             console.warn('No se pudo cargar el logo de la empresa del vale:', eLogoDer);
           }
 
-          var y = yHeader + 68;
-          var mitad = (anchoUtil - 16) / 2;
-
-          // ===== Fila 1: Razón Social Proveedor / Num. Cliente Extingue =====
-          dibujarCajaEtiquetaVale(doc, margen, y, mitad, 48, 'Razón Social Proveedor', v.proveedor);
-          dibujarCajaEtiquetaVale(doc, margen + mitad + 16, y, mitad, 48, 'Num. Cliente Extingue', v.cliente);
-          y += 62;
-
-          // ===== Fila 2: Folio / Fecha de carga =====
-          dibujarCajaEtiquetaVale(doc, margen, y, mitad, 48, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 13 });
-          dibujarCajaEtiquetaVale(doc, margen + mitad + 16, y, mitad, 48, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
-          y += 62;
-
-          // ===== Fila 3: Proceso / Firma Chofer / QR =====
-          var col3 = (anchoUtil - 32) / 3;
-          var yFila3 = y;
-          var altoFila3 = 110;
-
-          // Caja "Proceso": checklist de avance del vale
-          doc.setDrawColor(120, 120, 120);
-          doc.setLineWidth(0.7);
-          doc.setFillColor(216, 216, 216);
-          doc.rect(margen, yFila3, col3, 18, 'FD');
-          doc.setFont(undefined, 'bold');
-          doc.setFontSize(9.5);
-          doc.setTextColor(20, 20, 20);
-          doc.text('Proceso', margen + col3 / 2, yFila3 + 12.2, { align: 'center' });
-          doc.setFillColor(255, 255, 255);
-          doc.rect(margen, yFila3 + 18, col3, altoFila3 - 18, 'FD');
-          var pasosProceso = [
-            { etiqueta: 'Solicitado', hecho: true },
-            { etiqueta: 'Aprobado Jefe', hecho: ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA'].indexOf(v.estado) !== -1 },
-            { etiqueta: 'Autorizado (impreso)', hecho: !!v.fecha_impresion },
-            { etiqueta: 'Comprobado', hecho: v.estado === 'COMPROBADA' || v.estado === 'CERRADA' }
-          ];
-          var yPaso = yFila3 + 34;
-          doc.setFont(undefined, 'normal');
-          doc.setFontSize(9);
-          pasosProceso.forEach(function(paso) {
-            if (paso.hecho) {
-              doc.setTextColor(34, 139, 74);
-              doc.setFont(undefined, 'bold');
-              doc.text('✓', margen + 10, yPaso);
-            } else {
-              doc.setTextColor(180, 180, 180);
-              doc.setFont(undefined, 'normal');
-              doc.text('○', margen + 10, yPaso);
-            }
-            doc.setTextColor(20, 20, 20);
-            doc.setFont(undefined, 'normal');
-            doc.text(paso.etiqueta, margen + 24, yPaso);
-            yPaso += 17;
-          });
-
-          // Caja "Firma Chofer": recuadro en blanco para firmar
-          var xFirma = margen + col3 + 16;
-          doc.setFillColor(216, 216, 216);
-          doc.rect(xFirma, yFila3, col3, 18, 'FD');
-          doc.setFont(undefined, 'bold');
-          doc.setFontSize(9.5);
-          doc.text('Firma Chofer', xFirma + col3 / 2, yFila3 + 12.2, { align: 'center' });
-          doc.setFillColor(255, 255, 255);
-          doc.rect(xFirma, yFila3 + 18, col3, altoFila3 - 18, 'FD');
-          doc.setFont(undefined, 'normal');
-
           // QR específico de este vale: enlaza directo a "?vale=ID" para
-          // abrir la ventana modal de comprobación al escanearlo.
-          var xQR = margen + (col3 + 16) * 2;
+          // abrir la ventana modal de comprobación al escanearlo. Se
+          // genera una sola vez y se reutiliza en ambas copias.
+          var qrDataUrl = null;
           try {
             var urlVale = window.location.origin + window.location.pathname + '?vale=' + id;
             var qrCanvas = document.createElement('canvas');
             new QRious({ element: qrCanvas, value: urlVale, size: 300, background: 'white', foreground: 'black', level: 'M' });
-            var qrDataUrl = qrCanvas.toDataURL('image/png');
-            var qrLado = Math.min(col3, altoFila3) - 6;
-            doc.addImage(qrDataUrl, 'PNG', xQR + (col3 - qrLado) / 2, yFila3 + 3, qrLado, qrLado);
+            qrDataUrl = qrCanvas.toDataURL('image/png');
           } catch (eQR) {
             console.warn('No se pudo generar el código QR del vale:', eQR);
           }
 
-          y = yFila3 + altoFila3 + 14;
+          var ctx = {
+            v: v,
+            vehiculo: vehiculo,
+            margen: margen,
+            anchoUtil: anchoUtil,
+            altoTarjeta: 388,
+            logoExtingueDataUrl: logoExtingueDataUrl,
+            logoEmpresaDataUrl: logoEmpresaDataUrl,
+            qrDataUrl: qrDataUrl
+          };
 
-          // ===== Usuario solicitante / Chofer =====
-          var usuarioChofer = (v.departamento ? v.departamento + ' / ' : '') + (v.responsable || '');
-          dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 44, 'Usuario solicitante / Chofer', usuarioChofer);
-          y += 58;
-
-          // ===== Vehículo - Placas =====
-          var vehiculoTexto = vehiculo
-            ? (vehiculo.nombre + ' - ' + (vehiculo.placas || 'N/A') + ' - ' + (v.centro_negocio || '—'))
-            : ('Bidón - N/A - ' + (v.centro_negocio || '—'));
-          dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 44, 'Vehículo - Placas', vehiculoTexto);
-          y += 60;
-
-          // ===== Tabla de conceptos =====
-          var filaDatos = [
-            v.combustible || '—',
-            v.litros_autorizados != null ? String(v.litros_autorizados) : (v.cantidad_solicitada != null ? String(v.cantidad_solicitada) : '—'),
-            v.litros_cargados != null ? String(v.litros_cargados) : '',
-            v.precio_unitario != null ? formatoMoneda(v.precio_unitario, 'MXN') : '',
-            v.importe != null ? formatoMoneda(v.importe, 'MXN') : ''
-          ];
-          doc.autoTable({
-            startY: y,
-            margin: { left: margen, right: margen },
-            head: [['Concepto', 'Lts. Autorizados', 'Lts. Cargados', 'P.Unit', 'Importe']],
-            body: [filaDatos, ['', '', '', '', '']],
-            theme: 'grid',
-            styles: { fontSize: 9.5, cellPadding: 6, halign: 'center', lineColor: [120, 120, 120], lineWidth: 0.7 },
-            headStyles: { fillColor: [216, 216, 216], textColor: [20, 20, 20], fontStyle: 'bold' }
-          });
+          // Dos copias del mismo vale en la misma hoja.
+          dibujarValeCompleto(doc, ctx, 18);
+          dibujarValeCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
 
           doc.save((v.codigo || 'vale') + '.pdf');
 
