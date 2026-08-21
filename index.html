@@ -738,6 +738,23 @@
     min-height: 34px;
     width: 100%;
   }
+  /* Contenedor de botones de acciones por fila (Bandeja de OF, Control por
+     Proyecto, CXC, etc.) — antes sin estilo, quedaban amontonados. */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .actions button {
+    font-size: 11px;
+    padding: 4px 8px;
+    min-height: 30px;
+    min-width: 0;
+    white-space: nowrap;
+  }
   .oc-acciones-container button {
     font-size: 11px;
     padding: 4px 6px;
@@ -4602,8 +4619,12 @@
       </div>
 
       <!-- Resto de módulos (OC, Proyectos, CXP, CXC, OF) -->
-      <div id="proyectosModalToolbar" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
-        <button onclick="window.abrirModalCard('tablaProyectosCard')">📊 Control por Proyecto</button>
+      <div id="proyectosModalToolbar" class="hidden oc-menu-restaurante">
+        <button class="oc-menu-item" onclick="window.abrirModalCard('tablaProyectosCard')">
+          <span class="oc-menu-icono">📊</span>
+          <span class="oc-menu-titulo">Control por Proyecto</span>
+          <span class="oc-menu-sub">Presupuestos y límites</span>
+        </button>
       </div>
 
       <div id="panelProyecto" class="card hidden">
@@ -7058,6 +7079,11 @@
       // MOSTRAR MÓDULO - MODIFICADO PARA INDICADORES
       // ============================================================
       // Abre una tarjeta (Bandeja de OC / Control por Proyecto) como ventana modal.
+      // Recuerda desde qué módulo se abrió "Control por Proyecto" (puede
+      // abrirse tanto desde OC como desde el propio módulo Proyectos), para
+      // que al cerrarlo con la "✕" regrese exactamente a esa pestaña.
+      var moduloOrigenControlProyecto = 'oc';
+
       window.abrirModalCard = function(id) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -7066,6 +7092,7 @@
         document.getElementById('modalOverlayBackdrop').classList.add('active');
 
         if (id === 'tablaProyectosCard') {
+          moduloOrigenControlProyecto = moduloActual || 'oc';
           var btnAgregar = document.getElementById('btnAgregarProyectoModal');
           if (btnAgregar) {
             btnAgregar.style.display = (actual && usuarioPuedeCrearProyectos(actual)) ? 'inline-flex' : 'none';
@@ -7088,10 +7115,11 @@
       // Menú hamburguesa del módulo OC: agrupa "Crear Orden de Compra",
       // "Bandeja de OC" y "Control por Proyecto" en una sola ventana modal.
       // Botón "✕" de "Control por Proyecto": cierra la modal y regresa a
-      // la pantalla de OC (desde donde normalmente se abre este control).
+      // la pestaña principal desde donde se abrió (OC o Proyectos, según
+      // cuál de los dos botones "Control por Proyecto" se haya usado).
       window.cerrarControlProyecto = function() {
         window.cerrarModalCard('tablaProyectosCard');
-        window.mostrarModulo('oc');
+        window.mostrarModulo(moduloOrigenControlProyecto || 'oc');
       };
 
       // Bandera: si es true, al crear el proyecto exitosamente se regresa
@@ -16129,18 +16157,36 @@
 
           if (ocId) {
             console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
-            pendingOcId = ocId;
-            ocNotificadaId = ocId;
 
             // Si el Director vuelve a entrar por el mismo enlace y esa OC
             // ya fue autorizada (o siguió su curso: pagada/facturada/
-            // cancelada) en una visita anterior, se le informa con un
-            // mensaje claro en vez de dejarlo buscando una fila que ya no
-            // está pendiente.
+            // cancelada) en una visita anterior, el link ya se usó: se
+            // avisa, se cierra la sesión y se regresa al login limpio,
+            // limpiando la URL para que no vuelva a apuntar a esta OC
+            // (misma lógica que el enlace QR de los vales de gasolina).
             var ocEnlace = ordenes.find(function(o) { return o.id === ocId; });
             if (ocEnlace && ocEnlace.estado !== 'PENDIENTE_DIRECTOR') {
-              alert('esta OC ya ha sido autorizada previamente\ngracias!');
+              alert('⚠️ Esta OC ya ha sido autorizada previamente. El link ya ha sido utilizado.');
+              pendingOcId = null;
+              var urlLimpiaOC = window.location.origin + window.location.pathname;
+              window.history.replaceState({}, '', urlLimpiaOC);
+              actual = null;
+              var appContenidoOC = document.getElementById('contenidoApp');
+              if (appContenidoOC) { appContenidoOC.classList.remove('visible'); appContenidoOC.classList.add('hidden'); }
+              var headerOC = document.getElementById('mainHeader');
+              if (headerOC) headerOC.classList.add('hidden');
+              var loginFormOC = document.getElementById('login');
+              if (loginFormOC) loginFormOC.classList.remove('hidden');
+              var loginContOC = document.getElementById('loginContainer');
+              if (loginContOC) loginContOC.style.display = '';
+              var menuMaestroOC = document.getElementById('menuMaestroPrincipal');
+              if (menuMaestroOC) { menuMaestroOC.classList.add('hidden'); menuMaestroOC.classList.remove('visible'); }
+              try { location.reload(); } catch (eReloadOC) { console.warn('No se pudo recargar automáticamente:', eReloadOC); }
+              return;
             }
+
+            pendingOcId = ocId;
+            ocNotificadaId = ocId;
 
             configurarModulos();
 
