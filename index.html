@@ -16389,10 +16389,23 @@
 
                 if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
                   alert('⚠️ El link ya ha sido utilizado.');
-                  // Al aceptar el mensaje, se cierra la sesión y se
-                  // recarga para mostrar el login limpio (la URL ya fue
-                  // limpiada arriba, así que no vuelve a apuntar al VSC).
-                  location.reload();
+                  // Al aceptar el mensaje, se cierra la sesión y se regresa
+                  // al login limpio (la URL ya fue limpiada arriba, así que
+                  // no vuelve a apuntar al VSC). Se restablece el DOM
+                  // directamente (no solo location.reload()) para que
+                  // funcione también si el navegador difiere el reload.
+                  actual = null;
+                  var appContenido = document.getElementById('contenidoApp');
+                  if (appContenido) { appContenido.classList.remove('visible'); appContenido.classList.add('hidden'); }
+                  var header = document.getElementById('mainHeader');
+                  if (header) header.classList.add('hidden');
+                  var loginForm = document.getElementById('login');
+                  if (loginForm) loginForm.classList.remove('hidden');
+                  var loginCont = document.getElementById('loginContainer');
+                  if (loginCont) loginCont.style.display = '';
+                  var menuMaestro = document.getElementById('menuMaestroPrincipal');
+                  if (menuMaestro) { menuMaestro.classList.add('hidden'); menuMaestro.classList.remove('visible'); }
+                  try { location.reload(); } catch (eReload) { console.warn('No se pudo recargar automáticamente:', eReload); }
                   return;
                 }
 
