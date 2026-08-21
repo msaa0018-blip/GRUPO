@@ -8693,7 +8693,11 @@
         if (puedeAprobar) {
           botones += '<button class="success" onclick="window.aprobarValeGasolina(' + v.id + ').then(window.cerrarVisualizarVale)">✅ Aprobar</button>';
         }
-        if (['APROBADA_JEFE', 'COMPROBADA', 'CERRADA'].indexOf(v.estado) !== -1) {
+        // "Imprimir PDF" solo está disponible mientras el vale sigue en
+        // APROBADA_JEFE (autorizado, aún no comprobado). Una vez que se
+        // comprueba (COMPROBADA) o se cierra (CERRADA), se retira para
+        // evitar imprimir/duplicar el vale después de que ya fue cargado.
+        if (v.estado === 'APROBADA_JEFE') {
           botones += '<button class="success" onclick="window.imprimirPDFVale(' + v.id + ')">🖨️ Imprimir PDF</button>';
         }
         if (v.fecha_impresion && v.estado !== 'COMPROBADA' && v.estado !== 'CERRADA') {
@@ -8942,6 +8946,14 @@
       window.imprimirPDFVale = async function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
+        // Salvaguarda: una vez comprobado (o cerrado), ya no se puede
+        // volver a imprimir, para evitar duplicados del vale una vez
+        // cargado. El botón ya se oculta en ese punto, pero esto cubre
+        // cualquier otra vía de llamada (p.ej. el enlace del QR).
+        if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
+          alert('⚠️ Este vale ya fue comprobado. No es posible volver a imprimirlo para evitar duplicados.');
+          return;
+        }
         var vehiculo = vehiculosCache.find(function(x) { return x.id === v.vehiculo_id; });
 
         try {
@@ -16354,19 +16366,34 @@
 
           // ===== Enlace de QR de un vale (VSC): abre directamente ese =====
           // vale en su ventana modal para poder comprobarlo, sin que el
-          // usuario tenga que buscarlo manualmente en la lista.
+          // usuario tenga que buscarlo manualmente en la lista. Si el
+          // vale ya fue comprobado (o cerrado), el enlace ya se usó: se
+          // avisa y se manda al usuario al menú principal, limpiando el
+          // parámetro de la URL para que el enlace no se pueda reutilizar.
           if (pendingValeId) {
             var valeIdAAbrir = pendingValeId;
             pendingValeId = null;
             setTimeout(async function() {
               try {
-                window.mostrarModulo('vsc');
                 await window.cargarValesGasolina();
                 var v = valesGasolinaCache.find(function(x) { return x.id === valeIdAAbrir; });
+
+                var urlLimpia = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, '', urlLimpia);
+
                 if (!v) {
                   alert('⚠️ No se encontró el vale (' + valeIdAAbrir + '). Puede que ya no exista o que no tengas permiso para verlo.');
+                  window.mostrarMenuMaestroPrincipal();
                   return;
                 }
+
+                if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
+                  alert('⚠️ El link ya ha sido utilizado.');
+                  window.mostrarMenuMaestroPrincipal();
+                  return;
+                }
+
+                window.mostrarModulo('vsc');
                 window.visualizarVale(valeIdAAbrir);
                 // Si el vale ya fue impreso y está pendiente de comprobar,
                 // se abre directamente el modal de "Comprobar" (que es lo
