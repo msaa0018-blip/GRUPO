@@ -8784,11 +8784,10 @@
           doc.setLineWidth(1.2);
           doc.rect(margen - 12, margen - 12, anchoUtil + 24, 700);
 
-          // ===== Encabezado: logo + razón social + título =====
+          // ===== Encabezado: logo Extingue (izquierda) + razón social + título =====
           var yHeader = margen + 8;
           try {
-            var logoEmpresa = ORG_CATALOGO.empresas.find(function(e) { return e.nombre.indexOf('EXTINGUE') !== -1 || e.abreviatura === 'GIE'; });
-            var logoUrl = logoEmpresa ? logoEmpresa.logo : 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+            var logoUrl = getLogoEmpresaCatalogo('GRUPO INDUSTRIAL EXTINGUE') || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
             var logoDataUrl = await obtenerImagenComoDataURL(logoUrl);
             if (logoDataUrl) {
               doc.addImage(logoDataUrl, 'JPEG', margen, yHeader - 4, 85, 55);
@@ -8803,6 +8802,23 @@
           doc.setFontSize(11.5);
           doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', margen + 100, yHeader + 32);
           doc.setFont(undefined, 'normal');
+
+          // ===== Logotipo de la empresa del vale (derecha), solo si es =====
+          // distinta de GRUPO INDUSTRIAL EXTINGUE (evita duplicar el
+          // mismo logo cuando el vale ya pertenece a Extingue).
+          try {
+            var empresaVale = getEmpresaCatalogoPorNombre(v.empresa);
+            var esExtingue = empresaVale && (empresaVale.id === 'GIE' || coincideOrg(v.empresa, 'GRUPO INDUSTRIAL EXTINGUE', 'GIE'));
+            if (empresaVale && empresaVale.logo && !esExtingue) {
+              var logoEmpresaDataUrl = await obtenerImagenComoDataURL(empresaVale.logo);
+              if (logoEmpresaDataUrl) {
+                var wLogoDer = 85, hLogoDer = 55;
+                doc.addImage(logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - wLogoDer, yHeader - 4, wLogoDer, hLogoDer);
+              }
+            }
+          } catch (eLogoDer) {
+            console.warn('No se pudo cargar el logo de la empresa del vale:', eLogoDer);
+          }
 
           var y = yHeader + 68;
           var mitad = (anchoUtil - 16) / 2;
