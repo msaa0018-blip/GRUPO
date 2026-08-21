@@ -4619,12 +4619,8 @@
       </div>
 
       <!-- Resto de módulos (OC, Proyectos, CXP, CXC, OF) -->
-      <div id="proyectosModalToolbar" class="hidden oc-menu-restaurante">
-        <button class="oc-menu-item" onclick="window.abrirModalCard('tablaProyectosCard')">
-          <span class="oc-menu-icono">📊</span>
-          <span class="oc-menu-titulo">Control por Proyecto</span>
-          <span class="oc-menu-sub">Presupuestos y límites</span>
-        </button>
+      <div id="proyectosModalToolbar" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+        <button class="btn-visualizar" onclick="window.abrirModalCard('tablaProyectosCard')">📊 Control por Proyecto</button>
       </div>
 
       <div id="panelProyecto" class="card hidden">
@@ -6657,6 +6653,83 @@
         }
       }
 
+      // ============================================================
+      // SINCRONIZACIÓN EN TIEMPO REAL (Supabase Realtime)
+      // ============================================================
+      // Cuando otro usuario crea/edita/elimina una OC o un vale de
+      // gasolina, todos los demás usuarios conectados ven el cambio de
+      // forma automática (sin recargar la página), tanto en la Bandeja
+      // de OC / Control por Proyecto como en las bandejas y estados de
+      // los vales VSC.
+      //
+      // Requiere que Realtime esté habilitado en Supabase para las
+      // tablas "ordenes", "proyectos", "cuentas_cxc",
+      // "ordenes_facturacion" y "vales_gasolina" (Database → Replication
+      // en el panel de Supabase). Si no está habilitado, esto no rompe
+      // nada: simplemente no llegan actualizaciones en vivo y el sistema
+      // sigue funcionando como antes (refrescando solo al navegar).
+      var canalesRealtimeActivos = [];
+      var refrescoRealtimeOCPendiente = null;
+      var refrescoRealtimeValesPendiente = null;
+
+      window.iniciarSincronizacionTiempoReal = function() {
+        if (canalesRealtimeActivos.length > 0) return; // ya iniciado
+
+        // OC / Proyectos / CXC / OF: cualquier cambio en estas tablas
+        // recarga los datos y vuelve a pintar la vista actual (Bandeja de
+        // OC, Control por Proyecto, CXP, CXC, OF), con un pequeño
+        // "debounce" para no recargar de más si llegan varios cambios
+        // seguidos (por ejemplo, al confirmar una OC con productos).
+        var canalOC = supabase.channel('sync-oc-proyectos')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, function(payload) { console.log('🔄 Realtime OC:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'proyectos' }, function(payload) { console.log('🔄 Realtime Proyectos:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'cuentas_cxc' }, function(payload) { console.log('🔄 Realtime CXC:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes_facturacion' }, function(payload) { console.log('🔄 Realtime OF:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
+          .subscribe(function(status, err) {
+            console.log('📡 Canal Realtime "sync-oc-proyectos":', status, err || '');
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error('❌ No se pudo conectar el canal de OC/Proyectos en tiempo real. Revisa que "ordenes", "proyectos", "cuentas_cxc" y "ordenes_facturacion" estén agregadas a la publicación supabase_realtime en Supabase.');
+            }
+          });
+        canalesRealtimeActivos.push(canalOC);
+
+        // Vales de gasolina (VSC): igual, pero refresca solo esa lista.
+        var canalVSC = supabase.channel('sync-vales-gasolina')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'vales_gasolina' }, function(payload) { console.log('🔄 Realtime Vales:', payload.eventType, payload.table); programarRefrescoRealtimeVales(); })
+          .subscribe(function(status, err) {
+            console.log('📡 Canal Realtime "sync-vales-gasolina":', status, err || '');
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error('❌ No se pudo conectar el canal de Vales de gasolina en tiempo real. Revisa que "vales_gasolina" esté agregada a la publicación supabase_realtime en Supabase.');
+            }
+          });
+        canalesRealtimeActivos.push(canalVSC);
+      };
+
+      function programarRefrescoRealtimeOC() {
+        if (refrescoRealtimeOCPendiente) clearTimeout(refrescoRealtimeOCPendiente);
+        refrescoRealtimeOCPendiente = setTimeout(async function() {
+          refrescoRealtimeOCPendiente = null;
+          try {
+            await cargarDatos();
+            if (typeof render === 'function') render();
+          } catch (e) {
+            console.error('Error al sincronizar cambios en tiempo real (OC/Proyectos):', e);
+          }
+        }, 400);
+      }
+
+      function programarRefrescoRealtimeVales() {
+        if (refrescoRealtimeValesPendiente) clearTimeout(refrescoRealtimeValesPendiente);
+        refrescoRealtimeValesPendiente = setTimeout(async function() {
+          refrescoRealtimeValesPendiente = null;
+          try {
+            await window.cargarValesGasolina();
+          } catch (e) {
+            console.error('Error al sincronizar cambios en tiempo real (Vales de gasolina):', e);
+          }
+        }, 400);
+      }
+
       async function cargarDatos() {
         try {
           await cargarUsuarios();
@@ -8394,6 +8467,7 @@
         var deptoOculto = document.getElementById('valeDepartamentoValor');
         var depto = deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '');
         var sel = document.getElementById('valeVehiculo');
+        var valorActual = sel.value;
         var disponibles = vehiculosCache.filter(function(v) {
           if (!v.empresa) return true;
           if (normalizar(v.empresa) !== normalizar(empresa)) return false;
@@ -8402,6 +8476,9 @@
         });
         sel.innerHTML = '<option value="" disabled selected hidden>Selecciona vehículo *</option>' +
           disponibles.map(function(v) { return '<option value="' + v.id + '">' + escapeHTML(v.nombre) + (v.placas ? ' (' + escapeHTML(v.placas) + ')' : '') + '</option>'; }).join('');
+        // Conserva el vehículo ya elegido si sigue disponible en la lista
+        // (evita que se reconstruya el select y se pierda la selección).
+        if (disponibles.some(function(v) { return String(v.id) === valorActual; })) sel.value = valorActual;
 
         window.actualizarProyectosNuevoVale(empresa, depto);
       };
@@ -8444,6 +8521,7 @@
       window.actualizarProyectosNuevoVale = function(empresa, depto) {
         var sel = document.getElementById('valeProyectoOC');
         if (!sel) return;
+        var valorActual = sel.value;
         var nombreCliente = document.getElementById('valeCliente') ? document.getElementById('valeCliente').value : '';
         var centroNegocio = document.getElementById('valeCentroNegocio') ? document.getElementById('valeCentroNegocio').value : '';
         var coincidencias = (proyectos || []).filter(function(p) {
@@ -8453,6 +8531,8 @@
         });
         sel.innerHTML = '<option value="" disabled selected hidden>' + (nombreCliente ? 'Selecciona proyecto / contrato / OC' : 'Selecciona primero un cliente') + '</option>' +
           coincidencias.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + (p.codigo ? ' (' + escapeHTML(p.codigo) + ')' : '') + '</option>'; }).join('');
+        // Conserva la selección previa si sigue siendo una opción válida.
+        if (coincidencias.some(function(p) { return p.nombre === valorActual; })) sel.value = valorActual;
       };
 
       window.agregarValeGasolina = async function() {
@@ -8501,16 +8581,10 @@
           var codigoGenerado = 'VSC-' + String(nuevoId).padStart(5, '0');
           await supabase.from('vales_gasolina').update({ codigo: codigoGenerado }).eq('id', nuevoId);
 
-          document.getElementById('valeLitros').value = '';
-          document.getElementById('valeFechaCarga').value = '';
-          document.getElementById('valePeriodoInicio').value = '';
-          document.getElementById('valePeriodoFin').value = '';
-          document.getElementById('valeProveedor').value = '';
-          document.getElementById('valeCliente').value = '';
-          document.getElementById('valeCentroNegocio').value = '';
-          document.getElementById('valeProyectoOC').value = '';
-          document.getElementById('valeCombustible').value = '';
-          document.getElementById('valeNivelTanque').value = '';
+          // No se borran los campos del formulario: el vale recién
+          // registrado se queda visible para que el usuario pueda
+          // revisarlo/corregirlo si hace falta, en vez de perder de golpe
+          // lo que acababa de capturar.
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.</div>';
           window.cargarValesGasolina();
         } catch (e) {
@@ -16063,6 +16137,8 @@
             return;
           }
 
+          window.iniciarSincronizacionTiempoReal();
+
           actual = {
             usuario: userData.usuario,
             u: userData.usuario,
@@ -18143,9 +18219,6 @@
         document.getElementById('mensajeOC').innerHTML = '<div class="success-msg">✅ OC CREADA. CÓDIGO: ' + codigo + '</div>';
 
         try {
-          document.getElementById('cuerpoProductos').innerHTML = '';
-          window.agregarFilaProducto();
-          document.getElementById('totalProductos').textContent = '$0.00';
           if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
           render();
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
@@ -18155,9 +18228,56 @@
           doc.save(codigo + '.pdf');
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
-          document.getElementById('mensajeOC').innerHTML += '<div class="alert">⚠️ La OC se guardó, pero no se pudo generar el PDF automáticamente. Revisa la consola.</div>';
         }
+
+        // Cierra "Crear Orden de Compra" y muestra de inmediato la Bandeja
+        // de OC ya actualizada con la nueva orden. El formulario se deja
+        // completamente en blanco (como al inicio) para la próxima vez
+        // que se abra "Crear Orden de Compra".
+        window.cerrarModalCard('panelOC');
+        resetFormularioOC();
+        window.abrirModalCard('bandejaOCCard');
       };
+
+      // Deja el formulario "Crear Orden de Compra" exactamente como al
+      // abrirlo por primera vez (todos los campos en blanco, una sola
+      // fila de producto vacía). Se usa después de confirmar una OC para
+      // que la próxima vez que se abra el formulario no arrastre los
+      // datos de la orden recién creada.
+      function resetFormularioOC() {
+        var selectProyecto = document.getElementById('selectProyecto');
+        if (selectProyecto) selectProyecto.selectedIndex = 0;
+
+        ['proveedor', 'sucursal', 'rfc', 'direccion', 'direccionEntrega', 'cp',
+          'fechaPago', 'fechaEntrega', 'notasOC', 'banco', 'cuenta', 'clabe',
+          'swift', 'cie', 'referencia', 'paridadInicial'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+
+        var usoCFDI = document.getElementById('usoCFDI');
+        if (usoCFDI) usoCFDI.selectedIndex = 0;
+
+        var monedaOC = document.getElementById('monedaOC');
+        if (monedaOC) monedaOC.value = 'MXN';
+        var paridadInicial = document.getElementById('paridadInicial');
+        if (paridadInicial) paridadInicial.style.display = 'none';
+        var paridadInicialLabel = document.getElementById('paridadInicialLabel');
+        if (paridadInicialLabel) paridadInicialLabel.style.display = 'none';
+
+        var formatoMembreteOC = document.getElementById('formatoMembreteOC');
+        if (formatoMembreteOC) formatoMembreteOC.selectedIndex = 0;
+
+        var condicionesComercialesOC = document.getElementById('condicionesComercialesOC');
+        if (condicionesComercialesOC) condicionesComercialesOC.selectedIndex = 0;
+
+        document.getElementById('cuerpoProductos').innerHTML = '';
+        window.agregarFilaProducto();
+        document.getElementById('totalProductos').textContent = '$0.00';
+        document.getElementById('mensajeOC').innerHTML = '';
+
+        if (typeof window.actualizarDatosOC === 'function') window.actualizarDatosOC();
+      }
 
       window.imprimirOC = async function(index) {
         var oc = ordenes[index];
