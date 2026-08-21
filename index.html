@@ -4724,7 +4724,7 @@
       <div id="panelOC" class="card modal-card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <h2 style="margin:0;">📄 Crear Orden de Compra</h2>
-          <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('panelOC')">✕</button>
+          <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarPanelOC()">✕</button>
         </div>
         <div class="grupo-formulario">
           <div class="flex">
@@ -5255,7 +5255,7 @@
     <div id="dashboardContent"></div>
   </div>
 
-  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarModalCard('panelOC'); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
+  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarPanelOC(); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
 
   <div id="pdfPreviewModal">
     <div class="modal-content">
@@ -7273,6 +7273,15 @@
           window.agregarFilaProducto();
         }
         if (typeof window.actualizarDatosOC === 'function') window.actualizarDatosOC();
+      };
+
+      // Botón "✕" de "Crear Orden de Compra": cierra la modal Y limpia
+      // todo lo capturado, para que la próxima vez que se abra el
+      // formulario esté completamente en blanco (igual que al confirmar
+      // una OC exitosamente).
+      window.cerrarPanelOC = function() {
+        window.cerrarModalCard('panelOC');
+        if (typeof resetFormularioOC === 'function') resetFormularioOC();
       };
 
       // Escapa texto antes de insertarlo en HTML, para evitar que un nombre
@@ -18215,8 +18224,17 @@
         try {
           var doc = await generarPDFParaPreview(datos);
           ocPreviewPDF = doc;
-          var pdfData = doc.output('datauristring');
-          document.getElementById('pdfPreviewFrame').src = pdfData;
+          // Se usa blob + URL.createObjectURL en vez de
+          // doc.output('datauristring'): con membretes que incluyen varias
+          // imágenes (franjas, logo, fondo) el data URI resultante puede
+          // ser demasiado grande para cargarse como src de un iframe en
+          // algunos navegadores, dejando la vista previa en blanco. El
+          // blob no tiene ese límite (mismo método que ya usa "Visualizar
+          // OC", que sí funciona de forma confiable).
+          var pdfBlob = doc.output('blob');
+          var pdfUrl = URL.createObjectURL(pdfBlob);
+          var frame = document.getElementById('pdfPreviewFrame');
+          frame.src = pdfUrl;
           document.getElementById('pdfPreviewModal').classList.add('active');
         } catch (e) {
           console.error('❌ Error generando la vista previa del PDF:', e.stack || e);
