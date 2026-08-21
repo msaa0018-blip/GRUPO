@@ -1337,7 +1337,7 @@
   .almacen-kpi-card .almacen-kpi-valor { font-size: 16px; font-weight: 700; color: var(--primary); }
 
   /* ===== MODAL: NUEVA CUENTA POR COBRAR (CXC) ===== */
-  #agregarCXCModal, #agregarDocumentoCXPModal, #vehiculoAccionesModal, #agregarVehiculoModal, #agregarValeGasolinaModal, #valeAccionesModal, #valesGasolinaDashboardModal, #valeVisualizarModal, #valeComprobarModal, #vscCatalogoAccionesModal, #editarVscCatalogoModal {
+  #agregarCXCModal, #agregarDocumentoCXPModal, #vehiculoAccionesModal, #agregarVehiculoModal, #agregarValeGasolinaModal, #valeAccionesModal, #valesGasolinaDashboardModal, #valeVisualizarModal, #valeComprobarModal, #vscCatalogoAccionesModal, #editarVscCatalogoModal, #modalParidadOC {
     position: fixed;
     top: 0;
     left: 0;
@@ -1354,8 +1354,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #agregarCXCModal.active, #agregarDocumentoCXPModal.active, #vehiculoAccionesModal.active, #agregarVehiculoModal.active, #agregarValeGasolinaModal.active, #valeAccionesModal.active, #valesGasolinaDashboardModal.active, #valeVisualizarModal.active, #valeComprobarModal.active, #vscCatalogoAccionesModal.active, #editarVscCatalogoModal.active { display: flex }
-  #agregarCXCModal .modal-content, #agregarDocumentoCXPModal .modal-content, #vehiculoAccionesModal .modal-content, #agregarVehiculoModal .modal-content, #agregarValeGasolinaModal .modal-content, #valeAccionesModal .modal-content, #valesGasolinaDashboardModal .modal-content, #valeVisualizarModal .modal-content, #valeComprobarModal .modal-content, #vscCatalogoAccionesModal .modal-content, #editarVscCatalogoModal .modal-content {
+  #agregarCXCModal.active, #agregarDocumentoCXPModal.active, #vehiculoAccionesModal.active, #agregarVehiculoModal.active, #agregarValeGasolinaModal.active, #valeAccionesModal.active, #valesGasolinaDashboardModal.active, #valeVisualizarModal.active, #valeComprobarModal.active, #vscCatalogoAccionesModal.active, #editarVscCatalogoModal.active, #modalParidadOC.active { display: flex }
+  #agregarCXCModal .modal-content, #agregarDocumentoCXPModal .modal-content, #vehiculoAccionesModal .modal-content, #agregarVehiculoModal .modal-content, #agregarValeGasolinaModal .modal-content, #valeAccionesModal .modal-content, #valesGasolinaDashboardModal .modal-content, #valeVisualizarModal .modal-content, #valeComprobarModal .modal-content, #vscCatalogoAccionesModal .modal-content, #editarVscCatalogoModal .modal-content, #modalParidadOC .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
     border: 1px solid var(--modal-border);
@@ -4096,6 +4096,29 @@
       </div>
 
       <!-- ===== MODAL: OPCIONES DE VALE DE GASOLINA ===== -->
+      <!-- ===== MODAL: ELEGIR PARIDAD O PAGO EN DÓLARES (OC en USD) ===== -->
+      <div id="modalParidadOC">
+        <div class="modal-content" style="max-width:440px;">
+          <div class="modal-header">
+            <h3>💱 Paridad de la OC — <span id="paridadOCCodigo"></span></h3>
+            <button class="btn-modal-x" onclick="window.cerrarModalParidadOC()">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted" style="margin-bottom:14px;">Esta OC está en Dólares. Elige cómo se va a manejar antes de continuar con la autorización:</p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button class="success" style="width:100%; display:flex; flex-direction:column; gap:2px; padding:10px 14px;" onclick="window.elegirAgregarParidad()">
+                <span>💱 Agregar Paridad</span>
+                <span style="font-weight:400; font-size:11px;">Convertir a MXN con un tipo de cambio</span>
+              </button>
+              <button style="width:100%; display:flex; flex-direction:column; gap:2px; padding:10px 14px;" onclick="window.elegirPagoDolares()">
+                <span>💵 Pago en Dólares</span>
+                <span style="font-weight:400; font-size:11px;">Sin conversión — el PDF mostrará N/A</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="valeAccionesModal">
         <div class="modal-content" style="max-width:420px;">
           <div class="modal-header">
@@ -8614,12 +8637,12 @@
           var codigoGenerado = 'VSC-' + String(nuevoId).padStart(5, '0');
           await supabase.from('vales_gasolina').update({ codigo: codigoGenerado }).eq('id', nuevoId);
 
-          // No se borran los campos del formulario: el vale recién
-          // registrado se queda visible para que el usuario pueda
-          // revisarlo/corregirlo si hace falta, en vez de perder de golpe
-          // lo que acababa de capturar.
-          if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.</div>';
+          // Al registrar exitosamente, el formulario se limpia y regresa
+          // a sus valores originales (como al entrar al módulo VSC), para
+          // capturar el siguiente vale desde cero.
           window.cargarValesGasolina();
+          window.limpiarFormularioVale();
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.</div>';
         } catch (e) {
           console.error('Error registrando vale de gasolina:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo registrar: ' + escapeHTML(e.message) + '</div>';
@@ -12881,31 +12904,140 @@
         alert('❌ OC cancelada por Director.');
       };
 
-      window.ingresarParidad = async function(index) {
+      // Ingresa la paridad/tipo de cambio final de una OC en USD, o marca
+      // que se pagará directo en Dólares sin conversión (paso que ahora
+      // ocurre DESPUÉS de la aprobación del Jefe de Departamento, ya no
+      // al crear la OC). En ambos casos, la OC sigue el mismo camino que
+      // seguiría cualquier otra: se autoriza directo si cabe dentro del
+      // límite del proyecto, o pasa a Director si lo excede — igual que
+      // window.aprobarJefe.
+      var indexParidadPendiente = null;
+
+      window.abrirModalParidadOC = function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede ingresar la paridad final.');
+        if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede definir la paridad final.');
         var oc = ordenes[index];
+        if (!oc) return;
         if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+
+        indexParidadPendiente = index;
+        var titulo = document.getElementById('paridadOCCodigo');
+        if (titulo) titulo.textContent = oc.codigo;
+        document.getElementById('modalParidadOC').classList.add('active');
+      };
+
+      window.cerrarModalParidadOC = function() {
+        indexParidadPendiente = null;
+        document.getElementById('modalParidadOC').classList.remove('active');
+      };
+
+      window.elegirAgregarParidad = async function() {
+        var index = indexParidadPendiente;
+        window.cerrarModalParidadOC();
+        if (index === null) return;
+        var oc = ordenes[index];
         var tc = prompt('Ingrese el tipo de cambio (MXN/USD) para la OC ' + oc.codigo + ':');
         if (tc === null) return;
         var tipoCambio = parseFloat(tc);
         if (!tipoCambio || tipoCambio <= 0) { alert('Tipo de cambio inválido.'); return; }
         var nuevoMontoMXN = oc.montototal * tipoCambio;
-        var updates = { tipocambio: tipoCambio, montomxn: nuevoMontoMXN, estado: 'AUTORIZADA', estadopago: null };
+        await window.finalizarDecisionParidadOC(index, tipoCambio, nuevoMontoMXN, 'Paridad ingresada (' + tipoCambio + ')');
+      };
+
+      window.elegirPagoDolares = async function() {
+        var index = indexParidadPendiente;
+        window.cerrarModalParidadOC();
+        if (index === null) return;
+        var oc = ordenes[index];
+        // Pago en Dólares: no hay conversión real, así que no se guarda
+        // un tipo de cambio (queda null → el PDF lo muestra como "N/A").
+        // Para el control de presupuesto interno se usa el monto total en
+        // USD tal cual como referencia (1:1), igual que antes de definir
+        // la paridad.
+        await window.finalizarDecisionParidadOC(index, null, oc.montototal, 'Pago en Dólares (sin conversión, N/A)');
+      };
+
+      window.finalizarDecisionParidadOC = async function(index, tipoCambioONull, nuevoMontoMXN, mensajeOrigen) {
+        var oc = ordenes[index];
+        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        if (!proyecto) return alert('Proyecto no encontrado');
+
+        var montoEnMonedaProyecto = nuevoMontoMXN;
+        if (proyecto.moneda === 'USD') montoEnMonedaProyecto = oc.montototal; // ya está en USD, la conversión no aplica
+
+        var comprometidoPrevio = gastoProyectoMoneda(proyecto.nombre);
+        var excedePorSiSola = montoEnMonedaProyecto > proyecto.limite;
+        var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= proyecto.limite;
+
+        var updates = { tipocambio: tipoCambioONull, montomxn: nuevoMontoMXN, estadopago: null };
         if (!oc.fechaaprobacionsolicitante) { updates.fechaaprobacionsolicitante = new Date().toISOString();
           updates.nombresolicitante = 'No definido'; }
         if (!oc.fechaaprobacionjefe) { updates.fechaaprobacionjefe = new Date().toISOString();
           updates.nombrejefe = 'No definido'; }
-        if (!oc.fechaaprobaciondirector) { updates.fechaaprobaciondirector = new Date().toISOString();
-          updates.nombredirector = 'No definido'; }
+
+        if (!excedePorSiSola && !excedeAcumulado) {
+          updates.estado = 'AUTORIZADA';
+          updates.fechaaprobaciondirector = new Date().toISOString();
+          updates.nombredirector = getDirector();
+          updates.notificacion_enviada = false;
+          var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          if (error) return alert('Error al actualizar OC');
+          Object.assign(oc, updates);
+          render();
+          alert('✅ ' + mensajeOrigen + '. OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
+          return;
+        }
+
+        // Excede el límite del proyecto: pasa a Director para autorización,
+        // igual que ocurriría con una OC en MXN.
+        updates.estado = 'PENDIENTE_DIRECTOR';
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         render();
-        alert('✅ Paridad ingresada. OC autorizada.');
+
+        try {
+          var productos = oc.productos || [];
+          if (typeof productos === 'string') {
+            try { productos = JSON.parse(productos); } catch (e) { productos = []; }
+          }
+          if (!Array.isArray(productos)) productos = [];
+          var datosOC = {
+            codigo: oc.codigo,
+            proyectonombre: oc.proyecto,
+            empresa: proyecto.empresa,
+            departamento: proyecto.departamento,
+            cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            proveedor: oc.proveedor,
+            rfc: oc.rfc || 'No especificado',
+            responsable: oc.responsable,
+            solicitante: oc.solicitante || 'No especificado',
+            elaborador: oc.elaborador || 'Desconocido',
+            moneda: oc.moneda || 'MXN',
+            montototal: oc.montototal || 0,
+            montomxn: nuevoMontoMXN,
+            fechapago: oc.fechapago || new Date().toISOString(),
+            fechaentrega: oc.fechaentrega || new Date().toISOString(),
+            productos: productos
+          };
+          var motivoExceso = excedePorSiSola ?
+            'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
+            'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
+          var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
+          var enviado = await enviarNotificacionTelegram(mensajeTelegram);
+          if (enviado) {
+            await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+            oc.notificacion_enviada = true;
+            ocNotificadaId = oc.id;
+          }
+        } catch (errNotif) {
+          console.error('❌ Error al enviar notificación:', errNotif);
+        }
+
+        alert('✅ ' + mensajeOrigen + '. OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
       };
 
       // ============================================================
@@ -15349,7 +15481,7 @@
                   acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
                 }
                 if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
-                  acciones += '<button class="btn-warning" onclick="window.ingresarParidad(' + idxOriginal + ')">💰 Paridad</button>';
+                  acciones += '<button class="btn-warning" onclick="window.abrirModalParidadOC(' + idxOriginal + ')">💰 Paridad</button>';
                 }
                 if ((rol === 'Solicitante' || rol === 'Elaborador' || rol === 'Jefe Departamento') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
@@ -17620,17 +17752,17 @@
         }
       };
 
+      // El tipo de cambio de una OC en USD ya no se captura al crearla:
+      // el campo "paridadInicial" queda oculto siempre. La paridad final
+      // se ingresa después de la aprobación del Jefe de Departamento
+      // (ver window.abrirModalParidadOC), así que esta función ya no
+      // necesita mostrar/ocultar nada, pero se conserva por si algo más
+      // del código todavía la invoca.
       window.mostrarParidadInicial = function() {
-        var moneda = document.getElementById('monedaOC').value;
         var paridadInput = document.getElementById('paridadInicial');
         var paridadLabel = document.getElementById('paridadInicialLabel');
-        if (moneda === 'USD') {
-          paridadInput.style.display = 'inline-block';
-          paridadLabel.style.display = 'inline-block';
-        } else {
-          paridadInput.style.display = 'none';
-          paridadLabel.style.display = 'none';
-        }
+        if (paridadInput) paridadInput.style.display = 'none';
+        if (paridadLabel) paridadLabel.style.display = 'none';
       };
 
       window.filtrarPendientesPagar = function() {
@@ -18026,15 +18158,14 @@
 
         var moneda = document.getElementById('monedaOC').value;
         var montototal = window.recalcularTotal();
-        var tipocambio = 1;
-        if (moneda === 'USD') {
-          tipocambio = parseNumero(document.getElementById('paridadInicial').value || '0');
-          if (!tipocambio || tipocambio <= 0) {
-            mostrarError('Captura el tipo de cambio (MXN/USD).');
-            return null;
-          }
-        }
-        var montomxn = moneda === 'USD' ? montototal * tipocambio : montototal;
+        // La paridad/tipo de cambio para OC en USD ya NO se captura al
+        // crear la orden: el elaborador la ingresa después, cuando el
+        // Jefe de Departamento ya aprobó (ver window.abrirModalParidadOC).
+        // Mientras tanto se usa 1 como referencia temporal para poder
+        // guardar la OC; montomxn se recalcula con el tipo de cambio real
+        // en cuanto se ingresa la paridad final.
+        var tipocambio = moneda === 'USD' ? null : 1;
+        var montomxn = moneda === 'USD' ? montototal : montototal;
 
         var fechaPago = document.getElementById('fechaPago').value || null;
         var fechaEntrega = document.getElementById('fechaEntrega').value || null;
@@ -18662,6 +18793,25 @@
           { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
           { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') }
         ];
+        if (datos.moneda === 'USD') {
+          // Tres casos posibles para una OC en USD:
+          // 1) Aún no llega a la aprobación del Jefe (CREADA /
+          //    APROBADA_SOLICITANTE): todavía no aplica, no se muestra
+          //    el renglón.
+          // 2) Ya la aprobó el Jefe pero todavía no se decide la paridad
+          //    (PENDIENTE_PARIDAD, sin tipo de cambio): se indica
+          //    "Pendiente de paridad".
+          // 3) Ya se decidió: con tipo de cambio (Agregar Paridad) o sin
+          //    él porque se eligió "Pago en Dólares" (N/A).
+          var estadosAntesDeJefe = ['CREADA', 'APROBADA_SOLICITANTE'];
+          if (datos.tipocambio) {
+            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: '$' + Number(datos.tipocambio).toFixed(4) + ' MXN/USD' });
+          } else if (datos.estado === 'PENDIENTE_PARIDAD') {
+            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'Pendiente de paridad' });
+          } else if (datos.estado && estadosAntesDeJefe.indexOf(datos.estado) === -1) {
+            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'N/A (Pago en Dólares)' });
+          }
+        }
         var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
 
         var bottomBodyPadding = 12;
