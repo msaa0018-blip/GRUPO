@@ -29,7 +29,12 @@
     overflow-x: hidden;
     overflow-y: auto;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #e8ecf1;
+    background-color: #e8ecf1;
+    background-image: url('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%203.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: #0f172a;
     line-height: 1.5;
     padding: 0;
@@ -909,7 +914,12 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--gray-100);
+    background-color: var(--gray-100);
+    background-image: url('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%201.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     z-index: 1000;
     overflow-y: auto;
     padding: 16px;
@@ -1061,7 +1071,11 @@
     justify-content: center;
     padding: 20px;
     min-height: calc(100vh - 80px);
-    background: #e8ecf1;
+    background-color: #e8ecf1;
+    background-image: url('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%201.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 
   @media (max-width: 768px) {
@@ -1509,7 +1523,7 @@
     background: white;
   }
   .buzon-conv-item:hover { background: var(--gray-50); border-color: var(--primary); }
-  .buzon-conv-item .buzon-conv-asunto { font-weight: 600; margin-bottom: 4px; color: var(--gray-800); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
+  .buzon-conv-item .buzon-conv-asunto { font-weight: 700; font-size: 15px; margin-bottom: 4px; color: var(--gray-900); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
   .buzon-conv-item .buzon-conv-meta { font-size: 12px; color: var(--gray-500); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .buzon-conv-item .buzon-conv-ultimo { font-size: 12px; color: var(--gray-600); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .buzon-msg { max-width: 80%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-wrap: break-word; }
@@ -1931,7 +1945,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     gap: 20px;
     max-width: 100%;
     margin: 0 auto;
@@ -1990,11 +2004,20 @@
     width: 100%;
     max-width: 180px;
     word-break: break-word;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   /* ===== MENÚ MAESTRO (EGRESOS, INGRESOS, ALTA DE REGISTROS) ===== */
   #menuMaestro {
-    background: var(--gray-100);
+    background-color: var(--gray-100);
+    background-image: url('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%201.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     padding: 20px;
     text-align: center;
     min-height: 33.33vh;
@@ -2037,7 +2060,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     gap: 20px;
     max-width: 100%;
     margin: 0 auto;
@@ -2106,7 +2129,11 @@
 
   /* ===== MENÚ INTERNO ===== */
   #menuInterno {
-    background: var(--gray-100);
+    background-color: var(--gray-100);
+    background-image: url('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%201.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     padding: 20px;
     text-align: center;
     min-height: 30vh;
@@ -9167,7 +9194,7 @@
           var item = document.createElement('div');
           item.className = 'buzon-conv-item';
           var htmlBorrar = buzonEsAdmin()
-            ? '<button class="danger" style="padding:6px 12px; font-size:12.5px; min-height:32px; flex-shrink:0; white-space:nowrap; margin-left:auto;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️ Eliminar</button>'
+            ? '<button class="danger" title="Eliminar conversación" style="padding:0; width:26px; height:26px; min-height:26px; min-width:26px; font-size:12px; line-height:1; flex-shrink:0; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; margin-left:auto;" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️</button>'
             : '';
           item.innerHTML =
             '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; min-width:0;">' +
@@ -9351,8 +9378,8 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Selecciona al menos un destinatario.</div>';
           return;
         }
-        if (!mensaje) {
-          if (msg) msg.innerHTML = '<div class="alert">❌ El mensaje es obligatorio.</div>';
+        if (!mensaje && !archivo) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Escribe un mensaje o adjunta un documento.</div>';
           return;
         }
 
@@ -9381,7 +9408,7 @@
           var { error: errorMsg } = await supabase.from('buzon_mensajes').insert([{
             conversacion_id: convCreada.id,
             autor: actual.usuario,
-            contenido: mensaje,
+            contenido: mensaje || '',
             adjunto_url: adjunto ? adjunto.url : null,
             adjunto_nombre: adjunto ? adjunto.nombre : null,
             fecha: new Date().toISOString()
@@ -9441,9 +9468,12 @@
             if (m.adjunto_url) {
               htmlAdjunto = '<div class="buzon-msg-adjunto"><a href="' + escapeHTML(m.adjunto_url) + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">📎 ' + escapeHTML(m.adjunto_nombre || 'Documento adjunto') + '</a></div>';
             }
+            var htmlTexto = m.contenido
+              ? '<div class="buzon-msg-texto">' + escapeHTML(m.contenido).replace(/\n/g, '<br>') + '</div>'
+              : '';
             burbuja.innerHTML =
               '<div class="buzon-msg-autor">' + escapeHTML(m.autor || '') + '</div>' +
-              '<div class="buzon-msg-texto">' + escapeHTML(m.contenido || '').replace(/\n/g, '<br>') + '</div>' +
+              htmlTexto +
               htmlAdjunto +
               '<div class="buzon-msg-fecha">' + new Date(m.fecha).toLocaleString() + '</div>';
             hilo.appendChild(burbuja);
@@ -9472,8 +9502,8 @@
         var inputArchivo = document.getElementById('buzonConvArchivo');
         var archivo = (inputArchivo.files && inputArchivo.files[0]) || null;
         if (!buzonConversacionAbiertaId) return;
-        if (!texto) {
-          if (msg) msg.innerHTML = '<div class="alert">❌ Escribe una respuesta antes de enviar.</div>';
+        if (!texto && !archivo) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Escribe una respuesta o adjunta un documento antes de enviar.</div>';
           return;
         }
         try {
@@ -9485,7 +9515,7 @@
           var { error: errorMsg } = await supabase.from('buzon_mensajes').insert([{
             conversacion_id: buzonConversacionAbiertaId,
             autor: actual.usuario,
-            contenido: texto,
+            contenido: texto || '',
             adjunto_url: adjunto ? adjunto.url : null,
             adjunto_nombre: adjunto ? adjunto.nombre : null,
             fecha: new Date().toISOString()
@@ -17623,9 +17653,6 @@
             }
             var logoX = pageWidth - margin - imgWidth;
             var logoY = (franjas.yInicio - imgHeight) / 2;
-            var padLogo = 8;
-            doc.setFillColor(255, 255, 255);
-            doc.roundedRect(logoX - padLogo, logoY - padLogo, imgWidth + padLogo * 2, imgHeight + padLogo * 2, 3, 3, 'F');
             doc.addImage(imgData, logoTipo, logoX, logoY, imgWidth, imgHeight);
           } else {
             doc.setFontSize(14);
