@@ -3846,7 +3846,7 @@
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Registro y control de vales de gasolina por vehículo y departamento.</p>
 
-        <h3 style="margin-top:20px;">➕ Nuevo Vale de Gasolina</h3>
+        <h3 style="margin-top:20px;cursor:pointer;" onclick="window.limpiarFormularioVale()" title="Clic para limpiar y capturar otro vale">➕ Nuevo Vale de Gasolina</h3>
         <div class="cxc-form-row">
           <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha de carga<input id="valeFechaCarga" type="date" style="width:100%;margin-top:4px;"></label>
           <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Periodo consumo — inicio<input id="valePeriodoInicio" type="date" style="width:100%;margin-top:4px;"></label>
@@ -8535,6 +8535,39 @@
         if (coincidencias.some(function(p) { return p.nombre === valorActual; })) sel.value = valorActual;
       };
 
+      // Botón/encabezado "➕ Nuevo Vale de Gasolina": limpia por completo
+      // el formulario para capturar otro vale desde cero (Empresa y
+      // Departamento se vuelven a bloquear según los permisos del
+      // usuario, igual que al entrar al módulo por primera vez).
+      window.limpiarFormularioVale = function() {
+        ['valeFechaCarga', 'valePeriodoInicio', 'valePeriodoFin', 'valeNivelTanque'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+
+        var selVehiculo = document.getElementById('valeVehiculo');
+        if (selVehiculo) selVehiculo.selectedIndex = 0;
+        var selProveedor = document.getElementById('valeProveedor');
+        if (selProveedor) selProveedor.selectedIndex = 0;
+        var selCliente = document.getElementById('valeCliente');
+        if (selCliente) selCliente.selectedIndex = 0;
+        var selCentroNegocio = document.getElementById('valeCentroNegocio');
+        if (selCentroNegocio) selCentroNegocio.innerHTML = '<option value="" disabled selected hidden>Selecciona centro de negocio / sucursal</option>';
+        var selProyectoOC = document.getElementById('valeProyectoOC');
+        if (selProyectoOC) selProyectoOC.innerHTML = '<option value="" disabled selected hidden>Selecciona primero un cliente</option>';
+        var selCombustible = document.getElementById('valeCombustible');
+        if (selCombustible) selCombustible.selectedIndex = 0;
+        var selLitros = document.getElementById('valeLitros');
+        if (selLitros) selLitros.selectedIndex = 0;
+
+        var msg = document.getElementById('msgVales');
+        if (msg) msg.innerHTML = '';
+
+        // Vuelve a bloquear Empresa/Departamento según los permisos del
+        // usuario y refresca la lista de vehículos disponibles.
+        window.configurarEmpresaDeptoVale();
+      };
+
       window.agregarValeGasolina = async function() {
         var msg = document.getElementById('msgVales');
         var empresaSel = document.getElementById('valeEmpresa');
@@ -8796,10 +8829,11 @@
           botones += '<button class="success" onclick="window.aprobarValeGasolina(' + v.id + ').then(window.cerrarVisualizarVale)">✅ Aprobar</button>';
         }
         // "Imprimir PDF" solo está disponible mientras el vale sigue en
-        // APROBADA_JEFE (autorizado, aún no comprobado). Una vez que se
-        // comprueba (COMPROBADA) o se cierra (CERRADA), se retira para
-        // evitar imprimir/duplicar el vale después de que ya fue cargado.
-        if (v.estado === 'APROBADA_JEFE') {
+        // APROBADA_JEFE y aún NO se ha impreso ninguna vez. Una vez
+        // impreso (fecha_impresion queda registrada) ya no se puede
+        // volver a imprimir, para evitar duplicados del vale; el
+        // siguiente paso pasa a ser "Comprobar".
+        if (v.estado === 'APROBADA_JEFE' && !v.fecha_impresion) {
           botones += '<button class="success" onclick="window.imprimirPDFVale(' + v.id + ')">🖨️ Imprimir PDF</button>';
         }
         if (v.fecha_impresion && v.estado !== 'COMPROBADA' && v.estado !== 'CERRADA') {
@@ -9048,12 +9082,13 @@
       window.imprimirPDFVale = async function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
-        // Salvaguarda: una vez comprobado (o cerrado), ya no se puede
-        // volver a imprimir, para evitar duplicados del vale una vez
-        // cargado. El botón ya se oculta en ese punto, pero esto cubre
-        // cualquier otra vía de llamada (p.ej. el enlace del QR).
-        if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
-          alert('⚠️ Este vale ya fue comprobado. No es posible volver a imprimirlo para evitar duplicados.');
+        // Salvaguarda: el vale solo se puede imprimir UNA vez. Una vez
+        // impreso (fecha_impresion) o comprobado/cerrado, ya no se puede
+        // volver a imprimir, para evitar duplicados. El botón ya se
+        // oculta en ese punto, pero esto cubre cualquier otra vía de
+        // llamada (p.ej. el enlace del QR).
+        if (v.fecha_impresion || v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
+          alert('⚠️ Este vale ya fue impreso anteriormente. No es posible volver a imprimirlo para evitar duplicados.');
           return;
         }
         var vehiculo = vehiculosCache.find(function(x) { return x.id === v.vehiculo_id; });
