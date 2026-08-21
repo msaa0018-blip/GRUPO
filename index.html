@@ -8983,8 +8983,23 @@
             qrDataUrl: qrDataUrl
           };
 
-          // Dos copias del mismo vale en la misma hoja.
+          // Dos copias del mismo vale en la misma hoja (una para la
+          // gasolinera, otra para el expediente interno), separadas por
+          // una línea punteada de corte para poder recortarlas.
           dibujarValeCompleto(doc, ctx, 18);
+
+          var yCorte = 18 + ctx.altoTarjeta + 8;
+          doc.setDrawColor(140, 140, 140);
+          doc.setLineWidth(0.8);
+          doc.setLineDashPattern([4, 3], 0);
+          doc.line(margen - 10, yCorte, margen - 10 + anchoUtil + 20, yCorte);
+          doc.setLineDashPattern([], 0);
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(120, 120, 120);
+          doc.text('- - - - - - - - - - - -  CORTE AQUÍ (gasolinera / archivo interno)  - - - - - - - - - - - -', 297.64, yCorte + 3, { align: 'center' });
+          doc.setTextColor(20, 20, 20);
+
           dibujarValeCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
 
           doc.save((v.codigo || 'vale') + '.pdf');
