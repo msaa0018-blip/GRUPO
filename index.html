@@ -6239,6 +6239,24 @@
         return normalizar(depto);
       }
 
+      // Soporte de rol múltiple: un usuario puede tener más de un rol
+      // guardado como cadena separada por comas (ej. "Solicitante,Elaborador").
+      // rolIncluye/usuarioTieneRol/usuarioTieneAlgunRol son las funciones
+      // que deben usarse en vez de comparar `.rol === 'X'` directamente
+      // cuando ese rol puede combinarse con otro (Solicitante/Elaborador).
+      function rolIncluye(rolStr, rolBuscado) {
+        if (!rolStr) return false;
+        return String(rolStr).split(',').map(function(r) { return r.trim(); }).indexOf(rolBuscado) !== -1;
+      }
+      function usuarioTieneRol(usuario, rolBuscado) {
+        return !!(usuario && rolIncluye(usuario.rol, rolBuscado));
+      }
+      function usuarioTieneAlgunRol(usuario, listaRoles) {
+        if (!usuario || !usuario.rol) return false;
+        var rolesUsuario = String(usuario.rol).split(',').map(function(r) { return r.trim(); });
+        return listaRoles.some(function(r) { return rolesUsuario.indexOf(r) !== -1; });
+      }
+
       function usuarioPuedeAcceder(usuario, empresa, depto) {
         if (!usuario) return false;
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
@@ -6361,10 +6379,10 @@
             return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
           });
         }
-        if (usuario.rol === 'Solicitante') {
+        if (usuarioTieneRol(usuario, 'Solicitante')) {
           ocFiltradas = ocFiltradas.filter(function(o) { return o.solicitante === usuario.usuario; });
         }
-        if (usuario.rol === 'Elaborador') {
+        if (usuarioTieneRol(usuario, 'Elaborador')) {
           ocFiltradas = ocFiltradas.filter(function(o) { return o.elaborador === usuario.usuario; });
         }
         return ocFiltradas;
@@ -6395,7 +6413,7 @@
       }
 
       function getPosiblesResponsables() {
-        return usuariosDB.filter(function(u) { return u.rol === 'Elaborador' || u.rol === 'Solicitante' || u.rol === 'Jefe Departamento'; });
+        return usuariosDB.filter(function(u) { return usuarioTieneAlgunRol(u, ['Elaborador', 'Solicitante', 'Jefe Departamento']); });
       }
 
       function getResponsablesOF(empresa, departamento) {
@@ -6434,7 +6452,7 @@
       };
 
       function getSolicitantes() {
-        return usuariosDB.filter(function(u) { return u.rol === 'Solicitante'; });
+        return usuariosDB.filter(function(u) { return usuarioTieneRol(u, 'Solicitante'); });
       }
 
       function getJefeDepto(empresa, depto) {
@@ -6956,27 +6974,27 @@
         var modulos = [];
 
         if (tipo === 'egresos') {
-          if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
+          if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
             modulos.push({ id: 'cxp', icono: '💰', nombre: 'CXP' });
           }
-          if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
+          if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
             modulos.push({ id: 'oc', icono: '📄', nombre: 'OC' });
           }
           if (actual && (usuarioPuedeCrearProyectos(actual) || actual.rol === 'Administrador')) {
             modulos.push({ id: 'proyectos', icono: '🏗️', nombre: 'PROYECTO' });
           }
-          if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
+          if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
             modulos.push({ id: 'spm', icono: '📆', nombre: 'SPM' });
             modulos.push({ id: 'vales', icono: '🎫', nombre: 'VALES' });
           }
         } else if (tipo === 'vales') {
-          if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
+          if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
             modulos.push({ id: 'vc', icono: '💵', nombre: 'VC' });
             modulos.push({ id: 'vi', icono: '🛣️', nombre: 'VI' });
             modulos.push({ id: 'vsc', icono: '⛽', nombre: 'VSC' });
           }
         } else if (tipo === 'ingresos') {
-          if (actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1)) {
+          if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
             modulos.push({ id: 'cxc', icono: '💳', nombre: 'CXC' });
           }
           var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
@@ -11045,10 +11063,10 @@
           return;
         }
 
-        var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento');
+        var puedeCrearOC = actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']));
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
-        var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-        var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+        var puedeVerCXP = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
+        var puedeVerCXC = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
         var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
         var puedeVerOFReal = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
@@ -11192,7 +11210,7 @@
 
         setTimeout(function() {
           render();
-          if (modulo === 'oc' && actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
+          if (modulo === 'oc' && actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
             window.actualizarDatosOC();
           }
           var cuerpo = document.getElementById('cuerpoProductos');
@@ -12680,7 +12698,7 @@
         if (!proyecto) return alert('Proyecto no encontrado');
 
         var esInmobienesOC = ocEsInmobienes(oc);
-        var rolValidoSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador' || actual.rol === 'Jefe Departamento' ||
+        var rolValidoSolicitante = usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador', 'Jefe Departamento']) ||
           (esInmobienesOC && actual.rol === 'Jefe Departamento');
         if (!rolValidoSolicitante) return alert('Solo el Solicitante/Responsable designado puede aprobar.');
 
@@ -12988,7 +13006,7 @@
 
       window.abrirModalParidadOC = function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Elaborador') return alert('Solo el elaborador puede definir la paridad final.');
+        if (!usuarioTieneRol(actual, 'Elaborador')) return alert('Solo el elaborador puede definir la paridad final.');
         var oc = ordenes[index];
         if (!oc) return;
         if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
@@ -15720,7 +15738,7 @@
               }
 
               if (!o.pausada) {
-                if ((rol === 'Solicitante' || rol === 'Elaborador' || rol === 'Jefe Departamento') && o.estado === 'CREADA' && (o.solicitante === actual.u || rol === 'Jefe Departamento')) {
+                if ((rolIncluye(rol, 'Solicitante') || rolIncluye(rol, 'Elaborador') || rol === 'Jefe Departamento') && o.estado === 'CREADA' && (o.solicitante === actual.u || rol === 'Jefe Departamento')) {
                   acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
                 }
                 if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
@@ -15730,10 +15748,10 @@
                   acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
                   acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
                 }
-                if (rol === 'Elaborador' && o.estado === 'PENDIENTE_PARIDAD') {
+                if (rolIncluye(rol, 'Elaborador') && o.estado === 'PENDIENTE_PARIDAD') {
                   acciones += '<button class="btn-warning" onclick="window.abrirModalParidadOC(' + idxOriginal + ')">💰 Paridad</button>';
                 }
-                if ((rol === 'Solicitante' || rol === 'Elaborador' || rol === 'Jefe Departamento') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                if ((rolIncluye(rol, 'Solicitante') || rolIncluye(rol, 'Elaborador') || rol === 'Jefe Departamento') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
@@ -15966,7 +15984,7 @@
         // resto arranca viendo todo lo de su alcance (como siempre).
         // A partir de ahí, cada usuario puede cambiarlo con el botón.
         if (verSoloMisOC === null) {
-          verSoloMisOC = !!(actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador'));
+          verSoloMisOC = !!(actual && usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador']));
         }
 
         var btnToggleMisOC = document.getElementById('btnToggleMisOC');
@@ -15989,7 +16007,7 @@
         proyectosPaginacion.datosFiltrados = proyectosVisibles;
         renderTablaProyectosPaginada();
 
-        if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
+        if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
             selectProyecto.selectedIndex = 0;
           }
@@ -16695,17 +16713,17 @@
             var esAdmin = actual && actual.rol === 'Administrador';
             var esFinanzas = actual && actual.rol === 'Finanzas';
             var esJefe = actual && actual.rol === 'Jefe Departamento';
-            var esSolicitante = actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador');
+            var esSolicitante = actual && usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador']);
             var esDirector = actual && actual.rol === 'Director General';
 
             document.querySelectorAll('#contenidoApp .card').forEach(function(card) {
               card.classList.add('hidden');
             });
 
-            var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento');
+            var puedeCrearOC = actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']));
             var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
-            var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-            var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+            var puedeVerCXP = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
+            var puedeVerCXC = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
             var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
             var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
@@ -16729,7 +16747,7 @@
 
             setTimeout(function() {
               render();
-              if (actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento')) {
+              if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
                 window.actualizarDatosOC();
               }
               var cuerpo = document.getElementById('cuerpoProductos');
@@ -16780,7 +16798,7 @@
           var esAdmin = actual.rol === 'Administrador';
           var esFinanzas = actual.rol === 'Finanzas';
           var esJefe = actual.rol === 'Jefe Departamento';
-          var esSolicitante = actual.rol === 'Solicitante' || actual.rol === 'Elaborador';
+          var esSolicitante = usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador']);
           var esDirector = actual.rol === 'Director General';
 
           var modulosInterno = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item');
@@ -16803,10 +16821,10 @@
             }
           });
 
-          var puedeCrearOC = actual && (actual.rol === 'Elaborador' || actual.rol === 'Solicitante' || actual.rol === 'Jefe Departamento');
+          var puedeCrearOC = actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']));
           var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
-          var puedeVerCXP = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
-          var puedeVerCXC = actual && (['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador'].indexOf(actual.rol) !== -1);
+          var puedeVerCXP = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
+          var puedeVerCXC = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
           var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
           var puedeVerOF = actual && rolesExcluidosOF.indexOf(actual.rol) === -1;
 
@@ -18014,7 +18032,7 @@
             var opt = document.createElement('option');
             opt.value = u.usuario;
             opt.textContent = u.usuario + ' (' + u.rol + ')';
-            if (actual && (actual.rol === 'Solicitante' || actual.rol === 'Elaborador' || actual.rol === 'Jefe Departamento') && u.usuario === actual.usuario) {
+            if (actual && usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador', 'Jefe Departamento']) && u.usuario === actual.usuario) {
               opt.selected = true;
             }
             selectSol.appendChild(opt);
