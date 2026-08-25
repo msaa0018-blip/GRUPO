@@ -14337,6 +14337,13 @@
         } else if (filtroEstado === 'AUTORIZADA') ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA'; });
         else if (filtroEstado === 'CONCLUIDA') ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'CONCLUIDA'; });
 
+        // Ordenar de la más reciente a la más antigua según su fecha de creación.
+        ocVisibles = ocVisibles.slice().sort(function(a, b) {
+          var fechaA = new Date(a.fechacreacion || 0).getTime();
+          var fechaB = new Date(b.fechacreacion || 0).getTime();
+          return fechaB - fechaA;
+        });
+
         return { proyectos: proyectosVisibles, oc: ocVisibles, esGlobal: esGlobal };
       }
 
@@ -15729,7 +15736,12 @@
           ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; });
         }
 
-        return ocVisibles.slice().reverse();
+        // Ordenar de la más reciente a la más antigua según su fecha de creación.
+        return ocVisibles.slice().sort(function(a, b) {
+          var fechaA = new Date(a.fechacreacion || 0).getTime();
+          var fechaB = new Date(b.fechacreacion || 0).getTime();
+          return fechaB - fechaA;
+        });
       }
 
       // Renderiza SOLO la página actual de la Bandeja de OC (tablaOC),
@@ -19799,7 +19811,11 @@
         var circunferencia = 2 * Math.PI * r;
         var dashOffset = circunferencia - (porcentajeMostrado / 100) * circunferencia;
 
-        var ocsProyecto = ordenes.filter(function(o) { return o.proyecto === p.nombre; });
+        var ocsProyecto = ordenes.filter(function(o) { return o.proyecto === p.nombre; }).sort(function(a, b) {
+          var fechaA = new Date(a.fechacreacion || 0).getTime();
+          var fechaB = new Date(b.fechacreacion || 0).getTime();
+          return fechaB - fechaA;
+        });
         var totalOC = ocsProyecto.length;
         var pagadas = ocsProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).length;
         var pendientes = ocsProyecto.filter(function(o) { return o.estadopago !== 'PAGADA'; }).length;
