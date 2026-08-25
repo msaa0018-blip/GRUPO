@@ -4930,6 +4930,7 @@
             <label style="font-size:12px;font-weight:500;white-space:nowrap;">Hasta:</label>
             <input type="date" id="cxpFechaFin">
           </div>
+          <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
           <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de Órdenes de Compra</button>
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
@@ -19340,9 +19341,42 @@
         }
       };
 
-      window.imprimirReporteCXP = function() {
+      window.descargarReportePreview = function() {
         if (!reportePreviewPDF) return;
         reportePreviewPDF.save(reportePreviewNombre);
+      };
+
+      window.imprimirReporteCXP = function() {
+        try {
+          if (typeof window.renderCXP === 'function') window.renderCXP();
+          var datos = obtenerDatosCXP();
+          var doc = generarPDFReporteCXP(datos);
+          var blobUrl = doc.output('bloburl');
+          var printFrame = document.createElement('iframe');
+          printFrame.style.position = 'fixed';
+          printFrame.style.right = '0';
+          printFrame.style.bottom = '0';
+          printFrame.style.width = '0';
+          printFrame.style.height = '0';
+          printFrame.style.border = '0';
+          printFrame.src = blobUrl;
+          printFrame.onload = function() {
+            try {
+              printFrame.contentWindow.focus();
+              printFrame.contentWindow.print();
+            } catch (e) {
+              window.open(blobUrl, '_blank');
+            }
+          };
+          document.body.appendChild(printFrame);
+          setTimeout(function() {
+            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        } catch (error) {
+          console.error('❌ Error al imprimir reporte CXP:', error);
+          alert('Error al imprimir el reporte: ' + error.message);
+        }
       };
 
       window.cerrarPreviewCXP = function() {
