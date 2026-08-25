@@ -6857,8 +6857,9 @@
       // FUNCIONES DE NAVEGACIÓN
       // ============================================================
       var SISTEMA_RESTRINGIDO_KEY = 'allin_sistema_restringido';
+      var CANDADO_SISTEMA_PASSWORD = '980813';
       var MODULOS_PRINCIPALES_PERMITIDOS = ['egresos', 'alta_registros', 'almacenes'];
-      var MODULOS_INTERNOS_PERMITIDOS = ['oc', 'proyectos', 'proveedores', 'productos', 'clientes', 'vehiculos', 'almacenes'];
+      var MODULOS_INTERNOS_PERMITIDOS = ['oc', 'proyectos', 'cxp', 'proveedores', 'productos', 'clientes', 'vehiculos', 'almacenes'];
 
       function sistemaRestringidoActivo() {
         var valor = localStorage.getItem(SISTEMA_RESTRINGIDO_KEY);
@@ -6866,6 +6867,9 @@
       }
 
       function moduloPermitidoPorBloqueo(modulo) {
+        // El módulo CXP siempre queda libre para visualizar, sin importar
+        // si el sistema está restringido o no.
+        if (modulo === 'cxp') return true;
         if (!sistemaRestringidoActivo()) return true;
         return MODULOS_PRINCIPALES_PERMITIDOS.indexOf(modulo) !== -1 || MODULOS_INTERNOS_PERMITIDOS.indexOf(modulo) !== -1;
       }
@@ -6916,6 +6920,15 @@
       }
 
       window.toggleBloqueoSistema = function() {
+        var passwordIngresada = prompt('🔒 Ingresa la contraseña para cambiar de vista:');
+        if (passwordIngresada === null) {
+          // El usuario canceló el ingreso de contraseña: no se cambia de vista.
+          return;
+        }
+        if (passwordIngresada !== CANDADO_SISTEMA_PASSWORD) {
+          alert('❌ Contraseña incorrecta. No puedes cambiar de vista.');
+          return;
+        }
         var nuevoEstado = sistemaRestringidoActivo() ? '0' : '1';
         localStorage.setItem(SISTEMA_RESTRINGIDO_KEY, nuevoEstado);
         aplicarBloqueoSistemaMenus();
