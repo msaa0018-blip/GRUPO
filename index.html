@@ -245,7 +245,8 @@
 
   /* === BOTONES === */
   .header-right .btn-volver-menu,
-  .header-right .btn-cerrar-sesion-header {
+  .header-right .btn-cerrar-sesion-header,
+  .header-right .btn-bloqueo-sistema {
     background: var(--gray-600);
     color: white;
     border: none;
@@ -279,6 +280,18 @@
   .header-right .btn-cerrar-sesion-header:hover {
     background: #c62828;
     transform: scale(1.05);
+  }
+  .header-right .btn-bloqueo-sistema {
+    background: var(--primary);
+    border: 1px solid rgba(255,255,255,.35);
+  }
+  .header-right .btn-bloqueo-sistema:hover {
+    background: var(--primary-light);
+    transform: scale(1.05);
+  }
+  .header-right .btn-bloqueo-sistema.liberado {
+    background: var(--success);
+    border-color: var(--success-hover);
   }
 
   /* === RESPONSIVE === */
@@ -3010,6 +3023,7 @@
 
     <!-- ZONA DERECHA -->
     <div class="header-right">
+      <button class="btn-bloqueo-sistema hidden" id="btnBloqueoSistema" onclick="window.toggleBloqueoSistema()" title="Sistema restringido">🔒</button>
       <button class="btn-volver-menu hidden" id="btnVolverMenu" onclick="window.volverAlMenu()">←</button>
       <button class="btn-cerrar-sesion-header hidden" id="btnCerrarSesionHeader" onclick="window.salir()">✕</button>
     </div>
@@ -6842,6 +6856,80 @@
       // ============================================================
       // FUNCIONES DE NAVEGACIÓN
       // ============================================================
+      var SISTEMA_RESTRINGIDO_KEY = 'allin_sistema_restringido';
+      var MODULOS_PRINCIPALES_PERMITIDOS = ['egresos', 'alta_registros', 'almacenes'];
+      var MODULOS_INTERNOS_PERMITIDOS = ['oc', 'proyectos', 'proveedores', 'productos', 'clientes', 'vehiculos', 'almacenes'];
+
+      function sistemaRestringidoActivo() {
+        var valor = localStorage.getItem(SISTEMA_RESTRINGIDO_KEY);
+        return valor === null ? true : valor === '1';
+      }
+
+      function moduloPermitidoPorBloqueo(modulo) {
+        if (!sistemaRestringidoActivo()) return true;
+        return MODULOS_PRINCIPALES_PERMITIDOS.indexOf(modulo) !== -1 || MODULOS_INTERNOS_PERMITIDOS.indexOf(modulo) !== -1;
+      }
+
+      function actualizarBotonBloqueoSistema() {
+        var btn = document.getElementById('btnBloqueoSistema');
+        if (!btn) return;
+        var restringido = sistemaRestringidoActivo();
+        btn.classList.toggle('hidden', !actual);
+        btn.classList.toggle('liberado', !restringido);
+        btn.textContent = restringido ? '🔒' : '🔓';
+        btn.title = restringido ? 'Sistema restringido: clic para liberar sistema completo' : 'Sistema liberado: clic para activar restricciones';
+        btn.setAttribute('aria-label', btn.title);
+      }
+
+      function aplicarBloqueoSistemaMenus() {
+        actualizarBotonBloqueoSistema();
+        if (!sistemaRestringidoActivo()) {
+          document.querySelectorAll('#modulosGridPrincipal .modulo-item').forEach(function(item) {
+            var modulo = item.dataset.modulo;
+            if (modulo === 'egresos' || modulo === 'ingresos' || modulo === 'buzon') {
+              item.style.display = 'flex';
+            }
+          });
+          var accesoUnicoBtn = document.getElementById('menuAccesoUnicoBtn');
+          if (accesoUnicoBtn) accesoUnicoBtn.style.display = usuarioPuedeAltaRegistros(actual) ? 'flex' : 'none';
+          var inventarioBtn = document.getElementById('menuInventarioBtn');
+          if (inventarioBtn) inventarioBtn.style.display = (actual && actual.rol === 'Administrador') ? 'flex' : 'none';
+          var almacenesBtn = document.getElementById('menuAlmacenesBtn');
+          if (almacenesBtn) almacenesBtn.style.display = usuarioPuedeVerAlmacenes(actual) ? 'flex' : 'none';
+          mostrarIndicadoresEnMenuPrincipal();
+          return;
+        }
+
+        document.querySelectorAll('#modulosGridPrincipal .modulo-item').forEach(function(item) {
+          var modulo = item.dataset.modulo;
+          if (modulo && MODULOS_PRINCIPALES_PERMITIDOS.indexOf(modulo) === -1) {
+            item.style.display = 'none';
+          }
+        });
+
+        document.querySelectorAll('#modulosInternoGrid .modulo-interno-item').forEach(function(item) {
+          var modulo = item.dataset.modulo;
+          if (modulo && MODULOS_INTERNOS_PERMITIDOS.indexOf(modulo) === -1) {
+            item.classList.add('hidden');
+          }
+        });
+      }
+
+      window.toggleBloqueoSistema = function() {
+        var nuevoEstado = sistemaRestringidoActivo() ? '0' : '1';
+        localStorage.setItem(SISTEMA_RESTRINGIDO_KEY, nuevoEstado);
+        aplicarBloqueoSistemaMenus();
+        if (moduloActual && !moduloPermitidoPorBloqueo(moduloActual)) {
+          window.mostrarMenuMaestroPrincipal();
+          return;
+        }
+        if (document.getElementById('menuMaestroPrincipal').classList.contains('visible')) {
+          window.mostrarMenuMaestroPrincipal();
+        } else if (document.getElementById('menuMaestro').classList.contains('visible')) {
+          window.mostrarMenuMaestroPrincipal();
+        }
+      };
+
       window.mostrarMenuMaestroPrincipal = function() {
         document.getElementById('menuMaestroPrincipal').classList.add('visible');
         document.getElementById('menuMaestroPrincipal').classList.remove('hidden');
@@ -6875,11 +6963,13 @@
         // Mostrar el logo correspondiente al usuario autenticado
         mostrarLogoMaestro();
 
-        // Centrar módulos visibles en el menú principal
-        centrarModulosMenuPrincipal();
-
         // Mostrar/ocultar módulo INDICADORES en el menú principal
         mostrarIndicadoresEnMenuPrincipal();
+
+        aplicarBloqueoSistemaMenus();
+
+        // Centrar módulos visibles en el menú principal
+        centrarModulosMenuPrincipal();
 
         actualizarHeaderLogo();
         actualizarTotalesMenuPrincipal();
@@ -6940,6 +7030,11 @@
       // MENÚ MMD — Módulos disponibles del Menú Maestro seleccionado
       // ============================================================
       window.mostrarMenuMaestro = function(tipo, titulo) {
+        if (!moduloPermitidoPorBloqueo(tipo)) {
+          alert('🔒 Módulo bloqueado por restricción del sistema.');
+          window.mostrarMenuMaestroPrincipal();
+          return;
+        }
         document.getElementById('menuMaestroPrincipal').classList.remove('visible');
         document.getElementById('menuMaestroPrincipal').classList.add('hidden');
         document.getElementById('menuMaestro').classList.add('visible');
@@ -7009,6 +7104,12 @@
             modulos.push({ id: 'clientes', icono: '🧑\u200d💼', nombre: 'Clientes' });
             modulos.push({ id: 'vehiculos', icono: '🚗', nombre: 'Vehículos' });
           }
+        }
+
+        if (sistemaRestringidoActivo()) {
+          modulos = modulos.filter(function(m) {
+            return moduloPermitidoPorBloqueo(m.id);
+          });
         }
 
         if (modulos.length === 0) {
@@ -7133,6 +7234,7 @@
 
         mostrarLogoInterno();
         actualizarHeaderLogo();
+        aplicarBloqueoSistemaMenus();
 
         var modulosVisibles = document.querySelectorAll('#modulosInternoGrid .modulo-interno-item:not(.hidden)');
         if (modulosVisibles.length === 0) {
@@ -7167,6 +7269,10 @@
             var item = e.target.closest('.modulo-item');
             if (!item) return;
             var modulo = item.dataset.modulo;
+            if (!moduloPermitidoPorBloqueo(modulo)) {
+              alert('🔒 Módulo bloqueado por restricción del sistema.');
+              return;
+            }
             if (modulo === 'egresos') {
               window.mostrarMenuMaestro('egresos', 'EGRESOS');
             } else if (modulo === 'ingresos') {
@@ -7227,6 +7333,7 @@
         }
 
         modulosConfigurados = true;
+        aplicarBloqueoSistemaMenus();
       }
 
       // ============================================================
@@ -10972,6 +11079,11 @@
       };
 
       window.mostrarModulo = function(modulo) {
+        if (!moduloPermitidoPorBloqueo(modulo)) {
+          alert('🔒 Módulo bloqueado por restricción del sistema.');
+          window.mostrarMenuMaestroPrincipal();
+          return;
+        }
         moduloActual = modulo;
         document.getElementById('menuMaestroPrincipal').classList.remove('visible');
         document.getElementById('menuMaestroPrincipal').classList.add('hidden');
