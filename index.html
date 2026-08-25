@@ -5103,8 +5103,6 @@
           </div>
           <div class="grupo-formulario">
             <div class="flex">
-              <label style="font-weight:500;flex:0.15;min-width:60px;">Banco:</label><input id="ofBanco" placeholder="Nombre del banco" style="flex:1.5;">
-              <label style="font-weight:500;flex:0.15;min-width:60px;">Cuenta:</label><input id="ofCuenta" placeholder="Número de cuenta" style="flex:1.2;">
               <label style="font-weight:500;flex:0.25;min-width:110px;">Monto (con IVA):</label><input id="ofMonto" placeholder="Se calcula solo" disabled style="background:var(--gray-200); flex:1;">
             </div>
           </div>
@@ -15275,8 +15273,6 @@
           document.getElementById('ofDireccion').disabled = true;
           document.getElementById('ofCP').disabled = true;
           document.getElementById('ofODCContrato').disabled = true;
-          document.getElementById('ofBanco').disabled = true;
-          document.getElementById('ofCuenta').disabled = true;
           document.getElementById('ofCfdi').disabled = true;
           document.getElementById('ofFormaPago').disabled = true;
           document.getElementById('ofMetodoPago').disabled = true;
@@ -17203,8 +17199,8 @@
           direccion: document.getElementById('ofDireccion').value.trim(),
           formaPago: document.getElementById('ofFormaPago').value,
           metodoPago: document.getElementById('ofMetodoPago').value,
-          banco: document.getElementById('ofBanco').value.trim().toUpperCase(),
-          cuenta: document.getElementById('ofCuenta').value.trim(),
+          banco: '',
+          cuenta: '',
           moneda: document.getElementById('ofMoneda').value,
           cp: document.getElementById('ofCP').value.trim(),
           odcContrato: document.getElementById('ofODCContrato').value.trim().toUpperCase(),
@@ -17294,8 +17290,6 @@
           { label: 'Número de OC:', value: datos.ocNumero || 'N/A' },
           { label: 'Forma de Pago:', value: datos.formaPago },
           { label: 'Método de Pago:', value: datos.metodoPago },
-          { label: 'Banco:', value: datos.banco || 'No especificado' },
-          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
           { label: 'Moneda:', value: datos.moneda },
           { label: 'Responsable:', value: datos.responsable || 'No definido' },
           { label: 'Elaborador:', value: datos.elaborador },
@@ -17431,8 +17425,8 @@
         var direccion = document.getElementById('ofDireccion').value.trim();
         var formaPago = document.getElementById('ofFormaPago').value;
         var metodoPago = document.getElementById('ofMetodoPago').value;
-        var banco = document.getElementById('ofBanco').value.trim().toUpperCase();
-        var cuenta = document.getElementById('ofCuenta').value.trim();
+        var banco = '';
+        var cuenta = '';
         var moneda = document.getElementById('ofMoneda').value;
         var cp = document.getElementById('ofCP').value.trim();
         var odcContrato = document.getElementById('ofODCContrato').value.trim().toUpperCase();
@@ -17521,13 +17515,12 @@
         document.getElementById('ofRazonSocial').value = '';
         document.getElementById('ofRFC').value = '';
         document.getElementById('ofDireccion').value = '';
-        document.getElementById('ofBanco').value = '';
-        document.getElementById('ofCuenta').value = '';
         document.getElementById('ofCP').value = '';
         document.getElementById('ofODCContrato').value = '';
         document.getElementById('ofOCNumero').value = '';
         document.getElementById('ofResponsable').value = '';
         window.actualizarFolioOF();
+        window.cerrarModalCard('ofFormularioNuevo');
 
         window.renderOF();
         actualizarTotalesMenuPrincipal();
@@ -19281,10 +19274,50 @@
         return doc;
       }
 
-      window.previsualizarReporteCXP = function() {
+      async function agregarLogoUsuarioReporte(doc, pageWidth, margin) {
+        var DEFAULT_LOGO = 'https://extingue.com.mx/img/logo.png';
+        var DEFAULT_NOMBRE = 'GRUPO INDUSTRIAL EXTINGUE';
+        var empresaUsuario = '';
+        var nombreEmpresa = DEFAULT_NOMBRE;
+
+        var defaultData = actual ? obtenerEmpresaDeptoDefault(actual) : null;
+        if (defaultData && !defaultData.libre && defaultData.empresa) {
+          empresaUsuario = defaultData.empresa;
+        }
+
+        var empresaCatalogo = getEmpresaCatalogoPorNombre(empresaUsuario);
+        var logoUrl = empresaCatalogo && empresaCatalogo.logo ? empresaCatalogo.logo : DEFAULT_LOGO;
+        if (empresaCatalogo && empresaCatalogo.nombre) nombreEmpresa = empresaCatalogo.nombre;
+
+        try {
+          var imgData = await obtenerImagenComoDataURL(logoUrl);
+          if (!imgData) throw new Error('No se pudo cargar el logo');
+          var img = new Image();
+          img.src = imgData;
+          await new Promise(function(resolve, reject) {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          var imgWidth = 110;
+          var imgHeight = (img.height / img.width) * imgWidth;
+          var maxHeight = 42;
+          if (imgHeight > maxHeight) {
+            imgWidth = imgWidth * (maxHeight / imgHeight);
+            imgHeight = maxHeight;
+          }
+          doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth, 22, imgWidth, imgHeight);
+        } catch (e) {
+          doc.setFontSize(10);
+          doc.setTextColor(11, 26, 51);
+          doc.setFont('helvetica', 'bold');
+          doc.text(nombreEmpresa, pageWidth - margin, 40, { align: 'right' });
+        }
+      }
+
+      window.previsualizarReporteCXP = async function() {
         try {
           var datos = obtenerDatosCXP();
-          var doc = generarPDFReporteCXP(datos);
+          var doc = await generarPDFReporteCXP(datos);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXP_' + new Date().toISOString().split('T')[0] + '.pdf';
           document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
@@ -19295,14 +19328,14 @@
         }
       };
 
-      window.previsualizarReporteCXC = function() {
+      window.previsualizarReporteCXC = async function() {
         try {
           // Refresca la tabla en pantalla con los filtros vigentes (antes
           // requería el botón "Aplicar Filtros", ahora Previsualizar
           // Reporte hace esa misma acción antes de generar el PDF).
           window.renderCXC();
           var cuentas = obtenerDatosCXC();
-          var doc = generarPDFReporteCXC(cuentas);
+          var doc = await generarPDFReporteCXC(cuentas);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXC_' + new Date().toISOString().split('T')[0] + '.pdf';
           document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
@@ -19313,7 +19346,7 @@
         }
       };
 
-      window.previsualizarReporteCXF = function() {
+      window.previsualizarReporteCXF = async function() {
         try {
           var ofsVisibles = ordenesFacturacion.filter(function(o) {
             return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
@@ -19330,7 +19363,7 @@
           if (filtroEstado && filtroEstado.value) {
             ofsVisibles = ofsVisibles.filter(function(o) { return o.estado === filtroEstado.value; });
           }
-          var doc = generarPDFReporteCXF(ofsVisibles);
+          var doc = await generarPDFReporteCXF(ofsVisibles);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXF_' + new Date().toISOString().split('T')[0] + '.pdf';
           document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
@@ -19346,11 +19379,11 @@
         reportePreviewPDF.save(reportePreviewNombre);
       };
 
-      window.imprimirReporteCXP = function() {
+      window.imprimirReporteCXP = async function() {
         try {
           if (typeof window.renderCXP === 'function') window.renderCXP();
           var datos = obtenerDatosCXP();
-          var doc = generarPDFReporteCXP(datos);
+          var doc = await generarPDFReporteCXP(datos);
           var blobUrl = doc.output('bloburl');
           var printFrame = document.createElement('iframe');
           printFrame.style.position = 'fixed';
@@ -19385,14 +19418,15 @@
         reportePreviewPDF = null;
       };
 
-      function generarPDFReporteCXP(datos) {
-        var proys = datos.proyectos;
+      async function generarPDFReporteCXP(datos) {
         var ocFiltradas = datos.oc;
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
         var margin = 30;
-        var y = 40;
+        var y = 46;
+
+        await agregarLogoUsuarioReporte(doc, pageWidth, margin);
 
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -19431,20 +19465,6 @@
         doc.text('Total OC: ' + ocFiltradas.length, margin + 600, y);
         y += 20;
 
-        var headersProy = ['Empresa', 'Depto', 'Proyecto', 'Cliente', 'Presupuesto', 'Límite'];
-        var rowsProy = proys.map(function(p) {
-          return [p.empresa, p.departamento, p.nombre, p.cliente, formatoMoneda(p.presupuesto, p.moneda), formatoMoneda(p.limite, p.moneda)];
-        });
-        doc.autoTable({
-          head: [headersProy],
-          body: rowsProy,
-          startY: y,
-          margin: { left: margin, right: margin },
-          styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-          headStyles: { fillColor: [11, 26, 51] }
-        });
-
-        var y2 = doc.lastAutoTable.finalY + 20;
         var headersOC = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Equiv. MXN', 'F.Pago', 'Estado'];
         var rowsOC = ocFiltradas.map(function(o) {
           var estadoLabel = o.estado;
@@ -19455,7 +19475,7 @@
         doc.autoTable({
           head: [headersOC],
           body: rowsOC,
-          startY: y2,
+          startY: y,
           margin: { left: margin, right: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [11, 26, 51] }
@@ -19464,12 +19484,14 @@
         return doc;
       }
 
-      function generarPDFReporteCXC(cuentas) {
+      async function generarPDFReporteCXC(cuentas) {
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
         var margin = 30;
-        var y = 40;
+        var y = 46;
+
+        await agregarLogoUsuarioReporte(doc, pageWidth, margin);
 
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -19521,12 +19543,14 @@
         return doc;
       }
 
-      function generarPDFReporteCXF(ofs) {
+      async function generarPDFReporteCXF(ofs) {
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
         var margin = 30;
-        var y = 40;
+        var y = 46;
+
+        await agregarLogoUsuarioReporte(doc, pageWidth, margin);
 
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
