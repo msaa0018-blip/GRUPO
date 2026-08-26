@@ -1480,7 +1480,7 @@
     justify-content: center;
     align-items: center;
     gap: 16px;
-    margin-top: 11.111vh;
+    margin-top: 33.333vh;
     margin-bottom: 18px;
   }
   .oc-menu-item {
@@ -1488,11 +1488,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    flex: 1 1 0;
-    max-width: 33.333%;
-    height: 11.111vh;
-    padding: 6px 4px;
+    gap: 6px;
+    flex: 0 0 22.222%;
+    height: 33.333vh;
+    padding: 18px 8px;
     border-radius: 14px;
     border: 1px solid var(--gray-200);
     background: linear-gradient(180deg, #fff 0%, var(--gray-50, #fafafa) 100%);
@@ -1506,14 +1505,14 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     border-color: var(--color-primario, #2563eb);
   }
-  .oc-menu-icono { font-size: 13px; line-height: 1; }
-  .oc-menu-titulo { font-weight: 700; font-size: 6px; color: var(--gray-800); }
-  .oc-menu-sub { font-size: 4px; color: var(--gray-500); }
+  .oc-menu-icono { font-size: 48px; line-height: 1; }
+  .oc-menu-titulo { font-weight: 700; font-size: 16px; color: var(--gray-800); }
+  .oc-menu-sub { font-size: 13px; color: var(--gray-500); }
   @media (max-width: 640px) {
     .oc-menu-restaurante { flex-wrap: wrap; }
-    .oc-menu-item { flex: 1 1 100%; height: 11.111vh; }
-    .oc-menu-icono { font-size: 10px; }
-    .oc-menu-titulo { font-size: 5px; }
+    .oc-menu-item { flex: 1 1 100%; height: 33.333vh; }
+    .oc-menu-icono { font-size: 40px; }
+    .oc-menu-titulo { font-size: 15px; }
   }
 
   /* ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== */
@@ -3907,10 +3906,7 @@
         </div>
         <div class="cxc-form-row">
           <select id="valeCombustible">
-            <option value="" disabled selected hidden>Selecciona combustible *</option>
-            <option value="Gasolina Magna">Gasolina Magna</option>
-            <option value="Gasolina Premium">Gasolina Premium</option>
-            <option value="Diesel">Diesel</option>
+            <option value="" disabled selected hidden>Selecciona primero un vehículo</option>
           </select>
           <select id="valeNivelTanque">
             <option value="" disabled selected hidden>Nivel de tanque actual</option>
@@ -8742,17 +8738,22 @@
         window.actualizarProyectosNuevoVale(empresa, depto);
       };
 
-      // El combustible disponible para elegir en el vale queda
-      // restringido al tipo de combustible que admite el vehículo
-      // seleccionado (Gasolina -> solo Magna/Premium; Diesel -> solo
-      // Diesel; Ambos -> todas las opciones).
+      // El combustible del vale queda determinado directamente por el
+      // tipo de combustible asignado al vehículo elegido: solo se
+      // muestra esa opción (o "Gasolina"/"Diesel" si el vehículo admite
+      // "Ambos"), sin dejar elegir combustibles que el vehículo no usa.
       window.actualizarCombustibleSegunVehiculoVale = function() {
         var selVehiculo = document.getElementById('valeVehiculo');
         var selCombustible = document.getElementById('valeCombustible');
         if (!selVehiculo || !selCombustible) return;
         var vehiculo = vehiculosCache.find(function(v) { return String(v.id) === String(selVehiculo.value); });
-        var tipo = (vehiculo && vehiculo.tipo_combustible) || 'Ambos';
 
+        if (!vehiculo) {
+          selCombustible.innerHTML = '<option value="" disabled selected hidden>Selecciona primero un vehículo</option>';
+          return;
+        }
+
+        var tipo = vehiculo.tipo_combustible || 'Ambos';
         var opcionesPorTipo = {
           'Gasolina': [
             { value: 'Gasolina Magna', label: 'Gasolina Magna' },
@@ -8769,10 +8770,16 @@
         };
         var opciones = opcionesPorTipo[tipo] || opcionesPorTipo['Ambos'];
 
-        var valorActual = selCombustible.value;
-        selCombustible.innerHTML = '<option value="" disabled selected hidden>Selecciona combustible *</option>' +
-          opciones.map(function(o) { return '<option value="' + o.value + '">' + o.label + '</option>'; }).join('');
-        if (opciones.some(function(o) { return o.value === valorActual; })) selCombustible.value = valorActual;
+        if (opciones.length === 1) {
+          // Único combustible posible: se preselecciona automáticamente.
+          selCombustible.innerHTML = '<option value="' + opciones[0].value + '">' + opciones[0].label + '</option>';
+          selCombustible.value = opciones[0].value;
+        } else {
+          var valorActual = selCombustible.value;
+          selCombustible.innerHTML = '<option value="" disabled selected hidden>Selecciona combustible *</option>' +
+            opciones.map(function(o) { return '<option value="' + o.value + '">' + o.label + '</option>'; }).join('');
+          if (opciones.some(function(o) { return o.value === valorActual; })) selCombustible.value = valorActual;
+        }
       };
 
       // "Selecciona cliente" del vale de gasolina usa la lista real de
@@ -8849,10 +8856,7 @@
         if (selProyectoOC) selProyectoOC.innerHTML = '<option value="" disabled selected hidden>Selecciona primero un cliente</option>';
         var selCombustible = document.getElementById('valeCombustible');
         if (selCombustible) {
-          selCombustible.innerHTML = '<option value="" disabled selected hidden>Selecciona combustible *</option>' +
-            '<option value="Gasolina Magna">Gasolina Magna</option>' +
-            '<option value="Gasolina Premium">Gasolina Premium</option>' +
-            '<option value="Diesel">Diesel</option>';
+          selCombustible.innerHTML = '<option value="" disabled selected hidden>Selecciona primero un vehículo</option>';
         }
         var selLitros = document.getElementById('valeLitros');
         if (selLitros) selLitros.selectedIndex = 0;
