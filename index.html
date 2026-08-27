@@ -5482,6 +5482,7 @@
       </div>
       <div class="modal-body">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="btnAccionDocCxpEditar" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionDocumentoCXP('editar')">✏️ Editar</button>
           <button type="button" id="btnAccionDocCxpPagar" class="btn-accion-producto" data-accion="pagar" onclick="window.seleccionarAccionDocumentoCXP('pagar')">✅ Marcar Pagada</button>
           <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionDocumentoCXP('eliminar')">🗑️ Eliminar</button>
         </div>
@@ -15317,6 +15318,7 @@
       // solo un estado Pendiente/Pagada.
       var documentosCXPCache = [];
       var tipoDocCXPActual = null; // 'VC' | 'VI' | 'SPM'
+      var docCxpEdicionId = null; // id del documento en edición, o null si es "Nuevo Documento"
 
       var DOC_CXP_INFO = {
         VC: { nombre: 'Vale de Caja', icono: '💵', descripcion: 'Vales de caja: se registran directamente aquí, sin pasar por el módulo de Órdenes de Compra.' },
@@ -15617,6 +15619,7 @@
       };
 
       window.cerrarAgregarDocumentoCXP = function() {
+        docCxpEdicionId = null;
         document.getElementById('agregarDocumentoCXPModal').classList.remove('active');
       };
 
@@ -15629,6 +15632,41 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, concepto y monto (mayor a 0) son obligatorios.</div>';
           return;
         }
+
+        // ===== Modo edición (ADMIN / Jefe Departamento): actualiza el
+        // documento existente en vez de crear uno nuevo. No se tocan
+        // tipo, folio, código ni estado.
+        if (docCxpEdicionId !== null) {
+          if (!actual || (actual.rol !== 'Administrador' && actual.rol !== 'Jefe Departamento')) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ No tienes permiso para editar este documento.</div>';
+            return;
+          }
+          var actualizado = {
+            empresa: empresa,
+            departamento: document.getElementById('docCxpDepartamento').value || null,
+            concepto: concepto,
+            beneficiario: document.getElementById('docCxpBeneficiario').value.trim(),
+            fecha: document.getElementById('docCxpFecha').value || null,
+            monto: monto,
+            moneda: document.getElementById('docCxpMoneda').value,
+            cliente: document.getElementById('docCxpCliente').value || null,
+            proyecto: document.getElementById('docCxpProyecto').value || null,
+            solicitante: document.getElementById('docCxpSolicitante').value || null,
+            autoriza: document.getElementById('docCxpAutoriza').value || null
+          };
+          try {
+            var { error } = await supabase.from('documentos_cxp').update(actualizado).eq('id', docCxpEdicionId);
+            if (error) throw error;
+            docCxpEdicionId = null;
+            window.cerrarAgregarDocumentoCXP();
+            window.cargarDocumentosCXP();
+          } catch (e) {
+            console.error('Error actualizando documento CXP:', e);
+            if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo actualizar: ' + escapeHTML(e.message) + '</div>';
+          }
+          return;
+        }
+
         var nuevo = {
           tipo: document.getElementById('docCxpTipo').value,
           empresa: empresa,
@@ -15669,8 +15707,17 @@
         if (!d) return;
         accionDocumentoCXPActual = { id: id, accion: null };
         document.getElementById('docCxpAccionesTitulo').textContent = d.codigo || d.tipo;
+
+        // Editar (VC/VI): solo ADMIN y Jefe de Departamento.
+        var btnEditar = document.getElementById('btnAccionDocCxpEditar');
+        var puedeEditar = actual && (actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+        if (btnEditar) btnEditar.style.display = puedeEditar ? '' : 'none';
+
+        // Marcar Pagada: solo Jefe de Departamento (y solo si sigue pendiente).
         var btnPagar = document.getElementById('btnAccionDocCxpPagar');
-        if (btnPagar) btnPagar.style.display = (d.estado === 'PAGADA') ? 'none' : '';
+        var puedeMarcarPagada = actual && actual.rol === 'Jefe Departamento';
+        if (btnPagar) btnPagar.style.display = (d.estado === 'PAGADA' || !puedeMarcarPagada) ? 'none' : '';
+
         document.querySelectorAll('#docCxpAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
         document.getElementById('docCxpAccionesModal').classList.add('active');
       };
@@ -15690,7 +15737,7 @@
 
       window.confirmarAccionDocumentoCXP = function() {
         if (!accionDocumentoCXPActual || !accionDocumentoCXPActual.accion) {
-          alert('⚠️ Selecciona una opción: Marcar Pagada o Eliminar.');
+          alert('⚠️ Selecciona una opción: Editar, Marcar Pagada o Eliminar.');
           return;
         }
         var id = accionDocumentoCXPActual.id;
@@ -15698,9 +15745,14 @@
         window.cerrarModalAccionesDocumentoCXP();
         if (accion === 'pagar') window.marcarPagadoDocumentoCXP(id);
         else if (accion === 'eliminar') window.eliminarDocumentoCXP(id);
+        else if (accion === 'editar') window.editarDocumentoCXP(id);
       };
 
       window.marcarPagadoDocumentoCXP = async function(id) {
+        // Marcar Pagada un VC/VI es exclusivo del Jefe de Departamento.
+        if (!actual || actual.rol !== 'Jefe Departamento') {
+          return alert('❌ Solo el Jefe de Departamento puede marcar este documento como pagado.');
+        }
         try {
           var { error } = await supabase.from('documentos_cxp').update({ estado: 'PAGADA' }).eq('id', id);
           if (error) throw error;
@@ -15709,6 +15761,97 @@
           console.error('Error marcando documento como pagado:', e);
           alert('❌ No se pudo actualizar: ' + e.message);
         }
+      };
+
+      // Editar un VC/VI ya registrado: exclusivo de ADMIN y Jefe de
+      // Departamento. Reutiliza el mismo modal de "Nuevo Documento",
+      // precargado con los datos existentes; folio/tipo/código y estado
+      // no se tocan (los controla el sistema).
+      window.editarDocumentoCXP = async function(id) {
+        if (!actual || (actual.rol !== 'Administrador' && actual.rol !== 'Jefe Departamento')) {
+          return alert('❌ Solo ADMIN o el Jefe de Departamento pueden editar este documento.');
+        }
+        var d = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (!d) return;
+
+        var msgDiv = document.getElementById('msgDocumentoCXP');
+        if (msgDiv) msgDiv.innerHTML = '';
+
+        if (!clientesCache || clientesCache.length === 0) {
+          try {
+            var { data, error } = await supabase.from('clientes').select('*').order('nombre');
+            if (!error) clientesCache = data || [];
+          } catch (e) {
+            console.error('Error cargando clientes para editar documento CXP:', e);
+          }
+        }
+
+        docCxpEdicionId = id;
+        tipoDocCXPActual = d.tipo;
+
+        var tipoSelect = document.getElementById('docCxpTipo');
+        if (tipoSelect) tipoSelect.value = d.tipo;
+
+        // A diferencia de "Nuevo Documento", en edición Empresa y
+        // Departamento quedan libres y con el catálogo completo (para
+        // ADMIN incluido), precargados con los valores actuales del
+        // documento.
+        var selEmpresa = document.getElementById('docCxpEmpresa');
+        var selDepto = document.getElementById('docCxpDepartamento');
+        if (selEmpresa) {
+          selEmpresa.disabled = false;
+          selEmpresa.style.background = '';
+          selEmpresa.innerHTML = '<option value="">Selecciona empresa *</option>' +
+            getEmpresasCatalogo().map(function(e) { return '<option value="' + escapeHTML(e.nombre) + '">' + escapeHTML(e.nombre) + '</option>'; }).join('');
+          selEmpresa.value = d.empresa || '';
+        }
+        if (selDepto) {
+          selDepto.disabled = false;
+          selDepto.style.background = '';
+          selDepto.innerHTML = '<option value="">Selecciona departamento</option>' +
+            getDepartamentosPorEmpresa(d.empresa || '').map(function(dp) { return '<option value="' + escapeHTML(dp.nombre) + '">' + escapeHTML(dp.nombre) + '</option>'; }).join('');
+          selDepto.value = d.departamento || '';
+        }
+
+        var selCliente = document.getElementById('docCxpCliente');
+        if (selCliente) {
+          selCliente.innerHTML = '<option value="" disabled hidden>Selecciona cliente</option>' +
+            (clientesCache || []).map(function(c) { return '<option value="' + escapeHTML(c.nombre) + '">' + escapeHTML(c.nombre) + '</option>'; }).join('');
+          selCliente.value = d.cliente || '';
+        }
+
+        // Recalcula Proyecto/Solicitante/Autoriza para la empresa+depto
+        // del documento y luego reimpone los valores ya guardados.
+        window.actualizarDependientesDocumentoCXP();
+        var selProyecto = document.getElementById('docCxpProyecto');
+        if (selProyecto && d.proyecto) selProyecto.value = d.proyecto;
+        var selSolicitante = document.getElementById('docCxpSolicitante');
+        if (selSolicitante && d.solicitante) selSolicitante.value = d.solicitante;
+        var selAutoriza = document.getElementById('docCxpAutoriza');
+        if (selAutoriza && d.autoriza) selAutoriza.value = d.autoriza;
+
+        document.getElementById('docCxpConcepto').value = d.concepto || '';
+        document.getElementById('docCxpBeneficiario').value = d.beneficiario || '';
+        document.getElementById('docCxpFecha').value = d.fecha ? d.fecha.slice(0, 10) : '';
+        document.getElementById('docCxpMonto').value = d.monto != null ? d.monto : '';
+        document.getElementById('docCxpMoneda').value = d.moneda || 'MXN';
+
+        // El folio ya asignado no se recalcula ni se toca en edición.
+        var folioInput = document.getElementById('docCxpFolio');
+        if (folioInput) {
+          folioInput.value = d.folio || '';
+          folioInput.disabled = true;
+          folioInput.style.background = 'var(--gray-200)';
+          folioInput.placeholder = 'Folio';
+        }
+
+        var tituloModal = document.getElementById('docCxpModalTitulo');
+        if (tituloModal) {
+          var info = DOC_CXP_INFO[d.tipo] || { nombre: d.tipo };
+          tituloModal.textContent = 'Editar ' + d.tipo + ' — ' + info.nombre + ' (' + (d.codigo || '') + ')';
+        }
+
+        document.getElementById('agregarDocumentoCXPModal').classList.add('active');
       };
 
       window.eliminarDocumentoCXP = async function(id) {
