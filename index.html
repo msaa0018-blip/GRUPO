@@ -1395,6 +1395,12 @@
   #agregarCXCModal .modal-header .pdfPreview-btn-group, #agregarDocumentoCXPModal .modal-header .pdfPreview-btn-group, #vehiculoAccionesModal .modal-header .pdfPreview-btn-group, #agregarVehiculoModal .modal-header .pdfPreview-btn-group, #agregarValeGasolinaModal .modal-header .pdfPreview-btn-group, #valeAccionesModal .modal-header .pdfPreview-btn-group, #valesGasolinaDashboardModal .modal-header .pdfPreview-btn-group, #valeVisualizarModal .modal-header .pdfPreview-btn-group, #valeComprobarModal .modal-header .pdfPreview-btn-group, #vscCatalogoAccionesModal .modal-header .pdfPreview-btn-group, #editarVscCatalogoModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #agregarCXCModal .cxc-form-row, #agregarDocumentoCXPModal .cxc-form-row, #agregarVehiculoModal .cxc-form-row, #agregarValeGasolinaModal .cxc-form-row, #valeComprobarModal .cxc-form-row { margin-bottom: 10px; }
   #valeVisualizarModal .modal-body, #valeComprobarModal .modal-body { max-height: 80vh; overflow: auto; }
+  /* El botón "✅ Comprobar" (y demás acciones del vale) no debe agrandarse
+     al pasar el cursor/tocar: dentro de un modal con overflow:auto, el
+     transform:scale(1.02) del estado hover/active cuenta como parte del
+     área con scroll y provoca barras de desplazamiento horizontales y
+     verticales innecesarias. */
+  #valeVisualizarAcciones button:hover, #valeVisualizarAcciones button:active { transform: none; }
   #valesGasolinaDashboardModal .modal-content { max-width: 1000px; }
 
   /* ===== BOTÓN HAMBURGUESA (opciones de producto) ===== */
@@ -1559,7 +1565,7 @@
   .buzon-checklist-vacio { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
 
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
-  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal, #editarProductoModal, #fotoProductoModal, #docCxpAccionesModal, #clienteAccionesModal, #editarClienteModal, #clienteProyectosModal, #comprobantePagoModal, #adjuntarFacturaModal, #concluirOCModal, #proyectoAccionesModal, #editarProyectoModal, #aprobarOFModal, #complementoPagoCXCModal {
+  #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal, #editarProductoModal, #fotoProductoModal, #docCxpAccionesModal, #clienteAccionesModal, #editarClienteModal, #clienteProyectosModal, #comprobantePagoModal, #adjuntarFacturaModal, #concluirOCModal, #proyectoAccionesModal, #editarProyectoModal, #aprobarOFModal, #complementoPagoCXCModal, #comprobantePagoOFModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1576,7 +1582,7 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active, #almacenAccionesModal.active, #editarAlmacenModal.active, #editarProductoModal.active, #fotoProductoModal.active, #docCxpAccionesModal.active, #clienteAccionesModal.active, #editarClienteModal.active, #clienteProyectosModal.active, #comprobantePagoModal.active, #adjuntarFacturaModal.active, #concluirOCModal.active, #proyectoAccionesModal.active, #editarProyectoModal.active, #aprobarOFModal.active, #complementoPagoCXCModal.active { display: flex }
+  #productoAccionesModal.active, #proveedorAccionesModal.active, #ocAccionesModal.active, #editarProveedorModal.active, #almacenAccionesModal.active, #editarAlmacenModal.active, #editarProductoModal.active, #fotoProductoModal.active, #docCxpAccionesModal.active, #clienteAccionesModal.active, #editarClienteModal.active, #clienteProyectosModal.active, #comprobantePagoModal.active, #adjuntarFacturaModal.active, #concluirOCModal.active, #proyectoAccionesModal.active, #editarProyectoModal.active, #aprobarOFModal.active, #complementoPagoCXCModal.active, #comprobantePagoOFModal.active { display: flex }
   #productoAccionesModal .modal-content, #proveedorAccionesModal .modal-content, #ocAccionesModal .modal-content, #almacenAccionesModal .modal-content, #docCxpAccionesModal .modal-content, #clienteAccionesModal .modal-content, #editarClienteModal .modal-content, #clienteProyectosModal .modal-content, #proyectoAccionesModal .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
@@ -1590,7 +1596,7 @@
   }
   #editarClienteModal .modal-content, #clienteProyectosModal .modal-content { max-height: 92vh; overflow: auto; }
 
-  #editarProveedorModal .modal-content, #editarAlmacenModal .modal-content, #editarProductoModal .modal-content, #fotoProductoModal .modal-content, #comprobantePagoModal .modal-content, #adjuntarFacturaModal .modal-content, #concluirOCModal .modal-content, #editarProyectoModal .modal-content, #aprobarOFModal .modal-content, #complementoPagoCXCModal .modal-content {
+  #editarProveedorModal .modal-content, #editarAlmacenModal .modal-content, #editarProductoModal .modal-content, #fotoProductoModal .modal-content, #comprobantePagoModal .modal-content, #adjuntarFacturaModal .modal-content, #concluirOCModal .modal-content, #editarProyectoModal .modal-content, #aprobarOFModal .modal-content, #complementoPagoCXCModal .modal-content, #comprobantePagoOFModal .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
     border: 1px solid var(--modal-border);
@@ -1603,7 +1609,7 @@
     overflow: auto;
     box-sizing: border-box;
   }
-  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header, #almacenAccionesModal .modal-header, #editarAlmacenModal .modal-header, #editarProductoModal .modal-header, #fotoProductoModal .modal-header, #docCxpAccionesModal .modal-header, #clienteAccionesModal .modal-header, #editarClienteModal .modal-header, #clienteProyectosModal .modal-header, #comprobantePagoModal .modal-header, #adjuntarFacturaModal .modal-header, #concluirOCModal .modal-header, #proyectoAccionesModal .modal-header, #editarProyectoModal .modal-header, #aprobarOFModal .modal-header, #complementoPagoCXCModal .modal-header {
+  #productoAccionesModal .modal-header, #proveedorAccionesModal .modal-header, #ocAccionesModal .modal-header, #editarProveedorModal .modal-header, #almacenAccionesModal .modal-header, #editarAlmacenModal .modal-header, #editarProductoModal .modal-header, #fotoProductoModal .modal-header, #docCxpAccionesModal .modal-header, #clienteAccionesModal .modal-header, #editarClienteModal .modal-header, #clienteProyectosModal .modal-header, #comprobantePagoModal .modal-header, #adjuntarFacturaModal .modal-header, #concluirOCModal .modal-header, #proyectoAccionesModal .modal-header, #editarProyectoModal .modal-header, #aprobarOFModal .modal-header, #complementoPagoCXCModal .modal-header, #comprobantePagoOFModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1612,8 +1618,8 @@
     border-bottom: 2px solid var(--modal-accent);
     padding-bottom: 12px;
   }
-  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3, #editarProductoModal .modal-header h3, #fotoProductoModal .modal-header h3, #docCxpAccionesModal .modal-header h3, #clienteAccionesModal .modal-header h3, #editarClienteModal .modal-header h3, #clienteProyectosModal .modal-header h3, #comprobantePagoModal .modal-header h3, #adjuntarFacturaModal .modal-header h3, #concluirOCModal .modal-header h3, #proyectoAccionesModal .modal-header h3, #editarProyectoModal .modal-header h3, #aprobarOFModal .modal-header h3, #complementoPagoCXCModal .modal-header h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group, #almacenAccionesModal .modal-header .pdfPreview-btn-group, #editarAlmacenModal .modal-header .pdfPreview-btn-group, #editarProductoModal .modal-header .pdfPreview-btn-group, #fotoProductoModal .modal-header .pdfPreview-btn-group, #docCxpAccionesModal .modal-header .pdfPreview-btn-group, #clienteAccionesModal .modal-header .pdfPreview-btn-group, #editarClienteModal .modal-header .pdfPreview-btn-group, #clienteProyectosModal .modal-header .pdfPreview-btn-group, #comprobantePagoModal .modal-header .pdfPreview-btn-group, #adjuntarFacturaModal .modal-header .pdfPreview-btn-group, #concluirOCModal .modal-header .pdfPreview-btn-group, #proyectoAccionesModal .modal-header .pdfPreview-btn-group, #editarProyectoModal .modal-header .pdfPreview-btn-group, #aprobarOFModal .modal-header .pdfPreview-btn-group, #complementoPagoCXCModal .modal-header .pdfPreview-btn-group {
+  #productoAccionesModal .modal-header h3, #proveedorAccionesModal .modal-header h3, #ocAccionesModal .modal-header h3, #editarProveedorModal .modal-header h3, #almacenAccionesModal .modal-header h3, #editarAlmacenModal .modal-header h3, #editarProductoModal .modal-header h3, #fotoProductoModal .modal-header h3, #docCxpAccionesModal .modal-header h3, #clienteAccionesModal .modal-header h3, #editarClienteModal .modal-header h3, #clienteProyectosModal .modal-header h3, #comprobantePagoModal .modal-header h3, #adjuntarFacturaModal .modal-header h3, #concluirOCModal .modal-header h3, #proyectoAccionesModal .modal-header h3, #editarProyectoModal .modal-header h3, #aprobarOFModal .modal-header h3, #complementoPagoCXCModal .modal-header h3, #comprobantePagoOFModal .modal-header h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
+  #productoAccionesModal .modal-header .pdfPreview-btn-group, #proveedorAccionesModal .modal-header .pdfPreview-btn-group, #ocAccionesModal .modal-header .pdfPreview-btn-group, #editarProveedorModal .modal-header .pdfPreview-btn-group, #almacenAccionesModal .modal-header .pdfPreview-btn-group, #editarAlmacenModal .modal-header .pdfPreview-btn-group, #editarProductoModal .modal-header .pdfPreview-btn-group, #fotoProductoModal .modal-header .pdfPreview-btn-group, #docCxpAccionesModal .modal-header .pdfPreview-btn-group, #clienteAccionesModal .modal-header .pdfPreview-btn-group, #editarClienteModal .modal-header .pdfPreview-btn-group, #clienteProyectosModal .modal-header .pdfPreview-btn-group, #comprobantePagoModal .modal-header .pdfPreview-btn-group, #adjuntarFacturaModal .modal-header .pdfPreview-btn-group, #concluirOCModal .modal-header .pdfPreview-btn-group, #proyectoAccionesModal .modal-header .pdfPreview-btn-group, #editarProyectoModal .modal-header .pdfPreview-btn-group, #aprobarOFModal .modal-header .pdfPreview-btn-group, #complementoPagoCXCModal .modal-header .pdfPreview-btn-group, #comprobantePagoOFModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
@@ -4336,6 +4342,30 @@
         </div>
       </div>
 
+      <!-- ===== MODAL: COMPROBANTE DE PAGO DE OF (solicitante/responsable) ===== -->
+      <div id="comprobantePagoOFModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>💰 Comprobante de Pago OF <span id="comprobantePagoOFCodigo" style="font-weight:400;font-size:13px;color:var(--gray-500);"></span></h3>
+            <div class="pdfPreview-btn-group">
+              <button onclick="window.cancelarComprobantePagoOF()">✕</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted" style="margin-bottom:12px;">Para iniciar el cierre de esta OF es obligatorio adjuntar el comprobante de pago de la factura (PDF). Finanzas deberá confirmar y concluir el proceso después.</p>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">Adjuntar comprobante de pago (PDF) *</label>
+              <div id="comprobantePagoOFDropzone" class="foto-dropzone" style="width:100%;height:140px;" onclick="document.getElementById('comprobantePagoOFInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropComprobantePagoOF(event, this)">
+                <span id="comprobantePagoOFDropzoneTexto">📄 Arrastra el PDF aquí, o toca para elegirlo desde el escritorio</span>
+              </div>
+              <input type="file" id="comprobantePagoOFInput" accept=".pdf,application/pdf" class="hidden" onchange="window.manejarSeleccionComprobantePagoOF(this)">
+            </div>
+            <div id="msgComprobantePagoOF"></div>
+            <button class="success full-width" onclick="window.confirmarComprobantePagoOF()" style="margin-top:8px;">✔️ Subir Comprobante de Pago</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== MODAL: ADJUNTAR FACTURA AL CONCLUIR UNA OC ===== -->
       <div id="adjuntarFacturaModal">
         <div class="modal-content">
@@ -5380,7 +5410,7 @@
 
   <div id="visualizarModal">
     <div class="modal-content">
-      <div class="modal-header"><h3>📄 Visualizar Orden de Compra</h3><button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button></div>
+      <div class="modal-header"><h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3><button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button></div>
       <div id="visualizarStepperOC" class="stepper-oc"></div>
       <div class="modal-body"><iframe id="visualizarFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
     </div>
@@ -5551,10 +5581,6 @@
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Orden de Facturación</h3><button onclick="window.cerrarOfDocModal()">✕</button></div>
       <div class="modal-body"><iframe id="ofDocFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
-      <div class="modal-footer">
-        <button onclick="window.cerrarOfDocModal()">✕</button>
-        <button class="btn-imprimir" onclick="window.descargarOfDocModal()">🖨️ Imprimir / Descargar PDF</button>
-      </div>
     </div>
   </div>
 
@@ -15718,6 +15744,10 @@
         var puedeMarcarPagada = actual && actual.rol === 'Jefe Departamento';
         if (btnPagar) btnPagar.style.display = (d.estado === 'PAGADA' || !puedeMarcarPagada) ? 'none' : '';
 
+        // Eliminar (VC/VI): solo ADMIN y Jefe de Departamento.
+        var btnEliminar = document.querySelector('#docCxpAccionesModal .btn-accion-producto[data-accion="eliminar"]');
+        if (btnEliminar) btnEliminar.style.display = puedeEditar ? '' : 'none';
+
         document.querySelectorAll('#docCxpAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
         document.getElementById('docCxpAccionesModal').classList.add('active');
       };
@@ -15855,6 +15885,9 @@
       };
 
       window.eliminarDocumentoCXP = async function(id) {
+        if (!actual || (actual.rol !== 'Administrador' && actual.rol !== 'Jefe Departamento')) {
+          return alert('❌ Solo ADMIN o el Jefe de Departamento pueden eliminar este documento.');
+        }
         if (!confirm('¿Eliminar este documento?')) return;
         try {
           var { error } = await supabase.from('documentos_cxp').delete().eq('id', id);
@@ -18399,6 +18432,8 @@
         }
         visualizarModalTipoActual = 'of';
         visualizarModalIdActual = of.id;
+        var tituloVisualizarOF = document.getElementById('visualizarModalTitulo');
+        if (tituloVisualizarOF) tituloVisualizarOF.textContent = 'Visualizar OF';
         try {
           var partidas = of.partidas;
           if (typeof partidas === 'string') { try { partidas = JSON.parse(partidas); } catch (e) { partidas = []; } }
@@ -18680,25 +18715,144 @@
         window.abrirNuevaConversacionBuzon();
       };
 
+      // ===== Comprobante de pago de una OF (solicitante/responsable) y
+      // confirmación final de Finanzas =====
+      // Una vez FACTURADA, la OF tiene un límite de 30 días (a partir de
+      // fecha_aprobacion) para comprobar su pago: el solicitante/
+      // responsable sube el comprobante de pago (PDF, reutiliza el bucket
+      // "comprobantes-pago" ya usado en OC); esto NO marca la OF como
+      // pagada por sí solo — recién cuando Finanzas confirma con
+      // window.marcarPagadaOF queda PAGADO y se concluye el ciclo.
+      var indexComprobantePagoOFPendiente = null;
+      var archivoComprobantePagoOFPendiente = null;
+
+      window.abrirComprobantePagoOF = function(index) {
+        if (!actual) return alert('No has iniciado sesión');
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+        var esResponsable = of.responsable && of.responsable === actual.usuario;
+        if (!esResponsable && actual.rol !== 'Administrador') {
+          return alert('❌ Solo el solicitante/responsable (' + (of.responsable || '') + ') puede subir el comprobante de pago de esta OF.');
+        }
+        if (of.estado !== 'FACTURADA') return alert('La OF debe estar en estado Facturada para comprobar su pago.');
+        if (of.comprobante_pago_url) return alert('Esta OF ya tiene comprobante de pago subido, pendiente de confirmación de Finanzas.');
+
+        indexComprobantePagoOFPendiente = index;
+        archivoComprobantePagoOFPendiente = null;
+        var codigoEl = document.getElementById('comprobantePagoOFCodigo');
+        if (codigoEl) codigoEl.textContent = '— ' + (of.folio || ('OF-' + of.id));
+        var texto = document.getElementById('comprobantePagoOFDropzoneTexto');
+        if (texto) texto.textContent = '📄 Arrastra el PDF aquí, o toca para elegirlo desde el escritorio';
+        var input = document.getElementById('comprobantePagoOFInput');
+        if (input) input.value = '';
+        var msg = document.getElementById('msgComprobantePagoOF');
+        if (msg) msg.innerHTML = '';
+        document.getElementById('comprobantePagoOFModal').classList.add('active');
+      };
+
+      window.cancelarComprobantePagoOF = function() {
+        indexComprobantePagoOFPendiente = null;
+        archivoComprobantePagoOFPendiente = null;
+        document.getElementById('comprobantePagoOFModal').classList.remove('active');
+      };
+
+      window.manejarSeleccionComprobantePagoOF = function(input) {
+        if (!input.files || !input.files[0]) return;
+        archivoComprobantePagoOFPendiente = input.files[0];
+        var texto = document.getElementById('comprobantePagoOFDropzoneTexto');
+        if (texto) texto.textContent = '📄 ' + archivoComprobantePagoOFPendiente.name;
+      };
+
+      window.manejarDropComprobantePagoOF = function(event, el) {
+        event.preventDefault();
+        el.classList.remove('arrastrando');
+        var archivos = event.dataTransfer.files;
+        if (!archivos || !archivos[0]) return;
+        archivoComprobantePagoOFPendiente = archivos[0];
+        var texto = document.getElementById('comprobantePagoOFDropzoneTexto');
+        if (texto) texto.textContent = '📄 ' + archivoComprobantePagoOFPendiente.name;
+      };
+
+      async function subirComprobantePagoOF(archivo, folio) {
+        if (!archivo) return null;
+        try {
+          var extension = (archivo.name.split('.').pop() || 'pdf').toLowerCase();
+          var ruta = 'OF-' + (folio || 'SF') + '-' + Date.now() + '.' + extension;
+          var { error } = await supabase.storage.from('comprobantes-pago').upload(ruta, archivo, { upsert: true });
+          if (error) throw error;
+          var { data } = supabase.storage.from('comprobantes-pago').getPublicUrl(ruta);
+          return data ? data.publicUrl : null;
+        } catch (e) {
+          console.error('Error subiendo el comprobante de pago de la OF:', e);
+          return null;
+        }
+      }
+
+      window.confirmarComprobantePagoOF = async function() {
+        var msg = document.getElementById('msgComprobantePagoOF');
+        if (msg) msg.innerHTML = '';
+        if (indexComprobantePagoOFPendiente === null) return;
+        var of = ordenesFacturacion[indexComprobantePagoOFPendiente];
+        if (!of) return;
+
+        if (!archivoComprobantePagoOFPendiente) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Adjunta el comprobante de pago (PDF).</div>';
+          return;
+        }
+        if (!esArchivoPDF(archivoComprobantePagoOFPendiente)) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El documento adjunto debe ser un PDF.</div>';
+          return;
+        }
+
+        try {
+          var url = await subirComprobantePagoOF(archivoComprobantePagoOFPendiente, of.folio);
+          if (!url) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el comprobante. Intenta de nuevo.</div>';
+            return;
+          }
+          var updatesComprobante = {
+            comprobante_pago_url: url,
+            comprobante_pago_subido_por: actual.u,
+            comprobante_pago_fecha_subida: new Date().toISOString()
+          };
+          var { error: errorComprobante } = await supabase.from('ordenes_facturacion').update(updatesComprobante).eq('id', of.id);
+          if (errorComprobante) throw errorComprobante;
+          Object.assign(of, updatesComprobante);
+
+          indexComprobantePagoOFPendiente = null;
+          archivoComprobantePagoOFPendiente = null;
+          document.getElementById('comprobantePagoOFModal').classList.remove('active');
+          window.renderOF();
+          alert('✅ Comprobante de pago subido. Queda pendiente de que Finanzas confirme y concluya el proceso.');
+        } catch (e) {
+          console.error('Error confirmando el comprobante de pago de la OF:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      // Finanzas confirma el pago (una vez subido el comprobante) y
+      // concluye el ciclo de la OF: recién aquí queda PAGADO.
       window.marcarPagadaOF = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
         if (!of) return;
 
-        var esResponsable = of.responsable && of.responsable === actual.usuario;
-        var esOverride = actual.rol === 'Administrador';
-        if (!esResponsable && !esOverride) {
-          alert('❌ Solo el responsable asignado a esta OF puede marcarla como pagada.');
+        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') {
+          alert('❌ Solo Finanzas puede confirmar y concluir el pago de esta OF.');
           return;
         }
         if (of.estado !== 'FACTURADA') {
           alert('La OF debe estar en estado Facturada para marcarse como pagada.');
           return;
         }
+        if (!of.comprobante_pago_url) {
+          alert('⚠️ Todavía no se ha subido el comprobante de pago de esta OF (lo sube el solicitante/responsable).');
+          return;
+        }
 
-        if (!confirm('¿Marcar la OF ' + of.folio + ' como pagada?')) return;
+        if (!confirm('¿Confirmar el pago de la OF ' + of.folio + ' y concluir el proceso?')) return;
 
-        var updates = { estado: 'PAGADO', fecha_pago: new Date().toISOString(), pagado_por: actual.u };
+        var updates = { estado: 'PAGADO', fecha_pago: new Date().toISOString(), pagado_por: actual.u, confirmado_por: actual.u, fecha_confirmacion: new Date().toISOString() };
         var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
         if (error) { alert('Error al marcar como pagada la OF: ' + error.message); return; }
 
@@ -18938,9 +19092,26 @@
             }
           }
 
-          if ((esResponsable || esOverride) && o.estado === 'FACTURADA') {
-            acciones += '<button class="success" onclick="window.marcarPagadaOF(' + idxOriginal + ')">💰 Pagada</button>';
-            acciones += '<button class="warning" onclick="window.solicitarCancelacionOF(' + idxOriginal + ')">⚠️ Sol. Cancelación</button>';
+          // FACTURADA: límite de 30 días desde la aprobación para comprobar
+          // el pago. Primero el solicitante/responsable sube el comprobante
+          // de pago; una vez subido, Finanzas confirma y concluye el ciclo.
+          var limiteTexto = '';
+          if (o.estado === 'FACTURADA') {
+            if ((esResponsable || esOverride) && !o.comprobante_pago_url) {
+              acciones += '<button class="success" onclick="window.abrirComprobantePagoOF(' + idxOriginal + ')">📎 Subir Comprobante de Pago</button>';
+            } else if (esFinanzas && o.comprobante_pago_url) {
+              acciones += '<button class="success" onclick="window.marcarPagadaOF(' + idxOriginal + ')">✔️ Confirmar Pago</button>';
+            } else if (o.comprobante_pago_url) {
+              acciones += '<span class="text-muted" style="font-size:12px;">⏳ Pendiente de confirmación de Finanzas</span>';
+            }
+            if (esResponsable || esOverride) {
+              acciones += '<button class="warning" onclick="window.solicitarCancelacionOF(' + idxOriginal + ')">⚠️ Sol. Cancelación</button>';
+            }
+            if (o.fecha_aprobacion) {
+              var limiteOF = new Date(new Date(o.fecha_aprobacion).getTime() + 30 * 24 * 60 * 60 * 1000);
+              var vencidoOF = new Date() > limiteOF && !o.comprobante_pago_url;
+              limiteTexto = '<div style="font-size:11px;' + (vencidoOF ? 'color:var(--color-rojo);font-weight:600;' : 'color:var(--gray-500);') + 'margin-top:2px;">' + (vencidoOF ? '🔴 Venció: ' : '⏳ Vence: ') + limiteOF.toLocaleDateString() + '</div>';
+            }
           }
 
           if (!acciones) acciones = '—';
@@ -18954,7 +19125,7 @@
             '<td data-label="Responsable">' + (o.responsable || '-') + '</td>' +
             '<td data-label="Monto">' + formatoMoneda(o.monto || 0, o.moneda || 'MXN') + '</td>' +
             '<td data-label="Moneda">' + o.moneda + '</td>' +
-            '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + o.estado + '</span></td>' +
+            '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + o.estado + '</span>' + limiteTexto + '</td>' +
             '<td data-label="Acciones"><div class="actions">' + acciones + '</div></td>' +
             '</tr>';
         }).join('');
@@ -19309,6 +19480,8 @@
         if (!oc) return alert('OC no encontrada');
         visualizarModalTipoActual = 'oc';
         visualizarModalIdActual = oc.id;
+        var tituloVisualizarOC = document.getElementById('visualizarModalTitulo');
+        if (tituloVisualizarOC) tituloVisualizarOC.textContent = 'Visualizar Orden de Compra';
         try {
           var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
           if (!proyecto) return alert('Proyecto no encontrado');
