@@ -5579,7 +5579,7 @@
 
   <div id="ofDocModal">
     <div class="modal-content">
-      <div class="modal-header"><h3>📄 Orden de Facturación</h3><button onclick="window.cerrarOfDocModal()">✕</button></div>
+      <div class="modal-header"><h3>📄 Orden de Facturación</h3><button class="btn-modal-x" onclick="window.cerrarOfDocModal()">✕</button></div>
       <div class="modal-body"><iframe id="ofDocFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
     </div>
   </div>
@@ -18369,7 +18369,10 @@
         var suma = window.recalcularSumaOF();
         var folio = generarFolioOF(empresa, departamento);
 
-        var estadoOF = metodoPago === 'PPD' ? 'PENDIENTE' : (metodoPago === 'PUE' ? 'FACTURADA' : 'CREADA');
+        // La OF siempre nace PENDIENTE, sin importar el método de pago:
+        // el único que puede pasarla a FACTURADA es Finanzas, al aprobarla
+        // subiendo el folio y el PDF de la factura (window.confirmarAprobarOF).
+        var estadoOF = 'PENDIENTE';
 
         var nuevaOF = {
           folio: folio,
