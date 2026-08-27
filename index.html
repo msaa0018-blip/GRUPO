@@ -7065,6 +7065,14 @@
           tituloEl.textContent = '📊 Menú Maestro';
         }
 
+        // OC es un submenú de EGRESOS: su botón ← regresa a EGRESOS.
+        var btnVolverMenuMaestro = document.querySelector('#menuMaestro .btn-volver-menu-center');
+        if (btnVolverMenuMaestro) {
+          btnVolverMenuMaestro.onclick = (tipo === 'oc')
+            ? function() { window.mostrarMenuMaestro('egresos', 'EGRESOS'); }
+            : function() { window.volverAlMenuPrincipal(); };
+        }
+
         mostrarLogoMaestro();
         mostrarLogoMMD();
         llenarModulosMaestro(tipo);
@@ -7092,6 +7100,14 @@
           if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
             modulos.push({ id: 'spm', icono: '📆', nombre: 'SPM' });
             modulos.push({ id: 'vales', icono: '🎫', nombre: 'VALES' });
+          }
+        } else if (tipo === 'oc') {
+          // OC usa exactamente la misma presentación visual del Menú Maestro
+          // de EGRESOS/INGRESOS. Solo cambian el título y sus módulos.
+          if (actual && usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento'])) {
+            modulos.push({ id: 'oc_crear', icono: '📄', nombre: 'Crear OC' });
+            modulos.push({ id: 'oc_bandeja', icono: '📬', nombre: 'Bandeja de OC' });
+            modulos.push({ id: 'oc_control', icono: '📊', nombre: 'Control x Proyecto' });
           }
         } else if (tipo === 'vales') {
           if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
@@ -7154,7 +7170,16 @@
             } else if (modulo === 'of') {
               window.mostrarModulo('of');
             } else if (modulo === 'oc') {
+              window.mostrarMenuMaestro('oc', 'OC');
+            } else if (modulo === 'oc_crear') {
               window.mostrarModulo('oc');
+              setTimeout(function() { window.abrirPanelOC(); }, 0);
+            } else if (modulo === 'oc_bandeja') {
+              window.mostrarModulo('oc');
+              setTimeout(function() { window.abrirModalCard('bandejaOCCard'); }, 0);
+            } else if (modulo === 'oc_control') {
+              window.mostrarModulo('oc');
+              setTimeout(function() { window.abrirModalCard('tablaProyectosCard'); }, 0);
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos') {
@@ -7335,7 +7360,7 @@
             var modulo = item.dataset.modulo;
             if (item.classList.contains('hidden')) return;
 
-            if (modulo === 'oc') window.mostrarModulo('oc');
+            if (modulo === 'oc') window.mostrarMenuMaestro('oc', 'OC');
             else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
             else if (modulo === 'cxp') window.mostrarModulo('cxp');
             else if (modulo === 'cxc') window.mostrarModulo('cxc');
