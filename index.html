@@ -18539,6 +18539,39 @@
       var indexAprobarOFPendiente = null;
       var archivoAprobarOFPendiente = null;
 
+      // Primer paso: el Jefe de Departamento autoriza la OF (sin factura
+      // todavía). Solo después de esto Finanzas puede continuar con la
+      // factura (window.aprobarOF más abajo).
+      window.autorizarOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+
+        if (actual.rol !== 'Jefe Departamento') {
+          alert('❌ Solo el Jefe de Departamento puede autorizar esta OF.');
+          return;
+        }
+        if (!usuarioPuedeAccederOF(actual, of.empresa, of.departamento)) {
+          alert('❌ No tienes permiso sobre esta empresa/departamento.');
+          return;
+        }
+        if (of.estado !== 'PENDIENTE' && of.estado !== 'CREADA') {
+          alert('La OF debe estar en estado Pendiente para autorizarse.');
+          return;
+        }
+        if (!confirm('¿Autorizar la OF ' + of.folio + '? Una vez autorizada, Finanzas podrá continuar con la factura.')) return;
+
+        var updates = { estado: 'AUTORIZADA', autorizado_por: actual.u, fecha_autorizacion: new Date().toISOString() };
+        var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
+        if (error) { alert('Error al autorizar la OF: ' + error.message); return; }
+
+        Object.assign(of, updates);
+        window.renderOF();
+        alert('✅ OF ' + of.folio + ' autorizada. Finanzas ya puede continuar con la factura.');
+      };
+
+      // Segundo paso: ya autorizada por el Jefe de Departamento, Finanzas
+      // sube el folio y el PDF de la factura para marcarla FACTURADA.
       window.aprobarOF = function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -18552,8 +18585,8 @@
           alert('❌ No tienes permiso sobre esta empresa/departamento.');
           return;
         }
-        if (of.estado !== 'PENDIENTE' && of.estado !== 'CREADA') {
-          alert('La OF debe estar en estado Pendiente para aprobarse.');
+        if (of.estado !== 'AUTORIZADA') {
+          alert('La OF debe estar Autorizada por el Jefe de Departamento antes de poder facturarse.');
           return;
         }
 
@@ -18598,17 +18631,12 @@
 
       async function subirFacturaOF(archivo, folioOF) {
         if (!archivo) return null;
-        try {
-          var extension = (archivo.name.split('.').pop() || 'pdf').toLowerCase();
-          var ruta = (folioOF || 'OF') + '-' + Date.now() + '.' + extension;
-          var { error } = await supabase.storage.from('facturas-of').upload(ruta, archivo, { upsert: true });
-          if (error) throw error;
-          var { data } = supabase.storage.from('facturas-of').getPublicUrl(ruta);
-          return data ? data.publicUrl : null;
-        } catch (e) {
-          console.error('Error subiendo la factura de la OF:', e);
-          return null;
-        }
+        var extension = (archivo.name.split('.').pop() || 'pdf').toLowerCase();
+        var ruta = (folioOF || 'OF') + '-' + Date.now() + '.' + extension;
+        var { error } = await supabase.storage.from('facturas-of').upload(ruta, archivo, { upsert: true });
+        if (error) throw error;
+        var { data } = supabase.storage.from('facturas-of').getPublicUrl(ruta);
+        return data ? data.publicUrl : null;
       }
 
       window.confirmarAprobarOF = async function() {
@@ -18632,13 +18660,20 @@
           return;
         }
 
+        var url;
         try {
-          var url = await subirFacturaOF(archivoAprobarOFPendiente, of.folio);
-          if (!url) {
-            if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el PDF. Intenta de nuevo — la OF NO se marcó como FACTURADA.</div>';
-            return;
-          }
+          url = await subirFacturaOF(archivoAprobarOFPendiente, of.folio);
+        } catch (eUpload) {
+          console.error('Error subiendo la factura de la OF:', eUpload);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el PDF (' + escapeHTML(eUpload.message || 'error desconocido') + '). La OF NO se marcó como FACTURADA. Si el error menciona "bucket", falta crear el bucket "facturas-of" en Supabase Storage.</div>';
+          return;
+        }
+        if (!url) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el PDF. Intenta de nuevo — la OF NO se marcó como FACTURADA.</div>';
+          return;
+        }
 
+        try {
           var updates = {
             estado: 'FACTURADA',
             folio_factura: folioFactura.toUpperCase(),
@@ -19048,7 +19083,7 @@
           baseResumen.forEach(function(o) {
             var monto = o.monto || o.suma || 0;
             if (o.estado === 'PAGADO') { totalPagado += monto;
-              numPagado++; } else if (o.estado === 'PENDIENTE' || o.estado === 'FACTURADA' || o.estado === 'SOL_CANCELACION') { totalPendiente += monto;
+              numPagado++; } else if (o.estado === 'PENDIENTE' || o.estado === 'AUTORIZADA' || o.estado === 'FACTURADA' || o.estado === 'SOL_CANCELACION') { totalPendiente += monto;
               numPendiente++; }
           });
           resumenDiv.innerHTML =
@@ -19068,7 +19103,7 @@
           var badgeClass = 'badge-creada';
           var filaEstilo = '';
           if (o.estado === 'PAGADO') { badgeClass = 'badge-autorizada-pagada';
-            filaEstilo = 'background:var(--color-verde);'; } else if (o.estado === 'PENDIENTE') { badgeClass = 'badge-pendiente'; } else if (o.estado === 'FACTURADA') { badgeClass = 'badge-creada'; } else if (o.estado === 'SOL_CANCELACION') { badgeClass = 'badge-pausada';
+            filaEstilo = 'background:var(--color-verde);'; } else if (o.estado === 'PENDIENTE') { badgeClass = 'badge-pendiente'; } else if (o.estado === 'AUTORIZADA') { badgeClass = 'badge-autorizada-pendiente'; } else if (o.estado === 'FACTURADA') { badgeClass = 'badge-creada'; } else if (o.estado === 'SOL_CANCELACION') { badgeClass = 'badge-pausada';
             filaEstilo = 'background:var(--color-gris);'; } else if (o.estado === 'CANCELADO') { badgeClass = 'badge-cancelada'; }
 
           var acciones = '';
@@ -19085,9 +19120,17 @@
             acciones += '<button class="btn-imprimir" onclick="window.abrirChatOF(' + o.id + ', \'' + escapeHTML(o.folio || '') + '\')">💬 Chat</button>';
           }
 
+          // Primer paso: solo el Jefe de Departamento autoriza la OF
+          // (sin factura todavía).
+          if (actual && actual.rol === 'Jefe Departamento' && usuarioPuedeAccederOF(actual, o.empresa, o.departamento) && (o.estado === 'PENDIENTE' || o.estado === 'CREADA')) {
+            acciones += '<button class="success" onclick="window.autorizarOF(' + idxOriginal + ')">✅ Autorizar</button>';
+          }
+
           if (esFinanzas && usuarioPuedeAccederOF(actual, o.empresa, o.departamento)) {
             acciones += '<button class="btn-imprimir" onclick="window.imprimirOF(' + idxOriginal + ')">🖨️ Imprimir</button>';
-            if (o.estado === 'PENDIENTE' || o.estado === 'CREADA') {
+            // Segundo paso: ya autorizada por el Jefe de Departamento,
+            // Finanzas sube el folio y el PDF de la factura.
+            if (o.estado === 'AUTORIZADA') {
               acciones += '<button class="success" onclick="window.aprobarOF(' + idxOriginal + ')">✅ Aprobar</button>';
             }
             if (o.estado === 'SOL_CANCELACION') {
