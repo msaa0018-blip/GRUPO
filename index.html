@@ -4739,7 +4739,8 @@
         </div>
       </div>
 
-      <div id="ocModalToolbar" class="hidden modulos-maestro-grid" style="margin-top: 33.333vh; margin-bottom: 18px;">
+      <h2 id="ocModalToolbarTitulo" style="display:none; margin-top:60px; margin-bottom:20px; color:var(--gray-700); text-align:center;">📄 OC</h2>
+      <div id="ocModalToolbar" class="hidden modulos-maestro-grid" style="margin-bottom: 18px;">
         <div id="btnAbrirCrearOC" class="hidden modulo-maestro-item" onclick="window.abrirPanelOC()">
           <div class="modulo-cuadro funcional">📄</div>
           <span class="modulo-leyenda">Crear OC</span>
@@ -4753,6 +4754,7 @@
           <span class="modulo-leyenda">Control x Proyecto</span>
         </div>
       </div>
+      <button id="ocModalToolbarVolver" onclick="window.volverAlMenuMaestro()" class="hidden btn-volver-menu-center">←</button>
 
       <div id="panelOC" class="card modal-card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -11198,6 +11200,10 @@
         panelIndicadores.classList.remove('visible');
         panelIndicadores.classList.add('hidden');
         ocModalToolbar.classList.add('hidden');
+        var ocModalToolbarTitulo = document.getElementById('ocModalToolbarTitulo');
+        var ocModalToolbarVolver = document.getElementById('ocModalToolbarVolver');
+        if (ocModalToolbarTitulo) ocModalToolbarTitulo.style.display = 'none';
+        if (ocModalToolbarVolver) ocModalToolbarVolver.classList.add('hidden');
         document.getElementById('modalOverlayBackdrop').classList.remove('active');
 
         // Detener actualización de indicadores si estaba corriendo
@@ -11244,6 +11250,10 @@
 
         if (modulo === 'oc') {
           ocModalToolbar.classList.remove('hidden');
+          var ocModalToolbarTituloShow = document.getElementById('ocModalToolbarTitulo');
+          var ocModalToolbarVolverShow = document.getElementById('ocModalToolbarVolver');
+          if (ocModalToolbarTituloShow) ocModalToolbarTituloShow.style.display = 'block';
+          if (ocModalToolbarVolverShow) ocModalToolbarVolverShow.classList.remove('hidden');
           var btnAbrirCrearOC = document.getElementById('btnAbrirCrearOC');
           if (btnAbrirCrearOC) btnAbrirCrearOC.classList.toggle('hidden', !puedeCrearOC);
           window.cargarSelectorProductosCatalogo();
