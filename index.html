@@ -2086,6 +2086,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
     cursor: pointer;
     transition: all 0.2s ease;
     width: 120px;
@@ -2120,7 +2121,7 @@
     border-color: var(--gray-300);
     box-shadow: none;
   }
-  .modulo-maestro-item .modulo-leyenda { margin-top: 8px; font-size: 16px; font-weight: 500; color: var(--gray-700); text-align: center }
+  .modulo-maestro-item .modulo-leyenda { margin-top: 8px; font-size: 16px; font-weight: 500; color: var(--gray-700); text-align: center; display: flex; align-items: flex-start; justify-content: center; min-height: 42px; line-height: 1.2 }
   .modulo-maestro-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
 
   .btn-volver-menu-center {
@@ -5165,7 +5166,7 @@
       <div class="card modal-card hidden" id="bandejaOCCard">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h2 style="margin:0;">📬 Bandeja de Órdenes de Compra</h2>
-          <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('bandejaOCCard')">✕</button>
+          <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarBandejaOC()">✕</button>
         </div>
 
         <div id="deptoLogoContainer" class="depto-logo-container hidden">
@@ -7176,10 +7177,16 @@
               setTimeout(function() { window.abrirPanelOC(); }, 0);
             } else if (modulo === 'oc_bandeja') {
               window.mostrarModulo('oc');
-              setTimeout(function() { window.abrirModalCard('bandejaOCCard'); }, 0);
+              setTimeout(function() {
+                window.abrirModalCard('bandejaOCCard');
+                moduloOrigenBandejaOC = 'oc_menu';
+              }, 0);
             } else if (modulo === 'oc_control') {
               window.mostrarModulo('oc');
-              setTimeout(function() { window.abrirModalCard('tablaProyectosCard'); }, 0);
+              setTimeout(function() {
+                window.abrirModalCard('tablaProyectosCard');
+                moduloOrigenControlProyecto = 'oc_menu';
+              }, 0);
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos') {
@@ -7216,7 +7223,12 @@
       window.volverAlMenuMaestro = function() {
         if (moduloActual === 'vc' || moduloActual === 'vi' || moduloActual === 'vsc' || moduloActual === 'vales') {
           window.mostrarMenuMaestro('vales', 'VALES');
-        } else if (moduloActual === 'cxp' || moduloActual === 'oc' || moduloActual === 'proyectos' || moduloActual === 'egresos' || moduloActual === 'spm') {
+        } else if (moduloActual === 'oc') {
+          // OC tiene su propio menú intermedio "📊 OC" (Crear OC / Bandeja
+          // de OC / Control x Proyecto). El botón ← debe regresar ahí y no
+          // saltarse ese menú directo a EGRESOS.
+          window.mostrarMenuMaestro('oc', 'OC');
+        } else if (moduloActual === 'cxp' || moduloActual === 'proyectos' || moduloActual === 'egresos' || moduloActual === 'spm') {
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
         } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'ingresos') {
           window.mostrarMenuMaestro('ingresos', 'INGRESOS');
@@ -7380,7 +7392,11 @@
       // Recuerda desde qué módulo se abrió "Control por Proyecto" (puede
       // abrirse tanto desde OC como desde el propio módulo Proyectos), para
       // que al cerrarlo con la "✕" regrese exactamente a esa pestaña.
+      // Cuando el valor es 'oc_menu' significa que se abrió desde el propio
+      // menú "📊 OC" (y no desde dentro del módulo OC), así que al cerrar
+      // debe regresar a ese menú y no a la pantalla de trabajo de OC.
       var moduloOrigenControlProyecto = 'oc';
+      var moduloOrigenBandejaOC = 'oc';
 
       window.abrirModalCard = function(id) {
         var el = document.getElementById(id);
@@ -7395,6 +7411,8 @@
           if (btnAgregar) {
             btnAgregar.style.display = (actual && usuarioPuedeCrearProyectos(actual)) ? 'inline-flex' : 'none';
           }
+        } else if (id === 'bandejaOCCard') {
+          moduloOrigenBandejaOC = moduloActual || 'oc';
         }
       };
 
@@ -7410,13 +7428,31 @@
         }
       };
 
+      // Botón "✕" de "Bandeja de OC": cierra la modal y regresa exactamente
+      // a donde se abrió. Si se abrió desde el menú "📊 OC" (tarjeta
+      // "Bandeja de OC" del menú), regresa a ese menú en vez de dejar
+      // visible la pantalla de "Crear OC" de fondo.
+      window.cerrarBandejaOC = function() {
+        window.cerrarModalCard('bandejaOCCard');
+        if (moduloOrigenBandejaOC === 'oc_menu') {
+          window.mostrarMenuMaestro('oc', 'OC');
+        } else {
+          window.mostrarModulo(moduloOrigenBandejaOC || 'oc');
+        }
+      };
+
       // Menú hamburguesa del módulo OC: agrupa "Crear Orden de Compra",
       // "Bandeja de OC" y "Control por Proyecto" en una sola ventana modal.
       // Botón "✕" de "Control por Proyecto": cierra la modal y regresa a
       // la pestaña principal desde donde se abrió (OC o Proyectos, según
-      // cuál de los dos botones "Control por Proyecto" se haya usado).
+      // cuál de los dos botones "Control por Proyecto" se haya usado). Si
+      // se abrió desde el menú "📊 OC", regresa a ese menú.
       window.cerrarControlProyecto = function() {
         window.cerrarModalCard('tablaProyectosCard');
+        if (moduloOrigenControlProyecto === 'oc_menu') {
+          window.mostrarMenuMaestro('oc', 'OC');
+          return;
+        }
         window.mostrarModulo(moduloOrigenControlProyecto || 'oc');
       };
 
@@ -9511,7 +9547,14 @@
         document.getElementById('valeComprobarTitulo').textContent = v.codigo || '';
         document.getElementById('valeComprobarCombustible').value = v.combustible || '';
         document.getElementById('valeKmActualComprobar').value = v.kilometraje_actual != null ? v.kilometraje_actual : '';
-        document.getElementById('valeLitrosAutorizados').value = v.litros_autorizados != null ? v.litros_autorizados : '';
+        // Si aún no se ha capturado un valor de "litros autorizados" para
+        // este vale (comprobación nueva), se muestra automáticamente lo que
+        // ya fue solicitado/autorizado al crear el vale, en vez de dejar el
+        // campo vacío pidiendo capturarlo de nuevo a mano.
+        var litrosAutorizadosPrevios = v.litros_autorizados != null ? v.litros_autorizados
+          : (v.cantidad_solicitada != null ? v.cantidad_solicitada
+          : (v.litros != null ? v.litros : ''));
+        document.getElementById('valeLitrosAutorizados').value = litrosAutorizadosPrevios;
         document.getElementById('valeLitrosCargados').value = v.litros_cargados != null ? v.litros_cargados : '';
         document.getElementById('valePrecioUnitario').value = v.precio_unitario != null ? v.precio_unitario : '';
         document.getElementById('valeImporte').value = v.importe != null ? v.importe : '';
@@ -9614,6 +9657,16 @@
         }
         if (resultado === 'Otro' && !document.getElementById('valeNotasComprobacion').value.trim()) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Escribe una nota para el resultado "Otro".</div>';
+          return;
+        }
+
+        // La comprobación de un vale de gasolina no puede completarse sin
+        // foto del ticket: se acepta una foto ya guardada previamente en el
+        // vale, o una recién seleccionada/tomada en esta pantalla.
+        var valeAComprobarFoto = valesGasolinaCache.find(function(x) { return x.id === valeComprobarId; });
+        var tieneFotoExistente = !!(valeAComprobarFoto && valeAComprobarFoto.foto_ticket_url);
+        if (!valeTicketFotoArchivo && !tieneFotoExistente) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Debes adjuntar la foto del ticket para poder comprobar el vale.</div>';
           return;
         }
 
