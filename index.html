@@ -4834,7 +4834,7 @@
 
       <!-- Resto de módulos (OC, Proyectos, CXP, CXC, OF) -->
       <div id="proyectosModalToolbar" class="hidden" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
-        <button class="btn-visualizar" onclick="window.abrirModalCard('tablaProyectosCard')">📊 Control por Proyecto</button>
+        <button class="btn-visualizar" onclick="window.abrirTablaProyectosDesdeMenu()">📊 Control por Proyecto</button>
       </div>
 
       <div id="panelProyecto" class="card hidden">
@@ -4900,11 +4900,11 @@
           <div class="modulo-cuadro funcional">📄</div>
           <span class="modulo-leyenda">Crear OC</span>
         </div>
-        <div class="modulo-maestro-item" onclick="window.abrirModalCard('bandejaOCCard')">
+        <div class="modulo-maestro-item" onclick="window.abrirBandejaOCDesdeMenu()">
           <div class="modulo-cuadro funcional">📬</div>
           <span class="modulo-leyenda">Bandeja de OC</span>
         </div>
-        <div class="modulo-maestro-item" onclick="window.abrirModalCard('tablaProyectosCard')">
+        <div class="modulo-maestro-item" onclick="window.abrirTablaProyectosDesdeMenu()">
           <div class="modulo-cuadro funcional">📊</div>
           <span class="modulo-leyenda">Control x Proyecto</span>
         </div>
@@ -5085,7 +5085,7 @@
             <input type="date" id="cxpFechaFin">
           </div>
           <button class="btn-imprimir" onclick="window.imprimirReporteCXP()">🖨️ Imprimir Reporte</button>
-          <button class="btn-visualizar" onclick="window.abrirModalCard('bandejaOCCard')">📬 Bandeja de Órdenes de Compra</button>
+          <button class="btn-visualizar" onclick="window.abrirBandejaOCDesdeMenu()">📬 Bandeja de Órdenes de Compra</button>
         </div>
         <div id="cxpResumen" class="cxp-resumen"></div>
 
@@ -7628,6 +7628,18 @@
         document.getElementById('contenidoApp').classList.add('fondo-menu-oc');
       };
 
+      // OJO: esta función se usa tanto para abrir "Control por Proyecto" /
+      // "Bandeja de OC" desde un botón/tarjeta (una entrada "nueva", donde sí
+      // debe recalcularse a dónde regresar al cerrar) como para RE-abrirlas
+      // después de un desvío interno (p. ej. al cerrar "📊 Dashboard del
+      // Proyecto", o tras crear un proyecto/una OC desde dentro de esa misma
+      // ventana) — casos en los que NO se debe recalcular el origen, para no
+      // perder que se venía del menú "📊 OC" (ver `moduloOrigenControlProyecto`
+      // / `moduloOrigenBandejaOC`). Por eso esta función YA NO decide el
+      // origen: solo lo hacen las entradas "nuevas" explícitas
+      // (`window.abrirTablaProyectosDesdeMenu` / `window.abrirBandejaOCDesdeMenu`
+      // y el flujo del menú "📊 OC"); todo lo demás llama a esta función
+      // directamente y así conserva el origen que ya estaba guardado.
       window.abrirModalCard = function(id) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -7636,14 +7648,23 @@
         document.getElementById('modalOverlayBackdrop').classList.add('active');
 
         if (id === 'tablaProyectosCard') {
-          moduloOrigenControlProyecto = moduloActual || 'oc';
           var btnAgregar = document.getElementById('btnAgregarProyectoModal');
           if (btnAgregar) {
             btnAgregar.style.display = (actual && usuarioPuedeCrearProyectos(actual)) ? 'inline-flex' : 'none';
           }
-        } else if (id === 'bandejaOCCard') {
-          moduloOrigenBandejaOC = moduloActual || 'oc';
         }
+      };
+
+      // Entradas "nuevas" a "Control por Proyecto" / "Bandeja de OC" (desde
+      // un botón o tarjeta, no desde un regreso interno): aquí sí se
+      // recalcula el origen, según desde qué pantalla se entra.
+      window.abrirTablaProyectosDesdeMenu = function() {
+        moduloOrigenControlProyecto = moduloActual || 'oc';
+        window.abrirModalCard('tablaProyectosCard');
+      };
+      window.abrirBandejaOCDesdeMenu = function() {
+        moduloOrigenBandejaOC = moduloActual || 'oc';
+        window.abrirModalCard('bandejaOCCard');
       };
 
       // Cierra una modal-card. Si ya no queda ninguna abierta, oculta el backdrop.
