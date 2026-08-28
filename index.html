@@ -7051,6 +7051,13 @@
       }
 
       function moduloPermitidoPorBloqueo(modulo) {
+        // "oc_crear" / "oc_bandeja" / "oc_control" son las 3 vistas del
+        // submenú "📊 OC" (Crear OC, Bandeja de OC, Control x Proyecto):
+        // dependen del mismo permiso que el módulo "oc", así que se
+        // normalizan antes de comparar contra las listas de permitidos.
+        // Sin esto, el sistema restringido las filtraba todas (ninguna
+        // coincidía literalmente con "oc") y el submenú se veía vacío.
+        if (modulo === 'oc_crear' || modulo === 'oc_bandeja' || modulo === 'oc_control') modulo = 'oc';
         // El módulo CXP siempre queda libre para visualizar, sin importar
         // si el sistema está restringido o no.
         if (modulo === 'cxp') return true;
