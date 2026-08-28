@@ -3953,6 +3953,7 @@
                 <th>Departamento</th>
                 <th>Vehículo</th>
                 <th>Cantidad Solicitada</th>
+                <th>Monto</th>
                 <th>Km Actual</th>
                 <th>Fecha</th>
                 <th>Responsable</th>
@@ -9353,12 +9354,16 @@
           valesGasolinaCache = data || [];
           cuerpo.innerHTML = '';
           if (!valesGasolinaCache.length) {
-            cuerpo.innerHTML = '<tr><td colspan="10">No hay vales registrados.</td></tr>';
+            cuerpo.innerHTML = '<tr><td colspan="11">No hay vales registrados.</td></tr>';
             return;
           }
           valesGasolinaCache.forEach(function(v) {
             var vehiculo = vehiculosCache.find(function(x) { return x.id === v.vehiculo_id; });
             var infoEstado = ETIQUETAS_ESTADO_VALE[v.estado] || { texto: v.estado, clase: 'badge-pendiente' };
+            // El Monto real solo se conoce al comprobar el vale (se
+            // captura junto con litros_cargados/importe en ese paso), así
+            // que se muestra hasta entonces (COMPROBADA/CERRADA).
+            var valeYaComprobado = v.estado === 'COMPROBADA' || v.estado === 'CERRADA';
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(v.codigo) + '</td>' +
@@ -9366,6 +9371,7 @@
               '<td>' + escapeHTML(mostrarDepto(getAbreviaturaDepartamento(v.departamento, v.empresa) || v.departamento)) + '</td>' +
               '<td>' + escapeHTML(vehiculo ? vehiculo.nombre : 'Vehículo eliminado') + '</td>' +
               '<td>' + escapeHTML(v.cantidad_solicitada || v.litros || '—') + '</td>' +
+              '<td>' + (valeYaComprobado ? formatoMoneda(Number(v.importe) || Number(v.monto) || 0, 'MXN') : '—') + '</td>' +
               '<td>' + (v.kilometraje_actual != null ? v.kilometraje_actual : '—') + '</td>' +
               '<td>' + (v.fecha ? new Date(v.fecha).toLocaleDateString() : '') + '</td>' +
               '<td>' + escapeHTML(v.responsable) + '</td>' +
@@ -9382,7 +9388,7 @@
           });
         } catch (e) {
           console.error('Error cargando vales de gasolina:', e);
-          cuerpo.innerHTML = '<tr><td colspan="10">❌ Error al cargar los vales.</td></tr>';
+          cuerpo.innerHTML = '<tr><td colspan="11">❌ Error al cargar los vales.</td></tr>';
         }
       };
 
