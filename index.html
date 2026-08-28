@@ -2255,32 +2255,17 @@
   #contenidoApp { display: none !important }
   #contenidoApp.visible { display: block !important }
 
-  /* Modo "flotante": usado cuando se abre "Crear OC" / "Bandeja de OC" /
-     "Control x Proyecto" directamente desde las tarjetas del menú "📊 OC".
-     Mantiene visible de fondo la pantalla del menú "📊 OC" (con su logo y
-     fondo) en vez de la vista normal de #contenidoApp; #contenidoApp solo
-     se usa como contenedor técnico (invisible, sin tamaño) para que su
-     modal-card hija pueda mostrarse (position:fixed) por encima del menú. */
-  #contenidoApp.visible-flotante {
-    display: block !important;
-    /* position:absolute (NO fixed): "fixed" siempre crea un nuevo contexto
-       de apilamiento, lo que atraparía a la modal-card hija (z-index:2000)
-       por DEBAJO del fondo oscuro/borroso (#modalOverlayBackdrop,
-       z-index:1999), pintando la modal entera borrosa. Con "absolute" (y
-       z-index automático) #contenidoApp no crea contexto propio, así que
-       la modal-card compara su z-index directamente contra el backdrop. */
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: visible !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-  #contenidoApp.visible-flotante .card.modal-card.abierta {
-    visibility: visible !important;
-    pointer-events: auto !important;
+  /* Cuando se entra a "Crear OC" / "Bandeja de OC" / "Control x Proyecto"
+     desde las tarjetas del menú "📊 OC" (en vez de por el botón "OC" normal
+     de EGRESOS), #contenidoApp usa el mismo fondo (imagen + color) que el
+     menú "📊 OC" (#menuMaestro), para que la pantalla detrás de la ventana
+     modal luzca igual que ese menú en vez de una pantalla en blanco. */
+  #contenidoApp.fondo-menu-oc {
+    background-color: var(--gray-100);
+    background-image: url('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%201.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 
   .btn-pendientes-pagar {
@@ -7170,7 +7155,7 @@
         document.getElementById('menuInterno').classList.remove('visible');
         document.getElementById('menuInterno').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
-        document.getElementById('contenidoApp').classList.remove('visible-flotante');
+        document.getElementById('contenidoApp').classList.remove('fondo-menu-oc');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.add('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
@@ -7275,7 +7260,7 @@
         document.getElementById('menuInterno').classList.remove('visible');
         document.getElementById('menuInterno').classList.add('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
-        document.getElementById('contenidoApp').classList.remove('visible-flotante');
+        document.getElementById('contenidoApp').classList.remove('fondo-menu-oc');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
@@ -7394,21 +7379,23 @@
             } else if (modulo === 'oc') {
               window.mostrarMenuMaestro('oc', 'OC');
             } else if (modulo === 'oc_crear') {
-              window.abrirModalFlotanteSobreMenuOC('panelOC');
-              // "Crear OC" necesita el catálogo de productos y la lista de
-              // proveedores; normalmente los carga mostrarModulo('oc'), que
-              // aquí ya no se ejecuta (se mantiene la vista del menú "📊 OC").
-              window.cargarSelectorProductosCatalogo();
-              window.cargarListaProveedoresOC();
-              window.abrirPanelOC();
+              window.mostrarModulo('oc');
+              window.vestirContenidoAppComoMenuOC();
+              setTimeout(function() { window.abrirPanelOC(); }, 0);
             } else if (modulo === 'oc_bandeja') {
-              window.abrirModalFlotanteSobreMenuOC('bandejaOCCard');
-              window.abrirModalCard('bandejaOCCard');
-              moduloOrigenBandejaOC = 'oc_menu';
+              window.mostrarModulo('oc');
+              window.vestirContenidoAppComoMenuOC();
+              setTimeout(function() {
+                window.abrirModalCard('bandejaOCCard');
+                moduloOrigenBandejaOC = 'oc_menu';
+              }, 0);
             } else if (modulo === 'oc_control') {
-              window.abrirModalFlotanteSobreMenuOC('tablaProyectosCard');
-              window.abrirModalCard('tablaProyectosCard');
-              moduloOrigenControlProyecto = 'oc_menu';
+              window.mostrarModulo('oc');
+              window.vestirContenidoAppComoMenuOC();
+              setTimeout(function() {
+                window.abrirModalCard('tablaProyectosCard');
+                moduloOrigenControlProyecto = 'oc_menu';
+              }, 0);
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos') {
@@ -7467,17 +7454,7 @@
           window.mostrarModulo('indicadores');
           return;
         }
-        if (document.getElementById('contenidoApp').classList.contains('visible-flotante')) {
-          // Se estaba viendo "Crear OC" / "Bandeja de OC" / "Control x Proyecto"
-          // flotando sobre el menú "📊 OC": cierra esa modal y regresa a ese menú.
-          document.querySelectorAll('#contenidoApp .modal-card.abierta').forEach(function(el) {
-            el.classList.remove('abierta');
-            el.classList.add('hidden');
-          });
-          document.getElementById('contenidoApp').classList.remove('visible-flotante');
-          document.getElementById('modalOverlayBackdrop').classList.remove('active');
-          window.mostrarMenuMaestro('oc', 'OC');
-        } else if (document.getElementById('contenidoApp').classList.contains('visible')) {
+        if (document.getElementById('contenidoApp').classList.contains('visible')) {
           window.volverAlMenuMaestro();
         } else if (document.getElementById('menuInterno').classList.contains('visible')) {
           window.volverAlMenuMaestro();
@@ -7496,7 +7473,7 @@
         document.getElementById('menuInterno').classList.add('visible');
         document.getElementById('menuInterno').classList.remove('hidden');
         document.getElementById('contenidoApp').classList.remove('visible');
-        document.getElementById('contenidoApp').classList.remove('visible-flotante');
+        document.getElementById('contenidoApp').classList.remove('fondo-menu-oc');
         document.getElementById('contenidoApp').classList.add('hidden');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
         document.getElementById('btnCerrarSesionHeader').classList.remove('hidden');
@@ -7631,22 +7608,24 @@
       var moduloOrigenControlProyecto = 'oc';
       var moduloOrigenBandejaOC = 'oc';
 
-      // Abre una modal-card (Crear OC / Bandeja de OC / Control x Proyecto)
-      // SIN abandonar la pantalla del menú "📊 OC": deja #contenidoApp en
-      // modo "flotante" (invisible, sin ocupar espacio) para que solo la
-      // modal-card se vea, con el menú "📊 OC" de fondo, en vez de mostrar
-      // la vista normal (y desordenada, con todo oculto) de #contenidoApp.
-      window.abrirModalFlotanteSobreMenuOC = function(idModalDestino) {
-        moduloActual = 'oc';
-        var contenidoAppFlot = document.getElementById('contenidoApp');
-        contenidoAppFlot.classList.remove('visible');
-        contenidoAppFlot.classList.add('visible-flotante');
-        document.querySelectorAll('#contenidoApp .modal-card.abierta').forEach(function(el) {
-          if (el.id !== idModalDestino) {
-            el.classList.remove('abierta');
-            el.classList.add('hidden');
-          }
-        });
+      // Al entrar a "Crear OC" / "Bandeja de OC" / "Control x Proyecto"
+      // desde las tarjetas del menú "📊 OC", mostrarModulo('oc') ya dejó
+      // lista la pantalla de trabajo normal de OC (necesaria para que la
+      // modal que se abre encima, y todo lo que ésta a su vez pueda abrir
+      // -AGREGAR, menús ☰, etc.-, funcione exactamente igual que siempre).
+      // Lo único que se ve "de fondo" y no queremos es el mini-menú
+      // duplicado con las mismas 3 tarjetas (#ocModalToolbar) sin el
+      // logo/fondo del menú "📊 OC": se oculta y se le pone a #contenidoApp
+      // el mismo fondo (imagen + color) que usa el menú "📊 OC", para que
+      // detrás de la modal se vea consistente con esa pantalla.
+      window.vestirContenidoAppComoMenuOC = function() {
+        var ocModalToolbarOC = document.getElementById('ocModalToolbar');
+        var ocModalToolbarTituloOC = document.getElementById('ocModalToolbarTitulo');
+        if (ocModalToolbarOC) ocModalToolbarOC.classList.add('hidden');
+        if (ocModalToolbarTituloOC) ocModalToolbarTituloOC.style.display = 'none';
+        var btnAbrirCrearOCOC = document.getElementById('btnAbrirCrearOC');
+        if (btnAbrirCrearOCOC) btnAbrirCrearOCOC.classList.add('hidden');
+        document.getElementById('contenidoApp').classList.add('fondo-menu-oc');
       };
 
       window.abrirModalCard = function(id) {
@@ -11504,7 +11483,7 @@
         document.getElementById('menuInterno').classList.add('hidden');
         document.getElementById('menuInterno').classList.remove('visible');
         document.getElementById('contenidoApp').classList.remove('hidden');
-        document.getElementById('contenidoApp').classList.remove('visible-flotante');
+        document.getElementById('contenidoApp').classList.remove('fondo-menu-oc');
         document.getElementById('contenidoApp').classList.add('visible');
         document.getElementById('btnVolverMenu').classList.remove('hidden');
 
