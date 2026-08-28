@@ -4709,7 +4709,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorBalanceMesCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">⚖️ Balance del mes — Compras vs Ventas</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorBalanceMesCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorBalanceMesCard')">✕</button>
           </div>
           <div id="indicadorBalanceMesResumen" class="cxp-resumen"></div>
           <div style="overflow-x:auto;">
@@ -11552,10 +11552,22 @@
             panelProyecto.classList.remove('hidden');
             window.cargarClientesParaProyecto();
           }
-          // La ventana "Control por Proyecto" ya no se abre automáticamente
-          // al entrar al módulo: solo se abre al crear un proyecto con
-          // ➕ Crear, o manualmente con el botón "📊 Control por Proyecto".
-          if (proyectosModalToolbar) proyectosModalToolbar.classList.remove('hidden');
+          if (actual && actual.rol === 'Administrador') {
+            // ADMIN no puede crear proyectos (solo Jefe de Departamento
+            // puede, ver usuarioPuedeCrearProyectos), así que al entrar al
+            // módulo PROYECTO ve "Control por Proyecto" integrada
+            // directamente en la página, sin necesidad de abrirla como
+            // ventana modal aparte.
+            tablaProyectosCard.classList.remove('hidden');
+            tablaProyectosCard.classList.remove('abierta');
+            if (proyectosModalToolbar) proyectosModalToolbar.classList.add('hidden');
+          } else {
+            // Para el resto de roles, "Control por Proyecto" sigue sin
+            // abrirse automáticamente: solo se abre al crear un proyecto
+            // con ➕ Crear, o manualmente con el botón
+            // "📊 Control por Proyecto".
+            if (proyectosModalToolbar) proyectosModalToolbar.classList.remove('hidden');
+          }
         } else if (modulo === 'cxp') {
           if (puedeVerCXP) {
             panelCXP.classList.remove('hidden');
