@@ -10145,7 +10145,7 @@
         var cuartoB = anchoUtil / 4;
         var altoB = 30;
         dibujarCajaEtiquetaVale(doc, margen, y, cuartoB, altoB, 'SOLICITANTE.', d.solicitante || d.responsable, { headerColor: COLOR_HEADER_VALE_CXP });
-        dibujarCajaEtiquetaVale(doc, margen + cuartoB, y, cuartoB, altoB, 'DEPTO.', mostrarDepto(d.departamento), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7.5 });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB, y, cuartoB, altoB, 'DEPTO.', mostrarDepto(getAbreviaturaDepartamento(d.departamento, d.empresa) || d.departamento), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7.5 });
         dibujarCajaEtiquetaVale(doc, margen + cuartoB * 2, y, cuartoB, altoB, 'IMPORTE.', formatoMoneda(d.monto, d.moneda), { headerColor: COLOR_HEADER_VALE_CXP, valorFillColor: COLOR_IMPORTE_VALE_CXP, valorBold: true, valorSize: 11 });
         dibujarCajaEtiquetaVale(doc, margen + cuartoB * 3, y, cuartoB, altoB, 'FECHA SOLICITADA DE PAGO.', formatearFechaLargaEsMX(d.fecha), { headerColor: COLOR_HEADER_VALE_CXP, valorColor: [190, 30, 30], valorSize: 6.5 });
         y += altoB + 6;
@@ -10191,21 +10191,6 @@
           dibujarCeldaFirmaValeCXP(doc, margen + wFirma * i, y, wFirma, altoE, f.numero, f.titulo, f.valor, f.pie);
         });
         y += altoE + 8;
-
-        // Fila F: Nota "IMPORTANTE" (pie), igual al formato original
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(6.5);
-        doc.setTextColor(190, 30, 30);
-        doc.text('IMPORTANTE:', margen, y);
-        doc.setFont(undefined, 'italic');
-        doc.text(
-          tipo === 'VI'
-            ? 'MIÉRCOLES / RECEPCIÓN DE VI PARA PROGRAMACIÓN.'
-            : 'MIÉRCOLES / RECEPCIÓN DE VC PARA PROGRAMACIÓN / VIÁTICOS Y PREVISIÓN DE GASTOS.',
-          margen, y + 9
-        );
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(20, 20, 20);
       }
 
       // Genera el PDF de un VC o VI con el formato preimpreso oficial
@@ -10482,12 +10467,22 @@
 
           var statsPorVehiculo = {};
           var litrosTotal = 0, montoTotal = 0;
+          // 🧮 Consumo total (litros) y 💰 Gasto total solo cuentan lo ya
+          // comprobado (litros/importe reales capturados al comprobar el
+          // vale), no lo autorizado/solicitado: COMPROBADA y CERRADA (un
+          // vale cerrado ya pasó por comprobación y conserva esos datos).
+          var litrosTotalComprobado = 0, montoTotalComprobado = 0;
           var statsPorDepto = {};
           vales.forEach(function(v) {
             var litros = Number(v.litros) || 0;
             var monto = Number(v.monto) || 0;
             litrosTotal += litros;
             montoTotal += monto;
+
+            if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
+              litrosTotalComprobado += Number(v.litros_cargados) || litros;
+              montoTotalComprobado += Number(v.importe) || monto;
+            }
 
             var vehId = v.vehiculo_id || 'sin_asignar';
             if (!statsPorVehiculo[vehId]) statsPorVehiculo[vehId] = { litros: 0, monto: 0, vales: 0 };
@@ -10532,8 +10527,8 @@
             resumen.innerHTML = '<p>No hay vales de gasolina registrados todavía.</p>';
           } else {
             resumen.innerHTML =
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Consumo total (litros)</div><div class="almacen-kpi-valor">' + litrosTotal.toFixed(2) + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Gasto total</div><div class="almacen-kpi-valor">' + formatoMoneda(montoTotal, 'MXN') + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Consumo total (litros)</div><div class="almacen-kpi-valor">' + litrosTotalComprobado.toFixed(2) + '</div></div>' +
+              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Gasto total</div><div class="almacen-kpi-valor">' + formatoMoneda(montoTotalComprobado, 'MXN') + '</div></div>' +
               (deptoMayorConsumo ? '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🏢 Departamento con más consumo</div><div class="almacen-kpi-valor">' + escapeHTML(deptoMayorConsumo.departamento) + '</div></div>' : '') +
               (vehiculoMayorConsumo ? '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🚗 Vehículo que más consume</div><div class="almacen-kpi-valor">' + escapeHTML(vehiculoMayorConsumo.nombre) + '</div></div>' : '');
           }
@@ -16268,11 +16263,17 @@
 
         var selProyecto = document.getElementById('docCxpProyecto');
         if (selProyecto) {
+          // En VC/VI (vales internos) no siempre hay un cliente asociado,
+          // así que el proyecto se puede elegir con solo tener
+          // empresa/departamento — sin obligar antes a elegir cliente
+          // (a diferencia de SPM, que sí mantiene ese requisito).
+          var proyectoRequiereCliente = !(tipoDocCXPActual === 'VC' || tipoDocCXPActual === 'VI');
           var valorPrevioProyecto = selProyecto.value;
           var proyectosFiltrados = (proyectos || []).filter(function(p) {
-            return (!empresa || p.empresa === empresa) && (!departamento || p.departamento === departamento) && (!cliente || p.cliente === cliente);
+            return (!empresa || p.empresa === empresa) && (!departamento || p.departamento === departamento) && (!proyectoRequiereCliente || !cliente || p.cliente === cliente);
           });
-          selProyecto.innerHTML = '<option value="" disabled' + (proyectosFiltrados.length ? '' : ' selected') + ' hidden>' + (cliente ? 'Selecciona proyecto' : 'Selecciona primero un cliente') + '</option>' +
+          var proyectoSinOpciones = proyectoRequiereCliente && !cliente;
+          selProyecto.innerHTML = '<option value="" disabled' + (proyectosFiltrados.length ? '' : ' selected') + ' hidden>' + (proyectoSinOpciones ? 'Selecciona primero un cliente' : 'Selecciona proyecto') + '</option>' +
             proyectosFiltrados.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + '</option>'; }).join('');
           if (proyectosFiltrados.some(function(p) { return p.nombre === valorPrevioProyecto; })) selProyecto.value = valorPrevioProyecto;
           else selProyecto.value = '';
