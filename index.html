@@ -9364,6 +9364,11 @@
             // captura junto con litros_cargados/importe en ese paso), así
             // que se muestra hasta entonces (COMPROBADA/CERRADA).
             var valeYaComprobado = v.estado === 'COMPROBADA' || v.estado === 'CERRADA';
+            // A partir de AUTORIZADA (APROBADA_JEFE) ya no hay ninguna
+            // acción disponible en el menú (no se puede aprobar de nuevo,
+            // ni cancelar): el menú de opciones desaparece y solo queda
+            // el botón verde de Visualizar.
+            var valeEditableEnHamburguesa = v.estado === 'CREADA';
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(v.codigo) + '</td>' +
@@ -9379,9 +9384,10 @@
               '<td style="text-align:center;">' +
                 '<div style="display:flex; gap:6px; justify-content:center;">' +
                 '<button class="success" style="padding:6px 10px;" title="Visualizar" onclick="window.visualizarVale(' + v.id + ')">👁️</button>' +
+                (valeEditableEnHamburguesa ?
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesVale(' + v.id + ')">' +
                   '<span></span><span></span><span></span>' +
-                '</button>' +
+                '</button>' : '') +
                 '</div>' +
               '</td>';
             cuerpo.appendChild(fila);
@@ -9407,11 +9413,10 @@
         // El resto del flujo (Imprimir PDF / Comprobar / Cerrar) ahora vive
         // dentro de "Visualizar" (👁️), junto al diagrama de proceso.
         if (btnPagar) btnPagar.style.display = 'none';
-        // El Administrador puede cancelar un vale en cualquier momento,
-        // siempre y cuando todavía no se haya comprobado (con foto de
-        // ticket) ni esté ya cancelado/cerrado.
-        var puedeCancelar = actual && actual.rol === 'Administrador' &&
-          ['COMPROBADA', 'CERRADA', 'CANCELADA'].indexOf(v.estado) === -1;
+        // El Administrador solo puede cancelar un vale ANTES de que se
+        // autorice (estado CREADA). Una vez AUTORIZADA (APROBADA_JEFE) ya
+        // no se puede cancelar ni eliminar — el vale sigue su curso.
+        var puedeCancelar = actual && actual.rol === 'Administrador' && v.estado === 'CREADA';
         if (btnCancelar) btnCancelar.style.display = puedeCancelar ? '' : 'none';
         document.querySelectorAll('#valeAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
         document.getElementById('valeAccionesModal').classList.add('active');
@@ -9458,15 +9463,16 @@
         }
       };
 
-      // Solo el Administrador puede cancelar un vale, y solo mientras no
-      // se haya comprobado (con foto de ticket) ni esté ya cerrado. Un
-      // vale cancelado se conserva (no se elimina) para trazabilidad.
+      // Solo el Administrador puede cancelar un vale, y solo ANTES de que
+      // se autorice (estado CREADA). Una vez AUTORIZADA (APROBADA_JEFE) en
+      // adelante ya no se puede cancelar ni eliminar. Un vale cancelado se
+      // conserva (no se elimina) para trazabilidad.
       window.cancelarValeGasolina = async function(id) {
         if (!actual || actual.rol !== 'Administrador') return alert('⚠️ Solo el Administrador puede cancelar un vale.');
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
-        if (['COMPROBADA', 'CERRADA', 'CANCELADA'].indexOf(v.estado) !== -1) {
-          return alert('⚠️ Este vale ya fue comprobado (o ya está cerrado/cancelado) y no se puede cancelar.');
+        if (v.estado !== 'CREADA') {
+          return alert('⚠️ Este vale ya fue autorizado (o ya está comprobado/cerrado/cancelado) y no se puede cancelar.');
         }
         if (!confirm('¿Cancelar el vale ' + (v.codigo || '') + '? Esta acción no se puede deshacer.')) return;
         try {
