@@ -976,12 +976,15 @@
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    margin-bottom: 16px;
     font-size: 16px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 1;
   }
 
   /* ===== LOGIN ===== */
@@ -1193,8 +1196,10 @@
   .card.modal-card.abierta {
     display: block;
     position: fixed;
-    inset: 0;
-    margin: auto;
+    top: 5vh;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
     z-index: 2000;
     max-width: 1100px;
     width: 95%;
@@ -1234,7 +1239,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2000;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1305,7 +1310,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1362,7 +1367,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1494,7 +1499,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1577,7 +1582,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2100;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1657,7 +1662,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2001;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1779,7 +1784,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2002;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -1839,7 +1844,7 @@
     animation: modalOverlayIn .18s ease both;
     z-index: 2001;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
@@ -2128,6 +2133,7 @@
     box-shadow: none;
   }
   .modulo-maestro-item .modulo-leyenda { margin-top: 8px; font-size: 16px; font-weight: 500; color: var(--gray-700); text-align: center; display: flex; align-items: flex-start; justify-content: center; min-height: 42px; line-height: 1.2 }
+  .modulo-maestro-item .modulo-total-vale { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--color-verde, #2e7d32); text-align: center; }
   .modulo-maestro-item .modulo-leyenda.construccion { color: var(--gray-400); font-weight: 400; font-size: 11px }
 
   .btn-volver-menu-center {
@@ -3842,7 +3848,7 @@
       <div id="panelDocCXP" class="card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h2 id="docCxpPanelTitulo" style="margin:0;">📄 Documento</h2>
-          <button class="success" onclick="window.abrirAgregarDocumentoCXP()">➕ Agregar Documento</button>
+          <button class="success" id="btnAgregarDocumentoCXP" onclick="window.abrirAgregarDocumentoCXP()">➕ Agregar Documento</button>
         </div>
         <p id="docCxpPanelDescripcion" class="text-muted" style="margin-bottom:12px;"></p>
         <div class="table-wrapper">
@@ -3874,6 +3880,7 @@
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Registro y control de vales de gasolina por vehículo y departamento.</p>
 
+        <div id="seccionNuevoVale">
         <h3 style="margin-top:20px;cursor:pointer;" onclick="window.limpiarFormularioVale()" title="Clic para limpiar y capturar otro vale">➕ Nuevo Vale de Gasolina</h3>
         <div class="cxc-form-row">
           <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha de carga<input id="valeFechaCarga" type="date" style="width:100%;margin-top:4px;"></label>
@@ -3934,6 +3941,7 @@
           <button class="success" onclick="window.agregarValeGasolina()">➕ Registrar Vale</button>
         </div>
         <div id="msgVales"></div>
+        </div>
 
         <h3 style="margin-top:20px;">📋 Vales de Gasolina</h3>
         <div class="table-wrapper">
@@ -4670,7 +4678,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="ocPendientesIndicadoresCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">📋 Órdenes de Compra Pendientes</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('ocPendientesIndicadoresCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x danger" onclick="window.cerrarModalCard('ocPendientesIndicadoresCard')">✕</button>
           </div>
           <div id="tablaOCPendientes">
             <table>
@@ -5447,7 +5455,7 @@
 
   <div id="dashboardOverlay">
     <button class="btn-volver" onclick="window.cerrarDashboard()">✕</button>
-    <div id="dashboardContent"></div>
+    <div id="dashboardContent" style="margin-top:52px;"></div>
   </div>
 
   <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarPanelOC(); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
@@ -5568,6 +5576,7 @@
       </div>
       <div class="modal-body">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="btnAccionDocCxpImprimir" class="btn-accion-producto" data-accion="imprimir" onclick="window.seleccionarAccionDocumentoCXP('imprimir')">🖨️ Imprimir PDF</button>
           <button type="button" id="btnAccionDocCxpEditar" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionDocumentoCXP('editar')">✏️ Editar</button>
           <button type="button" id="btnAccionDocCxpPagar" class="btn-accion-producto" data-accion="pagar" onclick="window.seleccionarAccionDocumentoCXP('pagar')">✅ Marcar Pagada</button>
           <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionDocumentoCXP('eliminar')">🗑️ Eliminar</button>
@@ -5633,6 +5642,16 @@
         <div class="cxc-form-row">
           <input id="docCxpConcepto" placeholder="Concepto *" required>
           <input id="docCxpBeneficiario" placeholder="Beneficiario">
+        </div>
+        <div class="cxc-form-row">
+          <select id="docCxpPrioridad" style="flex:1;">
+            <option value="NORMAL">Prioridad: Normal</option>
+            <option value="URGENTE">Prioridad: Urgente</option>
+          </select>
+          <div id="celdaVehiculoDocCXP" class="hidden" style="flex:1;">
+            <input id="docCxpVehiculo" list="listaVehiculosDocCXP" placeholder="Vehículo (IAVE) — busca por coincidencia" autocomplete="off" oninput="window.autocompletarVehiculoDocCXP()" onchange="window.autocompletarVehiculoDocCXP()" style="width:100%;">
+            <datalist id="listaVehiculosDocCXP"></datalist>
+          </div>
         </div>
         <div class="cxc-form-row">
           <input id="docCxpFolio" placeholder="Folio">
@@ -6191,6 +6210,29 @@
         return promesa;
       }
 
+      // Mide el tamaño natural (px) de una imagen ya cargada como dataURL,
+      // para poder calcularle un ancho/alto en el PDF que respete su
+      // relación de aspecto original (evita que un logo se vea "estirado"
+      // o deforme al forzarlo dentro de una caja de tamaño fijo).
+      function medirImagenPDF(dataUrl) {
+        return new Promise(function(resolve) {
+          if (!dataUrl) { resolve(null); return; }
+          var img = new Image();
+          img.onload = function() { resolve({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height }); };
+          img.onerror = function() { resolve(null); };
+          img.src = dataUrl;
+        });
+      }
+
+      // Dado el tamaño natural de una imagen y una caja máxima (maxW x
+      // maxH), regresa el ancho/alto más grande que cabe dentro de la caja
+      // sin deformar la imagen (equivalente a `object-fit: contain`).
+      function ajustarImagenACaja(tamanoNatural, maxW, maxH) {
+        if (!tamanoNatural || !tamanoNatural.w || !tamanoNatural.h) return { w: maxW, h: maxH };
+        var escala = Math.min(maxW / tamanoNatural.w, maxH / tamanoNatural.h);
+        return { w: tamanoNatural.w * escala, h: tamanoNatural.h * escala };
+      }
+
       // Igual que obtenerImagenComoDataURL, pero le sube la saturación un
       // 10% (vía <canvas>) para que se visualice más marcada. No aplica
       // ningún otro filtro (ni desenfoque, ni cambios de nitidez).
@@ -6671,6 +6713,20 @@
       function getDirector() {
         var director = usuariosDB.find(function(u) { return u.rol === 'Director General'; });
         return director ? director.usuario : 'LJGR';
+      }
+
+      // Para el PDF de VC/VI: "VALIDA" (Administrador) y "AR - PROGR. PAGO"
+      // (Caja / Finanzas) son roles fijos de la empresa, no capturados por
+      // documento — se toma el primer usuario con ese rol, igual que
+      // getDirector() hace con Director General.
+      function getAdministrador() {
+        var admin = usuariosDB.find(function(u) { return u.rol === 'Administrador'; });
+        return admin ? admin.usuario : 'ADMINISTRADOR';
+      }
+
+      function getResponsableCaja() {
+        var caja = usuariosDB.find(function(u) { return u.rol === 'Finanzas'; });
+        return caja ? caja.usuario : 'CAJA';
       }
 
       function gastoProyectoMoneda(nombreProyecto) {
@@ -7284,6 +7340,7 @@
         mostrarLogoMMD();
         llenarModulosMaestro(tipo);
         actualizarHeaderLogo();
+        if (tipo === 'vales') window.actualizarTotalesModulosVales();
       };
 
       function llenarModulosMaestro(tipo) {
@@ -7368,6 +7425,14 @@
           item.appendChild(cuadro);
           item.appendChild(leyenda);
 
+          if (tipo === 'vales') {
+            var totalVale = document.createElement('span');
+            totalVale.className = 'modulo-total-vale';
+            totalVale.id = 'moduloTotalVale_' + m.id;
+            totalVale.textContent = 'Cargando…';
+            item.appendChild(totalVale);
+          }
+
           item.addEventListener('click', function(e) {
             var modulo = this.dataset.modulo;
             if (modulo === 'cxp') {
@@ -7424,6 +7489,60 @@
           item.style.flexShrink = '0';
         });
       }
+
+      // Totales por módulo (VC / VI / VSC) mostrados debajo de cada tarjeta
+      // del menú "📊 VALES". Solo cuenta lo que ya está comprometido: VC/VI
+      // en estado PAGADA, y vales de gasolina desde que el Jefe de
+      // Departamento los autoriza en adelante (AUTORIZADA/COMPROBADA/
+      // CERRADA) — nunca lo que sigue en borrador (PENDIENTE/CREADA) ni lo
+      // cancelado. Respeta la misma restricción por empresa/departamento
+      // que ya usa el resto de CXP/VSC (esRolGlobalCXP + actual.permisos).
+      window.actualizarTotalesModulosVales = async function() {
+        var spanVC = document.getElementById('moduloTotalVale_vc');
+        var spanVI = document.getElementById('moduloTotalVale_vi');
+        var spanVSC = document.getElementById('moduloTotalVale_vsc');
+        if (!spanVC && !spanVI && !spanVSC) return;
+
+        var esGlobal = esRolGlobalCXP(actual);
+        var empresaPropia = (!esGlobal && actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
+        var deptoPropio = (!esGlobal && actual && actual.permisos && actual.permisos[0] && actual.permisos[0].depto) || '';
+
+        async function totalDocumentoCXP(tipo) {
+          var q = supabase.from('documentos_cxp').select('monto').eq('tipo', tipo).eq('estado', 'PAGADA');
+          if (empresaPropia) q = q.eq('empresa', empresaPropia);
+          if (deptoPropio) q = q.eq('departamento', deptoPropio);
+          var { data, error } = await q;
+          if (error) throw error;
+          return (data || []).reduce(function(s, d) { return s + (Number(d.monto) || 0); }, 0);
+        }
+
+        try {
+          if (spanVC) spanVC.textContent = formatoMoneda(await totalDocumentoCXP('VC'), 'MXN');
+        } catch (e) {
+          console.error('Error calculando total de VC:', e);
+          if (spanVC) spanVC.textContent = '—';
+        }
+        try {
+          if (spanVI) spanVI.textContent = formatoMoneda(await totalDocumentoCXP('VI'), 'MXN');
+        } catch (e) {
+          console.error('Error calculando total de VI:', e);
+          if (spanVI) spanVI.textContent = '—';
+        }
+        if (spanVSC) {
+          try {
+            var qVSC = supabase.from('vales_gasolina').select('importe, monto, estado').in('estado', ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA']);
+            if (empresaPropia) qVSC = qVSC.eq('empresa', empresaPropia);
+            if (deptoPropio) qVSC = qVSC.eq('departamento', deptoPropio);
+            var rVSC = await qVSC;
+            if (rVSC.error) throw rVSC.error;
+            var totalVSC = (rVSC.data || []).reduce(function(s, v) { return s + (Number(v.importe) || Number(v.monto) || 0); }, 0);
+            spanVSC.textContent = formatoMoneda(totalVSC, 'MXN');
+          } catch (e) {
+            console.error('Error calculando total de VSC:', e);
+            spanVSC.textContent = '—';
+          }
+        }
+      };
 
       window.volverAlMenuPrincipal = function() {
         window.mostrarMenuMaestroPrincipal();
@@ -8560,6 +8679,13 @@
       var valesGasolinaCache = [];
 
       window.cargarVSC = async function() {
+        // FINANZAS puede consultar/gestionar vales de gasolina, pero no
+        // puede agregar (capturar) uno nuevo.
+        var seccionNuevoVale = document.getElementById('seccionNuevoVale');
+        if (seccionNuevoVale) {
+          seccionNuevoVale.style.display = (actual && actual.rol === 'Finanzas') ? 'none' : '';
+        }
+
         var campoSolicitante = document.getElementById('valeSolicitante');
         if (campoSolicitante) campoSolicitante.value = actual ? actual.usuario : '';
 
@@ -9153,6 +9279,10 @@
 
       window.agregarValeGasolina = async function() {
         var msg = document.getElementById('msgVales');
+        if (actual && actual.rol === 'Finanzas') {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Finanzas no tiene permiso para agregar vales.</div>';
+          return;
+        }
         var empresaSel = document.getElementById('valeEmpresa');
         var empresaOculto = document.getElementById('valeEmpresaValor');
         var empresa = empresaOculto ? empresaOculto.value : (empresaSel ? empresaSel.value : '');
@@ -9315,6 +9445,7 @@
           }).eq('id', id);
           if (error) throw error;
           window.cargarValesGasolina();
+          window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error aprobando vale de gasolina:', e);
           alert('❌ No se pudo aprobar: ' + e.message);
@@ -9340,6 +9471,7 @@
           }).eq('id', id);
           if (error) throw error;
           window.cargarValesGasolina();
+          window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error cancelando vale de gasolina:', e);
           alert('❌ No se pudo cancelar: ' + e.message);
@@ -9512,17 +9644,21 @@
         opts = opts || {};
         var alturaHeader = opts.alturaHeader || 14;
         var radio = 3.5;
+        var colorHeader = opts.headerColor || [216, 216, 216];
         doc.setDrawColor(120, 120, 120);
         doc.setLineWidth(0.6);
-        // Encabezado gris (relleno redondeado)
-        doc.setFillColor(216, 216, 216);
+        // Encabezado (relleno redondeado; color configurable — gris para
+        // VSC, durazno/salmón para VC/VI, igual al formato original)
+        doc.setFillColor(colorHeader[0], colorHeader[1], colorHeader[2]);
         doc.roundedRect(x, y, w, alturaHeader, radio, radio, 'F');
         doc.setFont(undefined, 'bold');
         doc.setFontSize(opts.etiquetaSize || 8.5);
         doc.setTextColor(20, 20, 20);
         doc.text(etiqueta, x + w / 2, y + alturaHeader / 2 + 2.8, { align: 'center' });
-        // Fila de valor (relleno redondeado)
-        doc.setFillColor(255, 255, 255);
+        // Fila de valor (relleno redondeado; opcionalmente resaltada, p.ej.
+        // en amarillo para IMPORTE)
+        var colorValor = opts.valorFillColor || [255, 255, 255];
+        doc.setFillColor(colorValor[0], colorValor[1], colorValor[2]);
         doc.roundedRect(x, y + alturaHeader, w, h - alturaHeader, radio, radio, 'F');
         doc.setFont(undefined, opts.valorBold ? 'bold' : 'normal');
         doc.setFontSize(opts.valorSize || 9);
@@ -9560,7 +9696,12 @@
         var yHeader = yTop + 10;
         var altoLogo = 46, anchoLogo = 82;
         if (ctx.logoExtingueDataUrl) {
-          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', margen, yHeader, anchoLogo, altoLogo);
+          // El tamaño real (ctx.logoExtingueTam) ya viene calculado para
+          // respetar la relación de aspecto original del logo (ver
+          // ajustarImagenACaja): se centra dentro de la misma caja
+          // anchoLogo x altoLogo en vez de estirarlo a la fuerza.
+          var tamExt = ctx.logoExtingueTam || { w: anchoLogo, h: altoLogo };
+          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', margen + (anchoLogo - tamExt.w) / 2, yHeader + (altoLogo - tamExt.h) / 2, tamExt.w, tamExt.h);
         }
         doc.setFont(undefined, 'bold');
         doc.setFontSize(11.5);
@@ -9573,7 +9714,8 @@
 
         // Logo de la empresa del vale (derecha), solo si no es Extingue
         if (ctx.logoEmpresaDataUrl) {
-          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - anchoLogo, yHeader, anchoLogo, altoLogo);
+          var tamEmp = ctx.logoEmpresaTam || { w: anchoLogo, h: altoLogo };
+          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - anchoLogo + (anchoLogo - tamEmp.w) / 2, yHeader + (altoLogo - tamEmp.h) / 2, tamEmp.w, tamEmp.h);
         }
 
         var y = yHeader + altoLogo + 6;
@@ -9741,6 +9883,12 @@
             console.warn('No se pudo generar el código QR del vale:', eQR);
           }
 
+          // Tamaño real de cada logo (respetando su relación de aspecto
+          // original) dentro de la caja de 82x46pt del encabezado, para
+          // que no se vea deforme/estirado.
+          var logoExtingueTam = ajustarImagenACaja(await medirImagenPDF(logoExtingueDataUrl), 82, 46);
+          var logoEmpresaTam = ajustarImagenACaja(await medirImagenPDF(logoEmpresaDataUrl), 82, 46);
+
           var ctx = {
             v: v,
             vehiculo: vehiculo,
@@ -9749,6 +9897,8 @@
             altoTarjeta: 388,
             logoExtingueDataUrl: logoExtingueDataUrl,
             logoEmpresaDataUrl: logoEmpresaDataUrl,
+            logoExtingueTam: logoExtingueTam,
+            logoEmpresaTam: logoEmpresaTam,
             qrDataUrl: qrDataUrl
           };
 
@@ -9786,6 +9936,340 @@
         }
       };
 
+      // ============================================================
+      // PDF de VC (Vale de Caja) y VI (Vale de IAVE) — replica el
+      // formato preimpreso oficial de la empresa (FORMATO VC / FORMATO
+      // VI), con el mismo criterio ya usado para el vale de gasolina:
+      // dos copias del mismo documento en la misma hoja (para archivo
+      // interno + entrega), separadas por una línea de corte. Las
+      // columnas de firma cambian según el tipo (VI tiene 5: Solicitante
+      // / Valida / Autoriza / AR-Progr.Pago / Recibe Pago; VC tiene 3:
+      // Solicitante / Autoriza / Recibe Pago), igual que en los formatos
+      // originales.
+      // ============================================================
+      var COLOR_HEADER_VALE_CXP = [250, 224, 199];
+      var COLOR_IMPORTE_VALE_CXP = [255, 241, 150];
+
+      function formatearFechaLargaEsMX(fechaISO) {
+        if (!fechaISO) return '—';
+        var conHora = String(fechaISO).length <= 10 ? (fechaISO + 'T00:00:00') : fechaISO;
+        var f = new Date(conHora);
+        if (isNaN(f.getTime())) return String(fechaISO);
+        var dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        return dias[f.getDay()] + ', ' + String(f.getDate()).padStart(2, '0') + ' de ' + meses[f.getMonth()] + ' de ' + f.getFullYear();
+      }
+
+      // Celda "DOCUMENTO:" — logo (izq.) + tipo (VC/VI) en grande + nombre
+      // largo en itálica, igual a la primera casilla del formato original.
+      function dibujarCeldaDocumentoValeCXP(doc, x, y, w, h, tipo, nombreLargo, logoDataUrl, logoTam) {
+        var radio = 3.5;
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.setFillColor(COLOR_HEADER_VALE_CXP[0], COLOR_HEADER_VALE_CXP[1], COLOR_HEADER_VALE_CXP[2]);
+        doc.roundedRect(x, y, w, 14, radio, radio, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(20, 20, 20);
+        doc.text('DOCUMENTO:', x + w / 2, y + 9.8, { align: 'center' });
+
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(x, y + 14, w, h - 14, radio, radio, 'F');
+
+        var logoAncho = Math.min(w * 0.4, 40);
+        if (logoDataUrl) {
+          var tam = logoTam || { w: logoAncho, h: (h - 14) * 0.6 };
+          var escala = Math.min(logoAncho / tam.w, (h - 20) / tam.h, 1);
+          var wDib = tam.w * escala, hDib = tam.h * escala;
+          doc.addImage(logoDataUrl, 'JPEG', x + 5, y + 14 + ((h - 14) - hDib) / 2, wDib, hDib);
+        }
+        var xTextoCentro = x + logoAncho + 10 + (w - logoAncho - 16) / 2;
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(20, 20, 20);
+        doc.text(tipo, xTextoCentro, y + 14 + (h - 14) / 2 - 2, { align: 'center' });
+        doc.setFont(undefined, 'italic');
+        doc.setFontSize(7);
+        doc.text(nombreLargo, xTextoCentro, y + 14 + (h - 14) / 2 + 10, { align: 'center', maxWidth: w - logoAncho - 16 });
+
+        doc.setFont(undefined, 'normal');
+        doc.setDrawColor(120, 120, 120);
+        doc.roundedRect(x, y, w, h, radio, radio, 'S');
+      }
+
+      // Celda "PRIORIDAD" — URGENTE (con letra de grado en rojo) / NORMAL,
+      // igual al formato original.
+      function dibujarCeldaPrioridadValeCXP(doc, x, y, w, h, prioridad) {
+        var radio = 3.5;
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.setFillColor(COLOR_HEADER_VALE_CXP[0], COLOR_HEADER_VALE_CXP[1], COLOR_HEADER_VALE_CXP[2]);
+        doc.roundedRect(x, y, w, 14, radio, radio, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(20, 20, 20);
+        doc.text('PRIORIDAD', x + w / 2, y + 9.8, { align: 'center' });
+
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(x, y + 14, w, h - 14, radio, radio, 'F');
+
+        var esUrgente = prioridad === 'URGENTE';
+        var yContenido = y + 14 + (h - 14) / 2 + 3;
+
+        doc.setFont(undefined, esUrgente ? 'bold' : 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(esUrgente ? 200 : 120, esUrgente ? 30 : 120, esUrgente ? 30 : 120);
+        doc.text('URGENTE.', x + 6, yContenido);
+        if (esUrgente) {
+          var xLetra = x + 6 + doc.getTextWidth('URGENTE.') + 6;
+          doc.setDrawColor(200, 30, 30);
+          doc.setLineWidth(0.7);
+          doc.rect(xLetra, yContenido - 9, 14, 12);
+          doc.setFontSize(9);
+          doc.setTextColor(200, 30, 30);
+          doc.text('A', xLetra + 7, yContenido, { align: 'center' });
+        }
+        doc.setFont(undefined, !esUrgente ? 'bold' : 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(!esUrgente ? 20 : 120, !esUrgente ? 20 : 120, !esUrgente ? 20 : 120);
+        doc.text('NORMAL.', x + w - 6, yContenido, { align: 'right' });
+
+        doc.setTextColor(20, 20, 20);
+        doc.setFont(undefined, 'normal');
+        doc.setDrawColor(120, 120, 120);
+        doc.roundedRect(x, y, w, h, radio, radio, 'S');
+      }
+
+      // Celda "CONCEPTO:" — etiqueta + texto (puede ocupar varias líneas)
+      // + importe a la derecha, igual al formato original.
+      function dibujarCeldaConceptoValeCXP(doc, x, y, w, h, lineasConcepto, importeTexto) {
+        var radio = 3.5;
+        var wLabel = Math.min(70, w * 0.16);
+        var wImporte = importeTexto ? Math.min(95, w * 0.2) : 0;
+        var wValor = w - wLabel - wImporte;
+
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.setFillColor(COLOR_HEADER_VALE_CXP[0], COLOR_HEADER_VALE_CXP[1], COLOR_HEADER_VALE_CXP[2]);
+        doc.roundedRect(x, y, wLabel, h, radio, radio, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(20, 20, 20);
+        doc.text('CONCEPTO:', x + wLabel / 2, y + h / 2 + 2.8, { align: 'center', maxWidth: wLabel - 8 });
+
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(x + wLabel, y, wValor, h, radio, radio, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        var yTextoConcepto = y + h / 2 - (lineasConcepto.length - 1) * 5 + 2;
+        lineasConcepto.forEach(function(linea) {
+          doc.text(linea, x + wLabel + wValor / 2, yTextoConcepto, { align: 'center', maxWidth: wValor - 10 });
+          yTextoConcepto += 10;
+        });
+
+        if (importeTexto) {
+          doc.roundedRect(x + wLabel + wValor, y, wImporte, h, radio, radio, 'F');
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(9.5);
+          doc.text(importeTexto, x + wLabel + wValor + wImporte / 2, y + h / 2 + 3, { align: 'center', maxWidth: wImporte - 6 });
+          doc.line(x + wLabel + wValor, y, x + wLabel + wValor, y + h);
+        }
+
+        doc.setFont(undefined, 'normal');
+        doc.setDrawColor(120, 120, 120);
+        doc.roundedRect(x, y, w, h, radio, radio, 'S');
+        doc.line(x + wLabel, y, x + wLabel, y + h);
+      }
+
+      // Celda de firma (3 franjas: encabezado numerado, espacio para la
+      // firma con el nombre/iniciales de quien corresponde, y el pie con
+      // el rol/instrucción) — igual a las columnas "(1) SOLICITANTE.",
+      // "(2) AUTORIZA", etc. del formato original.
+      function dibujarCeldaFirmaValeCXP(doc, x, y, w, h, numero, titulo, valorNombre, pieTexto) {
+        var radio = 3.5;
+        var alturaHeader = 14, alturaPie = 12;
+        var alturaMedio = h - alturaHeader - alturaPie;
+
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.setFillColor(COLOR_HEADER_VALE_CXP[0], COLOR_HEADER_VALE_CXP[1], COLOR_HEADER_VALE_CXP[2]);
+        doc.roundedRect(x, y, w, alturaHeader, radio, radio, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(7.2);
+        doc.setTextColor(20, 20, 20);
+        doc.text('(' + numero + ') ' + titulo, x + w / 2, y + 9.8, { align: 'center', maxWidth: w - 6 });
+
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x, y + alturaHeader, w, alturaMedio, 'F');
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+        doc.text(valorNombre || '—', x + w / 2, y + alturaHeader + alturaMedio - 8, { align: 'center', maxWidth: w - 6 });
+
+        doc.setFillColor(230, 230, 230);
+        doc.rect(x, y + alturaHeader + alturaMedio, w, alturaPie, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(6.3);
+        doc.text(pieTexto, x + w / 2, y + alturaHeader + alturaMedio + alturaPie / 2 + 2, { align: 'center', maxWidth: w - 4 });
+
+        doc.setFont(undefined, 'normal');
+        doc.setDrawColor(120, 120, 120);
+        doc.roundedRect(x, y, w, h, radio, radio, 'S');
+        doc.line(x, y + alturaHeader + alturaMedio, x + w, y + alturaHeader + alturaMedio);
+      }
+
+      // Dibuja UNA copia completa del VC/VI dentro de [margen, yTop,
+      // anchoUtil, altoTarjeta]. Se usa dos veces por hoja, igual que el
+      // vale de gasolina.
+      function dibujarDocumentoCXPCompleto(doc, ctx, yTop) {
+        var d = ctx.d, margen = ctx.margen, anchoUtil = ctx.anchoUtil;
+        var tipo = d.tipo;
+
+        doc.setDrawColor(30, 30, 30);
+        doc.setLineWidth(1);
+        doc.rect(margen - 10, yTop, anchoUtil + 20, ctx.altoTarjeta);
+
+        var y = yTop + 8;
+
+        // Fila A: Documento / Folio / Prioridad / Fecha de elaboración
+        var wDoc = anchoUtil * 0.26, wFolio = anchoUtil * 0.16, wPrio = anchoUtil * 0.28;
+        var wFecha = anchoUtil - wDoc - wFolio - wPrio;
+        var altoA = 46;
+        var infoTipo = DOC_CXP_INFO[tipo] || { nombre: tipo };
+        dibujarCeldaDocumentoValeCXP(doc, margen, y, wDoc, altoA, tipo, String(infoTipo.nombre).toUpperCase(), ctx.logoDataUrl, ctx.logoTam);
+        dibujarCajaEtiquetaVale(doc, margen + wDoc, y, wFolio, altoA, 'FOLIO.', d.folio || d.codigo, { headerColor: COLOR_HEADER_VALE_CXP, valorBold: true, valorSize: 11 });
+        dibujarCeldaPrioridadValeCXP(doc, margen + wDoc + wFolio, y, wPrio, altoA, d.prioridad || 'NORMAL');
+        dibujarCajaEtiquetaVale(doc, margen + wDoc + wFolio + wPrio, y, wFecha, altoA, 'FECHA DE ELABORACIÓN.', formatearFechaLargaEsMX(d.fecha_registro), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7 });
+        y += altoA + 6;
+
+        // Fila B: Solicitante / Depto / Importe / Fecha solicitada de pago
+        var cuartoB = anchoUtil / 4;
+        var altoB = 30;
+        dibujarCajaEtiquetaVale(doc, margen, y, cuartoB, altoB, 'SOLICITANTE.', d.solicitante || d.responsable, { headerColor: COLOR_HEADER_VALE_CXP });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB, y, cuartoB, altoB, 'DEPTO.', mostrarDepto(d.departamento), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7.5 });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB * 2, y, cuartoB, altoB, 'IMPORTE.', formatoMoneda(d.monto, d.moneda), { headerColor: COLOR_HEADER_VALE_CXP, valorFillColor: COLOR_IMPORTE_VALE_CXP, valorBold: true, valorSize: 11 });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB * 3, y, cuartoB, altoB, 'FECHA SOLICITADA DE PAGO.', formatearFechaLargaEsMX(d.fecha), { headerColor: COLOR_HEADER_VALE_CXP, valorColor: [190, 30, 30], valorSize: 6.5 });
+        y += altoB + 6;
+
+        // Fila C: Cliente / Proyecto
+        var mitadC = anchoUtil / 2;
+        dibujarCajaEtiquetaVale(doc, margen, y, mitadC, altoB, 'CLIENTE.', d.cliente, { headerColor: COLOR_HEADER_VALE_CXP });
+        dibujarCajaEtiquetaVale(doc, margen + mitadC, y, mitadC, altoB, 'PROYECTO.', d.proyecto, { headerColor: COLOR_HEADER_VALE_CXP });
+        y += altoB + 6;
+
+        // Fila D: Concepto (para VI se antepone el vehículo, como en el
+        // formato original: "CARGA DE IAVE PARA VEHICULO ...")
+        var lineasConcepto;
+        if (tipo === 'VI' && d.vehiculo) {
+          var conceptoVI = 'CARGA DE IAVE PARA VEHÍCULO ' + String(d.vehiculo).toUpperCase();
+          if (d.concepto && d.concepto.trim() && d.concepto.toUpperCase().indexOf(String(d.vehiculo).toUpperCase()) === -1) {
+            conceptoVI += ' — ' + d.concepto.toUpperCase();
+          }
+          lineasConcepto = doc.splitTextToSize(conceptoVI, anchoUtil * 0.6);
+        } else {
+          lineasConcepto = doc.splitTextToSize(String(d.concepto || '—').toUpperCase(), anchoUtil * 0.6);
+        }
+        var altoD = Math.max(40, 14 + lineasConcepto.length * 10 + 8);
+        dibujarCeldaConceptoValeCXP(doc, margen, y, anchoUtil, altoD, lineasConcepto, formatoMoneda(d.monto, d.moneda));
+        y += altoD + 6;
+
+        // Fila E: Firmas — 5 columnas en VI, 3 en VC (igual a los
+        // formatos originales)
+        var firmantes = (tipo === 'VI') ? [
+          { numero: 1, titulo: 'SOLICITANTE.', valor: d.solicitante || d.responsable, pie: 'FIRMA.' },
+          { numero: 2, titulo: 'VALIDA', valor: getAdministrador(), pie: 'ADMINISTRADOR.' },
+          { numero: 3, titulo: 'AUTORIZA', valor: getDirector(), pie: 'DIR. GRAL.' },
+          { numero: 4, titulo: 'AR - PROGR. PAGO.', valor: getResponsableCaja(), pie: 'CAJA / FIRMA Y FECHA.' },
+          { numero: 5, titulo: 'RECIBE PAGO.', valor: d.beneficiario, pie: 'NOMBRE, FIRMA Y FECHA.' }
+        ] : [
+          { numero: 1, titulo: 'SOLICITANTE.', valor: d.solicitante || d.responsable, pie: 'FIRMA.' },
+          { numero: 2, titulo: 'AUTORIZA', valor: getAdministrador(), pie: 'ADMINISTRADOR.' },
+          { numero: 3, titulo: 'RECIBE PAGO.', valor: d.beneficiario, pie: 'NOMBRE, FIRMA Y FECHA.' }
+        ];
+        var wFirma = anchoUtil / firmantes.length;
+        var altoE = 58;
+        firmantes.forEach(function(f, i) {
+          dibujarCeldaFirmaValeCXP(doc, margen + wFirma * i, y, wFirma, altoE, f.numero, f.titulo, f.valor, f.pie);
+        });
+        y += altoE + 8;
+
+        // Fila F: Nota "IMPORTANTE" (pie), igual al formato original
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(190, 30, 30);
+        doc.text('IMPORTANTE:', margen, y);
+        doc.setFont(undefined, 'italic');
+        doc.text(
+          tipo === 'VI'
+            ? 'MIÉRCOLES / RECEPCIÓN DE VI PARA PROGRAMACIÓN.'
+            : 'MIÉRCOLES / RECEPCIÓN DE VC PARA PROGRAMACIÓN / VIÁTICOS Y PREVISIÓN DE GASTOS.',
+          margen, y + 9
+        );
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(20, 20, 20);
+      }
+
+      // Genera el PDF de un VC o VI con el formato preimpreso oficial
+      // (ver dibujarDocumentoCXPCompleto). Igual que el vale de
+      // gasolina: dos copias por hoja, separadas por una línea de corte.
+      window.imprimirPDFDocumentoCXP = async function(id) {
+        var d = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (!d) return;
+        if (d.tipo !== 'VC' && d.tipo !== 'VI') {
+          alert('⚠️ El formato de PDF solo está disponible para VC (Vale de Caja) y VI (Vale de IAVE).');
+          return;
+        }
+
+        try {
+          var { jsPDF } = window.jspdf;
+          var doc = new jsPDF('p', 'pt', 'a4');
+          var margen = 40;
+          var anchoUtil = 595.28 - margen * 2;
+
+          var empresaDoc = getEmpresaCatalogoPorNombre(d.empresa);
+          var logoUrl = (empresaDoc && empresaDoc.logo) || getLogoEmpresaCatalogo('GRUPO INDUSTRIAL EXTINGUE') || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+          var logoDataUrl = null;
+          try {
+            logoDataUrl = await obtenerImagenComoDataURL(logoUrl);
+          } catch (eLogo) {
+            console.warn('No se pudo cargar el logo para el PDF del documento CXP:', eLogo);
+          }
+          // Tamaño real del logo (respetando su relación de aspecto
+          // original) para que no se vea deforme, igual que en el vale
+          // de gasolina.
+          var logoTam = ajustarImagenACaja(await medirImagenPDF(logoDataUrl), 40, 30);
+
+          var ctx = {
+            d: d,
+            margen: margen,
+            anchoUtil: anchoUtil,
+            altoTarjeta: 280,
+            logoDataUrl: logoDataUrl,
+            logoTam: logoTam
+          };
+
+          dibujarDocumentoCXPCompleto(doc, ctx, 18);
+
+          var yCorte = 18 + ctx.altoTarjeta + 8;
+          doc.setDrawColor(140, 140, 140);
+          doc.setLineWidth(0.8);
+          doc.setLineDashPattern([4, 3], 0);
+          doc.line(margen - 10, yCorte, margen - 10 + anchoUtil + 20, yCorte);
+          doc.setLineDashPattern([], 0);
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(120, 120, 120);
+          doc.text('- - - - - - - - - - - -  CORTE AQUÍ  - - - - - - - - - - - -', 297.64, yCorte + 3, { align: 'center' });
+          doc.setTextColor(20, 20, 20);
+
+          dibujarDocumentoCXPCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
+
+          doc.save((d.codigo || d.tipo) + '.pdf');
+        } catch (e) {
+          console.error('Error generando el PDF del documento CXP:', e);
+          alert('❌ No se pudo generar el PDF: ' + e.message);
+        }
+      };
+
       window.cerrarRevisionVale = async function(id) {
         if (!confirm('¿Cerrar este vale de gasolina? Esta acción marca el proceso como concluido.')) return;
         try {
@@ -9793,6 +10277,7 @@
           if (error) throw error;
           window.cerrarVisualizarVale();
           window.cargarValesGasolina();
+          window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error cerrando el vale:', e);
           alert('❌ No se pudo cerrar: ' + e.message);
@@ -9968,6 +10453,7 @@
           window.cerrarComprobarVale();
           await window.cargarValesGasolina();
           window.visualizarVale(idGuardado);
+          window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error guardando la comprobación del vale:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
@@ -12984,7 +13470,7 @@
               return '<tr>' +
                 '<td><code>' + o.codigo + '</code></td>' +
                 '<td>' + o.proyecto + '</td>' +
-                '<td>' + o.proveedor + '</td>' +
+                '<td>' + String(o.proveedor || '').slice(0, 15) + '</td>' +
                 '<td>' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
                 '<td><span class="badge badge-pendiente">' + o.estado + '</span></td>' +
                 '<td>' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td>' +
@@ -15626,7 +16112,50 @@
         var descripcion = document.getElementById('docCxpPanelDescripcion');
         if (titulo) titulo.textContent = info.icono + ' ' + tipo + ' — ' + info.nombre;
         if (descripcion) descripcion.textContent = info.descripcion;
+        // FINANZAS puede ver y pagar los vales (VC/VI), pero no puede
+        // agregar nuevos. SPM no es un "vale" y no aplica esta restricción.
+        var btnAgregarDocCXP = document.getElementById('btnAgregarDocumentoCXP');
+        if (btnAgregarDocCXP) {
+          var esValeRestringidoFinanzas = (tipo === 'VC' || tipo === 'VI') && actual && actual.rol === 'Finanzas';
+          btnAgregarDocCXP.style.display = esValeRestringidoFinanzas ? 'none' : '';
+        }
         window.cargarDocumentosCXP();
+      };
+
+      // La celda de "Vehículo" (con búsqueda de coincidencia igual a la de
+      // Proveedor en la OC) solo aplica al Vale de IAVE (VI): un vale de
+      // IAVE siempre es para cargar el dispositivo de un vehículo
+      // específico, mientras que VC/SPM no tienen vehículo asociado.
+      window.actualizarCeldaVehiculoDocCXP = async function() {
+        var celda = document.getElementById('celdaVehiculoDocCXP');
+        if (!celda) return;
+        var esVI = tipoDocCXPActual === 'VI';
+        celda.classList.toggle('hidden', !esVI);
+        if (!esVI) return;
+        if (!vehiculosCache.length) await window.cargarVehiculos();
+        var lista = document.getElementById('listaVehiculosDocCXP');
+        if (lista) {
+          lista.innerHTML = vehiculosCache.map(function(v) {
+            return '<option value="' + escapeHTML(v.nombre) + '"></option>';
+          }).join('');
+        }
+      };
+
+      // Al elegir un vehículo que coincide exactamente con el catálogo,
+      // se sugiere automáticamente el concepto (solo si sigue vacío, para
+      // no pisar algo que el usuario ya haya escrito a mano) — igual que
+      // el autocompletado de Proveedor rellena los datos bancarios.
+      window.autocompletarVehiculoDocCXP = function() {
+        var input = document.getElementById('docCxpVehiculo');
+        if (!input) return;
+        var valor = input.value.trim().toUpperCase();
+        if (!valor) return;
+        var match = vehiculosCache.find(function(v) { return (v.nombre || '').trim().toUpperCase() === valor; });
+        if (!match) return;
+        var concepto = document.getElementById('docCxpConcepto');
+        if (concepto && !concepto.value.trim()) {
+          concepto.value = 'CARGA DE IAVE PARA VEHÍCULO ' + String(match.nombre).toUpperCase();
+        }
       };
 
       window.actualizarDeptosDocumentoCXP = function() {
@@ -15858,6 +16387,11 @@
         document.getElementById('docCxpMonto').value = '';
         if (['VC', 'VI', 'SPM'].indexOf(tipoDocCXPActual) === -1) document.getElementById('docCxpFolio').value = '';
         window.actualizarFolioDocumentoCXP();
+        var selPrioridad = document.getElementById('docCxpPrioridad');
+        if (selPrioridad) selPrioridad.value = 'NORMAL';
+        var inputVehiculo = document.getElementById('docCxpVehiculo');
+        if (inputVehiculo) inputVehiculo.value = '';
+        window.actualizarCeldaVehiculoDocCXP();
 
         var selCliente = document.getElementById('docCxpCliente');
         if (selCliente) {
@@ -15875,12 +16409,35 @@
 
       window.agregarDocumentoCXP = async function() {
         var msg = document.getElementById('msgDocumentoCXP');
+        // FINANZAS no puede agregar vales nuevos (VC/VI); SPM no cuenta
+        // como vale y no aplica esta restricción.
+        if (docCxpEdicionId === null && (tipoDocCXPActual === 'VC' || tipoDocCXPActual === 'VI') && actual && actual.rol === 'Finanzas') {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Finanzas no tiene permiso para agregar vales.</div>';
+          return;
+        }
         var empresa = document.getElementById('docCxpEmpresa').value;
         var concepto = document.getElementById('docCxpConcepto').value.trim();
         var monto = parseFloat(document.getElementById('docCxpMonto').value);
         if (!empresa || !concepto || isNaN(monto) || monto <= 0) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, concepto y monto (mayor a 0) son obligatorios.</div>';
           return;
+        }
+
+        // Un Vale de IAVE (VI) siempre es para cargar el dispositivo de un
+        // vehículo específico: no se permite guardarlo sin elegir uno del
+        // catálogo (no basta con escribir cualquier texto, debe coincidir
+        // exactamente con un vehículo dado de alta).
+        var vehiculoTextoVI = null;
+        if (tipoDocCXPActual === 'VI') {
+          var inputVehiculoVI = document.getElementById('docCxpVehiculo');
+          vehiculoTextoVI = inputVehiculoVI ? inputVehiculoVI.value.trim() : '';
+          var vehiculoValidoVI = vehiculoTextoVI && vehiculosCache.some(function(v) {
+            return (v.nombre || '').trim().toUpperCase() === vehiculoTextoVI.toUpperCase();
+          });
+          if (!vehiculoValidoVI) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ Debes elegir un vehículo del catálogo para poder crear un Vale de IAVE.</div>';
+            return;
+          }
         }
 
         // ===== Modo edición (ADMIN / Jefe Departamento): actualiza el
@@ -15902,7 +16459,9 @@
             cliente: document.getElementById('docCxpCliente').value || null,
             proyecto: document.getElementById('docCxpProyecto').value || null,
             solicitante: document.getElementById('docCxpSolicitante').value || null,
-            autoriza: document.getElementById('docCxpAutoriza').value || null
+            autoriza: document.getElementById('docCxpAutoriza').value || null,
+            prioridad: (document.getElementById('docCxpPrioridad') && document.getElementById('docCxpPrioridad').value) || 'NORMAL',
+            vehiculo: tipoDocCXPActual === 'VI' ? (document.getElementById('docCxpVehiculo').value.trim() || null) : null
           };
           try {
             var { error } = await supabase.from('documentos_cxp').update(actualizado).eq('id', docCxpEdicionId);
@@ -15931,6 +16490,8 @@
           proyecto: document.getElementById('docCxpProyecto').value || null,
           solicitante: document.getElementById('docCxpSolicitante').value || null,
           autoriza: document.getElementById('docCxpAutoriza').value || null,
+          prioridad: (document.getElementById('docCxpPrioridad') && document.getElementById('docCxpPrioridad').value) || 'NORMAL',
+          vehiculo: document.getElementById('docCxpTipo').value === 'VI' ? (document.getElementById('docCxpVehiculo').value.trim() || null) : null,
           responsable: actual ? actual.usuario : null,
           elaborador: actual ? actual.usuario : null,
           estado: 'PENDIENTE'
@@ -15957,6 +16518,10 @@
         if (!d) return;
         accionDocumentoCXPActual = { id: id, accion: null };
         document.getElementById('docCxpAccionesTitulo').textContent = d.codigo || d.tipo;
+
+        // Imprimir PDF: solo existe el formato oficial para VC y VI.
+        var btnImprimir = document.getElementById('btnAccionDocCxpImprimir');
+        if (btnImprimir) btnImprimir.style.display = (d.tipo === 'VC' || d.tipo === 'VI') ? '' : 'none';
 
         // Editar (VC/VI): solo ADMIN y Jefe de Departamento.
         var btnEditar = document.getElementById('btnAccionDocCxpEditar');
@@ -15991,7 +16556,7 @@
 
       window.confirmarAccionDocumentoCXP = function() {
         if (!accionDocumentoCXPActual || !accionDocumentoCXPActual.accion) {
-          alert('⚠️ Selecciona una opción: Editar, Marcar Pagada o Eliminar.');
+          alert('⚠️ Selecciona una opción: Imprimir PDF, Editar, Marcar Pagada o Eliminar.');
           return;
         }
         var id = accionDocumentoCXPActual.id;
@@ -16000,6 +16565,7 @@
         if (accion === 'pagar') window.marcarPagadoDocumentoCXP(id);
         else if (accion === 'eliminar') window.eliminarDocumentoCXP(id);
         else if (accion === 'editar') window.editarDocumentoCXP(id);
+        else if (accion === 'imprimir') window.imprimirPDFDocumentoCXP(id);
       };
 
       window.marcarPagadoDocumentoCXP = async function(id) {
@@ -16011,6 +16577,7 @@
           var { error } = await supabase.from('documentos_cxp').update({ estado: 'PAGADA' }).eq('id', id);
           if (error) throw error;
           window.cargarDocumentosCXP();
+          window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error marcando documento como pagado:', e);
           alert('❌ No se pudo actualizar: ' + e.message);
@@ -16089,6 +16656,11 @@
         document.getElementById('docCxpFecha').value = d.fecha ? d.fecha.slice(0, 10) : '';
         document.getElementById('docCxpMonto').value = d.monto != null ? d.monto : '';
         document.getElementById('docCxpMoneda').value = d.moneda || 'MXN';
+        var selPrioridadEdicion = document.getElementById('docCxpPrioridad');
+        if (selPrioridadEdicion) selPrioridadEdicion.value = d.prioridad || 'NORMAL';
+        await window.actualizarCeldaVehiculoDocCXP();
+        var inputVehiculoEdicion = document.getElementById('docCxpVehiculo');
+        if (inputVehiculoEdicion) inputVehiculoEdicion.value = d.vehiculo || '';
 
         // El folio ya asignado no se recalcula ni se toca en edición.
         var folioInput = document.getElementById('docCxpFolio');
@@ -16117,6 +16689,7 @@
           var { error } = await supabase.from('documentos_cxp').delete().eq('id', id);
           if (error) throw error;
           window.cargarDocumentosCXP();
+          window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error eliminando documento CXP:', e);
           alert('❌ No se pudo eliminar: ' + e.message);
