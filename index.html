@@ -4360,6 +4360,34 @@
               </div>
               <input type="file" id="comprobantePagoOFInput" accept=".pdf,application/pdf" class="hidden" onchange="window.manejarSeleccionComprobantePagoOF(this)">
             </div>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">¿Hubo diferencias en el pago? *</label>
+              <select id="comprobantePagoOFHuboDiferencia" onchange="window.actualizarDiferenciaComprobantePagoOF()">
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            </div>
+            <div id="comprobantePagoOFBloqueDiferencia" style="display:none;">
+              <div class="grupo-formulario">
+                <label style="font-weight:500;">Razón de la diferencia *</label>
+                <textarea id="comprobantePagoOFRazonDiferencia" rows="2" placeholder="Explica por qué hubo diferencia en el pago"></textarea>
+              </div>
+              <div class="grupo-formulario">
+                <label style="font-weight:500;display:flex;align-items:center;gap:6px;">
+                  <input type="checkbox" id="comprobantePagoOFEsPenalizacion" onchange="window.actualizarDiferenciaComprobantePagoOF()">
+                  La diferencia fue por penalización
+                </label>
+              </div>
+              <div id="comprobantePagoOFBloqueNotaCredito" style="display:none;">
+                <div class="grupo-formulario">
+                  <label style="font-weight:500;">Adjuntar nota de crédito (PDF) *</label>
+                  <div id="notaCreditoOFDropzone" class="foto-dropzone" style="width:100%;height:120px;" onclick="document.getElementById('notaCreditoOFInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropNotaCreditoOF(event, this)">
+                    <span id="notaCreditoOFDropzoneTexto">📄 Arrastra el PDF de la nota de crédito aquí, o toca para elegirlo</span>
+                  </div>
+                  <input type="file" id="notaCreditoOFInput" accept=".pdf,application/pdf" class="hidden" onchange="window.manejarSeleccionNotaCreditoOF(this)">
+                </div>
+              </div>
+            </div>
             <div id="msgComprobantePagoOF"></div>
             <button class="success full-width" onclick="window.confirmarComprobantePagoOF()" style="margin-top:8px;">✔️ Subir Comprobante de Pago</button>
           </div>
@@ -15051,6 +15079,10 @@
       }
 
       function obtenerInfoProyectoCXC(cxc) {
+        // Si la cuenta ya trae su empresa/departamento directamente (p. ej.
+        // las generadas automáticamente desde una OF), se usan tal cual —
+        // no todas las CXC vienen ligadas a una OC con proyecto.
+        if (cxc.empresa) return { empresa: cxc.empresa, departamento: cxc.departamento || null };
         var orden = ordenes.find(function(o) { return o.codigo === cxc.oc_contrato; });
         if (!orden) return { empresa: null, departamento: null };
         var proyecto = proyectos.find(function(p) { return p.nombre === orden.proyecto; });
@@ -15086,7 +15118,9 @@
             moneda: of.moneda || 'MXN',
             estado: 'PENDIENTE',
             of_id: of.id,
-            responsable: of.responsable || null
+            responsable: of.responsable || null,
+            empresa: of.empresa || null,
+            departamento: of.departamento || null
           };
           var { data, error } = await supabase.from('cuentas_cxc').insert([nuevaCuenta]).select();
           if (error) throw error;
@@ -18542,6 +18576,37 @@
       // Primer paso: el Jefe de Departamento autoriza la OF (sin factura
       // todavía). Solo después de esto Finanzas puede continuar con la
       // factura (window.aprobarOF más abajo).
+      // Solo ADMIN o FINANZAS pueden eliminar una OF. Si ya tiene CXC o
+      // conversaciones de Buzón ligadas, Supabase puede rechazar el borrado
+      // por la relación de llave foránea (of_id) — se muestra ese motivo
+      // en vez de un error genérico.
+      window.eliminarOF = async function(index) {
+        if (!actual) { alert('❌ No has iniciado sesión.'); return; }
+        var of = ordenesFacturacion[index];
+        if (!of) return;
+
+        if (actual.rol !== 'Administrador' && actual.rol !== 'Finanzas') {
+          alert('❌ Solo ADMIN o Finanzas pueden eliminar una OF.');
+          return;
+        }
+        if (!confirm('¿Eliminar la OF ' + (of.folio || of.id) + '? Esta acción no se puede deshacer.')) return;
+
+        try {
+          var { error } = await supabase.from('ordenes_facturacion').delete().eq('id', of.id);
+          if (error) throw error;
+          var idx = ordenesFacturacion.indexOf(of);
+          if (idx !== -1) ordenesFacturacion.splice(idx, 1);
+          window.renderOF();
+          alert('✅ OF eliminada.');
+        } catch (e) {
+          console.error('Error eliminando OF:', e);
+          var esFK = e && e.message && /foreign key|violat/i.test(e.message);
+          alert(esFK
+            ? '❌ No se puede eliminar: esta OF ya tiene una cuenta por cobrar (CXC) o mensajes de Buzón ligados a ella.'
+            : '❌ No se pudo eliminar la OF: ' + (e.message || 'error desconocido'));
+        }
+      };
+
       window.autorizarOF = async function(index) {
         if (!actual) { alert('❌ No has iniciado sesión.'); return; }
         var of = ordenesFacturacion[index];
@@ -18763,6 +18828,7 @@
       // window.marcarPagadaOF queda PAGADO y se concluye el ciclo.
       var indexComprobantePagoOFPendiente = null;
       var archivoComprobantePagoOFPendiente = null;
+      var archivoNotaCreditoOFPendiente = null;
 
       window.abrirComprobantePagoOF = function(index) {
         if (!actual) return alert('No has iniciado sesión');
@@ -18777,6 +18843,7 @@
 
         indexComprobantePagoOFPendiente = index;
         archivoComprobantePagoOFPendiente = null;
+        archivoNotaCreditoOFPendiente = null;
         var codigoEl = document.getElementById('comprobantePagoOFCodigo');
         if (codigoEl) codigoEl.textContent = '— ' + (of.folio || ('OF-' + of.id));
         var texto = document.getElementById('comprobantePagoOFDropzoneTexto');
@@ -18785,13 +18852,40 @@
         if (input) input.value = '';
         var msg = document.getElementById('msgComprobantePagoOF');
         if (msg) msg.innerHTML = '';
+
+        var selDif = document.getElementById('comprobantePagoOFHuboDiferencia');
+        if (selDif) selDif.value = 'no';
+        var razonDif = document.getElementById('comprobantePagoOFRazonDiferencia');
+        if (razonDif) razonDif.value = '';
+        var chkPenal = document.getElementById('comprobantePagoOFEsPenalizacion');
+        if (chkPenal) chkPenal.checked = false;
+        var notaInput = document.getElementById('notaCreditoOFInput');
+        if (notaInput) notaInput.value = '';
+        var notaTexto = document.getElementById('notaCreditoOFDropzoneTexto');
+        if (notaTexto) notaTexto.textContent = '📄 Arrastra el PDF de la nota de crédito aquí, o toca para elegirlo';
+        window.actualizarDiferenciaComprobantePagoOF();
+
         document.getElementById('comprobantePagoOFModal').classList.add('active');
       };
 
       window.cancelarComprobantePagoOF = function() {
         indexComprobantePagoOFPendiente = null;
         archivoComprobantePagoOFPendiente = null;
+        archivoNotaCreditoOFPendiente = null;
         document.getElementById('comprobantePagoOFModal').classList.remove('active');
+      };
+
+      // Muestra/oculta el bloque de razón de diferencia y, si además se
+      // marca que fue por penalización, el de nota de crédito.
+      window.actualizarDiferenciaComprobantePagoOF = function() {
+        var huboDiferencia = document.getElementById('comprobantePagoOFHuboDiferencia');
+        var bloqueDiferencia = document.getElementById('comprobantePagoOFBloqueDiferencia');
+        var esPenalizacion = document.getElementById('comprobantePagoOFEsPenalizacion');
+        var bloqueNotaCredito = document.getElementById('comprobantePagoOFBloqueNotaCredito');
+        var mostrarDiferencia = huboDiferencia && huboDiferencia.value === 'si';
+        if (bloqueDiferencia) bloqueDiferencia.style.display = mostrarDiferencia ? '' : 'none';
+        var mostrarNotaCredito = mostrarDiferencia && esPenalizacion && esPenalizacion.checked;
+        if (bloqueNotaCredito) bloqueNotaCredito.style.display = mostrarNotaCredito ? '' : 'none';
       };
 
       window.manejarSeleccionComprobantePagoOF = function(input) {
@@ -18811,6 +18905,23 @@
         if (texto) texto.textContent = '📄 ' + archivoComprobantePagoOFPendiente.name;
       };
 
+      window.manejarSeleccionNotaCreditoOF = function(input) {
+        if (!input.files || !input.files[0]) return;
+        archivoNotaCreditoOFPendiente = input.files[0];
+        var texto = document.getElementById('notaCreditoOFDropzoneTexto');
+        if (texto) texto.textContent = '📄 ' + archivoNotaCreditoOFPendiente.name;
+      };
+
+      window.manejarDropNotaCreditoOF = function(event, el) {
+        event.preventDefault();
+        el.classList.remove('arrastrando');
+        var archivos = event.dataTransfer.files;
+        if (!archivos || !archivos[0]) return;
+        archivoNotaCreditoOFPendiente = archivos[0];
+        var texto = document.getElementById('notaCreditoOFDropzoneTexto');
+        if (texto) texto.textContent = '📄 ' + archivoNotaCreditoOFPendiente.name;
+      };
+
       async function subirComprobantePagoOF(archivo, folio) {
         if (!archivo) return null;
         try {
@@ -18822,6 +18933,23 @@
           return data ? data.publicUrl : null;
         } catch (e) {
           console.error('Error subiendo el comprobante de pago de la OF:', e);
+          return null;
+        }
+      }
+
+      // La nota de crédito reutiliza el mismo bucket "comprobantes-pago"
+      // (no requiere uno nuevo), diferenciada con el prefijo "NC-OF-".
+      async function subirNotaCreditoOF(archivo, folio) {
+        if (!archivo) return null;
+        try {
+          var extension = (archivo.name.split('.').pop() || 'pdf').toLowerCase();
+          var ruta = 'NC-OF-' + (folio || 'SF') + '-' + Date.now() + '.' + extension;
+          var { error } = await supabase.storage.from('comprobantes-pago').upload(ruta, archivo, { upsert: true });
+          if (error) throw error;
+          var { data } = supabase.storage.from('comprobantes-pago').getPublicUrl(ruta);
+          return data ? data.publicUrl : null;
+        } catch (e) {
+          console.error('Error subiendo la nota de crédito de la OF:', e);
           return null;
         }
       }
@@ -18842,16 +18970,56 @@
           return;
         }
 
+        var huboDiferenciaEl = document.getElementById('comprobantePagoOFHuboDiferencia');
+        var tuvoDiferencia = !!huboDiferenciaEl && huboDiferenciaEl.value === 'si';
+        var razonDiferencia = '';
+        var esPenalizacion = false;
+
+        if (tuvoDiferencia) {
+          var razonEl = document.getElementById('comprobantePagoOFRazonDiferencia');
+          razonDiferencia = razonEl ? razonEl.value.trim() : '';
+          if (!razonDiferencia) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ Indica la razón de la diferencia.</div>';
+            return;
+          }
+          var chkPenal = document.getElementById('comprobantePagoOFEsPenalizacion');
+          esPenalizacion = !!(chkPenal && chkPenal.checked);
+          if (esPenalizacion) {
+            if (!archivoNotaCreditoOFPendiente) {
+              if (msg) msg.innerHTML = '<div class="alert">❌ Adjunta la nota de crédito (PDF) de la penalización.</div>';
+              return;
+            }
+            if (!esArchivoPDF(archivoNotaCreditoOFPendiente)) {
+              if (msg) msg.innerHTML = '<div class="alert">❌ La nota de crédito adjunta debe ser un PDF.</div>';
+              return;
+            }
+          }
+        }
+
         try {
           var url = await subirComprobantePagoOF(archivoComprobantePagoOFPendiente, of.folio);
           if (!url) {
             if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el comprobante. Intenta de nuevo.</div>';
             return;
           }
+
+          var urlNotaCredito = null;
+          if (esPenalizacion) {
+            urlNotaCredito = await subirNotaCreditoOF(archivoNotaCreditoOFPendiente, of.folio);
+            if (!urlNotaCredito) {
+              if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir la nota de crédito. Intenta de nuevo.</div>';
+              return;
+            }
+          }
+
           var updatesComprobante = {
             comprobante_pago_url: url,
             comprobante_pago_subido_por: actual.u,
-            comprobante_pago_fecha_subida: new Date().toISOString()
+            comprobante_pago_fecha_subida: new Date().toISOString(),
+            tuvo_diferencia_pago: tuvoDiferencia,
+            razon_diferencia_pago: tuvoDiferencia ? razonDiferencia : null,
+            diferencia_es_penalizacion: tuvoDiferencia ? esPenalizacion : false,
+            nota_credito_url: urlNotaCredito
           };
           var { error: errorComprobante } = await supabase.from('ordenes_facturacion').update(updatesComprobante).eq('id', of.id);
           if (errorComprobante) throw errorComprobante;
@@ -18859,6 +19027,7 @@
 
           indexComprobantePagoOFPendiente = null;
           archivoComprobantePagoOFPendiente = null;
+          archivoNotaCreditoOFPendiente = null;
           document.getElementById('comprobantePagoOFModal').classList.remove('active');
           window.renderOF();
           alert('✅ Comprobante de pago subido. Queda pendiente de que Finanzas confirme y concluya el proceso.');
@@ -18888,7 +19057,17 @@
           return;
         }
 
-        if (!confirm('¿Confirmar el pago de la OF ' + of.folio + ' y concluir el proceso?')) return;
+        // Finanzas solo indica si el proceso se completó; si el
+        // solicitante/responsable reportó una diferencia al subir el
+        // comprobante, se le recuerda aquí antes de confirmar.
+        var textoConfirmacion = '¿Confirmar que el proceso de pago de la OF ' + of.folio + ' se completó?';
+        if (of.tuvo_diferencia_pago) {
+          textoConfirmacion += '\n\n⚠️ Se reportó una diferencia en el pago: ' + (of.razon_diferencia_pago || '(sin detalle)');
+          if (of.diferencia_es_penalizacion) {
+            textoConfirmacion += '\nMotivo: penalización.' + (of.nota_credito_url ? ' Nota de crédito adjunta.' : ' ⚠️ No se adjuntó nota de crédito.');
+          }
+        }
+        if (!confirm(textoConfirmacion)) return;
 
         var updates = { estado: 'PAGADO', fecha_pago: new Date().toISOString(), pagado_por: actual.u, confirmado_por: actual.u, fecha_confirmacion: new Date().toISOString() };
         var { error } = await supabase.from('ordenes_facturacion').update(updates).eq('id', of.id);
@@ -19120,6 +19299,11 @@
             acciones += '<button class="btn-imprimir" onclick="window.abrirChatOF(' + o.id + ', \'' + escapeHTML(o.folio || '') + '\')">💬 Chat</button>';
           }
 
+          // Solo ADMIN o FINANZAS pueden eliminar una OF.
+          if (actual && (actual.rol === 'Administrador' || actual.rol === 'Finanzas')) {
+            acciones += '<button class="danger" onclick="window.eliminarOF(' + idxOriginal + ')">🗑️ Eliminar</button>';
+          }
+
           // Primer paso: solo el Jefe de Departamento autoriza la OF
           // (sin factura todavía).
           if (actual && actual.rol === 'Jefe Departamento' && usuarioPuedeAccederOF(actual, o.empresa, o.departamento) && (o.estado === 'PENDIENTE' || o.estado === 'CREADA')) {
@@ -19150,6 +19334,9 @@
             } else if (o.comprobante_pago_url) {
               acciones += '<span class="text-muted" style="font-size:12px;">⏳ Pendiente de confirmación de Finanzas</span>';
             }
+            if (o.nota_credito_url) {
+              acciones += '<button class="btn-imprimir" onclick="window.abrirFacturaVer(this.dataset.url, \'Nota de Crédito OF ' + escapeHTML(o.folio || '') + '\')" data-url="' + escapeHTML(o.nota_credito_url) + '">📄 Ver Nota de Crédito</button>';
+            }
             if (esResponsable || esOverride) {
               acciones += '<button class="warning" onclick="window.solicitarCancelacionOF(' + idxOriginal + ')">⚠️ Sol. Cancelación</button>';
             }
@@ -19158,6 +19345,9 @@
               var vencidoOF = new Date() > limiteOF && !o.comprobante_pago_url;
               limiteTexto = '<div style="font-size:11px;' + (vencidoOF ? 'color:var(--color-rojo);font-weight:600;' : 'color:var(--gray-500);') + 'margin-top:2px;">' + (vencidoOF ? '🔴 Venció: ' : '⏳ Vence: ') + limiteOF.toLocaleDateString() + '</div>';
             }
+          }
+          if (o.tuvo_diferencia_pago) {
+            limiteTexto += '<div style="font-size:11px;color:var(--color-naranja,#c9760c);font-weight:600;margin-top:2px;" title="' + escapeHTML(o.razon_diferencia_pago || '') + '">⚠️ Diferencia' + (o.diferencia_es_penalizacion ? ' (penalización)' : '') + '</div>';
           }
 
           if (!acciones) acciones = '—';
