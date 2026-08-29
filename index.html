@@ -1399,6 +1399,38 @@
   #agregarCXCModal .modal-header h3, #agregarDocumentoCXPModal .modal-header h3, #cxpFiltroEstadosModal .modal-header h3, #cxcFiltroEstadosModal .modal-header h3, #vehiculoAccionesModal .modal-header h3, #agregarVehiculoModal .modal-header h3, #agregarValeGasolinaModal .modal-header h3, #valeAccionesModal .modal-header h3, #valesGasolinaDashboardModal .modal-header h3, #valeVisualizarModal .modal-header h3, #valeComprobarModal .modal-header h3, #vscCatalogoAccionesModal .modal-header h3, #editarVscCatalogoModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #agregarCXCModal .modal-header .pdfPreview-btn-group, #agregarDocumentoCXPModal .modal-header .pdfPreview-btn-group, #cxpFiltroEstadosModal .modal-header .pdfPreview-btn-group, #cxcFiltroEstadosModal .modal-header .pdfPreview-btn-group, #vehiculoAccionesModal .modal-header .pdfPreview-btn-group, #agregarVehiculoModal .modal-header .pdfPreview-btn-group, #agregarValeGasolinaModal .modal-header .pdfPreview-btn-group, #valeAccionesModal .modal-header .pdfPreview-btn-group, #valesGasolinaDashboardModal .modal-header .pdfPreview-btn-group, #valeVisualizarModal .modal-header .pdfPreview-btn-group, #valeComprobarModal .modal-header .pdfPreview-btn-group, #vscCatalogoAccionesModal .modal-header .pdfPreview-btn-group, #editarVscCatalogoModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #agregarCXCModal .cxc-form-row, #agregarDocumentoCXPModal .cxc-form-row, #agregarVehiculoModal .cxc-form-row, #agregarValeGasolinaModal .cxc-form-row, #valeComprobarModal .cxc-form-row { margin-bottom: 10px; }
+
+  /* ===== MODAL: FILTRO DE ESTADOS (CXP / CXC) — lista tipo menú, compacta ===== */
+  #cxpFiltroEstadosModal .modal-content, #cxcFiltroEstadosModal .modal-content { max-width: 290px; padding: 14px 16px; }
+  .filtro-estado-lista { display: flex; flex-direction: column; gap: 1px; }
+  .filtro-estado-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.2;
+    transition: background .12s ease;
+  }
+  .filtro-estado-item:hover { background: var(--gray-100); }
+  .filtro-estado-item input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: var(--primary);
+  }
+  .filtro-estado-item.filtro-estado-todos {
+    font-weight: 600;
+    border-bottom: 1px solid var(--gray-200);
+    padding-bottom: 9px;
+    margin-bottom: 5px;
+    border-radius: 0;
+  }
+  .filtro-estado-item.filtro-estado-todos:hover { background: transparent; }
+  .filtro-estado-lista + div { margin-top: 12px !important; }
   #valeVisualizarModal .modal-body, #valeComprobarModal .modal-body { max-height: 80vh; overflow: auto; }
   /* El botón "✅ Comprobar" (y demás acciones del vale) no debe agrandarse
      al pasar el cursor/tocar: dentro de un modal con overflow:auto, el
@@ -5133,31 +5165,33 @@
 
       <!-- ===== MODAL: FILTRO DE ESTADOS (CXP) ===== -->
       <div id="cxpFiltroEstadosModal">
-        <div class="modal-content" style="max-width:420px;">
+        <div class="modal-content">
           <div class="modal-header">
             <h3>🔎 Filtrar por Estado</h3>
             <button class="btn-modal-x" onclick="window.cerrarFiltroEstadosCXP()">✕</button>
           </div>
           <div class="modal-body">
-            <label style="display:flex; align-items:center; gap:8px; padding:8px 0; font-weight:600; border-bottom:1px solid var(--gray-200); margin-bottom:6px;">
-              <input type="checkbox" id="cxpEstadoTodos" onchange="window.alternarTodosEstadosCXP()"> Todos los estados
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxp-check-estado" value="AUTORIZADA" onchange="window.actualizarEstadoTodosCXP()"> Autorizadas
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxp-check-estado" value="PAGADA" onchange="window.actualizarEstadoTodosCXP()"> Pagadas
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxp-check-estado" value="PENDIENTE" onchange="window.actualizarEstadoTodosCXP()"> Pendientes de pago
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxp-check-estado" value="VENCIDA" onchange="window.actualizarEstadoTodosCXP()"> Vencidas
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxp-check-estado" value="CONCLUIDA" onchange="window.actualizarEstadoTodosCXP()"> Concluidas
-            </label>
-            <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+            <div class="filtro-estado-lista">
+              <label class="filtro-estado-item filtro-estado-todos">
+                <input type="checkbox" id="cxpEstadoTodos" onchange="window.alternarTodosEstadosCXP()"> Todos los estados
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxp-check-estado" value="AUTORIZADA" onchange="window.actualizarEstadoTodosCXP()"> Autorizadas
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxp-check-estado" value="PAGADA" onchange="window.actualizarEstadoTodosCXP()"> Pagadas
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxp-check-estado" value="PENDIENTE" onchange="window.actualizarEstadoTodosCXP()"> Pendientes de pago
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxp-check-estado" value="VENCIDA" onchange="window.actualizarEstadoTodosCXP()"> Vencidas
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxp-check-estado" value="CONCLUIDA" onchange="window.actualizarEstadoTodosCXP()"> Concluidas
+              </label>
+            </div>
+            <div style="margin-top:12px; display:flex; justify-content:flex-end;">
               <button class="success" onclick="window.aplicarFiltroEstadosCXP()">✔️ Aplicar</button>
             </div>
           </div>
@@ -5204,25 +5238,27 @@
 
       <!-- ===== MODAL: FILTRO DE ESTADOS (CXC) ===== -->
       <div id="cxcFiltroEstadosModal">
-        <div class="modal-content" style="max-width:420px;">
+        <div class="modal-content">
           <div class="modal-header">
             <h3>🔎 Filtrar por Estado</h3>
             <button class="btn-modal-x" onclick="window.cerrarFiltroEstadosCXC()">✕</button>
           </div>
           <div class="modal-body">
-            <label style="display:flex; align-items:center; gap:8px; padding:8px 0; font-weight:600; border-bottom:1px solid var(--gray-200); margin-bottom:6px;">
-              <input type="checkbox" id="cxcEstadoTodos" onchange="window.alternarTodosEstadosCXC()"> Todos los estados
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxc-check-estado" value="PAGADO" onchange="window.actualizarEstadoTodosCXC()"> Pagado
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxc-check-estado" value="PENDIENTE" onchange="window.actualizarEstadoTodosCXC()"> Pendiente
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0;">
-              <input type="checkbox" class="cxc-check-estado" value="VENCIDO" onchange="window.actualizarEstadoTodosCXC()"> Vencido
-            </label>
-            <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+            <div class="filtro-estado-lista">
+              <label class="filtro-estado-item filtro-estado-todos">
+                <input type="checkbox" id="cxcEstadoTodos" onchange="window.alternarTodosEstadosCXC()"> Todos los estados
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxc-check-estado" value="PAGADO" onchange="window.actualizarEstadoTodosCXC()"> Pagado
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxc-check-estado" value="PENDIENTE" onchange="window.actualizarEstadoTodosCXC()"> Pendiente
+              </label>
+              <label class="filtro-estado-item">
+                <input type="checkbox" class="cxc-check-estado" value="VENCIDO" onchange="window.actualizarEstadoTodosCXC()"> Vencido
+              </label>
+            </div>
+            <div style="margin-top:12px; display:flex; justify-content:flex-end;">
               <button class="success" onclick="window.aplicarFiltroEstadosCXC()">✔️ Aplicar</button>
             </div>
           </div>
