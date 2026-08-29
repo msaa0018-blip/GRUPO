@@ -5000,6 +5000,12 @@
         </div>
         <div class="grupo-formulario">
           <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Concepto:</label>
+            <input id="conceptoOC" placeholder="Concepto de la compra" style="flex:1.5;">
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
             <label style="font-weight:500;flex:0.3;min-width:100px;">Notas:</label>
             <textarea id="notasOC" placeholder="Notas adicionales (opcional)" style="flex:1.5;min-height:60px;"></textarea>
           </div>
@@ -20787,6 +20793,7 @@
           condicionpago: condicionPagoSeleccionada,
           fechapago2: fechaPago2,
           motivo: (document.getElementById('notasOC') ? document.getElementById('notasOC').value.trim() : null) || null,
+          concepto: (document.getElementById('conceptoOC') ? document.getElementById('conceptoOC').value.trim() : null) || null,
           productos: productos,
           elaborador: actual ? actual.usuario : 'Desconocido',
           banco: banco,
@@ -20861,6 +20868,7 @@
           responsable: datos.responsable,
           pausada: false,
           motivo: datos.motivo || null,
+          concepto: datos.concepto || null,
           fechaaprobacionsolicitante: null,
           fechaaprobacionjefe: null,
           fechaaprobaciondirector: null,
@@ -20950,6 +20958,7 @@
           responsable: datos.responsable,
           pausada: false,
           motivo: datos.motivo || null,
+          concepto: datos.concepto || null,
           fechaaprobacionsolicitante: null,
           fechaaprobacionjefe: null,
           fechaaprobaciondirector: null,
@@ -21014,7 +21023,7 @@
         if (selectProyecto) selectProyecto.selectedIndex = 0;
 
         ['proveedor', 'sucursal', 'rfc', 'direccion', 'direccionEntrega', 'cp',
-          'fechaPago', 'fechaPago2OC', 'fechaEntrega', 'notasOC', 'banco', 'cuenta', 'clabe',
+          'fechaPago', 'fechaPago2OC', 'fechaEntrega', 'notasOC', 'conceptoOC', 'banco', 'cuenta', 'clabe',
           'swift', 'cie', 'referencia', 'paridadInicial'].forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.value = '';
@@ -21805,12 +21814,23 @@
         doc.setTextColor(0, 0, 0);
         y += 20;
 
-        var headersOC = ['Código', 'Proyecto', 'Proveedor', 'Moneda', 'Total', 'Equiv. MXN', 'F.Pago', 'Estado'];
+        // Orden y columnas del reporte: Proveedor, Concepto, Cliente,
+        // Código, Factura, Fecha de pago, Monto USD y Monto MXN (esta
+        // última pareja según la moneda real de cada OC: solo se llena
+        // la columna que corresponde a su moneda, la otra queda en "—").
+        var headersOC = ['Proveedor', 'Concepto', 'Cliente', 'Código', 'Factura', 'F.Pago', 'Monto USD', 'Monto MXN'];
         var rowsOC = ocFiltradas.map(function(o) {
-          var estadoLabel = o.estado;
-          if (o.estadopago === 'PAGADA') estadoLabel = 'PAGADA';
-          else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) estadoLabel = 'PENDIENTE';
-          return [o.codigo, o.proyecto, o.proveedor, o.moneda, formatoMoneda(o.montototal, o.moneda), formatoMoneda(o.montomxn || 0, 'MXN'), new Date(o.fechapago).toLocaleDateString(), estadoLabel];
+          var esUSD = o.moneda === 'USD';
+          return [
+            o.proveedor,
+            o.concepto || '—',
+            o.cliente || '—',
+            o.codigo,
+            o.uuidfactura || '—',
+            o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—',
+            esUSD ? formatearNumeroMexico(o.montototal, true) : '—',
+            !esUSD ? formatoMoneda(o.montototal, 'MXN') : '—'
+          ];
         });
         doc.autoTable({
           head: [headersOC],
@@ -21925,12 +21945,23 @@
         doc.text('Total registros: ' + ofs.length, margin + 660, y);
         y += 20;
 
-        var headers = ['Folio', 'Fecha', 'Empresa', 'Depto', 'Razón Social', 'Responsable', 'Folio Factura', 'Moneda', 'Monto', 'Estado'];
+        // Orden y columnas del reporte: Empresa, Cliente, OC/Contrato,
+        // Concepto, Monto en pesos y Monto en dólares (solo se llena la
+        // columna que corresponde a la moneda real de cada OF, la otra
+        // queda en "—"). "Cliente" = Razón Social y "OC/Contrato" /
+        // "Concepto" siguen la misma convención ya usada al generar la
+        // Cuenta por Cobrar desde una OF (ver crearCXCDesdeOF).
+        var headers = ['Empresa', 'Cliente', 'OC/Contrato', 'Concepto', 'Monto MXN', 'Monto USD'];
         var rows = ofs.map(function(o) {
+          var montoOF = o.monto || o.suma || 0;
+          var esUSD = o.moneda === 'USD';
           return [
-            o.folio, o.fecha || '', (getAbreviaturaEmpresa(o.empresa) || o.empresa || ''), (getAbreviaturaDepartamento(o.departamento, o.empresa) || o.departamento || ''), o.razon_social,
-            o.responsable || '-', o.folio_factura || '-', o.moneda,
-            formatoMoneda(o.monto || o.suma || 0, o.moneda || 'MXN'), o.estado
+            (getAbreviaturaEmpresa(o.empresa) || o.empresa || ''),
+            o.razon_social || '—',
+            o.odc_contrato || o.oc_numero || o.folio || '—',
+            'OF ' + (o.folio || ''),
+            !esUSD ? formatoMoneda(montoOF, 'MXN') : '—',
+            esUSD ? formatearNumeroMexico(montoOF, true) : '—'
           ];
         });
         doc.autoTable({
