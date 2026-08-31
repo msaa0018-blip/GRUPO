@@ -11228,6 +11228,15 @@
           alert('⚠️ No tienes acceso a esta conversación.');
           return;
         }
+        // Al seleccionar una conversación desde la lista de una OC (o de
+        // una OF), esa ventana de lista se cierra primero para que solo
+        // quede visible la ventana de la conversación elegida (antes
+        // quedaban las dos abiertas una encima de la otra).
+        var modalListaOC = document.getElementById('ocChatModal');
+        if (modalListaOC) modalListaOC.classList.remove('active');
+        var modalListaOF = document.getElementById('ofChatModal');
+        if (modalListaOF) modalListaOF.classList.remove('active');
+
         buzonConversacionAbiertaId = id;
         document.getElementById('buzonConvAsunto').textContent = conv.asunto || '(Sin asunto)';
         var participantes = buzonParticipantes(conv);
