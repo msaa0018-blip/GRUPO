@@ -3110,6 +3110,12 @@
           <span class="modulo-leyenda">ALTA DE REGISTROS</span>
           <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Configuración</div>
         </div>
+        <!-- Módulo COLABORADORES - visible solo para el rol Administrador -->
+        <div class="modulo-item" id="menuColaboradoresBtn" data-modulo="colaboradores" style="display:none;">
+          <div class="modulo-cuadro funcional">🧑‍💻</div>
+          <span class="modulo-leyenda">COLABORADORES</span>
+          <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Empresa, rol y salario</div>
+        </div>
         <!-- Módulo INDICADORES - visible solo para roles autorizados -->
         <div class="modulo-item" id="moduloIndicadoresPrincipal" data-modulo="indicadores" style="display:none;">
           <div class="modulo-cuadro funcional">📊</div>
@@ -7443,6 +7449,8 @@
           if (inventarioBtn) inventarioBtn.style.display = (actual && actual.rol === 'Administrador') ? 'flex' : 'none';
           var almacenesBtn = document.getElementById('menuAlmacenesBtn');
           if (almacenesBtn) almacenesBtn.style.display = usuarioPuedeVerAlmacenes(actual) ? 'flex' : 'none';
+          var colaboradoresBtn = document.getElementById('menuColaboradoresBtn');
+          if (colaboradoresBtn) colaboradoresBtn.style.display = (actual && actual.rol === 'Administrador') ? 'flex' : 'none';
           mostrarIndicadoresEnMenuPrincipal();
           return;
         }
@@ -7678,7 +7686,6 @@
           if (actual && actual.rol === 'Administrador') {
             modulos.push({ id: 'clientes', icono: '🧑\u200d💼', nombre: 'Clientes' });
             modulos.push({ id: 'vehiculos', icono: '🚗', nombre: 'Vehículos' });
-            modulos.push({ id: 'colaboradores', icono: '🧑\u200d💻', nombre: 'Colaboradores' });
           }
         }
 
@@ -7747,7 +7754,7 @@
               }, 0);
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
-            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos' || modulo === 'colaboradores') {
+            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos') {
               window.mostrarModulo(modulo);
             } else if (modulo === 'spm') {
               window.mostrarModulo(modulo);
@@ -7956,6 +7963,13 @@
               // INVENTARIO es exclusivo del rol Administrador.
               if (actual && actual.rol === 'Administrador') {
                 window.mostrarModulo('inventario');
+              } else {
+                alert('⚠️ No tienes permisos para acceder a este módulo.');
+              }
+            } else if (modulo === 'colaboradores') {
+              // COLABORADORES: exclusivo del rol Administrador.
+              if (actual && actual.rol === 'Administrador') {
+                window.mostrarModulo('colaboradores');
               } else {
                 alert('⚠️ No tienes permisos para acceder a este módulo.');
               }
@@ -14082,6 +14096,15 @@
             }
           }
 
+          var colaboradoresBtn = document.getElementById('menuColaboradoresBtn');
+          if (colaboradoresBtn) {
+            if (actual && actual.rol === 'Administrador') {
+              colaboradoresBtn.style.display = 'flex';
+            } else {
+              colaboradoresBtn.style.display = 'none';
+            }
+          }
+
           // El botón "➕ Agregar" de Cuentas por Cobrar (alta de ingresos)
           // es exclusivo del usuario IQA.
           var btnAgregarCXCToggle = document.getElementById('btnAgregarCXCToggle');
@@ -19493,6 +19516,7 @@
         btnLogin.textContent = 'Ingresar';
         errorDiv.classList.add('hidden');
 
+        cerrarTodosLosModalesAbiertos();
         document.getElementById('mainHeader').classList.remove('hidden');
         document.getElementById('login').classList.add('hidden');
         document.getElementById('loginContainer').style.display = 'none';
@@ -19525,6 +19549,15 @@
               almacenesBtnLogin.style.display = 'flex';
             } else {
               almacenesBtnLogin.style.display = 'none';
+            }
+          }
+
+          var colaboradoresBtnLogin = document.getElementById('menuColaboradoresBtn');
+          if (colaboradoresBtnLogin) {
+            if (actual && actual.rol === 'Administrador') {
+              colaboradoresBtnLogin.style.display = 'flex';
+            } else {
+              colaboradoresBtnLogin.style.display = 'none';
             }
           }
 
@@ -19889,6 +19922,21 @@
           alert('Hubo un problema cargando parte de la interfaz. Se muestra el Menú Maestro Principal. Por favor comparte este mensaje con soporte: ' + e.message);
         }
       };
+
+      // Cierra cualquier ventana modal que hubiera quedado abierta de una
+      // sesión anterior (por ejemplo, al volver con el botón "atrás" del
+      // navegador después de haber dejado un formulario a medias). Se
+      // ejecuta justo después de iniciar sesión, para que nunca se vea un
+      // formulario (Nuevo Documento, SPM, Colaborador, etc.) sobrepuesto
+      // nada más entrar.
+      function cerrarTodosLosModalesAbiertos() {
+        document.querySelectorAll('.active').forEach(function(el) {
+          if (!el.id) return;
+          if (/Modal$/.test(el.id) || el.id === 'dashboardOverlay' || el.id === 'modalOverlayBackdrop') {
+            el.classList.remove('active');
+          }
+        });
+      }
 
       window.salir = function() {
         // Excepción: dentro de ALMACENES, el botón ✕ regresa al Menú
