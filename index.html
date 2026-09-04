@@ -5939,7 +5939,11 @@
               </tfoot>
             </table>
           </div>
-          <button id="btnAgregarEmpleadoPMSYS" onclick="window.agregarFilaEmpleadoPMSYS()" class="success" style="width:100%;margin-top:8px;">➕ Agregar Empleado</button>
+          <div id="filaBuscarColaboradorPMSYS" style="display:flex; gap:8px; margin-top:8px;">
+            <input id="buscarColaboradorPMSYS" list="listaColaboradoresPMSYS" placeholder="Buscar colaborador por usuario..." autocomplete="off" style="flex:1;" oninput="window.validarBusquedaColaboradorPMSYS()" onchange="window.validarBusquedaColaboradorPMSYS()">
+            <datalist id="listaColaboradoresPMSYS"></datalist>
+            <button type="button" id="btnAgregarEmpleadoPMSYS" onclick="window.agregarColaboradorPMSYSDesdeBusqueda()" class="success">➕ Agregar</button>
+          </div>
         </div>
 
         <div style="margin-top:16px;">
@@ -17554,12 +17558,9 @@
         }
         var tbody = document.getElementById('cuerpoPMSYS');
         var fila = document.createElement('tr');
-        var yaUsados = Array.prototype.map.call(tbody.querySelectorAll('.pmsys-usuario'), function(s) { return s.value; });
-        var opciones = usuariosDB.slice().sort(function(a, b) { return (a.usuario || '').localeCompare(b.usuario || ''); })
-          .map(function(u) { return '<option value="' + escapeHTML(u.usuario) + '" ' + (u.usuario === usuarioPrecargado ? 'selected' : '') + '>' + escapeHTML(u.usuario) + '</option>'; }).join('');
         fila.innerHTML =
           '<td class="indice">SYS-' + (tbody.children.length + 1) + '</td>' +
-          '<td><select class="pmsys-usuario" onchange="window.onUsuarioSeleccionadoPMSYS(this)"><option value="">-- Selecciona --</option>' + opciones + '</select></td>' +
+          '<td><input class="pmsys-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="pmsys-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span></td>' +
           '<td><input class="pmsys-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" onchange="window.recalcularFilaPMSYS(this)" oninput="window.recalcularFilaPMSYS(this)"></td>' +
           '<td class="pmsys-semanas" style="text-align:center;">' + (parseInt(document.getElementById('spmNumSemanas').value, 10) || 0) + '</td>' +
           '<td><input class="pmsys-importe-total" type="text" value="0.00" readonly></td>' +
@@ -17568,19 +17569,66 @@
           '<td><button class="danger" onclick="window.eliminarFilaPMSYS(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.aplicarPermisosPMSYS();
+        window.actualizarListaColaboradoresPMSYS();
         window.recalcularFilaPMSYS(fila);
       };
 
-      window.onUsuarioSeleccionadoPMSYS = async function(select) {
-        var usuario = select.value;
-        var fila = select.closest('tr');
-        if (!usuario || !fila) return;
-        var inputSalario = fila.querySelector('.pmsys-salario');
-        var salarioGuardado = await obtenerSalarioUsuarioSPM(usuario);
-        if (inputSalario && salarioGuardado > 0) {
-          inputSalario.value = formatearNumeroMexico(salarioGuardado, true);
+      // ===== Alta de colaboradores a PMSYS por búsqueda (igual filosofía
+      // que "Agregar desde catálogo" en los productos de la OC, pero aquí
+      // en vez de un catálogo fijo se busca por coincidencia de texto
+      // sobre los colaboradores dados de alta, igual que la búsqueda de
+      // Vehículo en el Vale de IAVE). Solo se puede agregar un colaborador
+      // que exista tal cual en el catálogo (usuario exacto), y no se
+      // permite agregarlo dos veces a la misma SPM.
+      window.actualizarListaColaboradoresPMSYS = function() {
+        var lista = document.getElementById('listaColaboradoresPMSYS');
+        if (!lista) return;
+        var yaAgregados = Array.prototype.map.call(document.querySelectorAll('#cuerpoPMSYS .pmsys-usuario'), function(inp) { return (inp.value || '').toUpperCase(); });
+        var disponibles = usuariosDB.filter(function(u) { return yaAgregados.indexOf((u.usuario || '').toUpperCase()) === -1; });
+        lista.innerHTML = disponibles.slice().sort(function(a, b) { return (a.usuario || '').localeCompare(b.usuario || ''); })
+          .map(function(u) { return '<option value="' + escapeHTML(u.usuario) + '">' + escapeHTML(u.rol || '') + '</option>'; }).join('');
+      };
+
+      // Solo visual: marca en verde/rojo si lo escrito ya coincide
+      // exactamente con un colaborador disponible, igual que la búsqueda
+      // de Vehículo hace con el input de docCxpVehiculo.
+      window.validarBusquedaColaboradorPMSYS = function() {
+        var input = document.getElementById('buscarColaboradorPMSYS');
+        if (!input) return;
+        var valor = input.value.trim().toUpperCase();
+        if (!valor) { input.style.background = ''; return; }
+        var coincide = usuariosDB.some(function(u) { return (u.usuario || '').trim().toUpperCase() === valor; });
+        input.style.background = coincide ? '#e8f7ee' : '#fdecea';
+      };
+
+      window.agregarColaboradorPMSYSDesdeBusqueda = async function() {
+        if (!spmUsuarioEsAdmin()) {
+          alert('⚠️ Solo ADMIN puede agregar empleados a la SPM.');
+          return;
         }
-        window.recalcularFilaPMSYS(fila);
+        var input = document.getElementById('buscarColaboradorPMSYS');
+        if (!input) return;
+        var texto = input.value.trim().toUpperCase();
+        if (!texto) {
+          alert('⚠️ Escribe el usuario del colaborador que quieres agregar y elige una coincidencia.');
+          return;
+        }
+        var match = usuariosDB.find(function(u) { return (u.usuario || '').trim().toUpperCase() === texto; });
+        if (!match) {
+          alert('⚠️ No se encontró ese colaborador. Elige una de las coincidencias sugeridas (debe existir en el catálogo de Colaboradores).');
+          return;
+        }
+        var yaAgregado = Array.prototype.some.call(document.querySelectorAll('#cuerpoPMSYS .pmsys-usuario'), function(inp) {
+          return (inp.value || '').toUpperCase() === texto;
+        });
+        if (yaAgregado) {
+          alert('⚠️ Ese colaborador ya está agregado a esta SPM.');
+          return;
+        }
+        var salario = await obtenerSalarioUsuarioSPM(match.usuario);
+        window.agregarFilaEmpleadoPMSYS(match.usuario, salario);
+        input.value = '';
+        input.style.background = '';
       };
 
       window.eliminarFilaPMSYS = function(boton) {
@@ -17590,6 +17638,7 @@
         }
         boton.closest('tr').remove();
         window.reindexarPMSYS();
+        window.actualizarListaColaboradoresPMSYS();
         window.recalcularTotalesPMSYS();
       };
 
@@ -17646,13 +17695,11 @@
       // resto de los roles puede ver la SPM pero no modificar esta sección.
       window.aplicarPermisosPMSYS = function() {
         var esAdmin = spmUsuarioEsAdmin();
-        var btnAgregar = document.getElementById('btnAgregarEmpleadoPMSYS');
-        if (btnAgregar) btnAgregar.style.display = esAdmin ? '' : 'none';
+        var filaBuscar = document.getElementById('filaBuscarColaboradorPMSYS');
+        if (filaBuscar) filaBuscar.style.display = esAdmin ? '' : 'none';
         document.querySelectorAll('#cuerpoPMSYS tr').forEach(function(fila) {
-          var select = fila.querySelector('.pmsys-usuario');
           var salario = fila.querySelector('.pmsys-salario');
           var btnEliminar = fila.querySelector('button.danger');
-          if (select) select.disabled = !esAdmin;
           if (salario) salario.readOnly = !esAdmin;
           if (btnEliminar) btnEliminar.style.display = esAdmin ? '' : 'none';
         });
@@ -17720,6 +17767,9 @@
         document.getElementById('spmVDC2').value = 0;
         document.getElementById('spmVDC3').value = 0;
         document.getElementById('cuerpoPMSYS').innerHTML = '';
+        var buscarColabNuevo = document.getElementById('buscarColaboradorPMSYS');
+        if (buscarColabNuevo) { buscarColabNuevo.value = ''; buscarColabNuevo.style.background = ''; }
+        window.actualizarListaColaboradoresPMSYS();
 
         configurarCamposDefaultSPM();
         window.actualizarFolioSPM();
@@ -17787,11 +17837,14 @@
 
         var tbody = document.getElementById('cuerpoPMSYS');
         tbody.innerHTML = '';
+        var buscarColabEdicion = document.getElementById('buscarColaboradorPMSYS');
+        if (buscarColabEdicion) { buscarColabEdicion.value = ''; buscarColabEdicion.style.background = ''; }
         var empleados = [];
         try { empleados = d.pmsys_empleados ? JSON.parse(d.pmsys_empleados) : []; } catch (e) { empleados = Array.isArray(d.pmsys_empleados) ? d.pmsys_empleados : []; }
         empleados.forEach(function(emp) {
           window.agregarFilaEmpleadoPMSYS(emp.usuario, emp.salario_semanal);
         });
+        window.actualizarListaColaboradoresPMSYS();
 
         window.recalcularSemanasSPM();
         window.recalcularPMVDC();
