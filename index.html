@@ -17552,10 +17552,6 @@
 
       // ===== PMSYS: lista de empleados incluidos en la SPM =====
       window.agregarFilaEmpleadoPMSYS = function(usuarioPrecargado, salarioPrecargado) {
-        if (!spmUsuarioEsAdmin()) {
-          alert('⚠️ Solo ADMIN puede agregar empleados a la SPM.');
-          return;
-        }
         var tbody = document.getElementById('cuerpoPMSYS');
         var fila = document.createElement('tr');
         fila.innerHTML =
@@ -17602,10 +17598,6 @@
       };
 
       window.agregarColaboradorPMSYSDesdeBusqueda = async function() {
-        if (!spmUsuarioEsAdmin()) {
-          alert('⚠️ Solo ADMIN puede agregar empleados a la SPM.');
-          return;
-        }
         var input = document.getElementById('buscarColaboradorPMSYS');
         if (!input) return;
         var texto = input.value.trim().toUpperCase();
@@ -17632,10 +17624,6 @@
       };
 
       window.eliminarFilaPMSYS = function(boton) {
-        if (!spmUsuarioEsAdmin()) {
-          alert('⚠️ Solo ADMIN puede quitar empleados de la SPM.');
-          return;
-        }
         boton.closest('tr').remove();
         window.reindexarPMSYS();
         window.actualizarListaColaboradoresPMSYS();
@@ -17691,17 +17679,19 @@
         return { total: total, comision: comision };
       };
 
-      // Solo ADMIN puede agregar/quitar empleados o editar el salario; el
-      // resto de los roles puede ver la SPM pero no modificar esta sección.
+      // Cualquier usuario que esté llenando la SPM puede agregar/quitar
+      // empleados y ajustar el salario de esta captura, igual que con los
+      // productos de una OC (no está restringido a ADMIN). Lo que sí es
+      // exclusivo de ADMIN es que el salario capturado se guarde de vuelta
+      // en el catálogo de Colaboradores (ver window.guardarSPM).
       window.aplicarPermisosPMSYS = function() {
-        var esAdmin = spmUsuarioEsAdmin();
         var filaBuscar = document.getElementById('filaBuscarColaboradorPMSYS');
-        if (filaBuscar) filaBuscar.style.display = esAdmin ? '' : 'none';
+        if (filaBuscar) filaBuscar.style.display = 'flex';
         document.querySelectorAll('#cuerpoPMSYS tr').forEach(function(fila) {
           var salario = fila.querySelector('.pmsys-salario');
           var btnEliminar = fila.querySelector('button.danger');
-          if (salario) salario.readOnly = !esAdmin;
-          if (btnEliminar) btnEliminar.style.display = esAdmin ? '' : 'none';
+          if (salario) salario.readOnly = false;
+          if (btnEliminar) btnEliminar.style.display = '';
         });
       };
 
