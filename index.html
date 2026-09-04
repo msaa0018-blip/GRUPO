@@ -3614,6 +3614,7 @@
                 <th>Empresa</th>
                 <th>Departamento</th>
                 <th>Salario semanal</th>
+                <th>TDD BBVA</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -3870,6 +3871,7 @@
             </div>
             <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Salario semanal<input id="colabSalario" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">TDD BBVA<input id="colabTdd" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
             </div>
             <div id="msgColaboradorModal"></div>
           </div>
@@ -11030,12 +11032,12 @@
         if (!cuerpo) return;
         if (!usuarioPuedeGestionarColaboradores()) return;
         try {
-          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,salario_semanal').order('usuario');
+          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,salario_semanal,tdd_bbva').order('usuario');
           if (error) throw error;
           colaboradoresCache = data || [];
           cuerpo.innerHTML = '';
           if (!colaboradoresCache.length) {
-            cuerpo.innerHTML = '<tr><td colspan="6">No hay colaboradores registrados.</td></tr>';
+            cuerpo.innerHTML = '<tr><td colspan="7">No hay colaboradores registrados.</td></tr>';
             return;
           }
           colaboradoresCache.forEach(function(u) {
@@ -11047,6 +11049,7 @@
               '<td>' + escapeHTML(getAbreviaturaEmpresa(permiso.empresa) || permiso.empresa || '—') + '</td>' +
               '<td>' + escapeHTML(mostrarDepto(getAbreviaturaDepartamento(permiso.depto, permiso.empresa) || permiso.depto)) + '</td>' +
               '<td>' + formatoMoneda(u.salario_semanal || 0, 'MXN') + '</td>' +
+              '<td>' + formatoMoneda(u.tdd_bbva || 0, 'MXN') + '</td>' +
               '<td style="text-align:center;">' +
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesColaborador(\'' + escapeHTML(u.usuario).replace(/'/g, "\\'") + '\')">' +
                   '<span></span><span></span><span></span>' +
@@ -11056,7 +11059,7 @@
           });
         } catch (e) {
           console.error('Error cargando colaboradores:', e);
-          cuerpo.innerHTML = '<tr><td colspan="6">❌ Error al cargar colaboradores: ' + escapeHTML(e.message) + '</td></tr>';
+          cuerpo.innerHTML = '<tr><td colspan="7">❌ Error al cargar colaboradores: ' + escapeHTML(e.message) + '</td></tr>';
         }
       };
 
@@ -11086,6 +11089,7 @@
         selEmpresa.value = '';
         window.actualizarDeptosColaborador();
         document.getElementById('colabSalario').value = '';
+        document.getElementById('colabTdd').value = '';
         document.getElementById('colaboradorModal').classList.add('active');
       };
 
@@ -11104,6 +11108,7 @@
         var empresa = document.getElementById('colabEmpresa').value;
         var departamento = document.getElementById('colabDepartamento').value;
         var salario = parseFloat(document.getElementById('colabSalario').value) || 0;
+        var tdd = parseFloat(document.getElementById('colabTdd').value) || 0;
 
         if (!usuario || !rol) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Usuario (iniciales) y rol son obligatorios.</div>';
@@ -11114,12 +11119,22 @@
 
         try {
           if (colaboradorEditando !== null) {
-            var { error } = await supabase.from('usuarios').update({
+            var { data: dataUpd, error } = await supabase.from('usuarios').update({
               rol: rol,
               permisos: permisos,
-              salario_semanal: salario
-            }).eq('usuario', colaboradorEditando);
+              salario_semanal: salario,
+              tdd_bbva: tdd
+            }).eq('usuario', colaboradorEditando).select();
             if (error) throw error;
+            // Si Supabase no reporta error pero tampoco devuelve la fila
+            // actualizada, es que el permiso/columna no se aplicó de
+            // verdad (por ejemplo, falta el GRANT de UPDATE sobre alguna
+            // columna) — se avisa en vez de cerrar el modal como si hubiera
+            // quedado guardado.
+            if (!dataUpd || !dataUpd.length) {
+              if (msg) msg.innerHTML = '<div class="alert">❌ No se confirmó el guardado (revisa permisos en Supabase para salario_semanal / tdd_bbva).</div>';
+              return;
+            }
           } else {
             var yaExiste = colaboradoresCache.some(function(u) { return (u.usuario || '').toUpperCase() === usuario; }) ||
               usuariosDB.some(function(u) { return (u.usuario || '').toUpperCase() === usuario; });
@@ -11131,7 +11146,8 @@
               usuario: usuario,
               rol: rol,
               permisos: permisos,
-              salario_semanal: salario
+              salario_semanal: salario,
+              tdd_bbva: tdd
             }]);
             if (errorNuevo) throw errorNuevo;
           }
@@ -11166,6 +11182,7 @@
         var selDepto = document.getElementById('colabDepartamento');
         if (permiso.depto) selDepto.value = permiso.depto;
         document.getElementById('colabSalario').value = u.salario_semanal || 0;
+        document.getElementById('colabTdd').value = u.tdd_bbva || 0;
         document.getElementById('colaboradorModal').classList.add('active');
       };
 
@@ -17400,22 +17417,23 @@
       // listado, cobro y reportes que ya existen para VC/VI.
       var spmEdicionId = null; // id del documento en edición, o null si es nuevo
       var COMISION_PMSYS = 0.0638;
-      var TDD_BBVA_FIJO = 2205.30;
 
-      // "Salario" es un dato del EMPLEADO (tabla usuarios), no de la SPM:
-      // se guarda ahí para que la próxima SPM ya lo traiga precargado.
-      // Se consulta solo bajo demanda (no en la carga masiva de usuarios)
-      // para no exponer el salario de todos en el navegador de cualquier
+      // "Salario" y "TDD BBVA" son datos del EMPLEADO (tabla usuarios,
+      // capturados por ADMIN en el módulo Colaboradores), no de la SPM: se
+      // guardan ahí para que la próxima SPM ya los traiga precargados. Se
+      // consultan solo bajo demanda (no en la carga masiva de usuarios)
+      // para no exponer esta información en el navegador de cualquier
       // usuario logueado.
-      async function obtenerSalarioUsuarioSPM(usuario) {
-        if (!usuario) return 0;
+      async function obtenerDatosUsuarioSPM(usuario) {
+        if (!usuario) return { salario: 0, tdd: 0 };
         try {
-          var { data, error } = await supabase.from('usuarios').select('salario_semanal').eq('usuario', usuario).limit(1);
+          var { data, error } = await supabase.from('usuarios').select('salario_semanal,tdd_bbva').eq('usuario', usuario).limit(1);
           if (error) throw error;
-          return (data && data[0] && Number(data[0].salario_semanal)) || 0;
+          var u = data && data[0];
+          return { salario: (u && Number(u.salario_semanal)) || 0, tdd: (u && Number(u.tdd_bbva)) || 0 };
         } catch (e) {
-          console.error('Error obteniendo salario de ' + usuario + ':', e);
-          return 0;
+          console.error('Error obteniendo datos de ' + usuario + ':', e);
+          return { salario: 0, tdd: 0 };
         }
       }
 
@@ -17546,18 +17564,25 @@
         document.querySelectorAll('#cuerpoPMSYS tr').forEach(function(fila) {
           var celdaSemanas = fila.querySelector('.pmsys-semanas');
           if (celdaSemanas) celdaSemanas.textContent = numSemanas;
+          window.recalcularFilaPMSYS(fila);
         });
         window.recalcularTotalesPMSYS();
       };
 
       // ===== PMSYS: lista de empleados incluidos en la SPM =====
-      window.agregarFilaEmpleadoPMSYS = function(usuarioPrecargado, salarioPrecargado) {
+      // Salario semanal y TDD BBVA son de solo lectura aquí: los asigna el
+      // ADMIN en el catálogo de Colaboradores y la SPM solo los consume
+      // (se guardan en el <tr> vía data-* para recalcular Total/Efectivo
+      // cuando cambie el número de semanas). Desde la SPM solo se puede
+      // agregar o quitar colaboradores, no modificar esos montos.
+      window.agregarFilaEmpleadoPMSYS = function(usuarioPrecargado, salarioPrecargado, tddPrecargado) {
         var tbody = document.getElementById('cuerpoPMSYS');
         var fila = document.createElement('tr');
+        fila.dataset.tddBase = Number(tddPrecargado) || 0;
         fila.innerHTML =
           '<td class="indice">SYS-' + (tbody.children.length + 1) + '</td>' +
           '<td><input class="pmsys-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="pmsys-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span></td>' +
-          '<td><input class="pmsys-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" onchange="window.recalcularFilaPMSYS(this)" oninput="window.recalcularFilaPMSYS(this)"></td>' +
+          '<td><input class="pmsys-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" readonly></td>' +
           '<td class="pmsys-semanas" style="text-align:center;">' + (parseInt(document.getElementById('spmNumSemanas').value, 10) || 0) + '</td>' +
           '<td><input class="pmsys-importe-total" type="text" value="0.00" readonly></td>' +
           '<td><input class="pmsys-tdd" type="text" value="0.00" readonly></td>' +
@@ -17617,8 +17642,8 @@
           alert('⚠️ Ese colaborador ya está agregado a esta SPM.');
           return;
         }
-        var salario = await obtenerSalarioUsuarioSPM(match.usuario);
-        window.agregarFilaEmpleadoPMSYS(match.usuario, salario);
+        var datos = await obtenerDatosUsuarioSPM(match.usuario);
+        window.agregarFilaEmpleadoPMSYS(match.usuario, datos.salario, datos.tdd);
         input.value = '';
         input.style.background = '';
       };
@@ -17638,8 +17663,10 @@
       };
 
       // Por cada empleado: Total = salario semanal × N semanas.
-      // TDD BBVA = 2205.30 fijo (topado al total, para no dar negativo si
-      // el total calculado es menor); Efectivo = Total − TDD BBVA.
+      // TDD BBVA: el monto que capturó ADMIN para ese colaborador en el
+      // catálogo de Colaboradores (guardado en fila.dataset.tddBase),
+      // topado al total para no dar negativo si el total calculado es
+      // menor; Efectivo = Total − TDD BBVA.
       window.recalcularFilaPMSYS = function(elemento) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
@@ -17655,7 +17682,8 @@
         }
         var semanas = parseInt(celdaSemanas ? celdaSemanas.textContent : '0', 10) || 0;
         var total = salario * semanas;
-        var tdd = Math.min(TDD_BBVA_FIJO, total);
+        var tddBase = Number(fila.dataset.tddBase) || 0;
+        var tdd = Math.min(tddBase, total);
         var efectivo = total - tdd;
 
         if (inputTotal) inputTotal.value = formatearNumeroMexico(total, true);
@@ -17680,17 +17708,15 @@
       };
 
       // Cualquier usuario que esté llenando la SPM puede agregar/quitar
-      // empleados y ajustar el salario de esta captura, igual que con los
-      // productos de una OC (no está restringido a ADMIN). Lo que sí es
-      // exclusivo de ADMIN es que el salario capturado se guarde de vuelta
-      // en el catálogo de Colaboradores (ver window.guardarSPM).
+      // empleados (igual que con los productos de una OC, no está
+      // restringido a ADMIN). El salario semanal y el TDD BBVA de cada
+      // colaborador NO se editan aquí: los asigna ADMIN en el catálogo de
+      // Colaboradores y la SPM solo los toma automáticamente.
       window.aplicarPermisosPMSYS = function() {
         var filaBuscar = document.getElementById('filaBuscarColaboradorPMSYS');
         if (filaBuscar) filaBuscar.style.display = 'flex';
         document.querySelectorAll('#cuerpoPMSYS tr').forEach(function(fila) {
-          var salario = fila.querySelector('.pmsys-salario');
           var btnEliminar = fila.querySelector('button.danger');
-          if (salario) salario.readOnly = false;
           if (btnEliminar) btnEliminar.style.display = '';
         });
       };
@@ -17832,7 +17858,7 @@
         var empleados = [];
         try { empleados = d.pmsys_empleados ? JSON.parse(d.pmsys_empleados) : []; } catch (e) { empleados = Array.isArray(d.pmsys_empleados) ? d.pmsys_empleados : []; }
         empleados.forEach(function(emp) {
-          window.agregarFilaEmpleadoPMSYS(emp.usuario, emp.salario_semanal);
+          window.agregarFilaEmpleadoPMSYS(emp.usuario, emp.salario_semanal, emp.tdd_bbva);
         });
         window.actualizarListaColaboradoresPMSYS();
 
@@ -17928,13 +17954,9 @@
         if (registro.estado === undefined) delete registro.estado;
 
         try {
-          // ADMIN: persiste el salario capturado/editado de cada empleado
-          // en la tabla usuarios, para que la siguiente SPM ya lo traiga.
-          if (spmUsuarioEsAdmin()) {
-            for (var j = 0; j < empleados.length; j++) {
-              await supabase.from('usuarios').update({ salario_semanal: empleados[j].salario_semanal }).eq('usuario', empleados[j].usuario);
-            }
-          }
+          // El salario semanal y el TDD BBVA de cada colaborador se
+          // administran únicamente desde el catálogo de Colaboradores (por
+          // ADMIN); la SPM solo los toma tal cual, sin reescribirlos aquí.
 
           if (spmEdicionId !== null) {
             var { error: errorUpd } = await supabase.from('documentos_cxp').update(registro).eq('id', spmEdicionId);
