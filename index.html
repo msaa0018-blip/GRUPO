@@ -5958,13 +5958,11 @@
           </div>
         </div>
 
+        <!-- El solicitante ya no se elige manualmente: es siempre el Jefe
+             de Departamento que genera la SPM (único rol que puede
+             hacerlo). "Quién autoriza" se eliminó como campo seleccionable. -->
         <div class="cxc-form-row" style="margin-top:16px;">
-          <select id="spmSolicitante">
-            <option value="" disabled selected hidden>Selecciona solicitante</option>
-          </select>
-          <select id="spmAutoriza">
-            <option value="" disabled selected hidden>Selecciona quién autoriza</option>
-          </select>
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Solicitante<input id="spmSolicitante" type="text" readonly style="width:100%;margin-top:4px;background:var(--gray-200);"></label>
         </div>
 
         <div style="margin-top:12px;padding:10px;border-radius:8px;background:var(--gray-100);display:flex;justify-content:space-between;font-weight:bold;font-size:16px;">
@@ -10514,8 +10512,9 @@
       window.imprimirPDFDocumentoCXP = async function(id) {
         var d = documentosCXPCache.find(function(x) { return x.id === id; });
         if (!d) return;
+        if (d.tipo === 'SPM') return window.imprimirPDFSPM(id);
         if (d.tipo !== 'VC' && d.tipo !== 'VI') {
-          alert('⚠️ El formato de PDF solo está disponible para VC (Vale de Caja) y VI (Vale de IAVE).');
+          alert('⚠️ El formato de PDF solo está disponible para VC (Vale de Caja), VI (Vale de IAVE) y SPM.');
           return;
         }
 
@@ -10566,6 +10565,197 @@
           doc.save((d.codigo || d.tipo) + '.pdf');
         } catch (e) {
           console.error('Error generando el PDF del documento CXP:', e);
+          alert('❌ No se pudo generar el PDF: ' + e.message);
+        }
+      };
+
+      // Genera el PDF de reporte de una SPM (Solicitud de Presupuesto
+      // Mensual): datos generales, tabla de personal PMSYS y el resumen
+      // de totales (PMSYS + comisión + PMVDC TKC). Sigue el mismo estilo
+      // de reporte que la Orden de Facturación (generarPDFOF).
+      window.imprimirPDFSPM = async function(id) {
+        var d = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (!d) return;
+        if (d.tipo !== 'SPM') return;
+
+        try {
+          var { jsPDF } = window.jspdf;
+          var doc = new jsPDF('p', 'pt', 'a4');
+          var pageWidth = doc.internal.pageSize.getWidth();
+          var margin = 40;
+          var y = margin;
+
+          var nombreEmpresa = getNombreMembrete(d.empresa);
+          var leyendaPie = getLeyendaPie(d.empresa);
+
+          var logoInfo = getLogoPorDepartamento(d.empresa, d.departamento);
+          var logoUrl = logoInfo ? logoInfo.url : null;
+          var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
+          if (!logoUrl) {
+            logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+            logoTipo = 'PNG';
+          }
+
+          try {
+            var response = await fetch(logoUrl);
+            if (response.ok) {
+              var blob = await response.blob();
+              var imgData = await new Promise(function(resolve) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result); };
+                reader.readAsDataURL(blob);
+              });
+              var img = new Image();
+              img.src = imgData;
+              await new Promise(function(resolve) { img.onload = resolve; });
+              var imgWidth = 140;
+              var imgHeight = (img.height / img.width) * imgWidth;
+              doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
+              y += imgHeight + 25;
+            } else {
+              doc.setFontSize(18);
+              doc.setTextColor(11, 26, 51);
+              doc.setFont('helvetica', 'bold');
+              doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+              y += 60;
+            }
+          } catch (eLogo) {
+            doc.setFontSize(18);
+            doc.setTextColor(11, 26, 51);
+            doc.setFont('helvetica', 'bold');
+            doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
+            y += 60;
+          }
+
+          doc.setFontSize(16);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'bold');
+          doc.text('SOLICITUD DE PRESUPUESTO MENSUAL', margin, y);
+          y += 12;
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 10;
+
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'normal');
+
+          var periodo = (d.fecha_inicio_semanas ? new Date(d.fecha_inicio_semanas + 'T00:00:00').toLocaleDateString() : '—') +
+            ' al ' + (d.fecha_fin_semanas ? new Date(d.fecha_fin_semanas + 'T00:00:00').toLocaleDateString() : '—');
+
+          var datosLista = [
+            { label: 'Folio:', value: d.folio || d.codigo },
+            { label: 'Fecha de creación:', value: d.fecha_registro ? new Date(d.fecha_registro).toLocaleDateString() : '' },
+            { label: 'Empresa:', value: d.empresa },
+            { label: 'Departamento:', value: mostrarDepto(getAbreviaturaDepartamento(d.departamento, d.empresa) || d.departamento) },
+            { label: 'Mes / Año:', value: (d.mes || '') + ' ' + (d.anio || '') },
+            { label: 'Tipo:', value: d.tipo_spm || 'NORMAL' },
+            { label: 'Versión:', value: d.version_spm || 'A' },
+            { label: 'N.º de semanas:', value: d.num_semanas },
+            { label: 'Periodo:', value: periodo },
+            { label: 'Solicitante:', value: d.solicitante || d.responsable },
+            { label: 'Estado:', value: d.estado }
+          ];
+
+          datosLista.forEach(function(item) {
+            doc.setFont('helvetica', 'bold');
+            doc.text(item.label, margin, y);
+            doc.setFont('helvetica', 'normal');
+            var labelWidth = doc.getTextWidth(item.label) + 8;
+            var maxWidth = pageWidth - margin - labelWidth - 20;
+            var textLines = doc.splitTextToSize(String(item.value == null ? '' : item.value), maxWidth);
+            doc.text(textLines, margin + labelWidth, y);
+            y += textLines.length * 9 + 2;
+          });
+          y += 5;
+
+          var empleados = [];
+          try { empleados = d.pmsys_empleados ? JSON.parse(d.pmsys_empleados) : []; } catch (eParse) { empleados = Array.isArray(d.pmsys_empleados) ? d.pmsys_empleados : []; }
+
+          var headers = ['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo'];
+          var rows = empleados.map(function(emp, i) {
+            return [
+              i + 1,
+              emp.usuario || '',
+              formatoMoneda(emp.salario_semanal || 0, 'MXN'),
+              emp.semanas || d.num_semanas || 0,
+              formatoMoneda(emp.total || 0, 'MXN'),
+              formatoMoneda(emp.tdd_bbva || 0, 'MXN'),
+              formatoMoneda(emp.efectivo || 0, 'MXN')
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: y,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+            columnStyles: {
+              0: { cellWidth: 20 },
+              1: { cellWidth: 'auto' },
+              2: { cellWidth: 70 },
+              3: { cellWidth: 45 },
+              4: { cellWidth: 70 },
+              5: { cellWidth: 70 },
+              6: { cellWidth: 70 }
+            },
+            didDrawPage: function(data) { window._tableFinalYSPM = data.cursor.y; }
+          });
+
+          y = window._tableFinalYSPM || doc.lastAutoTable.finalY + 10;
+          y += 20;
+
+          var pmsysTotal = Number(d.pmsys_total) || 0;
+          var pmsysComision = Number(d.pmsys_comision) || 0;
+          var pmvdcTotal = Number(d.pmvdc_total) || 0;
+          var granTotal = Number(d.monto) || (pmsysTotal + pmsysComision + pmvdcTotal);
+
+          var resumen = [
+            { label: 'Total PMSYS:', value: pmsysTotal },
+            { label: 'Comisión (6.38%):', value: pmsysComision },
+            { label: 'PMVDC TKC:', value: pmvdcTotal }
+          ];
+          var totalX = pageWidth * 0.62 - 5;
+          doc.setFontSize(9);
+          resumen.forEach(function(item) {
+            doc.setFont('helvetica', 'bold');
+            doc.text(item.label, totalX, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(formatoMoneda(item.value, 'MXN'), pageWidth - margin, y, { align: 'right' });
+            y += 14;
+          });
+          y += 4;
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.line(totalX, y, pageWidth - margin, y);
+          y += 14;
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text('TOTAL SPM:', totalX, y);
+          doc.text(formatoMoneda(granTotal, 'MXN'), pageWidth - margin, y, { align: 'right' });
+          y += 40;
+
+          var pieY = doc.internal.pageSize.height - 55;
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.line(margin, pieY, pageWidth - margin, pieY);
+          doc.setFontSize(9);
+          doc.setTextColor(11, 26, 51);
+          doc.setFont('helvetica', 'bold');
+          doc.text(leyendaPie, pageWidth / 2, pieY + 10, { align: 'center' });
+
+          doc.setFontSize(7);
+          doc.setTextColor(80, 80, 80);
+          doc.setFont('helvetica', 'normal');
+          doc.text(d.folio || d.codigo || '', pageWidth / 2, pieY + 20, { align: 'center' });
+
+          doc.save((d.folio || d.codigo || 'SPM') + '.pdf');
+        } catch (e) {
+          console.error('Error generando el PDF de la SPM:', e);
           alert('❌ No se pudo generar el PDF: ' + e.message);
         }
       };
@@ -16805,11 +16995,13 @@
         if (titulo) titulo.textContent = info.icono + ' ' + tipo + ' — ' + info.nombre;
         if (descripcion) descripcion.textContent = info.descripcion;
         // FINANZAS puede ver y pagar los vales (VC/VI), pero no puede
-        // agregar nuevos. SPM no es un "vale" y no aplica esta restricción.
+        // agregar nuevos. SPM no es un "vale": ahí la restricción es que
+        // solo un Jefe de Departamento puede generar una SPM nueva.
         var btnAgregarDocCXP = document.getElementById('btnAgregarDocumentoCXP');
         if (btnAgregarDocCXP) {
           var esValeRestringidoFinanzas = (tipo === 'VC' || tipo === 'VI') && actual && actual.rol === 'Finanzas';
-          btnAgregarDocCXP.style.display = esValeRestringidoFinanzas ? 'none' : '';
+          var esSPMRestringidaNoJefe = tipo === 'SPM' && !(actual && actual.rol === 'Jefe Departamento');
+          btnAgregarDocCXP.style.display = (esValeRestringidoFinanzas || esSPMRestringidaNoJefe) ? 'none' : '';
         }
         window.cargarDocumentosCXP();
       };
@@ -17225,9 +17417,10 @@
         accionDocumentoCXPActual = { id: id, accion: null };
         document.getElementById('docCxpAccionesTitulo').textContent = d.codigo || d.tipo;
 
-        // Imprimir PDF: solo existe el formato oficial para VC y VI.
+        // Imprimir PDF: formato oficial para VC/VI, y formato de reporte
+        // para SPM.
         var btnImprimir = document.getElementById('btnAccionDocCxpImprimir');
-        if (btnImprimir) btnImprimir.style.display = (d.tipo === 'VC' || d.tipo === 'VI') ? '' : 'none';
+        if (btnImprimir) btnImprimir.style.display = (d.tipo === 'VC' || d.tipo === 'VI' || d.tipo === 'SPM') ? '' : 'none';
 
         // Editar (VC/VI): solo ADMIN y Jefe de Departamento.
         var btnEditar = document.getElementById('btnAccionDocCxpEditar');
@@ -17447,31 +17640,13 @@
         window.actualizarDependientesSPM();
       };
 
+      // El solicitante ya no se elige de una lista: es siempre el Jefe de
+      // Departamento que está generando la SPM (único rol que puede
+      // hacerlo). "Quién autoriza" se eliminó como campo seleccionable.
       window.actualizarDependientesSPM = function() {
         window.actualizarFolioSPM();
-        var selSolicitante = document.getElementById('spmSolicitante');
-        if (selSolicitante) {
-          var empresa = document.getElementById('spmEmpresa').value;
-          var departamento = document.getElementById('spmDepartamento').value;
-          var solicitantes = getSolicitantes().filter(function(u) {
-            return !empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento);
-          });
-          selSolicitante.innerHTML = '<option value="" disabled hidden>Selecciona solicitante</option>' +
-            solicitantes.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + '</option>'; }).join('');
-          if (actual && solicitantes.some(function(u) { return u.usuario === actual.usuario; })) selSolicitante.value = actual.usuario;
-          else selSolicitante.value = '';
-        }
-        var selAutoriza = document.getElementById('spmAutoriza');
-        if (selAutoriza) {
-          var empresa2 = document.getElementById('spmEmpresa').value;
-          var departamento2 = document.getElementById('spmDepartamento').value;
-          var autorizadores = usuariosDB.filter(function(u) {
-            return u.rol === 'Jefe Departamento' && (!empresa2 || !departamento2 || usuarioPuedeAcceder(u, empresa2, departamento2));
-          });
-          selAutoriza.innerHTML = '<option value="" disabled hidden>Selecciona quién autoriza</option>' +
-            autorizadores.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + ' (' + u.rol + ')</option>'; }).join('');
-          selAutoriza.value = '';
-        }
+        var inputSolicitante = document.getElementById('spmSolicitante');
+        if (inputSolicitante) inputSolicitante.value = actual ? actual.usuario : '';
       };
 
       function configurarCamposDefaultSPM() {
@@ -17754,6 +17929,10 @@
       };
 
       window.abrirAgregarSPM = async function() {
+        if (!actual || actual.rol !== 'Jefe Departamento') {
+          alert('⚠️ Solo un Jefe de Departamento puede generar una SPM.');
+          return;
+        }
         spmEdicionId = null;
         var msgDiv = document.getElementById('msgSPM');
         if (msgDiv) msgDiv.innerHTML = '';
@@ -17829,10 +18008,10 @@
         selDepto.value = d.departamento || '';
 
         window.actualizarDependientesSPM();
-        var selSolicitante = document.getElementById('spmSolicitante');
-        if (selSolicitante && d.solicitante) selSolicitante.value = d.solicitante;
-        var selAutoriza = document.getElementById('spmAutoriza');
-        if (selAutoriza && d.autoriza) selAutoriza.value = d.autoriza;
+        // Al editar se muestra quién la generó originalmente (ya no es
+        // un campo seleccionable).
+        var inputSolicitanteEdicion = document.getElementById('spmSolicitante');
+        if (inputSolicitanteEdicion) inputSolicitanteEdicion.value = d.solicitante || (actual ? actual.usuario : '');
 
         selMes.value = d.mes || MESES_INDICADOR[new Date().getMonth()];
         document.getElementById('spmAnio').value = d.anio || new Date().getFullYear();
@@ -17924,8 +18103,11 @@
           moneda: 'MXN',
           cliente: null,
           proyecto: null,
-          solicitante: document.getElementById('spmSolicitante').value || null,
-          autoriza: document.getElementById('spmAutoriza').value || null,
+          // Ya no son campos seleccionables: el solicitante es siempre
+          // quien genera la SPM (Jefe de Departamento); no hay "quien
+          // autoriza" independiente.
+          solicitante: actual ? actual.usuario : null,
+          autoriza: null,
           prioridad: 'NORMAL',
           mes: mes,
           anio: anio,
