@@ -11119,22 +11119,18 @@
 
         try {
           if (colaboradorEditando !== null) {
-            var { data: dataUpd, error } = await supabase.from('usuarios').update({
-              rol: rol,
-              permisos: permisos,
-              salario_semanal: salario,
-              tdd_bbva: tdd
-            }).eq('usuario', colaboradorEditando).select('usuario,rol,permisos,salario_semanal,tdd_bbva');
+            // Se guarda vía RPC (SECURITY DEFINER) en vez de tocar la
+            // tabla directamente: así el guardado no depende de que el
+            // rol "anon" tenga bien alineados permisos de columna + RLS
+            // sobre "usuarios" (ver migracion_lote21_rpc_colaboradores.sql).
+            var { error } = await supabase.rpc('actualizar_colaborador', {
+              p_usuario: colaboradorEditando,
+              p_rol: rol,
+              p_permisos: permisos,
+              p_salario_semanal: salario,
+              p_tdd_bbva: tdd
+            });
             if (error) throw error;
-            // Si Supabase no reporta error pero tampoco devuelve la fila
-            // actualizada, es que el permiso/columna no se aplicó de
-            // verdad (por ejemplo, falta el GRANT de UPDATE sobre alguna
-            // columna) — se avisa en vez de cerrar el modal como si hubiera
-            // quedado guardado.
-            if (!dataUpd || !dataUpd.length) {
-              if (msg) msg.innerHTML = '<div class="alert">❌ No se confirmó el guardado (revisa permisos en Supabase para salario_semanal / tdd_bbva).</div>';
-              return;
-            }
           } else {
             var yaExiste = colaboradoresCache.some(function(u) { return (u.usuario || '').toUpperCase() === usuario; }) ||
               usuariosDB.some(function(u) { return (u.usuario || '').toUpperCase() === usuario; });
@@ -11142,13 +11138,13 @@
               if (msg) msg.innerHTML = '<div class="alert">❌ Ya existe un colaborador con ese usuario.</div>';
               return;
             }
-            var { error: errorNuevo } = await supabase.from('usuarios').insert([{
-              usuario: usuario,
-              rol: rol,
-              permisos: permisos,
-              salario_semanal: salario,
-              tdd_bbva: tdd
-            }]);
+            var { error: errorNuevo } = await supabase.rpc('crear_colaborador', {
+              p_usuario: usuario,
+              p_rol: rol,
+              p_permisos: permisos,
+              p_salario_semanal: salario,
+              p_tdd_bbva: tdd
+            });
             if (errorNuevo) throw errorNuevo;
           }
           window.cerrarColaboradorModal();
