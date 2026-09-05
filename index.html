@@ -1526,7 +1526,7 @@
      de la pantalla (33.33vh desde arriba). */
 
   /* ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== */
-  #buzonNuevaModal, #buzonConversacionModal, #ocChatModal, #ofChatModal, #comunicadoModal {
+  #buzonNuevaModal, #buzonConversacionModal, #ocChatModal, #ofChatModal, #comunicadoModal, #seleccionProyectosMultiOCModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1543,8 +1543,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #buzonNuevaModal.active, #buzonConversacionModal.active, #ocChatModal.active, #ofChatModal.active, #comunicadoModal.active { display: flex; }
-  #buzonNuevaModal .modal-content, #buzonConversacionModal .modal-content, #ocChatModal .modal-content, #ofChatModal .modal-content, #comunicadoModal .modal-content {
+  #buzonNuevaModal.active, #buzonConversacionModal.active, #ocChatModal.active, #ofChatModal.active, #comunicadoModal.active, #seleccionProyectosMultiOCModal.active { display: flex; }
+  #buzonNuevaModal .modal-content, #buzonConversacionModal .modal-content, #ocChatModal .modal-content, #ofChatModal .modal-content, #comunicadoModal .modal-content, #seleccionProyectosMultiOCModal .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
     border: 1px solid var(--modal-border);
@@ -1557,7 +1557,7 @@
     overflow: auto;
     box-sizing: border-box;
   }
-  #buzonNuevaModal .modal-header, #buzonConversacionModal .modal-header, #ocChatModal .modal-header, #ofChatModal .modal-header, #comunicadoModal .modal-header {
+  #buzonNuevaModal .modal-header, #buzonConversacionModal .modal-header, #ocChatModal .modal-header, #ofChatModal .modal-header, #comunicadoModal .modal-header, #seleccionProyectosMultiOCModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1566,9 +1566,14 @@
     border-bottom: 2px solid var(--modal-accent);
     padding-bottom: 12px;
   }
-  #buzonNuevaModal .modal-header h3, #buzonConversacionModal .modal-header h3, #ocChatModal .modal-header h3, #ofChatModal .modal-header h3, #comunicadoModal .modal-header h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #buzonNuevaModal .modal-header .pdfPreview-btn-group, #buzonConversacionModal .modal-header .pdfPreview-btn-group, #ocChatModal .modal-header .pdfPreview-btn-group, #ofChatModal .modal-header .pdfPreview-btn-group, #comunicadoModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #buzonNuevaModal .modal-header h3, #buzonConversacionModal .modal-header h3, #ocChatModal .modal-header h3, #ofChatModal .modal-header h3, #comunicadoModal .modal-header h3, #seleccionProyectosMultiOCModal .modal-header h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
+  #buzonNuevaModal .modal-header .pdfPreview-btn-group, #buzonConversacionModal .modal-header .pdfPreview-btn-group, #ocChatModal .modal-header .pdfPreview-btn-group, #ofChatModal .modal-header .pdfPreview-btn-group, #comunicadoModal .modal-header .pdfPreview-btn-group, #seleccionProyectosMultiOCModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #comunicadoModal .modal-content { max-width: 820px; }
+  #seleccionProyectosMultiOCModal .modal-content { max-width: 480px; }
+  .checklist-proyectos-multi { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
+  .checklist-proyectos-multi label { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .checklist-proyectos-multi label:hover { background: var(--gray-100); }
+  .checklist-proyectos-multi input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; }
   .buzon-conv-item {
     border: 1px solid var(--gray-300);
     border-radius: 10px;
@@ -3859,6 +3864,23 @@
         </div>
       </div>
 
+      <!-- ===== MODAL: CHECKLIST DE PROYECTOS (OC MULTIPROYECTO) ===== -->
+      <div id="seleccionProyectosMultiOCModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>🗂️ Proyectos adicionales de la OC</h3>
+            <div class="pdfPreview-btn-group">
+              <button onclick="window.cerrarSeleccionProyectosMultiOC()">✕</button>
+            </div>
+          </div>
+          <p class="text-muted" style="margin:-4px 0 10px;font-size:12px;">Marca los proyectos, además del principal, a los que aplica esta OC. En cada partida podrás elegir a cuál de ellos corresponde.</p>
+          <div id="checklistProyectosMultiOC" class="checklist-proyectos-multi"></div>
+          <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
+            <button class="success" onclick="window.confirmarSeleccionProyectosMultiOC()">✔️ Listo</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== MODAL: CHAT INDEPENDIENTE DE UNA OC ===== -->
       <div id="ocChatModal">
         <div class="modal-content">
@@ -5153,9 +5175,12 @@
         <div class="grupo-formulario hidden" id="grupoProyectosMultiOC">
           <div class="flex">
             <label style="font-weight:500;flex:0.3;min-width:100px;">Proyectos adicionales:</label>
-            <select id="selectProyectosMultiOC" multiple style="flex:1.5;min-height:90px;" onchange="window.actualizarSelectsProyectoPartidas()"></select>
+            <button type="button" class="btn-visualizar" onclick="window.abrirSeleccionProyectosMultiOC()" style="flex:1.5;">🗂️ Seleccionar proyectos…</button>
           </div>
-          <div class="text-muted" style="font-size:11px;margin-top:4px;">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar varios. En cada producto podrás elegir a cuál de estos proyectos corresponde.</div>
+          <div id="resumenProyectosMultiOC" class="text-muted" style="font-size:12px;margin-top:6px;">Ningún proyecto adicional seleccionado.</div>
+          <div class="text-muted" style="font-size:11px;margin-top:4px;">En cada producto podrás elegir a cuál de estos proyectos corresponde.</div>
+          <!-- Fuente de verdad de la selección (checklist del modal la marca/desmarca); permanece oculto. -->
+          <select id="selectProyectosMultiOC" multiple class="hidden" style="display:none;" onchange="window.actualizarSelectsProyectoPartidas()"></select>
         </div>
         <div class="grupo-formulario">
           <div class="flex">
@@ -22831,7 +22856,55 @@
           }
         }
 
+        window.actualizarResumenProyectosMultiOC();
         window.actualizarSelectsProyectoPartidas();
+      };
+
+      // La selección de proyectos adicionales se hace en una ventana modal
+      // (checklist), no directo en el formulario: #selectProyectosMultiOC
+      // sigue existiendo oculto como fuente de verdad (cada <option> marca
+      // su .selected), y el modal solo lee/escribe sobre él.
+      window.abrirSeleccionProyectosMultiOC = function() {
+        var selMulti = document.getElementById('selectProyectosMultiOC');
+        var cont = document.getElementById('checklistProyectosMultiOC');
+        if (!selMulti || !cont) return;
+        var opciones = Array.from(selMulti.options);
+        cont.innerHTML = opciones.length
+          ? opciones.map(function(o) {
+              return '<label><input type="checkbox" value="' + o.value + '" ' + (o.selected ? 'checked' : '') + ' onchange="window.toggleProyectoMultiOC(this)"> ' + escapeHTML(o.textContent) + '</label>';
+            }).join('')
+          : '<p class="text-muted" style="font-size:13px;">No hay otros proyectos disponibles.</p>';
+        document.getElementById('seleccionProyectosMultiOCModal').classList.add('active');
+      };
+
+      window.cerrarSeleccionProyectosMultiOC = function() {
+        document.getElementById('seleccionProyectosMultiOCModal').classList.remove('active');
+      };
+
+      // El botón "✔️ Listo" no hace más que cerrar: cada checkbox ya
+      // aplicó su cambio (selected + resumen + selects de partida) al
+      // marcarse/desmarcarse, así que no hay nada pendiente por confirmar.
+      window.confirmarSeleccionProyectosMultiOC = function() {
+        window.cerrarSeleccionProyectosMultiOC();
+      };
+
+      window.toggleProyectoMultiOC = function(checkbox) {
+        var selMulti = document.getElementById('selectProyectosMultiOC');
+        if (!selMulti) return;
+        var opt = Array.from(selMulti.options).find(function(o) { return o.value === checkbox.value; });
+        if (opt) opt.selected = checkbox.checked;
+        window.actualizarResumenProyectosMultiOC();
+        window.actualizarSelectsProyectoPartidas();
+      };
+
+      window.actualizarResumenProyectosMultiOC = function() {
+        var selMulti = document.getElementById('selectProyectosMultiOC');
+        var resumen = document.getElementById('resumenProyectosMultiOC');
+        if (!resumen) return;
+        var nombres = selMulti ? Array.from(selMulti.selectedOptions || []).map(function(o) { return o.textContent; }) : [];
+        resumen.textContent = nombres.length
+          ? (nombres.length + (nombres.length > 1 ? ' proyectos seleccionados: ' : ' proyecto seleccionado: ') + nombres.join(', '))
+          : 'Ningún proyecto adicional seleccionado.';
       };
 
       // Refresca el <select class="prod-proyecto"> de cada partida ya
@@ -23662,6 +23735,7 @@
         if (grupoProyectosMultiOC) grupoProyectosMultiOC.classList.add('hidden');
         var selectProyectosMultiOC = document.getElementById('selectProyectosMultiOC');
         if (selectProyectosMultiOC) selectProyectosMultiOC.innerHTML = '';
+        if (typeof window.actualizarResumenProyectosMultiOC === 'function') window.actualizarResumenProyectosMultiOC();
         document.querySelectorAll('#tablaProductos .col-proyecto-partida').forEach(function(el) {
           el.classList.add('hidden');
         });
