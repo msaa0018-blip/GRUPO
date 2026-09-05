@@ -5144,6 +5144,20 @@
           </div>
         </div>
         <div class="grupo-formulario">
+          <div class="flex" style="align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;">
+              <input type="checkbox" id="ocEsMultiproyecto" onchange="window.actualizarMultiproyectoOC()"> ¿Esta OC es multiproyecto?
+            </label>
+          </div>
+        </div>
+        <div class="grupo-formulario hidden" id="grupoProyectosMultiOC">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Proyectos adicionales:</label>
+            <select id="selectProyectosMultiOC" multiple style="flex:1.5;min-height:90px;" onchange="window.actualizarSelectsProyectoPartidas()"></select>
+          </div>
+          <div class="text-muted" style="font-size:11px;margin-top:4px;">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar varios. En cada producto podrás elegir a cuál de estos proyectos corresponde.</div>
+        </div>
+        <div class="grupo-formulario">
           <div class="flex">
             <input id="empresaOC" placeholder="Empresa" disabled style="background:var(--gray-200); flex:1;">
             <input id="departamentoOC" placeholder="Departamento" disabled style="background:var(--gray-200); flex:1;">
@@ -5255,10 +5269,11 @@
                   <th style="min-width:150px;">Descripción</th>
                   <th style="width:140px;">Cantidad</th>
                   <th style="min-width:100px;width:100px;">UDM</th>
-                  <th style="width:110px;min-width:110px;">Precio Unit.</th>
+                  <th style="width:120px;min-width:120px;">Precio Unit.</th>
                   <th style="width:60px;">Dto.%</th>
                   <th style="width:60px;">Imp.%</th>
                   <th style="min-width:200px;width:210px;">Importe</th>
+                  <th class="hidden col-proyecto-partida" style="width:150px;min-width:150px;">Proyecto</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
@@ -5267,6 +5282,7 @@
                 <tr>
                   <td colspan="9" style="text-align:right;font-weight:bold">Total OC:</td>
                   <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:200px;width:210px;">$0.00</td>
+                  <td class="hidden col-proyecto-partida"></td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -6761,7 +6777,7 @@
           inferior: null
         },
         '10': {
-          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20DOCS%20FORM.jpg', tipo: 'JPEG' },
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20OFICIAL.png', tipo: 'PNG' },
           inferior: null
         }
       };
@@ -7176,19 +7192,55 @@
         return caja ? caja.usuario : 'CAJA';
       }
 
+      // Partidas de una OC ya pagada, listas para prorratear por proyecto
+      // (ver gastoProyectoMoneda). Si ninguna partida trae ".proyecto"
+      // (OC no multiproyecto, o multiproyecto creada antes de este
+      // cambio), se devuelve tal cual y el llamador aplica el
+      // comportamiento de siempre (se descuenta la OC completa del
+      // proyecto principal).
+      function partidasOCParaProrrateo(o) {
+        var prods = parsearProductosOC(o);
+        return Array.isArray(prods) ? prods : [];
+      }
+
+      // Gasto (pagado) de un proyecto, en la moneda del proyecto. Una OC
+      // "normal" (de un solo proyecto) se cuenta completa, igual que
+      // siempre. Una OC multiproyecto reparte su monto entre los
+      // proyectos de sus partidas, en proporción al importe de las
+      // partidas que le corresponden a cada uno — así solo se descuenta
+      // de cada proyecto lo que realmente es suyo, sin tocar el monto
+      // total ni el flujo de aprobación/pago de la OC.
       function gastoProyectoMoneda(nombreProyecto) {
         var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
         if (!proyecto) return 0;
         var monedaProyecto = proyecto.moneda || 'MXN';
         return ordenes
-          .filter(function(o) { return o.proyecto === nombreProyecto && o.estadopago === 'PAGADA'; })
+          .filter(function(o) {
+            if (o.estadopago !== 'PAGADA') return false;
+            if (o.proyecto === nombreProyecto) return true;
+            if (o.es_multiproyecto) {
+              return partidasOCParaProrrateo(o).some(function(p) { return p.proyecto === nombreProyecto; });
+            }
+            return false;
+          })
           .reduce(function(sum, o) {
-            var montoEnMonedaProyecto = o.montomxn || 0;
+            var montoTotalOC = o.montomxn || 0;
+            var montoAsignado = montoTotalOC;
+            var partidas = partidasOCParaProrrateo(o);
+            var algunaConProyecto = partidas.some(function(p) { return p.proyecto; });
+            if (algunaConProyecto) {
+              var sumaTotalPartidas = partidas.reduce(function(s, p) { return s + (Number(p.importe) || 0); }, 0);
+              var sumaPartidasProyecto = partidas
+                .filter(function(p) { return p.proyecto === nombreProyecto; })
+                .reduce(function(s, p) { return s + (Number(p.importe) || 0); }, 0);
+              montoAsignado = sumaTotalPartidas > 0 ? montoTotalOC * (sumaPartidasProyecto / sumaTotalPartidas) : 0;
+            }
+            var montoEnMonedaProyecto = montoAsignado;
             if (monedaProyecto === 'USD') {
               if (o.tipocambio && o.tipocambio > 0) {
-                montoEnMonedaProyecto = o.montomxn / o.tipocambio;
+                montoEnMonedaProyecto = montoAsignado / o.tipocambio;
               } else {
-                montoEnMonedaProyecto = o.montomxn / 20;
+                montoEnMonedaProyecto = montoAsignado / 20;
               }
             }
             return sum + montoEnMonedaProyecto;
@@ -7792,6 +7844,19 @@
         if (tipo === 'vales') window.actualizarTotalesModulosVales();
       };
 
+      // El submenú intermedio "📊 OC" (tarjetas Crear OC / Bandeja de OC /
+      // Control x Proyecto, con su propio título y logo) ya no se muestra:
+      // entrar al módulo OC abre "Crear OC" directamente. Bandeja de OC y
+      // Control x Proyecto siguen accesibles desde el mini-menú
+      // #ocModalToolbar dentro de esa misma pantalla. Todo lo que antes
+      // regresaba a ese submenú (mostrarMenuMaestro('oc','OC')) usa ahora
+      // esta función.
+      function irADirectoCrearOC() {
+        window.mostrarModulo('oc');
+        window.vestirContenidoAppComoMenuOC();
+        setTimeout(function() { window.abrirPanelOC(); }, 0);
+      }
+
       function llenarModulosMaestro(tipo) {
         var grid = document.getElementById('modulosMaestroGrid');
         if (!grid) return;
@@ -7891,11 +7956,9 @@
             } else if (modulo === 'of') {
               window.mostrarModulo('of');
             } else if (modulo === 'oc') {
-              window.mostrarMenuMaestro('oc', 'OC');
+              irADirectoCrearOC();
             } else if (modulo === 'oc_crear') {
-              window.mostrarModulo('oc');
-              window.vestirContenidoAppComoMenuOC();
-              setTimeout(function() { window.abrirPanelOC(); }, 0);
+              irADirectoCrearOC();
             } else if (modulo === 'oc_bandeja') {
               window.mostrarModulo('oc');
               window.vestirContenidoAppComoMenuOC();
@@ -8000,12 +8063,7 @@
       window.volverAlMenuMaestro = function() {
         if (moduloActual === 'vc' || moduloActual === 'vi' || moduloActual === 'vsc' || moduloActual === 'vales') {
           window.mostrarMenuMaestro('vales', 'VALES');
-        } else if (moduloActual === 'oc') {
-          // OC tiene su propio menú intermedio "📊 OC" (Crear OC / Bandeja
-          // de OC / Control x Proyecto). El botón ← debe regresar ahí y no
-          // saltarse ese menú directo a EGRESOS.
-          window.mostrarMenuMaestro('oc', 'OC');
-        } else if (moduloActual === 'cxp' || moduloActual === 'proyectos' || moduloActual === 'egresos' || moduloActual === 'spm') {
+        } else if (moduloActual === 'cxp' || moduloActual === 'proyectos' || moduloActual === 'egresos' || moduloActual === 'spm' || moduloActual === 'oc') {
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
         } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'ingresos') {
           window.mostrarMenuMaestro('ingresos', 'INGRESOS');
@@ -8157,7 +8215,7 @@
             var modulo = item.dataset.modulo;
             if (item.classList.contains('hidden')) return;
 
-            if (modulo === 'oc') window.mostrarMenuMaestro('oc', 'OC');
+            if (modulo === 'oc') irADirectoCrearOC();
             else if (modulo === 'proyectos') window.mostrarModulo('proyectos');
             else if (modulo === 'cxp') window.mostrarModulo('cxp');
             else if (modulo === 'cxc') window.mostrarModulo('cxc');
@@ -8261,7 +8319,7 @@
       window.cerrarBandejaOC = function() {
         window.cerrarModalCard('bandejaOCCard');
         if (moduloOrigenBandejaOC === 'oc_menu') {
-          window.mostrarMenuMaestro('oc', 'OC');
+          irADirectoCrearOC();
         } else {
           window.mostrarModulo(moduloOrigenBandejaOC || 'oc');
         }
@@ -8276,7 +8334,7 @@
       window.cerrarControlProyecto = function() {
         window.cerrarModalCard('tablaProyectosCard');
         if (moduloOrigenControlProyecto === 'oc_menu') {
-          window.mostrarMenuMaestro('oc', 'OC');
+          irADirectoCrearOC();
           return;
         }
         window.mostrarModulo(moduloOrigenControlProyecto || 'oc');
@@ -8353,9 +8411,10 @@
         window.cerrarModalCard('panelOC');
         if (typeof resetFormularioOC === 'function') resetFormularioOC();
         if (estabaAbierta) {
-          // Regresa a la pantalla completa del menú "📊 OC" (con su logo),
-          // en vez de dejar visible el mini-menú "📄 OC" embebido de fondo.
-          window.mostrarMenuMaestro('oc', 'OC');
+          // El submenú "📊 OC" ya no existe: al cerrar "Crear OC" se
+          // regresa directo a EGRESOS (un nivel arriba), igual que el
+          // botón ← del resto de módulos.
+          window.mostrarMenuMaestro('egresos', 'EGRESOS');
         }
       };
 
@@ -12156,12 +12215,34 @@
         var cuerpo = document.getElementById('cuerpoComunicadoCcp');
         var fila = document.createElement('tr');
         fila.innerHTML =
-          '<td><input placeholder="Nombre" style="width:100%;"></td>' +
+          '<td><input placeholder="Nombre" style="width:100%;" oninput="window.actualizarCcpDesdeNombre(this)"></td>' +
           '<td><input placeholder="Puesto" style="width:100%;"></td>' +
           '<td><input placeholder="Empresa" style="width:100%;"></td>' +
           '<td style="text-align:center;"><input type="checkbox"></td>' +
           '<td style="text-align:center;"><button type="button" class="danger" onclick="this.closest(\'tr\').remove()" style="padding:6px 10px;">🗑️</button></td>';
         cuerpo.appendChild(fila);
+      };
+
+      // Ccp del comunicado: si lo capturado en "Nombre" coincide con un
+      // usuario del sistema, se rellenan "Puesto" y "Empresa" por default
+      // (mismos datos que usa el Destinatario), quedando editables por si
+      // hay que redactarlos distinto.
+      window.actualizarCcpDesdeNombre = function(inputNombre) {
+        var fila = inputNombre.closest ? inputNombre.closest('tr') : null;
+        if (!fila) return;
+        var texto = (inputNombre.value || '').trim().toUpperCase();
+        if (!texto) return;
+        var inputs = fila.querySelectorAll('input');
+        var inputPuesto = inputs[1];
+        var inputEmpresa = inputs[2];
+        var match = (usuariosDB || []).find(function(u) { return (u.usuario || '').trim().toUpperCase() === texto; });
+        if (!match) {
+          match = (usuariosDB || []).find(function(u) { return (u.usuario || '').trim().toUpperCase().indexOf(texto) === 0; });
+        }
+        if (!match) return;
+        var permisoM = (match.permisos && match.permisos[0]) || {};
+        if (inputPuesto) inputPuesto.value = match.rol || '';
+        if (inputEmpresa) inputEmpresa.value = permisoM.empresa || '';
       };
 
       // Folio Interno consecutivo por departamento: cuenta los
@@ -13724,14 +13805,32 @@
             if (!proyecto) return 0;
             var monedaProyecto = proyecto.moneda || 'MXN';
             return ordenes
-              .filter(function(o) { return o.proyecto === nombreProyecto && o.estadopago === 'PAGADA'; })
+              .filter(function(o) {
+                if (o.estadopago !== 'PAGADA') return false;
+                if (o.proyecto === nombreProyecto) return true;
+                if (o.es_multiproyecto) {
+                  return partidasOCParaProrrateo(o).some(function(p) { return p.proyecto === nombreProyecto; });
+                }
+                return false;
+              })
               .reduce(function(sum, o) {
-                var montoEnMonedaProyecto = o.montomxn || 0;
+                var montoTotalOC = o.montomxn || 0;
+                var montoAsignado = montoTotalOC;
+                var partidas = partidasOCParaProrrateo(o);
+                var algunaConProyecto = partidas.some(function(p) { return p.proyecto; });
+                if (algunaConProyecto) {
+                  var sumaTotalPartidas = partidas.reduce(function(s, p) { return s + (Number(p.importe) || 0); }, 0);
+                  var sumaPartidasProyecto = partidas
+                    .filter(function(p) { return p.proyecto === nombreProyecto; })
+                    .reduce(function(s, p) { return s + (Number(p.importe) || 0); }, 0);
+                  montoAsignado = sumaTotalPartidas > 0 ? montoTotalOC * (sumaPartidasProyecto / sumaTotalPartidas) : 0;
+                }
+                var montoEnMonedaProyecto = montoAsignado;
                 if (monedaProyecto === 'USD') {
                   if (o.tipocambio && o.tipocambio > 0) {
-                    montoEnMonedaProyecto = o.montomxn / o.tipocambio;
+                    montoEnMonedaProyecto = montoAsignado / o.tipocambio;
                   } else {
-                    montoEnMonedaProyecto = o.montomxn / 20;
+                    montoEnMonedaProyecto = montoAsignado / 20;
                   }
                 }
                 return sum + montoEnMonedaProyecto;
@@ -19452,6 +19551,57 @@
         select.value = '';
       };
 
+      // Calcula un código consecutivo "PROD-00001" a partir del mayor
+      // número ya usado (en el catálogo cargado y en las filas ya
+      // capturadas en esta misma OC), para previsualizar el código que se
+      // asignará a un producto nuevo agregado manualmente. Es solo una
+      // vista previa: el código real y definitivo de un producto nuevo lo
+      // sigue generando el módulo "Productos" a partir del id que asigna
+      // la base de datos (igual que hoy); esto evita que el capturista
+      // tenga que inventar/teclear un código a mano.
+      function siguienteCodigoProductoPreview() {
+        var maxNum = 0;
+        (productosCatalogoCache || []).forEach(function(p) {
+          var m = /^PROD-(\d+)$/.exec(((p && p.codigo) || '').trim());
+          if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+        });
+        var tbody = document.getElementById('cuerpoProductos');
+        if (tbody) {
+          tbody.querySelectorAll('.codigo').forEach(function(inp) {
+            var m = /^PROD-(\d+)$/.exec((inp.value || '').trim());
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+          });
+        }
+        return 'PROD-' + String(maxNum + 1).padStart(5, '0');
+      }
+
+      // Busca en el catálogo un producto cuyo número de parte coincida
+      // (sin distinguir mayúsculas/espacios) con el capturado en la fila.
+      function buscarProductoCatalogoPorParte(parte) {
+        parte = (parte || '').trim().toUpperCase();
+        if (!parte) return null;
+        return (productosCatalogoCache || []).find(function(p) {
+          return (p.numero_parte || '').trim().toUpperCase() === parte;
+        }) || null;
+      }
+
+      // El código de cada partida ya NO se captura a mano: si el número de
+      // parte coincide con uno ya dado de alta en el catálogo, se usa ese
+      // mismo código (así, al pagarse la OC, la entrada de inventario suma
+      // la cantidad a ese producto existente en vez de duplicarlo); si es
+      // un número de parte nuevo, se asigna el siguiente consecutivo como
+      // referencia.
+      window.actualizarCodigoDesdeParte = function(inputParte) {
+        var fila = inputParte.closest ? inputParte.closest('tr') : null;
+        if (!fila) return;
+        var codigoInput = fila.querySelector('.codigo');
+        if (!codigoInput) return;
+        var parte = (inputParte.value || '').trim();
+        if (!parte) { codigoInput.value = ''; return; }
+        var existente = buscarProductoCatalogoPorParte(parte);
+        codigoInput.value = existente ? (existente.codigo || '') : siguienteCodigoProductoPreview();
+      };
+
       window.agregarFilaProducto = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
         codigo = codigo || '';
         parte = parte || '';
@@ -19461,11 +19611,20 @@
         precio = precio || 0;
         descuento = descuento || 0;
         impuesto = impuesto || 0;
+        // Si no llegó un código (alta manual, sin venir del catálogo), se
+        // asigna automáticamente: el código del producto existente si el
+        // número de parte ya está dado de alta, o el siguiente consecutivo
+        // si es nuevo. Nadie captura el código a mano.
+        if (!codigo) {
+          var existentePorParte = buscarProductoCatalogoPorParte(parte);
+          codigo = existentePorParte ? (existentePorParte.codigo || '') : siguienteCodigoProductoPreview();
+        }
         var tbody = document.getElementById('cuerpoProductos');
         var fila = document.createElement('tr');
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Código"></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:90px;width:100px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        var proyectoPartidaVisible = document.getElementById('ocEsMultiproyecto') && document.getElementById('ocEsMultiproyecto').checked;
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se asigna automáticamente: si el número de parte ya existe en el catálogo se usa ese mismo código (sumará existencia al pagar la OC); si es nuevo, se asigna el siguiente consecutivo."></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte" oninput="window.actualizarCodigoDesdeParte(this)" onchange="window.actualizarCodigoDesdeParte(this)"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:110px;width:120px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td class="' + (proyectoPartidaVisible ? '' : 'hidden ') + 'col-proyecto-partida"><select class="prod-proyecto" onchange="window.recalcularFila(this)">' + opcionesProyectoPartidaHTML(null) + '</select></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -20196,6 +20355,21 @@
           return;
         }
 
+        // Este editor (solo Administrador) no tiene columna "Proyecto": si
+        // la OC es multiproyecto, se conserva el proyecto que ya tenía
+        // asignado cada partida (buscando por código+número de
+        // parte+descripción contra la versión anterior), para no perder
+        // silenciosamente el prorrateo por proyecto al ajustar cantidades
+        // aquí. Una partida realmente nueva (agregada en este editor)
+        // queda sin proyecto asignado.
+        var productosViejos = parsearProductosOC(oc);
+        function proyectoPrevioDe(codigo, parte, descripcion) {
+          var match = productosViejos.find(function(p) {
+            return (p.codigo || '') === codigo && (p.parte || '') === parte && (p.descripcion || '') === descripcion;
+          });
+          return (match && match.proyecto) || null;
+        }
+
         var productosNuevos = [];
         var invalido = false;
         filas.forEach(function(fila) {
@@ -20204,24 +20378,25 @@
           var precioUnitario = parseNumero(fila.querySelector('.precio') ? fila.querySelector('.precio').value : '0');
           var importe = parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
           if (!descripcion || cantidad <= 0 || precioUnitario <= 0) invalido = true;
+          var codigoFila = (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase();
+          var parteFila = (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase();
           productosNuevos.push({
-            codigo: (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase(),
-            parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
+            codigo: codigoFila,
+            parte: parteFila,
             descripcion: descripcion,
             cantidad: cantidad,
             udm: fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA',
             precioUnitario: precioUnitario,
             descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
             impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
-            importe: importe
+            importe: importe,
+            proyecto: proyectoPrevioDe(codigoFila, parteFila, descripcion)
           });
         });
         if (invalido) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Revisa los productos: descripción, cantidad y precio deben ser válidos.</div>';
           return;
         }
-
-        var productosViejos = parsearProductosOC(oc);
         var nuevoTotal = productosNuevos.reduce(function(s, p) { return s + p.importe; }, 0);
         var tipoCambio = oc.tipocambio || 1;
         var nuevoMontoMXN = oc.moneda === 'USD' ? nuevoTotal * tipoCambio : nuevoTotal;
@@ -22594,6 +22769,80 @@
             selectSol.appendChild(opt);
           });
         }
+
+        if (typeof window.actualizarSelectsProyectoPartidas === 'function') window.actualizarSelectsProyectoPartidas();
+      };
+
+      // ===== OC MULTIPROYECTO =====
+      // Devuelve el HTML de <option> con el proyecto principal de la OC
+      // (selectProyecto) más los proyectos adicionales marcados como
+      // multiproyecto (selectProyectosMultiOC), para el <select> de
+      // "Proyecto" de cada partida. Se identifica por nombre (igual que
+      // usa gastoProyectoMoneda), no por id.
+      function opcionesProyectoPartidaHTML(seleccionado) {
+        var nombres = [];
+        var selPrincipal = document.getElementById('selectProyecto');
+        if (selPrincipal && selPrincipal.value) {
+          var idPrincipal = parseInt(selPrincipal.value, 10);
+          var pPrincipal = proyectos.find(function(p) { return p.id === idPrincipal; });
+          if (pPrincipal) nombres.push(pPrincipal.nombre);
+        }
+        var selMulti = document.getElementById('selectProyectosMultiOC');
+        if (selMulti) {
+          Array.from(selMulti.selectedOptions || []).forEach(function(o) {
+            var idm = parseInt(o.value, 10);
+            var pm = proyectos.find(function(p) { return p.id === idm; });
+            if (pm && nombres.indexOf(pm.nombre) === -1) nombres.push(pm.nombre);
+          });
+        }
+        if (!seleccionado && nombres.length) seleccionado = nombres[0];
+        return nombres.map(function(n) {
+          return '<option value="' + escapeHTML(n) + '" ' + (n === seleccionado ? 'selected' : '') + '>' + escapeHTML(n) + '</option>';
+        }).join('');
+      }
+
+      // Checkbox "¿Esta OC es multiproyecto?": muestra/oculta el selector
+      // de proyectos adicionales y la columna "Proyecto" de la tabla de
+      // productos (solo tiene sentido elegir proyecto por partida cuando
+      // la OC realmente aplica a más de un proyecto).
+      window.actualizarMultiproyectoOC = function() {
+        var checkbox = document.getElementById('ocEsMultiproyecto');
+        var esMulti = !!(checkbox && checkbox.checked);
+        var grupoMulti = document.getElementById('grupoProyectosMultiOC');
+        if (grupoMulti) grupoMulti.classList.toggle('hidden', !esMulti);
+
+        document.querySelectorAll('#tablaProductos .col-proyecto-partida').forEach(function(el) {
+          el.classList.toggle('hidden', !esMulti);
+        });
+
+        if (!esMulti) {
+          var selMulti = document.getElementById('selectProyectosMultiOC');
+          if (selMulti) Array.from(selMulti.options).forEach(function(o) { o.selected = false; });
+        } else {
+          var selPrincipal = document.getElementById('selectProyecto');
+          var idExcluir = selPrincipal ? parseInt(selPrincipal.value, 10) : null;
+          var selMultiOC = document.getElementById('selectProyectosMultiOC');
+          if (selMultiOC) {
+            var seleccionPrevia = Array.from(selMultiOC.selectedOptions || []).map(function(o) { return o.value; });
+            selMultiOC.innerHTML = proyectos
+              .filter(function(p) { return p.id !== idExcluir; })
+              .map(function(p) { return '<option value="' + p.id + '" ' + (seleccionPrevia.indexOf(String(p.id)) !== -1 ? 'selected' : '') + '>' + escapeHTML(p.nombre) + '</option>'; })
+              .join('');
+          }
+        }
+
+        window.actualizarSelectsProyectoPartidas();
+      };
+
+      // Refresca el <select class="prod-proyecto"> de cada partida ya
+      // capturada con el proyecto principal + los proyectos adicionales
+      // marcados, conservando la selección de cada fila cuando sigue
+      // siendo válida.
+      window.actualizarSelectsProyectoPartidas = function() {
+        document.querySelectorAll('#cuerpoProductos .prod-proyecto').forEach(function(sel) {
+          var valorPrevio = sel.value;
+          sel.innerHTML = opcionesProyectoPartidaHTML(valorPrevio);
+        });
       };
 
       // El tipo de cambio de una OC en USD ya no se captura al crearla:
@@ -23028,14 +23277,37 @@
           mostrarError('Agrega al menos un producto.');
           return null;
         }
+        // Multiproyecto: si la OC aplica para más de un proyecto, cada
+        // partida indica a cuál de ellos corresponde; así, al pagarse, el
+        // gasto de cada partida se descuenta solo del proyecto que le
+        // corresponde (ver gastoProyectoMoneda). Si la OC NO es
+        // multiproyecto, las partidas no llevan "proyecto" y todo sigue
+        // funcionando exactamente igual que antes (se descuenta del único
+        // proyecto de la OC).
+        var ocEsMultiproyectoCheckbox = document.getElementById('ocEsMultiproyecto');
+        var esMultiproyecto = !!(ocEsMultiproyectoCheckbox && ocEsMultiproyectoCheckbox.checked);
+        var selMultiProyectos = document.getElementById('selectProyectosMultiOC');
+        var proyectosMultiIds = (esMultiproyecto && selMultiProyectos)
+          ? Array.from(selMultiProyectos.selectedOptions).map(function(o) { return parseInt(o.value, 10); })
+          : [];
+        var proyectosMultiNombres = proyectosMultiIds
+          .map(function(id) { var px = proyectos.find(function(x) { return x.id === id; }); return px ? px.nombre : null; })
+          .filter(Boolean);
+
         var productos = [];
         var productoInvalido = false;
+        var gastoPorProyectoPartida = {};
         filas.forEach(function(fila) {
           var descripcion = (fila.querySelector('.desc') ? fila.querySelector('.desc').value : '').trim().toUpperCase();
           var cantidad = parseNumero(fila.querySelector('.cantidad') ? fila.querySelector('.cantidad').value : '0');
           var precioUnitario = parseNumero(fila.querySelector('.precio') ? fila.querySelector('.precio').value : '0');
           var importe = parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
           if (!descripcion || cantidad <= 0 || precioUnitario <= 0) { productoInvalido = true; }
+          var selProyectoPartida = fila.querySelector('.prod-proyecto');
+          var proyectoPartida = (esMultiproyecto && selProyectoPartida && selProyectoPartida.value) ? selProyectoPartida.value : null;
+          if (proyectoPartida) {
+            gastoPorProyectoPartida[proyectoPartida] = (gastoPorProyectoPartida[proyectoPartida] || 0) + importe;
+          }
           productos.push({
             codigo: (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase(),
             parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
@@ -23045,12 +23317,35 @@
             precioUnitario: precioUnitario,
             descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
             impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
-            importe: importe
+            importe: importe,
+            proyecto: proyectoPartida
           });
         });
         if (productoInvalido) {
           mostrarError('Revisa los productos: descripción, cantidad y precio deben ser válidos.');
           return null;
+        }
+        if (esMultiproyecto) {
+          if (!proyectosMultiNombres.length) {
+            mostrarError('Marcaste esta OC como multiproyecto: selecciona al menos un proyecto adicional.');
+            return null;
+          }
+          // Solo advertencia (no bloquea el registro): si el gasto ya
+          // pagado de un proyecto más lo que le corresponde de esta OC
+          // rebasa su límite, se avisa antes de continuar.
+          var avisosPresupuesto = [];
+          Object.keys(gastoPorProyectoPartida).forEach(function(nombreP) {
+            var px = proyectos.find(function(x) { return x.nombre === nombreP; });
+            if (!px || !px.limite) return;
+            var gastoPrevio = gastoProyectoMoneda(nombreP);
+            var gastoProyectado = gastoPrevio + gastoPorProyectoPartida[nombreP];
+            if (gastoProyectado > px.limite) {
+              avisosPresupuesto.push('• ' + nombreP + ': ' + formatoMoneda(gastoProyectado, 'MXN') + ' de ' + formatoMoneda(px.limite, 'MXN') + ' (límite)');
+            }
+          });
+          if (avisosPresupuesto.length) {
+            alert('⚠️ Aviso: con esta OC, los siguientes proyectos quedarían por encima de su límite de presupuesto:\n\n' + avisosPresupuesto.join('\n') + '\n\nLa OC se puede registrar de todas formas; este es solo un aviso.');
+          }
         }
 
         var moneda = document.getElementById('monedaOC').value;
@@ -23104,6 +23399,8 @@
           motivo: (document.getElementById('notasOC') ? document.getElementById('notasOC').value.trim() : null) || null,
           concepto: (document.getElementById('conceptoOC') ? document.getElementById('conceptoOC').value.trim() : null) || null,
           productos: productos,
+          es_multiproyecto: esMultiproyecto,
+          proyectos_multi: proyectosMultiNombres,
           elaborador: actual ? actual.usuario : 'Desconocido',
           banco: banco,
           cuenta: (document.getElementById('cuenta').value || '').trim(),
@@ -23199,7 +23496,9 @@
           referencia: datos.referencia,
           formatomembrete: datos.formatomembrete || '1',
           condicionpago: datos.condicionpago || null,
-          notificacion_enviada: false
+          notificacion_enviada: false,
+          es_multiproyecto: datos.es_multiproyecto || false,
+          proyectos_multi: datos.proyectos_multi || []
         };
 
         var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -23289,7 +23588,9 @@
           referencia: datos.referencia,
           formatomembrete: datos.formatomembrete || '1',
           condicionpago: datos.condicionpago || null,
-          notificacion_enviada: false
+          notificacion_enviada: false,
+          es_multiproyecto: datos.es_multiproyecto || false,
+          proyectos_multi: datos.proyectos_multi || []
         };
 
         var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -23354,6 +23655,16 @@
 
         var condicionesComercialesOC = document.getElementById('condicionesComercialesOC');
         if (condicionesComercialesOC) condicionesComercialesOC.selectedIndex = 0;
+
+        var ocEsMultiproyecto = document.getElementById('ocEsMultiproyecto');
+        if (ocEsMultiproyecto) ocEsMultiproyecto.checked = false;
+        var grupoProyectosMultiOC = document.getElementById('grupoProyectosMultiOC');
+        if (grupoProyectosMultiOC) grupoProyectosMultiOC.classList.add('hidden');
+        var selectProyectosMultiOC = document.getElementById('selectProyectosMultiOC');
+        if (selectProyectosMultiOC) selectProyectosMultiOC.innerHTML = '';
+        document.querySelectorAll('#tablaProductos .col-proyecto-partida').forEach(function(el) {
+          el.classList.add('hidden');
+        });
 
         document.getElementById('cuerpoProductos').innerHTML = '';
         window.agregarFilaProducto();
@@ -23681,7 +23992,7 @@
             2: { cellWidth: 'auto' },
             3: { cellWidth: 42 },
             4: { cellWidth: 35 },
-            5: { cellWidth: 50 },
+            5: { cellWidth: 68 },
             6: { cellWidth: 35 },
             7: { cellWidth: 48 },
             8: { cellWidth: 60 }
