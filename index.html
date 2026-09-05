@@ -17664,11 +17664,11 @@
         });
       };
 
-      // Por cada empleado: Total = salario semanal × N semanas.
-      // TDD BBVA: el monto que capturó ADMIN para ese colaborador en el
-      // catálogo de Colaboradores (guardado en fila.dataset.tddBase),
-      // topado al total para no dar negativo si el total calculado es
-      // menor; Efectivo = Total − TDD BBVA.
+      // Por cada empleado: Total = salario semanal × N semanas (el costo
+      // del periodo completo). TDD BBVA es el monto semanal que capturó
+      // ADMIN para ese colaborador en el catálogo de Colaboradores
+      // (guardado en fila.dataset.tddBase, topado al salario semanal para
+      // no dar negativo). Efectivo = Salario semanal − TDD BBVA.
       window.recalcularFilaPMSYS = function(elemento) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
@@ -17685,8 +17685,8 @@
         var semanas = parseInt(celdaSemanas ? celdaSemanas.textContent : '0', 10) || 0;
         var total = salario * semanas;
         var tddBase = Number(fila.dataset.tddBase) || 0;
-        var tdd = Math.min(tddBase, total);
-        var efectivo = total - tdd;
+        var tdd = Math.min(tddBase, salario);
+        var efectivo = salario - tdd;
 
         if (inputTotal) inputTotal.value = formatearNumeroMexico(total, true);
         if (inputTdd) inputTdd.value = formatearNumeroMexico(tdd, true);
