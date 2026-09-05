@@ -3689,7 +3689,10 @@
       <div id="panelBuzon" class="card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
           <h2 style="margin:0;">📥 Buzón</h2>
-          <button class="success" onclick="window.abrirNuevaConversacionBuzon()" style="padding:8px 12px; font-size:13px; min-height:36px;">✉️ Nueva conversación</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="success" onclick="window.abrirNuevaConversacionBuzon()" style="padding:8px 12px; font-size:13px; min-height:36px;">✉️ Nueva conversación</button>
+            <button class="success" onclick="window.abrirNuevoComunicado()" style="padding:8px 12px; font-size:13px; min-height:36px;">🗞️ Nuevo comunicado</button>
+          </div>
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Conversaciones independientes entre los usuarios que participan en cada una. Cada chat es privado: solo tú y quienes fueron agregados como destinatarios/involucrados de esa conversación pueden verlo, incluido su asunto.</p>
         <div id="buzonListaConversaciones"></div>
@@ -3769,6 +3772,88 @@
               <div id="buzonConvArchivoNombre" class="text-muted" style="font-size:12px; margin-top:4px;"></div>
             </div>
             <div id="msgBuzonConv" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: NUEVO COMUNICADO (BUZÓN) ===== -->
+      <div id="comunicadoModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>🗞️ Nuevo Comunicado</h3>
+            <div class="pdfPreview-btn-group">
+              <button class="btn-modal-x" onclick="window.cerrarNuevoComunicado()">✕</button>
+              <button class="success btn-modal-x" onclick="window.generarComunicado()">➜</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div class="cxc-form-row">
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Doc.<select id="comunicadoDoc" style="width:100%;margin-top:4px;">
+                <option value="AVISO">Aviso</option>
+                <option value="CIRCULAR">Circular</option>
+                <option value="CARTA ENTREGA">Carta Entrega</option>
+                <option value="A/R">A/R</option>
+                <option value="OTRO">Otro</option>
+              </select></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Formato de impresión<select id="comunicadoFormato" style="width:100%;margin-top:4px;">
+                <option value="OFICIAL">Membrete Oficial</option>
+                <option value="SIN_LOGO">Membrete sin logo</option>
+              </select></label>
+            </div>
+            <div class="cxc-form-row">
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Folio Interno (automático)<input id="comunicadoFolio" readonly style="width:100%;margin-top:4px;background:var(--gray-200);"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Ciudad<input id="comunicadoCiudad" value="IRAPUATO, GTO." style="width:100%;margin-top:4px;"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha<input id="comunicadoFecha" type="text" readonly style="width:100%;margin-top:4px;background:var(--gray-200);"></label>
+            </div>
+
+            <div style="margin-top:12px;">
+              <h4>Remitente</h4>
+              <div class="cxc-form-row">
+                <input id="comunicadoRemitenteNombre" placeholder="Nombre" readonly style="flex:1;background:var(--gray-200);">
+                <input id="comunicadoRemitenteEmpresa" placeholder="Empresa u Organización" readonly style="flex:1;background:var(--gray-200);">
+              </div>
+              <div class="cxc-form-row">
+                <input id="comunicadoRemitenteDepartamento" placeholder="Departamento" readonly style="flex:1;background:var(--gray-200);">
+                <input id="comunicadoRemitentePuesto" placeholder="Puesto" readonly style="flex:1;background:var(--gray-200);">
+              </div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <h4>Destinatario</h4>
+              <div class="cxc-form-row">
+                <select id="comunicadoDestinatarioUsuario" onchange="window.actualizarDestinatarioComunicado()" style="flex:1;">
+                  <option value="">Selecciona destinatario *</option>
+                </select>
+              </div>
+              <div class="cxc-form-row">
+                <input id="comunicadoDestinatarioNombre" placeholder="Nombre" style="flex:1;">
+                <input id="comunicadoDestinatarioEmpresa" placeholder="Empresa u Organización" style="flex:1;">
+              </div>
+              <div class="cxc-form-row">
+                <input id="comunicadoDestinatarioDepartamento" placeholder="Departamento" style="flex:1;">
+                <input id="comunicadoDestinatarioPuesto" placeholder="Puesto" style="flex:1;">
+              </div>
+            </div>
+
+            <div class="cxc-form-row" style="margin-top:12px;">
+              <input id="comunicadoAsunto" placeholder="Asunto *" style="flex:1;">
+            </div>
+            <div class="cxc-form-row">
+              <textarea id="comunicadoCuerpo" rows="5" placeholder="Redacta el contenido del comunicado..." style="width:100%;box-sizing:border-box;"></textarea>
+            </div>
+
+            <div style="margin-top:12px;">
+              <h4>Ccp. Con copia para (opcional)</h4>
+              <div class="table-wrapper">
+                <table class="productos-tabla" id="tablaComunicadoCcp">
+                  <thead><tr><th>Nombre</th><th>Puesto</th><th>Empresa</th><th style="width:60px;">A/R</th><th style="width:50px;"></th></tr></thead>
+                  <tbody id="cuerpoComunicadoCcp"></tbody>
+                </table>
+              </div>
+              <button type="button" class="success" onclick="window.agregarFilaComunicadoCcp()" style="margin-top:6px;padding:8px 12px;">➕ Agregar</button>
+            </div>
+
+            <div id="msgComunicado" style="margin-top:10px;"></div>
           </div>
         </div>
       </div>
@@ -5764,8 +5849,9 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" id="btnAccionDocCxpImprimir" class="btn-accion-producto" data-accion="imprimir" onclick="window.seleccionarAccionDocumentoCXP('imprimir')">🖨️ Imprimir PDF</button>
           <button type="button" id="btnAccionDocCxpEditar" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionDocumentoCXP('editar')">✏️ Editar</button>
+          <button type="button" id="btnAccionDocCxpAutorizar" class="btn-accion-producto" data-accion="autorizar" onclick="window.seleccionarAccionDocumentoCXP('autorizar')">🖋️ Autorizar (Director)</button>
           <button type="button" id="btnAccionDocCxpPagar" class="btn-accion-producto" data-accion="pagar" onclick="window.seleccionarAccionDocumentoCXP('pagar')">✅ Marcar Pagada</button>
-          <button type="button" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionDocumentoCXP('eliminar')">🗑️ Eliminar</button>
+          <button type="button" id="btnAccionDocCxpEliminar" class="btn-accion-producto danger" data-accion="eliminar" onclick="window.seleccionarAccionDocumentoCXP('eliminar')">🗑️ Eliminar</button>
         </div>
       </div>
     </div>
@@ -6674,7 +6760,7 @@
           inferior: null
         },
         '10': {
-          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20BASE.jpg', tipo: 'JPEG' },
+          superior: { url: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20DOCS%20FORM.jpg', tipo: 'JPEG' },
           inferior: null
         }
       };
@@ -9665,6 +9751,16 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, vehículo, combustible y cantidad solicitada son obligatorios.</div>';
           return;
         }
+        // Un vale de gasolina nuevo solo puede registrarse si ya existe
+        // una SPM autorizada por el Director y pagada por Finanzas para
+        // esa empresa/departamento en el mes correspondiente.
+        var fechaParaSPMVale = document.getElementById('valePeriodoInicio').value || document.getElementById('valeFechaCarga').value || null;
+        var spmVigenteVale = await obtenerSPMPagadaVigente(empresa, depto, fechaParaSPMVale);
+        if (!spmVigenteVale) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ No hay una SPM pagada para ' + escapeHTML(empresa) + (depto ? ' / ' + escapeHTML(depto) : '') + ' en este periodo. La SPM debe estar autorizada por el Director y marcada como pagada por Finanzas antes de poder registrar este vale.</div>';
+          return;
+        }
+
         // "TANQUE LLENO" no es un valor numérico: se guarda el litros
         // numérico solo cuando aplica, y el texto elegido siempre en
         // cantidad_solicitada.
@@ -10715,14 +10811,8 @@
             { label: 'Folio:', value: d.folio || d.codigo },
             { label: 'Fecha de creación:', value: d.fecha_registro ? new Date(d.fecha_registro).toLocaleDateString() : '' },
             { label: 'Empresa:', value: d.empresa },
-            { label: 'Departamento:', value: mostrarDepto(getAbreviaturaDepartamento(d.departamento, d.empresa) || d.departamento) },
-            { label: 'Mes / Año:', value: (d.mes || '') + ' ' + (d.anio || '') },
-            { label: 'Tipo:', value: d.tipo_spm || 'NORMAL' },
-            { label: 'Versión:', value: d.version_spm || 'A' },
             { label: 'N.º de semanas:', value: d.num_semanas },
-            { label: 'Periodo:', value: periodo },
-            { label: 'Solicitante:', value: d.solicitante || d.responsable },
-            { label: 'Estado:', value: d.estado }
+            { label: 'Periodo:', value: periodo }
           ];
 
           datosLista.forEach(function(item) {
@@ -11987,6 +12077,383 @@
         } catch (e) {
           console.error('Error creando la conversación:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo iniciar la conversación: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      // ============================================================
+      // NUEVO COMUNICADO (memo/oficio interno con membrete oficial)
+      // ============================================================
+      // Imagen del membrete oficial (banda superior del documento).
+      var MEMBRETE_OFICIAL_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/MEMBRETE%20OFICIAL.png';
+
+      window.abrirNuevoComunicado = async function() {
+        if (!actual) return;
+        var msg = document.getElementById('msgComunicado');
+        if (msg) msg.innerHTML = '';
+
+        document.getElementById('comunicadoDoc').value = 'AVISO';
+        document.getElementById('comunicadoFormato').value = 'OFICIAL';
+        document.getElementById('comunicadoFolio').value = 'Calculando...';
+        document.getElementById('comunicadoFecha').value = new Date().toLocaleDateString();
+        document.getElementById('comunicadoAsunto').value = '';
+        document.getElementById('comunicadoCuerpo').value = '';
+        document.getElementById('cuerpoComunicadoCcp').innerHTML = '';
+
+        // Remitente: se rellena solo con los datos del usuario en sesión.
+        var permisoActual = (actual.permisos && actual.permisos[0]) || {};
+        var empresaActual = permisoActual.empresa || '';
+        var deptoActual = permisoActual.depto || '';
+        document.getElementById('comunicadoRemitenteNombre').value = actual.usuario;
+        document.getElementById('comunicadoRemitenteEmpresa').value = empresaActual;
+        document.getElementById('comunicadoRemitenteDepartamento').value = mostrarDepto(getAbreviaturaDepartamento(deptoActual, empresaActual) || deptoActual);
+        document.getElementById('comunicadoRemitentePuesto').value = actual.rol || '';
+
+        // Destinatario: se elige de entre los usuarios del sistema (para
+        // poder notificarle por Buzón); sus datos se autocompletan pero
+        // quedan editables por si el puesto/depto mostrado en el
+        // documento debe redactarse distinto.
+        var selDestinatario = document.getElementById('comunicadoDestinatarioUsuario');
+        selDestinatario.innerHTML = '<option value="">Selecciona destinatario *</option>';
+        (usuariosDB || [])
+          .filter(function(u) { return u.usuario && u.usuario !== actual.usuario; })
+          .sort(function(a, b) { return (a.usuario || '').localeCompare(b.usuario || ''); })
+          .forEach(function(u) {
+            var opt = document.createElement('option');
+            opt.value = u.usuario;
+            opt.textContent = u.usuario + (u.rol ? ' (' + u.rol + ')' : '');
+            selDestinatario.appendChild(opt);
+          });
+        document.getElementById('comunicadoDestinatarioNombre').value = '';
+        document.getElementById('comunicadoDestinatarioEmpresa').value = '';
+        document.getElementById('comunicadoDestinatarioDepartamento').value = '';
+        document.getElementById('comunicadoDestinatarioPuesto').value = '';
+
+        document.getElementById('comunicadoModal').classList.add('active');
+
+        // El folio interno es consecutivo por departamento; se calcula
+        // en cuanto se conoce el departamento del remitente.
+        var folio = await calcularFolioInternoComunicado(empresaActual, deptoActual);
+        document.getElementById('comunicadoFolio').value = folio;
+      };
+
+      window.cerrarNuevoComunicado = function() {
+        document.getElementById('comunicadoModal').classList.remove('active');
+      };
+
+      window.actualizarDestinatarioComunicado = function() {
+        var usuario = document.getElementById('comunicadoDestinatarioUsuario').value;
+        var u = (usuariosDB || []).find(function(x) { return x.usuario === usuario; });
+        if (!u) return;
+        var permisoU = (u.permisos && u.permisos[0]) || {};
+        document.getElementById('comunicadoDestinatarioNombre').value = u.usuario;
+        document.getElementById('comunicadoDestinatarioEmpresa').value = permisoU.empresa || '';
+        document.getElementById('comunicadoDestinatarioDepartamento').value = mostrarDepto(getAbreviaturaDepartamento(permisoU.depto, permisoU.empresa) || permisoU.depto || '');
+        document.getElementById('comunicadoDestinatarioPuesto').value = u.rol || '';
+      };
+
+      window.agregarFilaComunicadoCcp = function() {
+        var cuerpo = document.getElementById('cuerpoComunicadoCcp');
+        var fila = document.createElement('tr');
+        fila.innerHTML =
+          '<td><input placeholder="Nombre" style="width:100%;"></td>' +
+          '<td><input placeholder="Puesto" style="width:100%;"></td>' +
+          '<td><input placeholder="Empresa" style="width:100%;"></td>' +
+          '<td style="text-align:center;"><input type="checkbox"></td>' +
+          '<td style="text-align:center;"><button type="button" class="danger" onclick="this.closest(\'tr\').remove()" style="padding:6px 10px;">🗑️</button></td>';
+        cuerpo.appendChild(fila);
+      };
+
+      // Folio Interno consecutivo por departamento: cuenta los
+      // comunicados ya emitidos por ese departamento (misma empresa) y
+      // arma "EMPRESA-DEPTO-###".
+      async function calcularFolioInternoComunicado(empresa, departamento) {
+        try {
+          var query = supabase.from('comunicados_internos').select('id', { count: 'exact', head: true }).eq('empresa', empresa || '');
+          if (departamento) query = query.eq('departamento', departamento);
+          var { count, error } = await query;
+          if (error) throw error;
+          var siguiente = (count || 0) + 1;
+          var empAbrev = getAbreviaturaEmpresa(empresa) || empresa || 'GIE';
+          var deptoAbrev = departamento ? (getAbreviaturaDepartamento(departamento, empresa) || departamento) : 'GRAL';
+          return empAbrev + '-' + deptoAbrev + '-' + String(siguiente).padStart(3, '0');
+        } catch (e) {
+          console.error('Error calculando el folio interno del comunicado:', e);
+          return 'S/N';
+        }
+      }
+
+      // Dibuja una caja con un renglón "Etiqueta: valor" (una sola línea,
+      // etiqueta en negritas seguida del valor).
+      function dibujarRenglonEtiquetaValor(doc, x, y, w, etiqueta, valor) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text(etiqueta, x + 4, y);
+        var anchoEtiqueta = doc.getTextWidth(etiqueta) + 6;
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(valor || '—'), x + anchoEtiqueta, y, { maxWidth: w - anchoEtiqueta - 4 });
+      }
+
+      // Genera el PDF del comunicado (memo/oficio) con el membrete
+      // oficial. Formato "OFICIAL": membrete + logo superpuesto (mismo
+      // criterio que las OC). Formato "SIN_LOGO": solo el membrete, sin
+      // ningún logo adicional encima.
+      async function generarPDFComunicado(datos) {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var margin = 40;
+        var y = 0;
+
+        try {
+          var dataMembrete = await obtenerImagenComoDataURL(MEMBRETE_OFICIAL_URL);
+          if (dataMembrete) {
+            var propsMembrete = await medirImagenPDF(dataMembrete);
+            var altoMembrete = propsMembrete ? (pageWidth * (propsMembrete.h / propsMembrete.w)) : 90;
+            doc.addImage(dataMembrete, 'PNG', 0, 0, pageWidth, altoMembrete);
+            y = altoMembrete + 14;
+
+            if (datos.formato !== 'SIN_LOGO') {
+              try {
+                var logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+                var dataLogo = await obtenerImagenComoDataURL(logoUrl);
+                var logoTam = ajustarImagenACaja(await medirImagenPDF(dataLogo), 50, 36);
+                if (dataLogo && logoTam) {
+                  doc.addImage(dataLogo, 'PNG', pageWidth - margin - logoTam.w, 8, logoTam.w, logoTam.h);
+                }
+              } catch (eLogo) {
+                console.warn('No se pudo superponer el logo del comunicado:', eLogo);
+              }
+            }
+          } else {
+            y = margin;
+          }
+        } catch (eMembrete) {
+          console.warn('No se pudo cargar el membrete oficial:', eMembrete);
+          y = margin;
+        }
+
+        var anchoUtil = pageWidth - margin * 2;
+
+        // Fila 1: Doc./Folio Interno (izq) y Ciudad/Fecha (der)
+        var wIzq = anchoUtil * 0.55, wDer = anchoUtil * 0.45;
+        var altoFila1 = 34;
+        doc.setDrawColor(120, 120, 120);
+        doc.setLineWidth(0.6);
+        doc.rect(margin, y, wIzq, altoFila1);
+        doc.rect(margin + wIzq, y, wDer, altoFila1);
+        dibujarRenglonEtiquetaValor(doc, margin, y + 13, wIzq, 'Doc.:', datos.tipoDoc);
+        dibujarRenglonEtiquetaValor(doc, margin, y + 27, wIzq, 'Folio Interno:', datos.folioInterno);
+        dibujarRenglonEtiquetaValor(doc, margin + wIzq, y + 13, wDer, 'Ciudad:', datos.ciudad);
+        dibujarRenglonEtiquetaValor(doc, margin + wIzq, y + 27, wDer, 'Fecha:', datos.fecha);
+        y += altoFila1 + 10;
+
+        // Fila 2: Remitente (izq) y Destinatario (der)
+        var mitad = anchoUtil / 2;
+        var altoFila2 = 70;
+        [
+          { x: margin, titulo: 'Remitente:', datos: datos.remitente, elabora: datos.remitente.iniciales },
+          { x: margin + mitad, titulo: 'Destinatario:', datos: datos.destinatario, elabora: null }
+        ].forEach(function(bloque) {
+          doc.setDrawColor(120, 120, 120);
+          doc.setLineWidth(0.6);
+          doc.rect(bloque.x, y, mitad, altoFila2);
+          doc.setFillColor(216, 216, 216);
+          doc.rect(bloque.x, y, mitad, 14, 'F');
+          doc.rect(bloque.x, y, mitad, 14, 'S');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.setTextColor(20, 20, 20);
+          doc.text(bloque.titulo, bloque.x + mitad / 2, y + 10, { align: 'center' });
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          var yTexto = y + 24;
+          var lineas = [bloque.datos.nombre, bloque.datos.empresa, bloque.datos.departamento, bloque.datos.puesto];
+          if (bloque.elabora) lineas.push('Elabora: ' + bloque.elabora);
+          lineas.forEach(function(linea) {
+            if (linea) {
+              doc.text(String(linea), bloque.x + 6, yTexto, { maxWidth: mitad - 12 });
+              yTexto += 10;
+            }
+          });
+        });
+        y += altoFila2 + 10;
+
+        // Fila 3: Asunto + cuerpo del comunicado
+        var lineasCuerpo = doc.splitTextToSize(String(datos.cuerpo || 'Indicar.'), anchoUtil - 12);
+        var altoAsunto = Math.max(60, 30 + lineasCuerpo.length * 10);
+        doc.setDrawColor(120, 120, 120);
+        doc.rect(margin, y, anchoUtil, altoAsunto);
+        doc.setFillColor(216, 216, 216);
+        doc.rect(margin, y, anchoUtil, 14, 'F');
+        doc.rect(margin, y, anchoUtil, 14, 'S');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text('Asunto:', margin + anchoUtil / 2, y + 10, { align: 'center' });
+        doc.setFontSize(8.5);
+        doc.text(String(datos.asunto || ''), margin + 6, y + 26, { maxWidth: anchoUtil - 12 });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text(lineasCuerpo, margin + 6, y + 38);
+        y += altoAsunto + 10;
+
+        // Fila 4: Ccp. Con copia para (si hay)
+        if (datos.ccp && datos.ccp.length) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.text('Ccp. Con copia para:', margin, y);
+          y += 6;
+          doc.autoTable({
+            head: [['Nombre', 'Puesto', 'Empresa', 'A/R']],
+            body: datos.ccp.map(function(c) { return [c.nombre || '', c.puesto || '', c.empresa || '', c.ar ? 'Indicar.' : '']; }),
+            startY: y,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
+            columnStyles: { 3: { cellWidth: 50, halign: 'center' } }
+          });
+          y = doc.lastAutoTable.finalY + 10;
+        }
+
+        // Pie de página: fecha/hora de generación, referencia y número
+        // de página (igual criterio que el resto de PDFs de la app).
+        var totalPaginas = doc.internal.getNumberOfPages();
+        for (var p = 1; p <= totalPaginas; p++) {
+          doc.setPage(p);
+          var pieY = doc.internal.pageSize.height - 20;
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.line(margin, pieY - 8, pageWidth - margin, pieY - 8);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(80, 80, 80);
+          doc.text(new Date().toLocaleDateString() + '  ' + new Date().toLocaleTimeString(), margin, pieY);
+          doc.text(datos.referencia || '', pageWidth / 2, pieY, { align: 'center' });
+          doc.text('Pág. ' + p + ' de ' + totalPaginas, pageWidth - margin, pieY, { align: 'right' });
+        }
+
+        return doc;
+      }
+
+      window.generarComunicado = async function() {
+        var msg = document.getElementById('msgComunicado');
+        if (msg) msg.innerHTML = '';
+        if (!actual) return;
+
+        var tipoDoc = document.getElementById('comunicadoDoc').value;
+        var formato = document.getElementById('comunicadoFormato').value;
+        var asunto = document.getElementById('comunicadoAsunto').value.trim();
+        var cuerpo = document.getElementById('comunicadoCuerpo').value.trim();
+        var destinatarioUsuario = document.getElementById('comunicadoDestinatarioUsuario').value;
+
+        if (!asunto) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El asunto es obligatorio.</div>';
+          return;
+        }
+        if (!destinatarioUsuario) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Selecciona un destinatario.</div>';
+          return;
+        }
+
+        var permisoActual = (actual.permisos && actual.permisos[0]) || {};
+        var empresaRemitente = permisoActual.empresa || '';
+        var deptoRemitente = permisoActual.depto || '';
+
+        var remitente = {
+          nombre: document.getElementById('comunicadoRemitenteNombre').value,
+          empresa: document.getElementById('comunicadoRemitenteEmpresa').value,
+          departamento: document.getElementById('comunicadoRemitenteDepartamento').value,
+          puesto: document.getElementById('comunicadoRemitentePuesto').value,
+          iniciales: actual.usuario
+        };
+        var destinatario = {
+          nombre: document.getElementById('comunicadoDestinatarioNombre').value,
+          empresa: document.getElementById('comunicadoDestinatarioEmpresa').value,
+          departamento: document.getElementById('comunicadoDestinatarioDepartamento').value,
+          puesto: document.getElementById('comunicadoDestinatarioPuesto').value
+        };
+        var ccp = Array.prototype.slice.call(document.querySelectorAll('#cuerpoComunicadoCcp tr')).map(function(fila) {
+          var inputs = fila.querySelectorAll('input');
+          return { nombre: inputs[0].value.trim(), puesto: inputs[1].value.trim(), empresa: inputs[2].value.trim(), ar: inputs[3].checked };
+        }).filter(function(c) { return c.nombre; });
+
+        try {
+          // El folio interno se recalcula justo antes de guardar (por si
+          // se abrió el modal hace rato y ya se registró otro comunicado
+          // del mismo departamento mientras tanto).
+          var folioInterno = await calcularFolioInternoComunicado(empresaRemitente, deptoRemitente);
+          var ciudad = document.getElementById('comunicadoCiudad').value;
+          var fecha = document.getElementById('comunicadoFecha').value;
+          var referencia = (getAbreviaturaEmpresa(empresaRemitente) || 'GIE') + ':' + (deptoRemitente ? (getAbreviaturaDepartamento(deptoRemitente, empresaRemitente) || deptoRemitente) : 'GRAL') +
+            ':' + tipoDoc + ':Mod Membretado:' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + ':' + actual.usuario;
+
+          var registro = {
+            folio_interno: folioInterno,
+            tipo_doc: tipoDoc,
+            ciudad: ciudad,
+            fecha: fecha,
+            empresa: empresaRemitente,
+            departamento: deptoRemitente,
+            remitente_usuario: actual.usuario,
+            remitente_nombre: remitente.nombre,
+            remitente_empresa: remitente.empresa,
+            remitente_departamento: remitente.departamento,
+            remitente_puesto: remitente.puesto,
+            destinatario_usuario: destinatarioUsuario,
+            destinatario_nombre: destinatario.nombre,
+            destinatario_empresa: destinatario.empresa,
+            destinatario_departamento: destinatario.departamento,
+            destinatario_puesto: destinatario.puesto,
+            asunto: asunto,
+            cuerpo: cuerpo,
+            ccp: JSON.stringify(ccp)
+          };
+          var { data: comunicadoCreado, error: errorComunicado } = await supabase.from('comunicados_internos').insert([registro]).select().single();
+          if (errorComunicado) throw errorComunicado;
+
+          var pdfDoc = await generarPDFComunicado({
+            tipoDoc: tipoDoc, formato: formato, folioInterno: folioInterno, ciudad: ciudad, fecha: fecha,
+            remitente: remitente, destinatario: destinatario, asunto: asunto, cuerpo: cuerpo, ccp: ccp, referencia: referencia
+          });
+          var pdfBlob = pdfDoc.output('blob');
+          var nombreArchivo = folioInterno + '.pdf';
+          var archivoPDF = new File([pdfBlob], nombreArchivo, { type: 'application/pdf' });
+          var adjunto = await subirDocumentoBuzon(archivoPDF);
+
+          // Se crea también la conversación de Buzón con el destinatario,
+          // con el PDF adjunto, para notificarle del comunicado.
+          var nuevaConv = {
+            asunto: tipoDoc + ' ' + folioInterno + ' — ' + asunto,
+            creador: actual.usuario,
+            destinatarios: [destinatarioUsuario],
+            involucrados: ccp.map(function(c) { return c.nombre; }).filter(function(n) { return (usuariosDB || []).some(function(u) { return u.usuario === n; }); }),
+            oc_id: null,
+            of_id: null,
+            fecha_creacion: new Date().toISOString(),
+            ultima_actividad: new Date().toISOString()
+          };
+          var { data: convCreada, error: errorConv } = await supabase.from('buzon_conversaciones').insert([nuevaConv]).select().single();
+          if (errorConv) throw errorConv;
+
+          var { error: errorMsg2 } = await supabase.from('buzon_mensajes').insert([{
+            conversacion_id: convCreada.id,
+            autor: actual.usuario,
+            contenido: 'Se generó el comunicado ' + tipoDoc + ' ' + folioInterno + ': ' + asunto,
+            adjunto_url: adjunto ? adjunto.url : null,
+            adjunto_nombre: adjunto ? adjunto.nombre : nombreArchivo,
+            fecha: new Date().toISOString()
+          }]);
+          if (errorMsg2) throw errorMsg2;
+
+          await supabase.from('comunicados_internos').update({ conversacion_id: convCreada.id }).eq('id', comunicadoCreado.id);
+
+          window.cerrarNuevoComunicado();
+          await window.cargarBuzon();
+          window.abrirConversacionBuzon(convCreada.id);
+          pdfDoc.save(nombreArchivo);
+        } catch (e) {
+          console.error('Error generando el comunicado:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo generar el comunicado: ' + escapeHTML(e.message) + '</div>';
         }
       };
 
@@ -17485,6 +17952,20 @@
           }
         }
 
+        // Un VC/VI nuevo solo puede generarse si ya existe una SPM
+        // autorizada por el Director y pagada por Finanzas para esa
+        // empresa/departamento en el mes correspondiente: es la SPM
+        // pagada la que rige el consumo del periodo.
+        if (docCxpEdicionId === null && (tipoDocCXPActual === 'VC' || tipoDocCXPActual === 'VI')) {
+          var deptoParaSPM = document.getElementById('docCxpDepartamento').value || null;
+          var fechaParaSPM = document.getElementById('docCxpFecha').value || null;
+          var spmVigenteDoc = await obtenerSPMPagadaVigente(empresa, deptoParaSPM, fechaParaSPM);
+          if (!spmVigenteDoc) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ No hay una SPM pagada para ' + escapeHTML(empresa) + (deptoParaSPM ? ' / ' + escapeHTML(deptoParaSPM) : '') + ' en este periodo. La SPM debe estar autorizada por el Director y marcada como pagada por Finanzas antes de poder generar este documento.</div>';
+            return;
+          }
+        }
+
         // ===== Modo edición (ADMIN / Jefe Departamento): actualiza el
         // documento existente en vez de crear uno nuevo. No se tocan
         // tipo, folio, código ni estado.
@@ -17569,18 +18050,32 @@
         var btnImprimir = document.getElementById('btnAccionDocCxpImprimir');
         if (btnImprimir) btnImprimir.style.display = (d.tipo === 'VC' || d.tipo === 'VI' || d.tipo === 'SPM') ? '' : 'none';
 
-        // Editar (VC/VI): solo ADMIN y Jefe de Departamento.
+        var esSPM = d.tipo === 'SPM';
+
+        // Editar: las SPM no se pueden editar nunca, por nadie. VC/VI:
+        // solo ADMIN y Jefe de Departamento.
         var btnEditar = document.getElementById('btnAccionDocCxpEditar');
-        var puedeEditar = actual && (actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
+        var puedeEditar = !esSPM && actual && (actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
         if (btnEditar) btnEditar.style.display = puedeEditar ? '' : 'none';
 
-        // Marcar Pagada: solo Jefe de Departamento (y solo si sigue pendiente).
-        var btnPagar = document.getElementById('btnAccionDocCxpPagar');
-        var puedeMarcarPagada = actual && actual.rol === 'Jefe Departamento';
-        if (btnPagar) btnPagar.style.display = (d.estado === 'PAGADA' || !puedeMarcarPagada) ? 'none' : '';
+        // Autorizar (solo SPM): exclusivo del Director General, y solo
+        // mientras la SPM sigue PENDIENTE (esperando su autorización).
+        var btnAutorizar = document.getElementById('btnAccionDocCxpAutorizar');
+        var puedeAutorizar = esSPM && actual && actual.rol === 'Director General' && d.estado === 'PENDIENTE';
+        if (btnAutorizar) btnAutorizar.style.display = puedeAutorizar ? '' : 'none';
 
-        // Eliminar (VC/VI): solo ADMIN y Jefe de Departamento.
-        var btnEliminar = document.querySelector('#docCxpAccionesModal .btn-accion-producto[data-accion="eliminar"]');
+        // Marcar Pagada: en SPM es exclusivo de Finanzas, y solo después
+        // de que el Director la autorizó (estado AUTORIZADA). En VC/VI
+        // sigue siendo el Jefe de Departamento, mientras no esté pagada.
+        var btnPagar = document.getElementById('btnAccionDocCxpPagar');
+        var puedeMarcarPagada = esSPM ?
+          (actual && actual.rol === 'Finanzas' && d.estado === 'AUTORIZADA') :
+          (actual && actual.rol === 'Jefe Departamento' && d.estado !== 'PAGADA');
+        if (btnPagar) btnPagar.style.display = puedeMarcarPagada ? '' : 'none';
+
+        // Eliminar: las SPM no se pueden eliminar nunca, por nadie. VC/VI:
+        // solo ADMIN y Jefe de Departamento.
+        var btnEliminar = document.getElementById('btnAccionDocCxpEliminar');
         if (btnEliminar) btnEliminar.style.display = puedeEditar ? '' : 'none';
 
         document.querySelectorAll('#docCxpAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
@@ -17602,7 +18097,7 @@
 
       window.confirmarAccionDocumentoCXP = function() {
         if (!accionDocumentoCXPActual || !accionDocumentoCXPActual.accion) {
-          alert('⚠️ Selecciona una opción: Imprimir PDF, Editar, Marcar Pagada o Eliminar.');
+          alert('⚠️ Selecciona una opción: Imprimir PDF, Editar, Autorizar, Marcar Pagada o Eliminar.');
           return;
         }
         var id = accionDocumentoCXPActual.id;
@@ -17612,18 +18107,60 @@
         else if (accion === 'eliminar') window.eliminarDocumentoCXP(id);
         else if (accion === 'editar') window.editarDocumentoCXP(id);
         else if (accion === 'imprimir') window.imprimirPDFDocumentoCXP(id);
+        else if (accion === 'autorizar') window.autorizarSPMDirector(id);
+      };
+
+      // Autorización de la SPM por el Director General: paso obligatorio
+      // entre que el Jefe de Departamento la genera (PENDIENTE) y
+      // Finanzas puede marcarla como pagada (AUTORIZADA → PAGADA).
+      window.autorizarSPMDirector = async function(id) {
+        var d = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (!d || d.tipo !== 'SPM') return;
+        if (!actual || actual.rol !== 'Director General') {
+          return alert('❌ Solo el Director General puede autorizar la SPM.');
+        }
+        if (d.estado !== 'PENDIENTE') {
+          return alert('⚠️ Esta SPM ya no está pendiente de autorización.');
+        }
+        if (!confirm('¿Autorizar la SPM ' + (d.folio || d.codigo || '') + '? Después de esto, Finanzas podrá marcarla como pagada.')) return;
+        try {
+          var { error } = await supabase.from('documentos_cxp').update({
+            estado: 'AUTORIZADA',
+            autorizador_director: actual.usuario,
+            fecha_autorizacion_director: new Date().toISOString()
+          }).eq('id', id);
+          if (error) throw error;
+          window.cargarDocumentosCXP();
+          alert('✅ SPM autorizada. Finanzas ya puede marcarla como pagada.');
+        } catch (e) {
+          console.error('Error autorizando la SPM:', e);
+          alert('❌ No se pudo autorizar: ' + e.message);
+        }
       };
 
       window.marcarPagadoDocumentoCXP = async function(id) {
-        // Marcar Pagada un VC/VI es exclusivo del Jefe de Departamento.
-        if (!actual || actual.rol !== 'Jefe Departamento') {
-          return alert('❌ Solo el Jefe de Departamento puede marcar este documento como pagado.');
+        var d = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (d && d.tipo === 'SPM') {
+          // Marcar pagada una SPM es exclusivo de Finanzas, y solo
+          // después de que el Director la haya autorizado.
+          if (!actual || actual.rol !== 'Finanzas') {
+            return alert('❌ Solo Finanzas puede marcar la SPM como pagada.');
+          }
+          if (d.estado !== 'AUTORIZADA') {
+            return alert('⚠️ Esta SPM primero debe ser autorizada por el Director General.');
+          }
+        } else {
+          // Marcar Pagada un VC/VI es exclusivo del Jefe de Departamento.
+          if (!actual || actual.rol !== 'Jefe Departamento') {
+            return alert('❌ Solo el Jefe de Departamento puede marcar este documento como pagado.');
+          }
         }
         try {
           var { error } = await supabase.from('documentos_cxp').update({ estado: 'PAGADA' }).eq('id', id);
           if (error) throw error;
           window.cargarDocumentosCXP();
           window.actualizarTotalesModulosVales();
+          if (d && d.tipo === 'SPM') alert('✅ SPM marcada como pagada. Ya se pueden generar vales contra su presupuesto.');
         } catch (e) {
           console.error('Error marcando documento como pagado:', e);
           alert('❌ No se pudo actualizar: ' + e.message);
@@ -17635,12 +18172,14 @@
       // precargado con los datos existentes; folio/tipo/código y estado
       // no se tocan (los controla el sistema).
       window.editarDocumentoCXP = async function(id) {
+        var d = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (d && d.tipo === 'SPM') {
+          return alert('❌ Las SPM no se pueden editar una vez generadas.');
+        }
         if (!actual || (actual.rol !== 'Administrador' && actual.rol !== 'Jefe Departamento')) {
           return alert('❌ Solo ADMIN o el Jefe de Departamento pueden editar este documento.');
         }
-        var d = documentosCXPCache.find(function(x) { return x.id === id; });
         if (!d) return;
-        if (d.tipo === 'SPM') return window.abrirEditarSPM(id);
 
         var msgDiv = document.getElementById('msgDocumentoCXP');
         if (msgDiv) msgDiv.innerHTML = '';
@@ -17728,6 +18267,10 @@
       };
 
       window.eliminarDocumentoCXP = async function(id) {
+        var dEliminar = documentosCXPCache.find(function(x) { return x.id === id; });
+        if (dEliminar && dEliminar.tipo === 'SPM') {
+          return alert('❌ Las SPM no se pueden eliminar una vez generadas.');
+        }
         if (!actual || (actual.rol !== 'Administrador' && actual.rol !== 'Jefe Departamento')) {
           return alert('❌ Solo ADMIN o el Jefe de Departamento pueden eliminar este documento.');
         }
@@ -17754,6 +18297,30 @@
       var spmEdicionId = null; // id del documento en edición, o null si es nuevo
       var COMISION_PMSYS = 0.0638;
       var TDD_BBVA_DEFAULT = 2205.30; // valor por default de todo colaborador mientras ADMIN no capture otro en Colaboradores
+
+      // Una SPM, ya autorizada por el Director y marcada como pagada por
+      // Finanzas, es la que rige el consumo del mes: solo entonces se
+      // pueden generar vales de gasolina, vales de caja (VC) y vales de
+      // IAVE (VI) contra su presupuesto. Busca la SPM PAGADA de la misma
+      // empresa/departamento cuyo mes/año coincida con la fecha del gasto
+      // (o con hoy, si no se especifica fecha).
+      async function obtenerSPMPagadaVigente(empresa, departamento, fechaStr) {
+        if (!empresa) return null;
+        var fecha = fechaStr ? new Date(fechaStr + 'T00:00:00') : new Date();
+        var mesNombre = MESES_INDICADOR[fecha.getMonth()];
+        var anio = fecha.getFullYear();
+        try {
+          var query = supabase.from('documentos_cxp').select('id,folio,codigo,mes,anio,departamento')
+            .eq('tipo', 'SPM').eq('estado', 'PAGADA').eq('empresa', empresa).eq('mes', mesNombre).eq('anio', anio);
+          if (departamento) query = query.eq('departamento', departamento);
+          var { data, error } = await query.limit(1);
+          if (error) throw error;
+          return (data && data[0]) || null;
+        } catch (e) {
+          console.error('Error verificando la SPM vigente:', e);
+          return null;
+        }
+      }
 
       // "Salario" y "TDD BBVA" son datos del EMPLEADO (tabla usuarios,
       // capturados por ADMIN en el módulo Colaboradores), no de la SPM: se
@@ -17860,7 +18427,10 @@
         }
         var empAbrev = getAbreviaturaEmpresa(empresa) || empresa;
         var deptoAbrev = departamento ? (getAbreviaturaDepartamento(departamento, empresa) || departamento) : '';
-        folioInput.value = 'SPM-' + mes.toUpperCase() + '-' + version + '-' + empAbrev + (deptoAbrev ? '-' + deptoAbrev : '');
+        // Formato: SPM-(mes en curso en número)-(versión A/B/C)-EMPRESA-(DEPARTAMENTO)
+        var indiceMes = MESES_INDICADOR.indexOf(mes);
+        var mesNumero = indiceMes >= 0 ? String(indiceMes + 1).padStart(2, '0') : mes;
+        folioInput.value = 'SPM-' + mesNumero + '-' + version + '-' + empAbrev + (deptoAbrev ? '-' + deptoAbrev : '');
       };
 
       // Fecha final = fecha de inicio + N semanas (N × 7 días), mostrando
