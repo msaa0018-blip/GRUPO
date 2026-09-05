@@ -11049,7 +11049,7 @@
               '<td>' + escapeHTML(getAbreviaturaEmpresa(permiso.empresa) || permiso.empresa || '—') + '</td>' +
               '<td>' + escapeHTML(mostrarDepto(getAbreviaturaDepartamento(permiso.depto, permiso.empresa) || permiso.depto)) + '</td>' +
               '<td>' + formatoMoneda(u.salario_semanal || 0, 'MXN') + '</td>' +
-              '<td>' + formatoMoneda(u.tdd_bbva || 0, 'MXN') + '</td>' +
+              '<td>' + formatoMoneda(u.tdd_bbva != null ? u.tdd_bbva : TDD_BBVA_DEFAULT, 'MXN') + '</td>' +
               '<td style="text-align:center;">' +
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesColaborador(\'' + escapeHTML(u.usuario).replace(/'/g, "\\'") + '\')">' +
                   '<span></span><span></span><span></span>' +
@@ -11089,7 +11089,7 @@
         selEmpresa.value = '';
         window.actualizarDeptosColaborador();
         document.getElementById('colabSalario').value = '';
-        document.getElementById('colabTdd').value = '';
+        document.getElementById('colabTdd').value = 2205.30;
         document.getElementById('colaboradorModal').classList.add('active');
       };
 
@@ -11182,7 +11182,7 @@
         var selDepto = document.getElementById('colabDepartamento');
         if (permiso.depto) selDepto.value = permiso.depto;
         document.getElementById('colabSalario').value = u.salario_semanal || 0;
-        document.getElementById('colabTdd').value = u.tdd_bbva || 0;
+        document.getElementById('colabTdd').value = (u.tdd_bbva != null ? u.tdd_bbva : 2205.30);
         document.getElementById('colaboradorModal').classList.add('active');
       };
 
@@ -17417,6 +17417,7 @@
       // listado, cobro y reportes que ya existen para VC/VI.
       var spmEdicionId = null; // id del documento en edición, o null si es nuevo
       var COMISION_PMSYS = 0.0638;
+      var TDD_BBVA_DEFAULT = 2205.30; // valor por default de todo colaborador mientras ADMIN no capture otro en Colaboradores
 
       // "Salario" y "TDD BBVA" son datos del EMPLEADO (tabla usuarios,
       // capturados por ADMIN en el módulo Colaboradores), no de la SPM: se
@@ -17425,15 +17426,16 @@
       // para no exponer esta información en el navegador de cualquier
       // usuario logueado.
       async function obtenerDatosUsuarioSPM(usuario) {
-        if (!usuario) return { salario: 0, tdd: 0 };
+        if (!usuario) return { salario: 0, tdd: TDD_BBVA_DEFAULT };
         try {
           var { data, error } = await supabase.from('usuarios').select('salario_semanal,tdd_bbva').eq('usuario', usuario).limit(1);
           if (error) throw error;
           var u = data && data[0];
-          return { salario: (u && Number(u.salario_semanal)) || 0, tdd: (u && Number(u.tdd_bbva)) || 0 };
+          var tddGuardado = u && u.tdd_bbva != null ? Number(u.tdd_bbva) : null;
+          return { salario: (u && Number(u.salario_semanal)) || 0, tdd: tddGuardado != null ? tddGuardado : TDD_BBVA_DEFAULT };
         } catch (e) {
           console.error('Error obteniendo datos de ' + usuario + ':', e);
-          return { salario: 0, tdd: 0 };
+          return { salario: 0, tdd: TDD_BBVA_DEFAULT };
         }
       }
 
