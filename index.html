@@ -1570,8 +1570,8 @@
   #buzonNuevaModal .modal-header .pdfPreview-btn-group, #buzonConversacionModal .modal-header .pdfPreview-btn-group, #ocChatModal .modal-header .pdfPreview-btn-group, #ofChatModal .modal-header .pdfPreview-btn-group, #comunicadoModal .modal-header .pdfPreview-btn-group, #seleccionProyectosMultiOCModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #comunicadoModal .modal-content { max-width: 820px; }
   #seleccionProyectosMultiOCModal .modal-content { max-width: 480px; }
-  .checklist-proyectos-multi { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
-  .checklist-proyectos-multi label { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .checklist-proyectos-multi { display: flex; flex-direction: column; gap: 0; max-height: 50vh; overflow-y: auto; }
+  .checklist-proyectos-multi label { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
   .checklist-proyectos-multi label:hover { background: var(--gray-100); }
   .checklist-proyectos-multi input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; }
   .buzon-conv-item {
@@ -5161,14 +5161,10 @@
           <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarPanelOC()">✕</button>
         </div>
         <div class="grupo-formulario">
-          <div class="flex">
-            <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1.5;"></select>
-          </div>
-        </div>
-        <div class="grupo-formulario">
-          <div class="flex" style="align-items:center;">
-            <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;">
-              <input type="checkbox" id="ocEsMultiproyecto" onchange="window.actualizarMultiproyectoOC()"> ¿Esta OC es multiproyecto?
+          <div class="flex" style="align-items:center;gap:12px;">
+            <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;white-space:nowrap;flex:1;">
+              <input type="checkbox" id="ocEsMultiproyecto" onchange="window.actualizarMultiproyectoOC()" style="width:14px;height:14px;flex-shrink:0;"> ¿Esta OC es multiproyecto?
             </label>
           </div>
         </div>
@@ -22849,7 +22845,10 @@
           var selMultiOC = document.getElementById('selectProyectosMultiOC');
           if (selMultiOC) {
             var seleccionPrevia = Array.from(selMultiOC.selectedOptions || []).map(function(o) { return o.value; });
-            selMultiOC.innerHTML = proyectos
+            // Solo proyectos de la empresa/departamento del propio usuario
+            // (mismo alcance que ya usa el selector de proyecto principal),
+            // nunca proyectos de otras empresas/departamentos.
+            selMultiOC.innerHTML = filtrarProyectosSegunUsuario(actual)
               .filter(function(p) { return p.id !== idExcluir; })
               .map(function(p) { return '<option value="' + p.id + '" ' + (seleccionPrevia.indexOf(String(p.id)) !== -1 ? 'selected' : '') + '>' + escapeHTML(p.nombre) + '</option>'; })
               .join('');
