@@ -24059,7 +24059,7 @@
         var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
 
         // ---------- 1. ENCABEZADO DE LA ORDEN ----------
-        var headerH = 52;
+        var headerH = 58;
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
@@ -24072,20 +24072,22 @@
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
         doc.text('ORDEN DE COMPRA', margin + 24, y + 20);
 
-        // Debajo del título se muestra el usuario que elaboró la OC, el
-        // folio y el departamento (sin abreviar), separados por "|".
+        // Debajo de la leyenda "ORDEN DE COMPRA": primero el folio de la
+        // OC, y debajo de éste, el usuario que la elaboró junto con la
+        // empresa, separados por "|".
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + codigoFinalHeader + ' | ' + (datos.departamento || '')), margin + 24, y + 35);
+        doc.text('FOLIO: ' + codigoFinalHeader, margin + 24, y + 35);
+        doc.setFontSize(9);
+        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + (datos.empresa || '')), margin + 24, y + 47);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
-        doc.text('FOLIO: ' + codigoFinalHeader, xDerecha, y + 20, { align: 'right' });
-        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 35, { align: 'right' });
+        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 20, { align: 'right' });
 
         y += headerH + 5;
 
@@ -25147,3 +25149,4 @@
   </script>
 </body>
 </html>
+            
