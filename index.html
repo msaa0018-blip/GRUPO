@@ -5211,6 +5211,53 @@
         </div>
         <div class="grupo-formulario">
           <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Método de pago:</label>
+            <select id="metodoPagoOC" style="flex:1.5;">
+              <option value="">Selecciona un método</option>
+              <option value="01 Efectivo">01 - Efectivo</option>
+              <option value="02 Cheque nominativo">02 - Cheque nominativo</option>
+              <option value="03 Transferencia electrónica de fondos">03 - Transferencia electrónica de fondos</option>
+              <option value="04 Tarjeta de crédito">04 - Tarjeta de crédito</option>
+              <option value="28 Tarjeta de débito">28 - Tarjeta de débito</option>
+              <option value="99 Por definir">99 - Por definir</option>
+            </select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Tel./Email solicitante:</label>
+            <input id="solicitanteTelefonoOC" placeholder="Teléfono del solicitante (opcional)" style="flex:1;">
+            <input id="solicitanteEmailOC" placeholder="Email del solicitante (opcional)" style="flex:1.5;">
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Responsable de entrega:</label>
+            <input id="responsableEntregaOC" placeholder="Responsable de entrega (opcional)" style="flex:1;">
+            <label style="font-weight:500;flex:0.2;min-width:70px;">Sucursal:</label>
+            <input id="sucursalEntregaOC" placeholder="Sucursal de entrega (opcional)" style="flex:1;">
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Paquetería (si aplica):</label>
+            <select id="paqueteriaOC" style="flex:1.5;">
+              <option value="">No aplica / Entrega directa</option>
+              <option value="Estafeta">Estafeta</option>
+              <option value="DHL Express">DHL Express</option>
+              <option value="FedEx">FedEx</option>
+              <option value="Paquetexpress">Paquetexpress</option>
+              <option value="Redpack">Redpack</option>
+              <option value="99minutos">99minutos</option>
+              <option value="UPS">UPS</option>
+              <option value="Tres Guerras">Tres Guerras</option>
+              <option value="Grupo Castores">Grupo Castores</option>
+              <option value="J&T Express">J&T Express</option>
+            </select>
+          </div>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
             <label style="font-weight:500;flex:0.3;min-width:100px;">Formato de membrete:</label>
             <select id="formatoMembreteOC" style="flex:1.5;">
               <option value="1">Formato 1</option>
@@ -23479,7 +23526,13 @@
           clabe: (document.getElementById('clabe').value || '').trim(),
           swift: (document.getElementById('swift').value || '').trim().toUpperCase(),
           cie: (document.getElementById('cie').value || '').trim().toUpperCase(),
-          referencia: (document.getElementById('referencia').value || '').trim().toUpperCase()
+          referencia: (document.getElementById('referencia').value || '').trim().toUpperCase(),
+          metodopago: (document.getElementById('metodoPagoOC') ? document.getElementById('metodoPagoOC').value : '') || null,
+          solicitantetelefono: (document.getElementById('solicitanteTelefonoOC') ? document.getElementById('solicitanteTelefonoOC').value.trim() : '') || null,
+          solicitanteemail: (document.getElementById('solicitanteEmailOC') ? document.getElementById('solicitanteEmailOC').value.trim() : '') || null,
+          responsableentrega: (document.getElementById('responsableEntregaOC') ? document.getElementById('responsableEntregaOC').value.trim().toUpperCase() : '') || null,
+          sucursalentrega: (document.getElementById('sucursalEntregaOC') ? document.getElementById('sucursalEntregaOC').value.trim().toUpperCase() : '') || null,
+          paqueteria: (document.getElementById('paqueteriaOC') ? document.getElementById('paqueteriaOC').value : '') || null
         };
       }
 
@@ -23570,7 +23623,13 @@
           condicionpago: datos.condicionpago || null,
           notificacion_enviada: false,
           es_multiproyecto: datos.es_multiproyecto || false,
-          proyectos_multi: datos.proyectos_multi || []
+          proyectos_multi: datos.proyectos_multi || [],
+          metodopago: datos.metodopago || null,
+          solicitantetelefono: datos.solicitantetelefono || null,
+          solicitanteemail: datos.solicitanteemail || null,
+          responsableentrega: datos.responsableentrega || null,
+          sucursalentrega: datos.sucursalentrega || null,
+          paqueteria: datos.paqueteria || null
         };
 
         var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -23662,7 +23721,13 @@
           condicionpago: datos.condicionpago || null,
           notificacion_enviada: false,
           es_multiproyecto: datos.es_multiproyecto || false,
-          proyectos_multi: datos.proyectos_multi || []
+          proyectos_multi: datos.proyectos_multi || [],
+          metodopago: datos.metodopago || null,
+          solicitantetelefono: datos.solicitantetelefono || null,
+          solicitanteemail: datos.solicitanteemail || null,
+          responsableentrega: datos.responsableentrega || null,
+          sucursalentrega: datos.sucursalentrega || null,
+          paqueteria: datos.paqueteria || null
         };
 
         var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -23706,7 +23771,8 @@
 
         ['proveedor', 'sucursal', 'rfc', 'direccion', 'direccionEntrega', 'cp',
           'fechaPago', 'fechaPago2OC', 'fechaEntrega', 'notasOC', 'conceptoOC', 'banco', 'cuenta', 'clabe',
-          'swift', 'cie', 'referencia', 'paridadInicial'].forEach(function(id) {
+          'swift', 'cie', 'referencia', 'paridadInicial',
+          'solicitanteTelefonoOC', 'solicitanteEmailOC', 'responsableEntregaOC', 'sucursalEntregaOC'].forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.value = '';
         });
@@ -23714,6 +23780,11 @@
 
         var usoCFDI = document.getElementById('usoCFDI');
         if (usoCFDI) usoCFDI.selectedIndex = 0;
+
+        var metodoPagoOC = document.getElementById('metodoPagoOC');
+        if (metodoPagoOC) metodoPagoOC.selectedIndex = 0;
+        var paqueteriaOC = document.getElementById('paqueteriaOC');
+        if (paqueteriaOC) paqueteriaOC.selectedIndex = 0;
 
         var monedaOC = document.getElementById('monedaOC');
         if (monedaOC) monedaOC.value = 'MXN';
@@ -23789,7 +23860,13 @@
             clabe: oc.clabe || 'N/A',
             swift: oc.swift || 'N/A',
             cie: oc.cie || 'N/A',
-            referencia: oc.referencia || 'N/A'
+            referencia: oc.referencia || 'N/A',
+            metodopago: oc.metodopago || '',
+            solicitantetelefono: oc.solicitantetelefono || '',
+            solicitanteemail: oc.solicitanteemail || '',
+            responsableentrega: oc.responsableentrega || '',
+            sucursalentrega: oc.sucursalentrega || '',
+            paqueteria: oc.paqueteria || ''
           };
           var doc = await generarPDFParaPreview(datosOC, oc);
           doc.save(oc.codigo + '.pdf');
@@ -23928,19 +24005,19 @@
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
         doc.text('ORDEN DE COMPRA', margin + 24, y + 20);
 
-        // Debajo del título se muestra la razón social de la empresa
-        // que emite la orden (mismo nombre que usa el membrete).
+        // Debajo del título se muestra el usuario que elaboró la OC
+        // separado por "|" del departamento (sin abreviar).
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(nombreEmpresa || '', margin + 24, y + 35);
+        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + (datos.departamento || '')), margin + 24, y + 35);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
-        doc.text(codigoFinalHeader, xDerecha, y + 20, { align: 'right' });
+        doc.text('FOLIO: ' + codigoFinalHeader, xDerecha, y + 20, { align: 'right' });
         doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 35, { align: 'right' });
 
         y += headerH + 5;
@@ -23978,11 +24055,33 @@
           { label: 'Teléfono:', value: proveedorTelefono },
           { label: 'Email:', value: proveedorEmail }
         ];
-        var camposEntrega = [
-          { label: 'Dirección de Entrega: ', value: datos.direccionentrega },
-          { label: 'Solicitante:', value: datos.solicitante || 'No especificado' },
-          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' }
-        ];
+        // "FACTURAR A": si la OC es de GRUPO INDUSTRIAL EXTINGUE se
+        // muestran sus datos fiscales fijos; para las demás empresas se
+        // conserva la dirección de entrega/solicitante como referencia.
+        // En ambos casos se indica Uso CFDI, Moneda y el folio a incluir
+        // en la factura del proveedor.
+        var esGIEFacturar = datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1;
+        var camposEntrega;
+        if (esGIEFacturar) {
+          camposEntrega = [
+            { label: 'RFC:', value: 'GIE0402262X3' },
+            { label: 'Domicilio:', value: 'Privada del Copalillo #298 Colonia El Copalillo, 36800 Irapuato, Gto.' },
+            { label: 'C.P.:', value: '36800' },
+            { label: 'Teléfono:', value: datos.solicitantetelefono || 'N/A' },
+            { label: 'Email:', value: datos.solicitanteemail || 'N/A' },
+            { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
+            { label: 'Moneda:', value: datos.moneda || 'N/A' },
+            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader }
+          ];
+        } else {
+          camposEntrega = [
+            { label: 'Dirección de Entrega: ', value: datos.direccionentrega },
+            { label: 'Solicitante:', value: datos.solicitante || 'No especificado' },
+            { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
+            { label: 'Moneda:', value: datos.moneda || 'N/A' },
+            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader }
+          ];
+        }
 
         function alturaCampos(campos, maxWidth) {
           var total = 0;
@@ -24027,7 +24126,7 @@
         }
 
         dibujarTarjeta(margin, 'DATOS DEL PROVEEDOR', camposProveedor);
-        dibujarTarjeta(margin + cardW + cardGap, 'LUGAR DE ENTREGA Y SOLICITUD', camposEntrega);
+        dibujarTarjeta(margin + cardW + cardGap, 'FACTURAR A:', camposEntrega);
 
         y += cardH + 8;
 
@@ -24100,10 +24199,8 @@
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
         var camposCondicionesExtra = [
-          { label: 'Banco:', value: datos.banco || 'No especificado' },
-          { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-          { label: 'Uso CFDI / Moneda:', value: (datos.usocfdi || '') + ' / ' + (datos.moneda || '') }
+          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' },
+          { label: 'Método de pago:', value: datos.metodopago || 'N/A' }
         ];
         if (datos.moneda === 'USD') {
           // Tres casos posibles para una OC en USD:
@@ -24125,6 +24222,26 @@
           }
         }
         var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
+
+        // Datos bancarios del proveedor (antes formaban parte de la misma
+        // tarjeta de "CONDICIONES COMERCIALES"; ahora van en su propia
+        // tarjeta, en la fila inferior).
+        var camposBancarios = [
+          { label: 'Banco:', value: datos.banco || 'No especificado' },
+          { label: 'CLABE:', value: datos.clabe || 'N/A' },
+          { label: 'Cuenta:', value: datos.cuenta || 'N/A' }
+        ];
+
+        // Condiciones de entrega: lugar, responsable, sucursal y, si
+        // aplica, la paquetería utilizada.
+        var camposEntregaCondiciones = [
+          { label: 'Lugar de entrega:', value: datos.direccionentrega || 'N/A' },
+          { label: 'Responsable de entrega:', value: datos.responsableentrega || 'N/A' },
+          { label: 'Sucursal:', value: datos.sucursalentrega || 'N/A' }
+        ];
+        if (datos.paqueteria) {
+          camposEntregaCondiciones.push({ label: 'Paquetería:', value: datos.paqueteria });
+        }
 
         var bottomBodyPadding = 12;
         var altoTerminos = bottomHeaderH + lineasCondiciones.length * 9 + 12 + altoCamposCondiciones + bottomBodyPadding;
@@ -24194,7 +24311,38 @@
         doc.text('TOTAL:', bottomX2 + 16, totalBoxY + totalBoxH / 2 + 5);
         doc.text(formatoMoneda(datos.montototal, datos.moneda), bottomX2 + bottomW - 16, totalBoxY + totalBoxH / 2 + 5, { align: 'right' });
 
-        y += bottomH + 9 + 11;
+        y += bottomH + 8;
+
+        // ---------- 4b. FILA 2: DATOS BANCARIOS PROVEEDOR | CONDICIONES DE ENTREGA ----------
+        function dibujarCajaSimple(x, yPos, w, h, titulo, campos) {
+          doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+          doc.setLineWidth(0.75);
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(x, yPos, w, h, 3, 3, 'FD');
+          doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+          doc.roundedRect(x, yPos, w, bottomHeaderH, 3, 3, 'F');
+          doc.rect(x, yPos + bottomHeaderH / 2, w, bottomHeaderH / 2, 'F');
+          doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
+          doc.line(x, yPos + bottomHeaderH, x + w, yPos + bottomHeaderH);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+          doc.text(titulo, x + 14, yPos + bottomHeaderH / 2 + 4);
+          var yCampo = yPos + bottomHeaderH + 12;
+          campos.forEach(function(c) {
+            var alto = dibujarCampoLinea(x + 14, yCampo, c.label, c.value, w - 28);
+            yCampo += alto + 4;
+          });
+        }
+
+        var altoBancarios = alturaCampos(camposBancarios, bottomW - 28);
+        var altoEntregaCondiciones = alturaCampos(camposEntregaCondiciones, bottomW - 28);
+        var bottomH2 = Math.max(bottomHeaderH + 12 + altoBancarios + bottomBodyPadding, bottomHeaderH + 12 + altoEntregaCondiciones + bottomBodyPadding, 70);
+
+        dibujarCajaSimple(bottomX1, y, bottomW, bottomH2, 'DATOS BANCARIOS PROVEEDOR', camposBancarios);
+        dibujarCajaSimple(bottomX2, y, bottomW, bottomH2, 'CONDICIONES DE ENTREGA', camposEntregaCondiciones);
+
+        y += bottomH2 + 9 + 11;
 
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
