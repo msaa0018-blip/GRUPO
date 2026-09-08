@@ -3619,6 +3619,8 @@
                 <th>Rol</th>
                 <th>Empresa</th>
                 <th>Departamento</th>
+                <th>Teléfono</th>
+                <th>Email</th>
                 <th>Salario semanal</th>
                 <th>TDD BBVA</th>
                 <th>Acciones</th>
@@ -3976,6 +3978,10 @@
               <select id="colabDepartamento">
                 <option value="">Selecciona departamento</option>
               </select>
+            </div>
+            <div class="cxc-form-row">
+              <input id="colabTelefono" placeholder="Teléfono">
+              <input id="colabEmail" type="email" placeholder="Email">
             </div>
             <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Salario semanal<input id="colabSalario" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
@@ -5225,10 +5231,11 @@
         </div>
         <div class="grupo-formulario">
           <div class="flex">
-            <label style="font-weight:500;flex:0.3;min-width:100px;">Tel./Email solicitante:</label>
-            <input id="solicitanteTelefonoOC" placeholder="Teléfono del solicitante (opcional)" style="flex:1;">
-            <input id="solicitanteEmailOC" placeholder="Email del solicitante (opcional)" style="flex:1.5;">
+            <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Tel./Email solicitante:</label>
+            <input id="solicitanteTelefonoOC" placeholder="Teléfono (según Colaboradores)" style="flex:1;background:var(--gray-200);" readonly>
+            <input id="solicitanteEmailOC" placeholder="Email (según Colaboradores)" style="flex:1.5;background:var(--gray-200);" readonly>
           </div>
+          <div class="text-muted" style="font-size:11px;margin-top:4px;">Se toman del registro del solicitante en Colaboradores. Si faltan, complétalos ahí antes de guardar la OC.</div>
         </div>
         <div class="grupo-formulario">
           <div class="flex">
@@ -5308,7 +5315,7 @@
         <div class="grupo-formulario">
           <div class="flex">
             <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Solicitante / Responsable:</label>
-            <select id="solicitanteOC" style="flex:1.5;"></select>
+            <select id="solicitanteOC" style="flex:1.5;" onchange="window.actualizarContactoSolicitanteOC()"></select>
           </div>
         </div>
         <div class="grupo-formulario">
@@ -6401,6 +6408,13 @@
             abreviatura: 'VOP',
             logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20VEXPAR%20TRANSPARENTE.png',
             estado: 'Activo',
+            // Datos fiscales para "FACTURAR A" en el PDF de OC. Completar
+            // rfc/domicilio/cp reales cuando se tengan; mientras estén
+            // vacíos, el PDF usa el domicilio de entrega como respaldo.
+            razonSocial: 'VEXPAR OPERACIONES',
+            rfc: '',
+            domicilio: '',
+            cp: '',
             departamentos: [
               { id: 'VOP-VC', nombre: 'VENTAS CORPORATIVAS VEXPAR', abreviatura: 'VC', estado: 'Activo' }
             ]
@@ -6411,6 +6425,10 @@
             abreviatura: 'GIE',
             logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png',
             estado: 'Activo',
+            razonSocial: 'GRUPO INDUSTRIAL EXTINGUE',
+            rfc: 'GIE0402262X3',
+            domicilio: 'Privada del Copalillo #298 Colonia El Copalillo, 36800 Irapuato, Gto.',
+            cp: '36800',
             departamentos: [
               { id: 'GIE-TLLR', nombre: 'TALLER', abreviatura: 'TLLR', estado: 'Activo' },
               { id: 'GIE-SERV', nombre: 'SERVICIOS', abreviatura: 'SERV', estado: 'Activo' },
@@ -6426,6 +6444,10 @@
             abreviatura: 'SMV',
             logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20SUMINISERVICES%20TRANSPARENTE.png',
             estado: 'Activo',
+            razonSocial: 'SUMINISERVICES',
+            rfc: '',
+            domicilio: '',
+            cp: '',
             departamentos: []
           },
           {
@@ -6434,6 +6456,10 @@
             abreviatura: 'ICE',
             logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20INMOBIENES%20TRANSPARENTE.png',
             estado: 'Activo',
+            razonSocial: 'INMOBIENES DEL CENTRO',
+            rfc: '',
+            domicilio: '',
+            cp: '',
             departamentos: []
           },
           {
@@ -6442,6 +6468,10 @@
             abreviatura: 'ISCI',
             logo: 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20ISCI.png',
             estado: 'Activo',
+            razonSocial: 'INGENIERÍA EN SISTEMAS CONTRA INCENDIO',
+            rfc: '',
+            domicilio: '',
+            cp: '',
             departamentos: []
           }
         ]
@@ -7555,7 +7585,7 @@
           // NOTA SEGURIDAD: ya no se solicita la columna "password". El login real
           // se valida en el servidor vía RPC (login_verificar); esta carga solo
           // necesita usuario/rol/permisos para pintar la UI y calcular accesos.
-          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos');
+          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,telefono,email');
           if (error) throw error;
           usuariosDB = data || [];
           console.log('✅ Usuarios cargados desde Supabase:', usuariosDB.length);
@@ -11587,12 +11617,12 @@
         if (!cuerpo) return;
         if (!usuarioPuedeGestionarColaboradores()) return;
         try {
-          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,salario_semanal,tdd_bbva').order('usuario');
+          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,salario_semanal,tdd_bbva,telefono,email').order('usuario');
           if (error) throw error;
           colaboradoresCache = data || [];
           cuerpo.innerHTML = '';
           if (!colaboradoresCache.length) {
-            cuerpo.innerHTML = '<tr><td colspan="7">No hay colaboradores registrados.</td></tr>';
+            cuerpo.innerHTML = '<tr><td colspan="9">No hay colaboradores registrados.</td></tr>';
             return;
           }
           colaboradoresCache.forEach(function(u) {
@@ -11603,6 +11633,8 @@
               '<td>' + escapeHTML(u.rol) + '</td>' +
               '<td>' + escapeHTML(getAbreviaturaEmpresa(permiso.empresa) || permiso.empresa || '—') + '</td>' +
               '<td>' + escapeHTML(mostrarDepto(getAbreviaturaDepartamento(permiso.depto, permiso.empresa) || permiso.depto)) + '</td>' +
+              '<td>' + escapeHTML(u.telefono || '—') + '</td>' +
+              '<td>' + escapeHTML(u.email || '—') + '</td>' +
               '<td>' + formatoMoneda(u.salario_semanal || 0, 'MXN') + '</td>' +
               '<td>' + formatoMoneda(u.tdd_bbva != null ? u.tdd_bbva : TDD_BBVA_DEFAULT, 'MXN') + '</td>' +
               '<td style="text-align:center;">' +
@@ -11614,7 +11646,7 @@
           });
         } catch (e) {
           console.error('Error cargando colaboradores:', e);
-          cuerpo.innerHTML = '<tr><td colspan="7">❌ Error al cargar colaboradores: ' + escapeHTML(e.message) + '</td></tr>';
+          cuerpo.innerHTML = '<tr><td colspan="9">❌ Error al cargar colaboradores: ' + escapeHTML(e.message) + '</td></tr>';
         }
       };
 
@@ -11643,6 +11675,8 @@
           getEmpresasCatalogo().map(function(e) { return '<option value="' + escapeHTML(e.nombre) + '">' + escapeHTML(e.nombre) + '</option>'; }).join('');
         selEmpresa.value = '';
         window.actualizarDeptosColaborador();
+        document.getElementById('colabTelefono').value = '';
+        document.getElementById('colabEmail').value = '';
         document.getElementById('colabSalario').value = '';
         document.getElementById('colabTdd').value = 2205.30;
         document.getElementById('colaboradorModal').classList.add('active');
@@ -11662,6 +11696,8 @@
         var rol = document.getElementById('colabRol').value;
         var empresa = document.getElementById('colabEmpresa').value;
         var departamento = document.getElementById('colabDepartamento').value;
+        var telefono = (document.getElementById('colabTelefono').value || '').trim();
+        var email = (document.getElementById('colabEmail').value || '').trim();
         var salario = parseFloat(document.getElementById('colabSalario').value) || 0;
         var tdd = parseFloat(document.getElementById('colabTdd').value) || 0;
 
@@ -11677,13 +11713,16 @@
             // Se guarda vía RPC (SECURITY DEFINER) en vez de tocar la
             // tabla directamente: así el guardado no depende de que el
             // rol "anon" tenga bien alineados permisos de columna + RLS
-            // sobre "usuarios" (ver migracion_lote21_rpc_colaboradores.sql).
+            // sobre "usuarios" (ver migracion_lote21_rpc_colaboradores.sql
+            // y migracion_lote27_colaboradores_contacto.sql).
             var { error } = await supabase.rpc('actualizar_colaborador', {
               p_usuario: colaboradorEditando,
               p_rol: rol,
               p_permisos: permisos,
               p_salario_semanal: salario,
-              p_tdd_bbva: tdd
+              p_tdd_bbva: tdd,
+              p_telefono: telefono || null,
+              p_email: email || null
             });
             if (error) throw error;
           } else {
@@ -11698,7 +11737,9 @@
               p_rol: rol,
               p_permisos: permisos,
               p_salario_semanal: salario,
-              p_tdd_bbva: tdd
+              p_tdd_bbva: tdd,
+              p_telefono: telefono || null,
+              p_email: email || null
             });
             if (errorNuevo) throw errorNuevo;
           }
@@ -11732,6 +11773,8 @@
         window.actualizarDeptosColaborador();
         var selDepto = document.getElementById('colabDepartamento');
         if (permiso.depto) selDepto.value = permiso.depto;
+        document.getElementById('colabTelefono').value = u.telefono || '';
+        document.getElementById('colabEmail').value = u.email || '';
         document.getElementById('colabSalario').value = u.salario_semanal || 0;
         document.getElementById('colabTdd').value = (u.tdd_bbva != null ? u.tdd_bbva : 2205.30);
         document.getElementById('colaboradorModal').classList.add('active');
@@ -22839,6 +22882,24 @@
         }
 
         if (typeof window.actualizarSelectsProyectoPartidas === 'function') window.actualizarSelectsProyectoPartidas();
+        window.actualizarContactoSolicitanteOC();
+      };
+
+      // Rellena (solo lectura) el teléfono/email del solicitante
+      // seleccionado, tomados de su registro en Colaboradores. Estos
+      // datos son obligatorios para poder guardar la OC (se validan en
+      // recopilarDatosOC); si el usuario no los tiene capturados, los
+      // campos quedan vacíos y el mensaje de la vista avisa que deben
+      // completarse en el catálogo de Colaboradores.
+      window.actualizarContactoSolicitanteOC = function() {
+        var selectSol = document.getElementById('solicitanteOC');
+        var inputTel = document.getElementById('solicitanteTelefonoOC');
+        var inputEmail = document.getElementById('solicitanteEmailOC');
+        if (!inputTel || !inputEmail) return;
+        var usuarioSel = selectSol ? selectSol.value : '';
+        var u = usuarioSel ? (usuariosDB || []).find(function(x) { return x.usuario === usuarioSel; }) : null;
+        inputTel.value = (u && u.telefono) || '';
+        inputEmail.value = (u && u.email) || '';
       };
 
       // ===== OC MULTIPROYECTO =====
@@ -23384,12 +23445,18 @@
         var direccionEntrega = (document.getElementById('direccionEntrega').value || '').trim().toUpperCase();
         var responsable = document.getElementById('solicitanteOC').value;
         var banco = (document.getElementById('banco').value || '').trim().toUpperCase();
+        var solicitanteTelefono = (document.getElementById('solicitanteTelefonoOC') ? document.getElementById('solicitanteTelefonoOC').value.trim() : '');
+        var solicitanteEmail = (document.getElementById('solicitanteEmailOC') ? document.getElementById('solicitanteEmailOC').value.trim() : '');
 
         if (!proveedor) { mostrarError('El campo Proveedor es obligatorio.'); return null; }
         if (!direccion) { mostrarError('El campo Dirección es obligatorio.'); return null; }
         if (!direccionEntrega) { mostrarError('El campo Dirección de entrega es obligatorio.'); return null; }
         if (!responsable) { mostrarError('Selecciona un Solicitante/Responsable.'); return null; }
         if (!banco) { mostrarError('El campo Banco es obligatorio.'); return null; }
+        if (!solicitanteTelefono || !solicitanteEmail) {
+          mostrarError('El solicitante "' + responsable + '" no tiene teléfono y/o email registrado. Complétalo en 🧑‍💻 Colaboradores antes de guardar la OC.');
+          return null;
+        }
 
         var filas = document.querySelectorAll('#cuerpoProductos tr');
         if (filas.length === 0) {
@@ -24005,12 +24072,12 @@
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
         doc.text('ORDEN DE COMPRA', margin + 24, y + 20);
 
-        // Debajo del título se muestra el usuario que elaboró la OC
-        // separado por "|" del departamento (sin abreviar).
+        // Debajo del título se muestra el usuario que elaboró la OC, el
+        // folio y el departamento (sin abreviar), separados por "|".
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + (datos.departamento || '')), margin + 24, y + 35);
+        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + codigoFinalHeader + ' | ' + (datos.departamento || '')), margin + 24, y + 35);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
@@ -24023,12 +24090,20 @@
         y += headerH + 5;
 
         // ---------- 2. INFORMACIÓN GENERAL (dos tarjetas) ----------
-        function dibujarCampoLinea(x, yPos, label, value, maxWidth) {
+        // saltoLinea=true dibuja el valor en la línea SIGUIENTE a la del
+        // label (en vez de a su derecha), usando todo el ancho
+        // disponible — se usa para el folio a incluir en factura.
+        function dibujarCampoLinea(x, yPos, label, value, maxWidth, saltoLinea) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
           doc.text(label, x, yPos);
           doc.setFont('helvetica', 'normal');
+          if (saltoLinea) {
+            var lineasSalto = doc.splitTextToSize(String(value || ''), maxWidth);
+            doc.text(lineasSalto, x, yPos + 11);
+            return 11 + lineasSalto.length * 9;
+          }
           var labelWidth = doc.getTextWidth(label) + 6;
           var lineas = doc.splitTextToSize(String(value || ''), Math.max(maxWidth - labelWidth, 20));
           doc.text(lineas, x + labelWidth, yPos);
@@ -24055,31 +24130,34 @@
           { label: 'Teléfono:', value: proveedorTelefono },
           { label: 'Email:', value: proveedorEmail }
         ];
-        // "FACTURAR A": si la OC es de GRUPO INDUSTRIAL EXTINGUE se
-        // muestran sus datos fiscales fijos; para las demás empresas se
-        // conserva la dirección de entrega/solicitante como referencia.
-        // En ambos casos se indica Uso CFDI, Moneda y el folio a incluir
-        // en la factura del proveedor.
-        var esGIEFacturar = datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1;
+        // "FACTURAR A": cada empresa tiene su propia razón social/RFC/
+        // domicilio en ORG_CATALOGO (ver getEmpresaCatalogoPorNombre); si
+        // la empresa de la OC ya tiene RFC capturado se muestran esos
+        // datos fiscales. Si aún no se ha capturado (rfc vacío), se usa
+        // como respaldo el domicilio de entrega/solicitante. En ambos
+        // casos se indica Uso CFDI, Moneda y el folio a incluir en la
+        // factura del proveedor (en su propia línea).
+        var empresaCatalogoFacturar = getEmpresaCatalogoPorNombre(datos.empresa);
         var camposEntrega;
-        if (esGIEFacturar) {
+        if (empresaCatalogoFacturar && empresaCatalogoFacturar.rfc) {
           camposEntrega = [
-            { label: 'RFC:', value: 'GIE0402262X3' },
-            { label: 'Domicilio:', value: 'Privada del Copalillo #298 Colonia El Copalillo, 36800 Irapuato, Gto.' },
-            { label: 'C.P.:', value: '36800' },
+            { label: 'Razón Social:', value: empresaCatalogoFacturar.razonSocial || datos.empresa },
+            { label: 'RFC:', value: empresaCatalogoFacturar.rfc },
+            { label: 'Domicilio:', value: empresaCatalogoFacturar.domicilio || 'N/A' },
+            { label: 'C.P.:', value: empresaCatalogoFacturar.cp || 'N/A' },
             { label: 'Teléfono:', value: datos.solicitantetelefono || 'N/A' },
             { label: 'Email:', value: datos.solicitanteemail || 'N/A' },
             { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
             { label: 'Moneda:', value: datos.moneda || 'N/A' },
-            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader }
+            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
           ];
         } else {
           camposEntrega = [
-            { label: 'Dirección de Entrega: ', value: datos.direccionentrega },
+            { label: 'Domicilio: ', value: datos.direccionentrega },
             { label: 'Solicitante:', value: datos.solicitante || 'No especificado' },
             { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
             { label: 'Moneda:', value: datos.moneda || 'N/A' },
-            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader }
+            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
           ];
         }
 
@@ -24090,6 +24168,11 @@
             doc.setFontSize(9);
             var labelWidth = doc.getTextWidth(c.label) + 6;
             doc.setFont('helvetica', 'normal');
+            if (c.saltoLinea) {
+              var lineasSalto = doc.splitTextToSize(String(c.value || ''), maxWidth);
+              total += 11 + lineasSalto.length * 9 + 4;
+              return;
+            }
             var lineas = doc.splitTextToSize(String(c.value || ''), Math.max(maxWidth - labelWidth, 20));
             total += lineas.length * 9 + 4;
           });
@@ -24120,7 +24203,7 @@
 
           var yCampo = y + cardHeaderH + 12;
           campos.forEach(function(c) {
-            var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard);
+            var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard, c.saltoLinea);
             yCampo += alto + 4;
           });
         }
@@ -24269,7 +24352,7 @@
 
         var yCampoCondiciones = y + bottomHeaderH + 12 + lineasCondiciones.length * 9 + 8;
         camposCondicionesExtra.forEach(function(c) {
-          var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28);
+          var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28, c.saltoLinea);
           yCampoCondiciones += altoCampo + 4;
         });
 
@@ -24313,7 +24396,7 @@
 
         y += bottomH + 8;
 
-        // ---------- 4b. FILA 2: DATOS BANCARIOS PROVEEDOR | CONDICIONES DE ENTREGA ----------
+        // ---------- 4b. FILA 2: DATOS BANCARIOS PROVEEDOR | INSTRUCCIONES DE ENTREGA ----------
         function dibujarCajaSimple(x, yPos, w, h, titulo, campos) {
           doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
           doc.setLineWidth(0.75);
@@ -24330,7 +24413,7 @@
           doc.text(titulo, x + 14, yPos + bottomHeaderH / 2 + 4);
           var yCampo = yPos + bottomHeaderH + 12;
           campos.forEach(function(c) {
-            var alto = dibujarCampoLinea(x + 14, yCampo, c.label, c.value, w - 28);
+            var alto = dibujarCampoLinea(x + 14, yCampo, c.label, c.value, w - 28, c.saltoLinea);
             yCampo += alto + 4;
           });
         }
@@ -24340,7 +24423,7 @@
         var bottomH2 = Math.max(bottomHeaderH + 12 + altoBancarios + bottomBodyPadding, bottomHeaderH + 12 + altoEntregaCondiciones + bottomBodyPadding, 70);
 
         dibujarCajaSimple(bottomX1, y, bottomW, bottomH2, 'DATOS BANCARIOS PROVEEDOR', camposBancarios);
-        dibujarCajaSimple(bottomX2, y, bottomW, bottomH2, 'CONDICIONES DE ENTREGA', camposEntregaCondiciones);
+        dibujarCajaSimple(bottomX2, y, bottomW, bottomH2, 'INSTRUCCIONES DE ENTREGA', camposEntregaCondiciones);
 
         y += bottomH2 + 9 + 11;
 
