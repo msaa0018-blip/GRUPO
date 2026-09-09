@@ -3601,6 +3601,28 @@
         <div id="msgClientes"></div>
       </div>
 
+      <!-- ===== MÓDULO EMPRESAS: datos fiscales (exclusivo Administrador) ===== -->
+      <div id="panelEmpresas" class="card hidden">
+        <h2>🏛️ Empresas — Datos Fiscales</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Razón social, RFC, domicilio y C.P. de cada empresa. Estos datos se muestran en el apartado "FACTURAR A" del PDF de toda Orden de Compra que se genere para esa empresa.</p>
+        <div class="table-wrapper">
+          <table id="tablaEmpresasFiscales">
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Razón Social</th>
+                <th>RFC</th>
+                <th>Domicilio</th>
+                <th>C.P.</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoEmpresasFiscales"></tbody>
+          </table>
+        </div>
+        <div id="msgEmpresasFiscales"></div>
+      </div>
+
       <!-- ===== MÓDULO COLABORADORES (exclusivo Administrador) ===== -->
       <!-- Catálogo administrativo de usuarios/colaboradores: empresa,
            departamento, rol y salario semanal. Alimenta directamente la
@@ -6503,6 +6525,42 @@
         }) || null;
       }
 
+      // ============================================================
+      // DATOS FISCALES DE EMPRESAS (registrados por el Administrador en
+      // el módulo "🏛️ Empresas", tabla "empresas_fiscales") — se
+      // aplican sobre ORG_CATALOGO en memoria para que
+      // getEmpresaCatalogoPorNombre() (usada en "FACTURAR A" del PDF de
+      // OC) siempre refleje lo último capturado, sin editar código.
+      // ============================================================
+      var empresasFiscalesCache = [];
+
+      function aplicarDatosFiscalesEmpresas() {
+        ORG_CATALOGO.empresas.forEach(function(emp) {
+          var registro = empresasFiscalesCache.find(function(r) {
+            return coincideOrg(r.empresa, emp.nombre, emp.abreviatura);
+          });
+          if (registro) {
+            emp.razonSocial = registro.razon_social || emp.nombre;
+            emp.rfc = registro.rfc || '';
+            emp.domicilio = registro.domicilio || '';
+            emp.cp = registro.cp || '';
+          }
+        });
+      }
+
+      async function cargarEmpresasFiscalesDatos() {
+        try {
+          var { data, error } = await supabase.from('empresas_fiscales').select('*');
+          if (error) throw error;
+          empresasFiscalesCache = data || [];
+          aplicarDatosFiscalesEmpresas();
+          return true;
+        } catch (e) {
+          console.error('❌ Error cargando datos fiscales de empresas:', e);
+          return false;
+        }
+      }
+
       function getDepartamentosPorEmpresa(nombreEmpresa) {
         var empresa = getEmpresaCatalogoPorNombre(nombreEmpresa);
         if (!empresa) return [];
@@ -7678,6 +7736,7 @@
       async function cargarDatos() {
         try {
           await cargarUsuarios();
+          await cargarEmpresasFiscalesDatos();
 
           var { data: pData, error: e1 } = await supabase.from('proyectos').select('*');
           if (e1) throw e1;
@@ -8007,6 +8066,7 @@
           if (actual && actual.rol === 'Administrador') {
             modulos.push({ id: 'clientes', icono: '🧑\u200d💼', nombre: 'Clientes' });
             modulos.push({ id: 'vehiculos', icono: '🚗', nombre: 'Vehículos' });
+            modulos.push({ id: 'empresas', icono: '🏛️', nombre: 'Empresas' });
           }
         }
 
@@ -8073,7 +8133,7 @@
               }, 0);
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
-            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos') {
+            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos' || modulo === 'empresas') {
               window.mostrarModulo(modulo);
             } else if (modulo === 'spm') {
               window.mostrarModulo(modulo);
@@ -8165,7 +8225,7 @@
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
         } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'ingresos') {
           window.mostrarMenuMaestro('ingresos', 'INGRESOS');
-        } else if (moduloActual === 'alta_registros' || moduloActual === 'proveedores' || moduloActual === 'productos' || moduloActual === 'clientes') {
+        } else if (moduloActual === 'alta_registros' || moduloActual === 'proveedores' || moduloActual === 'productos' || moduloActual === 'clientes' || moduloActual === 'vehiculos' || moduloActual === 'empresas') {
           window.mostrarMenuMaestro('alta_registros', 'ALTA DE REGISTROS');
         } else {
           window.mostrarMenuMaestroPrincipal();
@@ -11445,6 +11505,58 @@
       // ===== MÓDULO CLIENTES (exclusivo Administrador) =====
       var clientesCache = [];
 
+      // ===== EMPRESAS: datos fiscales para "FACTURAR A" en el PDF de OC =====
+      window.cargarEmpresasFiscales = async function() {
+        var cuerpo = document.getElementById('cuerpoEmpresasFiscales');
+        if (!cuerpo) return;
+        await cargarEmpresasFiscalesDatos();
+        cuerpo.innerHTML = '';
+        getEmpresasCatalogo().forEach(function(emp) {
+          var registro = empresasFiscalesCache.find(function(r) {
+            return coincideOrg(r.empresa, emp.nombre, emp.abreviatura);
+          });
+          var fila = document.createElement('tr');
+          fila.innerHTML =
+            '<td>' + escapeHTML(emp.nombre) + '</td>' +
+            '<td><input class="ef-razonsocial" value="' + escapeHTML((registro && registro.razon_social) || emp.razonSocial || emp.nombre || '') + '" placeholder="Razón social" style="min-width:180px;"></td>' +
+            '<td><input class="ef-rfc" value="' + escapeHTML((registro && registro.rfc) || emp.rfc || '') + '" placeholder="RFC" style="text-transform:uppercase;width:110px;"></td>' +
+            '<td><input class="ef-domicilio" value="' + escapeHTML((registro && registro.domicilio) || emp.domicilio || '') + '" placeholder="Domicilio fiscal" style="min-width:220px;"></td>' +
+            '<td><input class="ef-cp" value="' + escapeHTML((registro && registro.cp) || emp.cp || '') + '" placeholder="C.P." style="width:80px;"></td>' +
+            '<td><button class="success" onclick="window.guardarEmpresaFiscal(this, \'' + escapeHTML(emp.nombre).replace(/'/g, "\\'") + '\')">💾 Guardar</button></td>';
+          cuerpo.appendChild(fila);
+        });
+      };
+
+      window.guardarEmpresaFiscal = async function(boton, nombreEmpresa) {
+        if (!(actual && actual.rol === 'Administrador')) return alert('⚠️ Solo ADMIN puede editar datos de empresas.');
+        var fila = boton.closest ? boton.closest('tr') : null;
+        if (!fila) return;
+        var msg = document.getElementById('msgEmpresasFiscales');
+        var razonSocial = (fila.querySelector('.ef-razonsocial').value || '').trim();
+        var rfc = (fila.querySelector('.ef-rfc').value || '').trim().toUpperCase();
+        var domicilio = (fila.querySelector('.ef-domicilio').value || '').trim();
+        var cp = (fila.querySelector('.ef-cp').value || '').trim();
+        try {
+          var { error } = await supabase.from('empresas_fiscales').upsert({
+            empresa: nombreEmpresa,
+            razon_social: razonSocial || null,
+            rfc: rfc || null,
+            domicilio: domicilio || null,
+            cp: cp || null
+          }, { onConflict: 'empresa' });
+          if (error) throw error;
+          await cargarEmpresasFiscalesDatos();
+          if (msg) {
+            msg.innerHTML = '<div class="success-msg">✅ Datos fiscales de ' + escapeHTML(nombreEmpresa) + ' guardados.</div>';
+            setTimeout(function() { if (msg) msg.innerHTML = ''; }, 3000);
+          }
+        } catch (e) {
+          console.error('Error guardando datos fiscales de empresa:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+          else alert('❌ No se pudo guardar: ' + e.message);
+        }
+      };
+
       window.cargarClientes = async function() {
         try {
           var { data, error } = await supabase.from('clientes').select('*').order('nombre');
@@ -13550,6 +13662,7 @@
         var panelVSC = document.getElementById('panelVSC');
         var panelDocCXP = document.getElementById('panelDocCXP');
         var panelClientes = document.getElementById('panelClientes');
+        var panelEmpresas = document.getElementById('panelEmpresas');
         var panelColaboradores = document.getElementById('panelColaboradores');
         var panelInventario = document.getElementById('panelInventario');
         var panelBuzon = document.getElementById('panelBuzon');
@@ -13560,6 +13673,7 @@
         if (panelVSC) panelVSC.classList.add('hidden');
         if (panelDocCXP) panelDocCXP.classList.add('hidden');
         if (panelClientes) panelClientes.classList.add('hidden');
+        if (panelEmpresas) panelEmpresas.classList.add('hidden');
         if (panelColaboradores) panelColaboradores.classList.add('hidden');
         if (panelInventario) panelInventario.classList.add('hidden');
         if (panelBuzon) panelBuzon.classList.add('hidden');
@@ -13743,6 +13857,16 @@
             window.cargarVscCatalogos();
           } else {
             alert('⚠️ No tienes permiso para acceder a Vehículos.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'empresas') {
+          if (actual && actual.rol === 'Administrador') {
+            var panelEmpresas = document.getElementById('panelEmpresas');
+            if (panelEmpresas) panelEmpresas.classList.remove('hidden');
+            window.cargarEmpresasFiscales();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a Empresas.');
             window.mostrarMenuInterno();
             return;
           }
@@ -24133,35 +24257,23 @@
           { label: 'Email:', value: proveedorEmail }
         ];
         // "FACTURAR A": cada empresa tiene su propia razón social/RFC/
-        // domicilio en ORG_CATALOGO (ver getEmpresaCatalogoPorNombre); si
-        // la empresa de la OC ya tiene RFC capturado se muestran esos
-        // datos fiscales. Si aún no se ha capturado (rfc vacío), se usa
-        // como respaldo el domicilio de entrega/solicitante. En ambos
-        // casos se indica Uso CFDI, Moneda y el folio a incluir en la
-        // factura del proveedor (en su propia línea).
-        var empresaCatalogoFacturar = getEmpresaCatalogoPorNombre(datos.empresa);
-        var camposEntrega;
-        if (empresaCatalogoFacturar && empresaCatalogoFacturar.rfc) {
-          camposEntrega = [
-            { label: 'Razón Social:', value: empresaCatalogoFacturar.razonSocial || datos.empresa },
-            { label: 'RFC:', value: empresaCatalogoFacturar.rfc },
-            { label: 'Domicilio:', value: empresaCatalogoFacturar.domicilio || 'N/A' },
-            { label: 'C.P.:', value: empresaCatalogoFacturar.cp || 'N/A' },
-            { label: 'Teléfono:', value: datos.solicitantetelefono || 'N/A' },
-            { label: 'Email:', value: datos.solicitanteemail || 'N/A' },
-            { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
-            { label: 'Moneda:', value: datos.moneda || 'N/A' },
-            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
-          ];
-        } else {
-          camposEntrega = [
-            { label: 'Domicilio: ', value: datos.direccionentrega },
-            { label: 'Solicitante:', value: datos.solicitante || 'No especificado' },
-            { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
-            { label: 'Moneda:', value: datos.moneda || 'N/A' },
-            { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
-          ];
-        }
+        // domicilio/C.P. registrados en el módulo "🏛️ Empresas" (tabla
+        // "empresas_fiscales", ver getEmpresaCatalogoPorNombre/
+        // aplicarDatosFiscalesEmpresas) — se muestran siempre, sin
+        // depender de si es GRUPO INDUSTRIAL EXTINGUE u otra empresa.
+        var empresaCatalogoFacturar = getEmpresaCatalogoPorNombre(datos.empresa) || {};
+        var camposEntrega = [
+          { label: 'Razón Social:', value: empresaCatalogoFacturar.razonSocial || datos.empresa || 'N/A' },
+          { label: 'RFC:', value: empresaCatalogoFacturar.rfc || 'N/A' },
+          { label: 'Domicilio:', value: empresaCatalogoFacturar.domicilio || 'N/A' },
+          { label: 'C.P.:', value: empresaCatalogoFacturar.cp || 'N/A' },
+          { label: 'Teléfono:', value: datos.solicitantetelefono || 'N/A' },
+          { label: 'Email:', value: datos.solicitanteemail || 'N/A' },
+          { label: 'Método de pago:', value: datos.metodopago || 'N/A' },
+          { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
+          { label: 'Moneda:', value: datos.moneda || 'N/A' },
+          { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
+        ];
 
         function alturaCampos(campos, maxWidth) {
           var total = 0;
@@ -25149,4 +25261,3 @@
   </script>
 </body>
 </html>
-            
