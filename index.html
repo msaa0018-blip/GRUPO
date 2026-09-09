@@ -5240,7 +5240,7 @@
         <div class="grupo-formulario">
           <div class="flex">
             <label style="font-weight:500;flex:0.3;min-width:100px;">Método de pago:</label>
-            <select id="metodoPagoOC" style="flex:1.5;">
+            <select id="metodoPagoOC" style="flex:1.5;min-width:280px;">
               <option value="">Selecciona un método</option>
               <option value="01 Efectivo">01 - Efectivo</option>
               <option value="02 Cheque nominativo">02 - Cheque nominativo</option>
@@ -5279,7 +5279,7 @@
               <option value="Redpack">Redpack</option>
               <option value="99minutos">99minutos</option>
               <option value="UPS">UPS</option>
-              <option value="Tres Guerras">Tres Guerras</option>
+              <option value="3 Guerras">3 Guerras</option>
               <option value="Grupo Castores">Grupo Castores</option>
               <option value="J&T Express">J&T Express</option>
             </select>
@@ -19725,7 +19725,8 @@
         var campos = {
           rfc: match.rfc,
           direccion: match.direccion,
-          cp: match.cp,
+          // C.P. ya no se autocompleta: el campo debe quedar solo con
+          // su placeholder ("Código Postal"), sin sugerir un dato.
           banco: esUSD ? match.banco_usd : match.banco,
           cuenta: esUSD ? match.cuenta_bancaria_usd : match.cuenta_bancaria,
           clabe: esUSD ? match.clave_usd : match.clave,
@@ -24197,14 +24198,14 @@
         doc.text('ORDEN DE COMPRA', margin + 24, y + 20);
 
         // Debajo de la leyenda "ORDEN DE COMPRA": primero el folio de la
-        // OC, y debajo de éste, el usuario que la elaboró junto con la
-        // empresa, separados por "|".
+        // OC, y debajo de éste, el usuario que la elaboró junto con el
+        // teléfono y el email del solicitante, separados por "|".
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         doc.text('FOLIO: ' + codigoFinalHeader, margin + 24, y + 35);
         doc.setFontSize(9);
-        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + (datos.empresa || '')), margin + 24, y + 47);
+        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + (datos.solicitantetelefono || 'N/A') + ' | ' + (datos.solicitanteemail || 'N/A')), margin + 24, y + 47);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
@@ -24264,14 +24265,12 @@
         var empresaCatalogoFacturar = getEmpresaCatalogoPorNombre(datos.empresa) || {};
         var camposEntrega = [
           { label: 'Razón Social:', value: empresaCatalogoFacturar.razonSocial || datos.empresa || 'N/A' },
-          { label: 'RFC:', value: empresaCatalogoFacturar.rfc || 'N/A' },
+          { label: 'RFC:', value: (empresaCatalogoFacturar.rfc || 'N/A') + '    C.P.: ' + (empresaCatalogoFacturar.cp || 'N/A') },
           { label: 'Domicilio:', value: empresaCatalogoFacturar.domicilio || 'N/A' },
-          { label: 'C.P.:', value: empresaCatalogoFacturar.cp || 'N/A' },
           { label: 'Teléfono:', value: datos.solicitantetelefono || 'N/A' },
           { label: 'Email:', value: datos.solicitanteemail || 'N/A' },
           { label: 'Método de pago:', value: datos.metodopago || 'N/A' },
-          { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A' },
-          { label: 'Moneda:', value: datos.moneda || 'N/A' },
+          { label: 'Uso CFDI:', value: (datos.usocfdi || 'N/A') + '    Moneda: ' + (datos.moneda || 'N/A') },
           { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
         ];
 
@@ -24396,7 +24395,7 @@
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
         var camposCondicionesExtra = [
-          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A' },
+          { label: 'Fecha de Pago:', value: (datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A') + '    Moneda: ' + (datos.moneda || 'N/A') },
           { label: 'Método de pago:', value: datos.metodopago || 'N/A' }
         ];
         if (datos.moneda === 'USD') {
@@ -24426,7 +24425,8 @@
         var camposBancarios = [
           { label: 'Banco:', value: datos.banco || 'No especificado' },
           { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Cuenta:', value: datos.cuenta || 'N/A' }
+          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
+          { label: 'Notas:', value: datos.motivo || 'Sin notas.', saltoLinea: true }
         ];
 
         // Condiciones de entrega: lugar, responsable, sucursal y, si
@@ -24617,9 +24617,6 @@
         y += 70;
 
         var pieY = doc.internal.pageSize.height - (doc.internal.pageSize.height / 8) - 20;
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(margin, pieY, pageWidth - margin, pieY);
 
         var textoNotasPie = datos.motivo ? String(datos.motivo) : 'Sin notas.';
         var lineasNotasPie = doc.splitTextToSize(textoNotasPie, pageWidth - 2 * margin - 100);
