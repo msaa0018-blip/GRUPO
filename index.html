@@ -24183,6 +24183,15 @@
         // el pie de página más abajo; no se altera esa parte).
         var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
 
+        // El método de pago "03" se muestra abreviado en el PDF (sin
+        // "de fondos"), a pedido; el valor guardado en la OC conserva
+        // el texto completo del catálogo SAT.
+        function formatoMetodoPagoPDF(valor) {
+          if (!valor) return 'N/A';
+          if (String(valor).indexOf('03') === 0) return '03 Transferencia electrónica';
+          return valor;
+        }
+
         // ---------- 1. ENCABEZADO DE LA ORDEN ----------
         var headerH = 58;
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
@@ -24198,14 +24207,15 @@
         doc.text('ORDEN DE COMPRA', margin + 24, y + 20);
 
         // Debajo de la leyenda "ORDEN DE COMPRA": primero el folio de la
-        // OC, y debajo de éste, el usuario que la elaboró junto con el
-        // teléfono y el email del solicitante, separados por "|".
+        // OC, y debajo de éste, las iniciales del SOLICITANTE (no del
+        // usuario que elaboró/creó la OC) junto con su teléfono y
+        // email, separados por "|".
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         doc.text('FOLIO: ' + codigoFinalHeader, margin + 24, y + 35);
         doc.setFontSize(9);
-        doc.text(((datos.elaborador || 'Desconocido') + ' | ' + (datos.solicitantetelefono || 'N/A') + ' | ' + (datos.solicitanteemail || 'N/A')), margin + 24, y + 47);
+        doc.text(((datos.solicitante || 'Desconocido') + ' | ' + (datos.solicitantetelefono || 'N/A') + ' | ' + (datos.solicitanteemail || 'N/A')), margin + 24, y + 47);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
@@ -24220,7 +24230,11 @@
         // saltoLinea=true dibuja el valor en la línea SIGUIENTE a la del
         // label (en vez de a su derecha), usando todo el ancho
         // disponible — se usa para el folio a incluir en factura.
-        function dibujarCampoLinea(x, yPos, label, value, maxWidth, saltoLinea) {
+        // sufijo={label,value} agrega, al final de la misma línea (solo
+        // cuando el valor no se partió en varias líneas), otro par
+        // label/valor con el label en NEGRITAS — se usa para "Moneda"
+        // dentro de "Uso CFDI" en FACTURAR A.
+        function dibujarCampoLinea(x, yPos, label, value, maxWidth, saltoLinea, sufijo) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
@@ -24234,6 +24248,14 @@
           var labelWidth = doc.getTextWidth(label) + 6;
           var lineas = doc.splitTextToSize(String(value || ''), Math.max(maxWidth - labelWidth, 20));
           doc.text(lineas, x + labelWidth, yPos);
+          if (sufijo && lineas.length === 1) {
+            var sufijoX = x + labelWidth + doc.getTextWidth(lineas[0] || '') + 6;
+            doc.setFont('helvetica', 'bold');
+            doc.text(sufijo.label, sufijoX, yPos);
+            var sufijoLabelWidth = doc.getTextWidth(sufijo.label) + 4;
+            doc.setFont('helvetica', 'normal');
+            doc.text(String(sufijo.value || ''), sufijoX + sufijoLabelWidth, yPos);
+          }
           return lineas.length * 9;
         }
 
@@ -24267,10 +24289,8 @@
           { label: 'Razón Social:', value: empresaCatalogoFacturar.razonSocial || datos.empresa || 'N/A' },
           { label: 'RFC:', value: (empresaCatalogoFacturar.rfc || 'N/A') + '    C.P.: ' + (empresaCatalogoFacturar.cp || 'N/A') },
           { label: 'Domicilio:', value: empresaCatalogoFacturar.domicilio || 'N/A' },
-          { label: 'Teléfono:', value: datos.solicitantetelefono || 'N/A' },
-          { label: 'Email:', value: datos.solicitanteemail || 'N/A' },
-          { label: 'Método de pago:', value: datos.metodopago || 'N/A' },
-          { label: 'Uso CFDI:', value: (datos.usocfdi || 'N/A') + '    Moneda: ' + (datos.moneda || 'N/A') },
+          { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
+          { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
           { label: 'Incluir en su factura el siguiente folio:', value: codigoFinalHeader, saltoLinea: true }
         ];
 
@@ -24316,7 +24336,7 @@
 
           var yCampo = y + cardHeaderH + 12;
           campos.forEach(function(c) {
-            var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard, c.saltoLinea);
+            var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard, c.saltoLinea, c.sufijo);
             yCampo += alto + 4;
           });
         }
@@ -24396,7 +24416,8 @@
 
         var camposCondicionesExtra = [
           { label: 'Fecha de Pago:', value: (datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A') + '    Moneda: ' + (datos.moneda || 'N/A') },
-          { label: 'Método de pago:', value: datos.metodopago || 'N/A' }
+          { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
+          { label: 'Notas:', value: datos.motivo || 'Sin notas.', saltoLinea: true }
         ];
         if (datos.moneda === 'USD') {
           // Tres casos posibles para una OC en USD:
@@ -24425,8 +24446,7 @@
         var camposBancarios = [
           { label: 'Banco:', value: datos.banco || 'No especificado' },
           { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Cuenta:', value: datos.cuenta || 'N/A' },
-          { label: 'Notas:', value: datos.motivo || 'Sin notas.', saltoLinea: true }
+          { label: 'Cuenta:', value: datos.cuenta || 'N/A' }
         ];
 
         // Condiciones de entrega: lugar, responsable, sucursal y, si
@@ -24616,18 +24636,9 @@
         dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
         y += 70;
 
+        // Las notas ya no se repiten aquí: solo se muestran debajo de
+        // "Método de pago" en la tarjeta "CONDICIONES COMERCIALES".
         var pieY = doc.internal.pageSize.height - (doc.internal.pageSize.height / 8) - 20;
-
-        var textoNotasPie = datos.motivo ? String(datos.motivo) : 'Sin notas.';
-        var lineasNotasPie = doc.splitTextToSize(textoNotasPie, pageWidth - 2 * margin - 100);
-        doc.setFontSize(8);
-        doc.setTextColor(11, 26, 51);
-        doc.setFont('helvetica', 'bold');
-        doc.text('NOTAS:', pageWidth / 2, pieY + 10, { align: 'center' });
-        doc.setFontSize(7);
-        doc.setTextColor(80, 80, 80);
-        doc.setFont('helvetica', 'normal');
-        doc.text(lineasNotasPie, pageWidth / 2, pieY + 20, { align: 'center' });
 
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
