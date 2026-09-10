@@ -1227,7 +1227,7 @@
     color: var(--modal-text);
   }
 
-  #pdfPreviewModal, #facturaVerModal, #facturaSeleccionModal {
+  #pdfPreviewModal, #facturaVerModal, #facturaSeleccionModal, #colaboradoresPreviewModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1248,8 +1248,8 @@
      z-index: 2000), ya que "Ver Factura" se abre desde dentro de ella. */
   #facturaVerModal { z-index: 2200; }
   #facturaSeleccionModal { z-index: 2300; }
-  #pdfPreviewModal.active, #facturaVerModal.active, #facturaSeleccionModal.active { display: flex }
-  #pdfPreviewModal .modal-content, #facturaVerModal .modal-content, #facturaSeleccionModal .modal-content {
+  #pdfPreviewModal.active, #facturaVerModal.active, #facturaSeleccionModal.active, #colaboradoresPreviewModal.active { display: flex }
+  #pdfPreviewModal .modal-content, #facturaVerModal .modal-content, #facturaSeleccionModal .modal-content, #colaboradoresPreviewModal .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
     border: 1px solid var(--modal-border);
@@ -1263,7 +1263,7 @@
     flex-direction: column;
     box-sizing: border-box;
   }
-  #pdfPreviewModal .modal-header, #facturaVerModal .modal-header, #facturaSeleccionModal .modal-header {
+  #pdfPreviewModal .modal-header, #facturaVerModal .modal-header, #facturaSeleccionModal .modal-header, #colaboradoresPreviewModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1273,15 +1273,22 @@
     border-bottom: 2px solid var(--modal-accent);
     padding-bottom: 12px;
   }
-  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #pdfPreviewModal .modal-body, #facturaVerModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
-  #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe {
+  #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3, #colaboradoresPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
+  #pdfPreviewModal .modal-body, #facturaVerModal .modal-body, #colaboradoresPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
+  #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe, #colaboradoresPreviewModal .modal-body iframe {
     width: 100%;
     height: 400px;
     border: 1px solid var(--gray-300);
     border-radius: 8px
   }
-  #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group, #facturaSeleccionModal .modal-header .pdfPreview-btn-group {
+  /* En computadora, la previsualización de la OC duplica al doble su
+     longitud vertical (el modal en sí conserva su max-height: 95vh y
+     hace scroll interno con .modal-body { overflow: auto }, así que
+     nunca se sale de la pantalla). */
+  @media (min-width: 900px) {
+    #pdfPreviewModal .modal-body iframe { height: 200vh; }
+  }
+  #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group, #facturaSeleccionModal .modal-header .pdfPreview-btn-group, #colaboradoresPreviewModal .modal-header .pdfPreview-btn-group {
     display: flex;
     gap: 10px;
     max-width: 50%;
@@ -3630,8 +3637,9 @@
       <div id="panelColaboradores" class="card hidden">
         <h2>🧑‍💻 Colaboradores</h2>
         <p class="text-muted" style="margin-bottom:12px;">Catálogo de usuarios: empresa, departamento, rol y salario semanal. Estos registros son los que se pueden incluir como empleados en el módulo SPM (PMSYS). Módulo exclusivo de ADMIN.</p>
-        <div style="margin-bottom:12px;">
-          <button class="success" onclick="window.abrirAgregarColaborador()">➕ Agregar Colaborador</button>
+        <div style="margin-bottom:12px;display:flex;gap:10px;">
+          <button class="success" style="width:50%;" onclick="window.abrirAgregarColaborador()">➕ Agregar Colaborador</button>
+          <button style="width:50%;" onclick="window.imprimirListaColaboradores()">🖨️ Imprimir Lista</button>
         </div>
         <div class="table-wrapper">
           <table id="tablaColaboradores">
@@ -5857,6 +5865,18 @@
     </div>
   </div>
 
+  <div id="colaboradoresPreviewModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🧑‍💻 Lista de Colaboradores</h3>
+        <div class="pdfPreview-btn-group">
+          <button onclick="window.cerrarPreviewColaboradores()">✕</button>
+        </div>
+      </div>
+      <div class="modal-body"><iframe id="colaboradoresPreviewFrame"></iframe></div>
+    </div>
+  </div>
+
   <div id="visualizarModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3><button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button></div>
@@ -6945,6 +6965,11 @@
       // central (los 6/8 restantes).
       async function dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formato) {
         var config = FORMATOS_MEMBRETE_OC[formato] || FORMATOS_MEMBRETE_OC['1'];
+        // "instrucciones" registra cada imagen dibujada (dataUrl/tipo/x/y/w/h)
+        // para poder repetir el membrete de forma SÍNCRONA en páginas nuevas
+        // que se agreguen más adelante (p.ej. cuando la OC ocupa más de una
+        // hoja) sin tener que volver a await-ear nada.
+        var instrucciones = [];
 
         // Formato 7: caso especial. El membrete no ocupa el ancho
         // completo de la hoja como los demás formatos, sino que se
@@ -6972,6 +6997,7 @@
               });
               var altoMembrete7 = propsImg7 ? (anchoMembrete7 * (propsImg7.h / propsImg7.w)) : (pageHeight / 8);
               doc.addImage(dataSup7, tipoSup7, margenLateral7, margenSuperior7, anchoMembrete7, altoMembrete7);
+              instrucciones.push({ dataUrl: dataSup7, tipo: tipoSup7, x: margenLateral7, y: margenSuperior7, w: anchoMembrete7, h: altoMembrete7 });
               yFinMembrete7 = margenSuperior7 + altoMembrete7;
             } else {
               console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen del membrete (formato 7)');
@@ -6980,7 +7006,7 @@
             console.warn('No se pudo cargar la imagen del membrete (formato 7):', e.stack || e);
           }
 
-          return { yInicio: yFinMembrete7 + 12, yFin: pageHeight };
+          return { yInicio: yFinMembrete7 + 12, yFin: pageHeight, instrucciones: instrucciones };
         }
 
         var alturaFranja = pageHeight / 8;
@@ -6998,8 +7024,10 @@
               var altoSup8 = alturaFranja * (7 / 8);
               var xSup8 = (pageWidth - anchoSup8) / 2;
               doc.addImage(dataSup, tipoSup, xSup8, 0, anchoSup8, altoSup8);
+              instrucciones.push({ dataUrl: dataSup, tipo: tipoSup, x: xSup8, y: 0, w: anchoSup8, h: altoSup8 });
             } else {
               doc.addImage(dataSup, tipoSup, 0, 0, pageWidth, alturaFranja);
+              instrucciones.push({ dataUrl: dataSup, tipo: tipoSup, x: 0, y: 0, w: pageWidth, h: alturaFranja });
             }
           } else {
             console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen superior (formato ' + formato + ')');
@@ -7015,6 +7043,7 @@
               var tipoInf = dataInf.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
               console.log('🖼️ Membrete inferior: tipo=' + tipoInf + ', tamaño=' + dataInf.length + ' caracteres');
               doc.addImage(dataInf, tipoInf, 0, pageHeight - alturaFranja, pageWidth, alturaFranja);
+              instrucciones.push({ dataUrl: dataInf, tipo: tipoInf, x: 0, y: pageHeight - alturaFranja, w: pageWidth, h: alturaFranja });
             } else {
               console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen inferior (formato ' + formato + ')');
             }
@@ -7023,7 +7052,7 @@
           console.warn('No se pudo cargar la imagen inferior del membrete:', e.stack || e);
         }
 
-        return { yInicio: alturaFranja, yFin: pageHeight - alturaFranja };
+        return { yInicio: alturaFranja, yFin: pageHeight - alturaFranja, instrucciones: instrucciones };
       }
 
       // Malla/red sutil de baja opacidad para el fondo central del PDF.
@@ -11760,6 +11789,68 @@
           console.error('Error cargando colaboradores:', e);
           cuerpo.innerHTML = '<tr><td colspan="9">❌ Error al cargar colaboradores: ' + escapeHTML(e.message) + '</td></tr>';
         }
+      };
+
+      // Genera un PDF con el listado completo de colaboradores (usa el
+      // mismo catálogo ya cargado en pantalla, sin nueva consulta a
+      // Supabase) y lo muestra en una ventana modal, con el mismo patrón
+      // de blob + iframe que ya usa la previsualización de la OC.
+      window.imprimirListaColaboradores = function() {
+        if (!usuarioPuedeGestionarColaboradores()) return alert('⚠️ Solo ADMIN puede imprimir la lista de colaboradores.');
+        if (!colaboradoresCache.length) return alert('No hay colaboradores registrados para imprimir.');
+        try {
+          var { jsPDF } = window.jspdf;
+          var doc = new jsPDF('l', 'pt', 'a4');
+          var pageWidth = doc.internal.pageSize.getWidth();
+          var margin = 30;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.setTextColor(23, 63, 115);
+          doc.text('Listado de Colaboradores', margin, 30);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Generado: ' + new Date().toLocaleString(), margin, 44);
+
+          var headers = ['Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA'];
+          var rows = colaboradoresCache.map(function(u) {
+            var permiso = (u.permisos && u.permisos[0]) || {};
+            return [
+              u.usuario || '',
+              u.rol || '',
+              getAbreviaturaEmpresa(permiso.empresa) || permiso.empresa || '—',
+              mostrarDepto(getAbreviaturaDepartamento(permiso.depto, permiso.empresa) || permiso.depto) || '—',
+              u.telefono || '—',
+              u.email || '—',
+              formatoMoneda(u.salario_semanal || 0, 'MXN'),
+              formatoMoneda(u.tdd_bbva != null ? u.tdd_bbva : TDD_BBVA_DEFAULT, 'MXN')
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: 56,
+            margin: { left: margin, right: margin },
+            theme: 'striped',
+            styles: { fontSize: 8, cellPadding: 5, font: 'helvetica' },
+            headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
+          });
+
+          var pdfBlob = doc.output('blob');
+          var pdfUrl = URL.createObjectURL(pdfBlob);
+          var frame = document.getElementById('colaboradoresPreviewFrame');
+          frame.src = pdfUrl;
+          document.getElementById('colaboradoresPreviewModal').classList.add('active');
+        } catch (e) {
+          console.error('❌ Error generando el PDF de colaboradores:', e.stack || e);
+          alert('No se pudo generar el PDF de colaboradores.\n\nDetalle: ' + (e.message || e));
+        }
+      };
+
+      window.cerrarPreviewColaboradores = function() {
+        document.getElementById('colaboradoresPreviewModal').classList.remove('active');
       };
 
       window.actualizarDeptosColaborador = function() {
@@ -24085,6 +24176,13 @@
         var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formatoElegido);
         var y = franjas.yInicio + 6.25;
 
+        // Se guarda cada elemento decorativo dibujado en la página 1 (franjas
+        // del membrete, fondo de GRUPO INDUSTRIAL EXTINGUE y logo) para poder
+        // repetirlo de forma SÍNCRONA en cualquier página nueva que se agregue
+        // más adelante (OC de más de una hoja) — ver dibujarDecoracionPaginaOC.
+        var instruccionFondoExtingue = null;
+        var instruccionLogo = null;
+
         // Imagen de fondo exclusiva de las OC de GRUPO INDUSTRIAL EXTINGUE.
         // Se dibuja primero (como fondo) justo a partir de donde termina
         // el membrete superior, para que el resto del contenido se
@@ -24102,6 +24200,7 @@
                 console.warn('No se pudo aplicar opacidad al fondo (GState no disponible):', eOpacidad);
               }
               doc.addImage(dataFondoExtingue, tipoFondoExtingue, 0, franjas.yInicio, pageWidth, franjas.yFin - franjas.yInicio);
+              instruccionFondoExtingue = { dataUrl: dataFondoExtingue, tipo: tipoFondoExtingue, x: 0, y: franjas.yInicio, w: pageWidth, h: franjas.yFin - franjas.yInicio };
               if (gStateFondoExtingue) {
                 try {
                   doc.setGState(new doc.GState({ opacity: 1 }));
@@ -24155,17 +24254,20 @@
             var logoY = (franjas.yInicio - imgHeight) / 2;
             var logoTipoFinal = imgData.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
             doc.addImage(imgData, logoTipoFinal, logoX, logoY, imgWidth, imgHeight);
+            instruccionLogo = { tipo: 'imagen', dataUrl: imgData, formato: logoTipoFinal, x: logoX, y: logoY, w: imgWidth, h: imgHeight };
           } else {
             doc.setFontSize(14);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text(nombreEmpresa, pageWidth - margin, franjas.yInicio / 2 + 5, { align: 'right' });
+            instruccionLogo = { tipo: 'texto', texto: nombreEmpresa, x: pageWidth - margin, y: franjas.yInicio / 2 + 5 };
           }
         } catch (e) {
           doc.setFontSize(14);
           doc.setTextColor(255, 255, 255);
           doc.setFont('helvetica', 'bold');
           doc.text(nombreEmpresa, pageWidth - margin, franjas.yInicio / 2 + 5, { align: 'right' });
+          instruccionLogo = { tipo: 'texto', texto: nombreEmpresa, x: pageWidth - margin, y: franjas.yInicio / 2 + 5 };
         }
         }
 
@@ -24179,6 +24281,55 @@
         var colorBorde = [217, 226, 236];   // #D9E2EC
         var colorTexto = [31, 41, 55];      // #1F2937
 
+        // ---------- PAGINACIÓN: pie de página y salto de hoja ----------
+        // El pie de página (fecha/hora | nombre de archivo | paginado) va
+        // a 1.5cm del borde inferior de la hoja. Ningún otro contenido debe
+        // invadir esa franja: "limiteContenidoY" es la Y máxima hasta donde
+        // se puede dibujar contenido normal antes de forzar una hoja nueva.
+        var CM_A_PT_OC = 28.3464567;
+        var alturaPiePaginaOC = 1.5 * CM_A_PT_OC;
+        var pieYOC = pageHeight - alturaPiePaginaOC;
+        var limiteContenidoY = pieYOC - 16;
+
+        // Repite, de forma síncrona (sin await), el membrete + fondo + logo
+        // ya calculados para la página 1, en cualquier página nueva que se
+        // agregue por desbordamiento de contenido.
+        function dibujarDecoracionPaginaOC() {
+          (franjas.instrucciones || []).forEach(function(ins) {
+            try { doc.addImage(ins.dataUrl, ins.tipo, ins.x, ins.y, ins.w, ins.h); } catch (eDec) { console.warn('No se pudo repetir una imagen del membrete en la nueva página:', eDec); }
+          });
+          if (instruccionFondoExtingue) {
+            try { doc.addImage(instruccionFondoExtingue.dataUrl, instruccionFondoExtingue.tipo, instruccionFondoExtingue.x, instruccionFondoExtingue.y, instruccionFondoExtingue.w, instruccionFondoExtingue.h); } catch (eDec2) { console.warn('No se pudo repetir el fondo en la nueva página:', eDec2); }
+          }
+          if (instruccionLogo) {
+            if (instruccionLogo.tipo === 'imagen') {
+              try { doc.addImage(instruccionLogo.dataUrl, instruccionLogo.formato, instruccionLogo.x, instruccionLogo.y, instruccionLogo.w, instruccionLogo.h); } catch (eDec3) { console.warn('No se pudo repetir el logo en la nueva página:', eDec3); }
+            } else {
+              doc.setFontSize(14);
+              doc.setTextColor(255, 255, 255);
+              doc.setFont('helvetica', 'bold');
+              doc.text(instruccionLogo.texto, instruccionLogo.x, instruccionLogo.y, { align: 'right' });
+            }
+          }
+        }
+
+        // Agrega una hoja nueva, repite la decoración y reubica "y" al
+        // inicio del área de contenido (idéntico a como arranca la página 1).
+        function nuevaPaginaOC() {
+          doc.addPage();
+          dibujarDecoracionPaginaOC();
+          y = franjas.yInicio + 6.25;
+        }
+
+        // Si lo que sigue no cabe antes de la franja del pie de página,
+        // salta de hoja primero. Así ninguna tarjeta/sección queda cortada
+        // ni invade el pie de página.
+        function asegurarEspacioOC(alturaNecesaria) {
+          if (y + alturaNecesaria > limiteContenidoY) {
+            nuevaPaginaOC();
+          }
+        }
+
         // Folio para mostrar en el encabezado (misma lógica que ya usa
         // el pie de página más abajo; no se altera esa parte).
         var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
@@ -24190,6 +24341,19 @@
           if (!valor) return 'N/A';
           if (String(valor).indexOf('03') === 0) return '03 Transferencia electrónica';
           return valor;
+        }
+
+        // Regla de formato para todo el PDF de la OC: cada VALOR mostrado en
+        // las tarjetas de información ("Label: Valor") debe terminar en
+        // punto, salvo que ya termine en un signo de puntuación o sea un
+        // correo electrónico. Las cantidades no pasan por aquí: se dibujan
+        // aparte, en la tabla de productos.
+        function agregarPuntoFinal(texto) {
+          var t = String(texto == null ? '' : texto).trim();
+          if (!t) return t;
+          if (t.indexOf('@') !== -1) return t;
+          if (/[.!?]$/.test(t)) return t;
+          return t + '.';
         }
 
         // ---------- 1. ENCABEZADO DE LA ORDEN ----------
@@ -24212,8 +24376,11 @@
         // email, separados por "|".
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
+        doc.setTextColor(200, 0, 0);
+        doc.text('FOLIO: ', margin + 24, y + 35);
+        var anchoLeyendaFolio = doc.getTextWidth('FOLIO: ');
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text('FOLIO: ' + codigoFinalHeader, margin + 24, y + 35);
+        doc.text(String(codigoFinalHeader), margin + 24 + anchoLeyendaFolio, y + 35);
         doc.setFontSize(9);
         doc.text(((datos.solicitante || 'Desconocido') + ' | ' + (datos.solicitantetelefono || 'N/A') + ' | ' + (datos.solicitanteemail || 'N/A')), margin + 24, y + 47);
 
@@ -24222,7 +24389,7 @@
         doc.setFontSize(9);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var fechaElaboracionHeader = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion).toLocaleDateString() : new Date().toLocaleDateString();
-        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader, xDerecha, y + 20, { align: 'right' });
+        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader + '.', xDerecha, y + 20, { align: 'right' });
 
         y += headerH + 5;
 
@@ -24241,12 +24408,12 @@
           doc.text(label, x, yPos);
           doc.setFont('helvetica', 'normal');
           if (saltoLinea) {
-            var lineasSalto = doc.splitTextToSize(String(value || ''), maxWidth);
+            var lineasSalto = doc.splitTextToSize(' ' + agregarPuntoFinal(value), maxWidth);
             doc.text(lineasSalto, x, yPos + 11);
             return 11 + lineasSalto.length * 9;
           }
           var labelWidth = doc.getTextWidth(label) + 6;
-          var lineas = doc.splitTextToSize(String(value || ''), Math.max(maxWidth - labelWidth, 20));
+          var lineas = doc.splitTextToSize(' ' + agregarPuntoFinal(value), Math.max(maxWidth - labelWidth, 20));
           doc.text(lineas, x + labelWidth, yPos);
           if (sufijo && lineas.length === 1) {
             var sufijoX = x + labelWidth + doc.getTextWidth(lineas[0] || '') + 6;
@@ -24254,7 +24421,7 @@
             doc.text(sufijo.label, sufijoX, yPos);
             var sufijoLabelWidth = doc.getTextWidth(sufijo.label) + 4;
             doc.setFont('helvetica', 'normal');
-            doc.text(String(sufijo.value || ''), sufijoX + sufijoLabelWidth, yPos);
+            doc.text(' ' + agregarPuntoFinal(sufijo.value), sufijoX + sufijoLabelWidth, yPos);
           }
           return lineas.length * 9;
         }
@@ -24287,7 +24454,7 @@
         var empresaCatalogoFacturar = getEmpresaCatalogoPorNombre(datos.empresa) || {};
         var camposEntrega = [
           { label: 'Razón Social:', value: empresaCatalogoFacturar.razonSocial || datos.empresa || 'N/A' },
-          { label: 'RFC:', value: (empresaCatalogoFacturar.rfc || 'N/A') + '    C.P.: ' + (empresaCatalogoFacturar.cp || 'N/A') },
+          { label: 'RFC:', value: empresaCatalogoFacturar.rfc || 'N/A', sufijo: { label: 'C.P.:', value: empresaCatalogoFacturar.cp || 'N/A' } },
           { label: 'Domicilio:', value: empresaCatalogoFacturar.domicilio || 'N/A' },
           { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
           { label: 'Uso CFDI:', value: datos.usocfdi || 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
@@ -24302,11 +24469,11 @@
             var labelWidth = doc.getTextWidth(c.label) + 6;
             doc.setFont('helvetica', 'normal');
             if (c.saltoLinea) {
-              var lineasSalto = doc.splitTextToSize(String(c.value || ''), maxWidth);
+              var lineasSalto = doc.splitTextToSize(' ' + agregarPuntoFinal(c.value), maxWidth);
               total += 11 + lineasSalto.length * 9 + 4;
               return;
             }
-            var lineas = doc.splitTextToSize(String(c.value || ''), Math.max(maxWidth - labelWidth, 20));
+            var lineas = doc.splitTextToSize(' ' + agregarPuntoFinal(c.value), Math.max(maxWidth - labelWidth, 20));
             total += lineas.length * 9 + 4;
           });
           return total;
@@ -24341,6 +24508,7 @@
           });
         }
 
+        asegurarEspacioOC(cardH);
         dibujarTarjeta(margin, 'DATOS DEL PROVEEDOR', camposProveedor);
         dibujarTarjeta(margin + cardW + cardGap, 'FACTURAR A:', camposEntrega);
 
@@ -24362,7 +24530,7 @@
           head: [headers],
           body: rows,
           startY: y,
-          margin: { left: margin, right: margin },
+          margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY },
           theme: 'plain',
           styles: {
             fontSize: 8, cellPadding: 5, font: 'helvetica',
@@ -24384,6 +24552,15 @@
             6: { cellWidth: 35 },
             7: { cellWidth: 48 },
             8: { cellWidth: 60 }
+          },
+          // Si la tabla de productos por sí sola necesita más de una hoja,
+          // cada página adicional que agrega jsPDF-autoTable internamente
+          // debe llevar también el membrete/logo — "willDrawPage" corre
+          // ANTES de dibujar las filas de esa página, así la decoración
+          // queda detrás del contenido (nunca lo tapa). La página 1 ya
+          // tiene su decoración dibujada más arriba, así que se omite aquí.
+          willDrawPage: function(data) {
+            if (data.pageNumber > 1) { dibujarDecoracionPaginaOC(); }
           },
           didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
         });
@@ -24415,7 +24592,7 @@
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
         var camposCondicionesExtra = [
-          { label: 'Fecha de Pago:', value: (datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A') + '    Moneda: ' + (datos.moneda || 'N/A') },
+          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
           { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
           { label: 'Notas:', value: datos.motivo || 'Sin notas.', saltoLinea: true }
         ];
@@ -24465,6 +24642,13 @@
         var altoFinanciero = bottomHeaderH + 3 * 17 + bottomBodyPadding;
         var bottomH = Math.max(altoTerminos, altoFinanciero, 90);
 
+        // Siempre se muestra al menos una partida de la tabla de productos
+        // antes de CONDICIONES COMERCIALES/RESUMEN FINANCIERO (la tabla ya
+        // terminó de dibujarse por completo en este punto); si lo que resta
+        // no cabe en lo que queda de la hoja actual, se salta de página
+        // antes de dibujar esta fila para no cortar las tarjetas.
+        asegurarEspacioOC(bottomH);
+
         // Tarjeta izquierda: CONDICIONES COMERCIALES + NOTAS
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
@@ -24486,7 +24670,7 @@
 
         var yCampoCondiciones = y + bottomHeaderH + 12 + lineasCondiciones.length * 9 + 8;
         camposCondicionesExtra.forEach(function(c) {
-          var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28, c.saltoLinea);
+          var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28, c.saltoLinea, c.sufijo);
           yCampoCondiciones += altoCampo + 4;
         });
 
@@ -24547,7 +24731,7 @@
           doc.text(titulo, x + 14, yPos + bottomHeaderH / 2 + 4);
           var yCampo = yPos + bottomHeaderH + 12;
           campos.forEach(function(c) {
-            var alto = dibujarCampoLinea(x + 14, yCampo, c.label, c.value, w - 28, c.saltoLinea);
+            var alto = dibujarCampoLinea(x + 14, yCampo, c.label, c.value, w - 28, c.saltoLinea, c.sufijo);
             yCampo += alto + 4;
           });
         }
@@ -24555,6 +24739,13 @@
         var altoBancarios = alturaCampos(camposBancarios, bottomW - 28);
         var altoEntregaCondiciones = alturaCampos(camposEntregaCondiciones, bottomW - 28);
         var bottomH2 = Math.max(bottomHeaderH + 12 + altoBancarios + bottomBodyPadding, bottomHeaderH + 12 + altoEntregaCondiciones + bottomBodyPadding, 70);
+
+        // DATOS BANCARIOS/INSTRUCCIONES DE ENTREGA y AUTORIZACIONES (firmas)
+        // se tratan como un solo bloque indivisible: si no caben juntos en lo
+        // que resta de la hoja, se pasan los DOS a una hoja nueva — así la
+        // hoja de las firmas nunca queda sola, siempre las acompaña esta fila.
+        var alturaAutorizacionesOC = 90;
+        asegurarEspacioOC(bottomH2 + 9 + 11 + alturaAutorizacionesOC);
 
         dibujarCajaSimple(bottomX1, y, bottomW, bottomH2, 'DATOS BANCARIOS PROVEEDOR', camposBancarios);
         dibujarCajaSimple(bottomX2, y, bottomW, bottomH2, 'INSTRUCCIONES DE ENTREGA', camposEntregaCondiciones);
@@ -24638,12 +24829,39 @@
 
         // Las notas ya no se repiten aquí: solo se muestran debajo de
         // "Método de pago" en la tarjeta "CONDICIONES COMERCIALES".
-        var pieY = doc.internal.pageSize.height - (doc.internal.pageSize.height / 8) - 20;
 
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Página 1 de 1', pageWidth - margin, pieY + 10, { align: 'right' });
+        // ---------- PIE DE PÁGINA (en TODAS las hojas) ----------
+        // Izquierda: fecha corta DD/MM/AA + hora HH:MM a.m./p.m.
+        // Centro: nombre del archivo (idéntico al que se usa al guardar/
+        // descargar la OC, ver window.descargarOC / doc.save).
+        // Derecha: paginado "Pág. N de N".
+        // Se dibuja al final, ya con el total de hojas conocido, a 1.5cm
+        // del borde inferior (pieYOC), la misma franja que ya se respetó
+        // en todo el contenido vía limiteContenidoY/asegurarEspacioOC.
+        var totalPaginasOC = doc.internal.getNumberOfPages();
+        var ahoraPieOC = new Date();
+        var diaPieOC = String(ahoraPieOC.getDate()).padStart(2, '0');
+        var mesPieOC = String(ahoraPieOC.getMonth() + 1).padStart(2, '0');
+        var anioPieOC = String(ahoraPieOC.getFullYear()).slice(-2);
+        var fechaCortaPieOC = diaPieOC + '/' + mesPieOC + '/' + anioPieOC;
+        var horas24PieOC = ahoraPieOC.getHours();
+        var ampmPieOC = horas24PieOC >= 12 ? 'p.m.' : 'a.m.';
+        var horas12PieOC = horas24PieOC % 12;
+        if (horas12PieOC === 0) horas12PieOC = 12;
+        var minutosPieOC = String(ahoraPieOC.getMinutes()).padStart(2, '0');
+        var horaCortaPieOC = String(horas12PieOC).padStart(2, '0') + ':' + minutosPieOC + ' ' + ampmPieOC;
+        var nombreArchivoPieOC = codigoParaTitulo + '.pdf';
+
+        for (var nPagOC = 1; nPagOC <= totalPaginasOC; nPagOC++) {
+          doc.setPage(nPagOC);
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 100);
+          doc.setFont('helvetica', 'normal');
+          doc.text(fechaCortaPieOC + '  ' + horaCortaPieOC, margin, pieYOC, { align: 'left' });
+          doc.text(nombreArchivoPieOC, pageWidth / 2, pieYOC, { align: 'center' });
+          doc.text('Pág. ' + nPagOC + ' de ' + totalPaginasOC, pageWidth - margin, pieYOC, { align: 'right' });
+        }
+        doc.setPage(totalPaginasOC);
 
         return doc;
       }
