@@ -1275,18 +1275,24 @@
   }
   #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3, #colaboradoresPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #pdfPreviewModal .modal-body, #facturaVerModal .modal-body, #colaboradoresPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
+  /* El iframe llena exactamente el alto disponible del modal (.modal-body
+     ya reparte el espacio con flex: 1) — así el visor de PDF del navegador
+     no deja franjas vacías debajo de una OC corta de 1 sola hoja; si la OC
+     tiene más hojas, el propio visor de PDF hace scroll interno. */
   #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe, #colaboradoresPreviewModal .modal-body iframe {
+    display: block;
     width: 100%;
-    height: 400px;
+    height: 100%;
+    min-height: 400px;
     border: 1px solid var(--gray-300);
     border-radius: 8px
   }
-  /* En computadora, la previsualización de la OC duplica al doble su
-     longitud vertical (el modal en sí conserva su max-height: 95vh y
-     hace scroll interno con .modal-body { overflow: auto }, así que
-     nunca se sale de la pantalla). */
+  /* En computadora, la ventana de previsualización de la OC es más grande
+     (más ancha y más alta) para ver mejor el contenido, sin dejar espacios
+     vacíos: el iframe siempre llena ese espacio (regla de arriba). */
   @media (min-width: 900px) {
-    #pdfPreviewModal .modal-body iframe { height: 200vh; }
+    #pdfPreviewModal .modal-content { max-width: 1100px; max-height: 96vh; }
+    #pdfPreviewModal .modal-body { min-height: 80vh; }
   }
   #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group, #facturaSeleccionModal .modal-header .pdfPreview-btn-group, #colaboradoresPreviewModal .modal-header .pdfPreview-btn-group {
     display: flex;
@@ -5189,7 +5195,6 @@
           <span class="modulo-leyenda">Control x Proyecto</span>
         </div>
       </div>
-      <button id="ocModalToolbarVolver" onclick="window.volverAlMenuMaestro()" class="hidden btn-volver-menu-center">←</button>
 
       <div id="panelOC" class="card modal-card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -13783,9 +13788,7 @@
         panelIndicadores.classList.add('hidden');
         ocModalToolbar.classList.add('hidden');
         var ocModalToolbarTitulo = document.getElementById('ocModalToolbarTitulo');
-        var ocModalToolbarVolver = document.getElementById('ocModalToolbarVolver');
         if (ocModalToolbarTitulo) ocModalToolbarTitulo.style.display = 'none';
-        if (ocModalToolbarVolver) ocModalToolbarVolver.classList.add('hidden');
         document.getElementById('modalOverlayBackdrop').classList.remove('active');
 
         // Detener actualización de indicadores si estaba corriendo
@@ -13833,9 +13836,7 @@
         if (modulo === 'oc') {
           ocModalToolbar.classList.remove('hidden');
           var ocModalToolbarTituloShow = document.getElementById('ocModalToolbarTitulo');
-          var ocModalToolbarVolverShow = document.getElementById('ocModalToolbarVolver');
           if (ocModalToolbarTituloShow) ocModalToolbarTituloShow.style.display = 'block';
-          if (ocModalToolbarVolverShow) ocModalToolbarVolverShow.classList.remove('hidden');
           var btnAbrirCrearOC = document.getElementById('btnAbrirCrearOC');
           if (btnAbrirCrearOC) btnAbrirCrearOC.classList.toggle('hidden', !puedeCrearOC);
           window.cargarSelectorProductosCatalogo();
