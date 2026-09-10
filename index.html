@@ -23822,6 +23822,15 @@
       window.previsualizarOC = async function() {
         var datos = recopilarDatosOC();
         if (!datos) return;
+        // El folio mostrado en la previsualización (encabezado y pie de
+        // página) debe ser el mismo que se usará al confirmar/guardar la
+        // OC — se calcula aquí con la misma lógica (codigoBase +
+        // verificarCodigoExistente) que usan confirmarOC/
+        // confirmarDesdePreview, para que folio, nombre de archivo y pie
+        // de página coincidan también en la vista previa.
+        var codigoBasePreview = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, '');
+        var letraPreview = verificarCodigoExistente(codigoBasePreview);
+        datos.codigo = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, letraPreview || 'A');
         ocPreviewData = datos;
         try {
           var doc = await generarPDFParaPreview(datos);
@@ -23931,7 +23940,15 @@
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
         try {
-          var docFinal = ocPreviewPDF || await generarPDFParaPreview(datos);
+          // El folio puede haber cambiado respecto al que se calculó al
+          // abrir la previsualización (p.ej. si se creó otra OC del mismo
+          // proyecto mientras el modal estaba abierto). Por eso NUNCA se
+          // reutiliza el PDF ya generado de la vista previa (ocPreviewPDF):
+          // se regenera aquí con el folio DEFINITIVO, para que el "FOLIO: "
+          // del encabezado y el nombre en el pie de página coincidan
+          // exactamente con el nombre del archivo que se guarda.
+          datos.codigo = codigo;
+          var docFinal = await generarPDFParaPreview(datos);
           docFinal.save(codigo + '.pdf');
         } catch (err) {
           console.error('⚠️ OC guardada, pero falló la generación del PDF:', err.stack || err);
@@ -24028,6 +24045,11 @@
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
 
         try {
+          // Igual que en confirmarDesdePreview: el PDF debe generarse con el
+          // folio DEFINITIVO (datos.codigo) para que el "FOLIO: " del
+          // encabezado y el nombre en el pie de página coincidan exactamente
+          // con el nombre del archivo que se guarda.
+          datos.codigo = codigo;
           var doc = await generarPDFParaPreview(datos);
           doc.save(codigo + '.pdf');
         } catch (err) {
@@ -24330,9 +24352,12 @@
           }
         }
 
-        // Folio para mostrar en el encabezado (misma lógica que ya usa
-        // el pie de página más abajo; no se altera esa parte).
-        var codigoFinalHeader = ocExistente ? ocExistente.codigo : generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, consecutivoOC);
+        // Folio para mostrar en el encabezado: se usa EXACTAMENTE el mismo
+        // valor que el nombre del archivo (codigoParaTitulo, definido al
+        // inicio de la función) — así el "FOLIO: " del encabezado, el
+        // nombre del PDF al descargar/guardar y el nombre impreso al centro
+        // del pie de página son siempre el mismo dato, sin poder desalinearse.
+        var codigoFinalHeader = codigoParaTitulo;
 
         // El método de pago "03" se muestra abreviado en el PDF (sin
         // "de fondos"), a pedido; el valor guardado en la OC conserva
@@ -24514,6 +24539,93 @@
 
         y += cardH + 8;
 
+        // ---------- DATOS DE "PARTE INFERIOR" CALCULADOS DE ANTEMANO ----------
+        // bottomW/camposCondicionesExtra/camposBancarios/camposEntregaCondiciones
+        // y las alturas (bottomH/bottomH2) de CONDICIONES COMERCIALES,
+        // RESUMEN FINANCIERO, DATOS BANCARIOS PROVEEDOR e INSTRUCCIONES DE
+        // ENTREGA NO dependen de dónde termine la tabla de productos — solo
+        // de "datos" — así que se calculan AQUÍ, antes de dibujar la tabla,
+        // para poder reservarles espacio en el margin.bottom del autoTable.
+        // Así, si la OC necesita más de una hoja, el propio corte de la
+        // tabla deja lugar para esta fila (y para AUTORIZACIONES) en la
+        // MISMA página que su última partida — nunca quedan solas en una
+        // hoja aparte sin ningún producto.
+        var bottomGap = 14;
+        var bottomW = (pageWidth - 2 * margin - bottomGap) / 2;
+        var bottomX1 = margin;
+        var bottomX2 = margin + bottomW + bottomGap;
+        var bottomHeaderH = 22;
+
+        var textoCondiciones = datos.condicionpago
+          ? String(datos.condicionpago)
+          : 'Sin condiciones comerciales especificadas.';
+        var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
+
+        var camposCondicionesExtra = [
+          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
+          { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
+          { label: 'Notas:', value: datos.motivo || 'Sin notas.' }
+        ];
+        if (datos.moneda === 'USD') {
+          // Tres casos posibles para una OC en USD:
+          // 1) Aún no llega a la aprobación del Jefe (CREADA /
+          //    APROBADA_SOLICITANTE): todavía no aplica, no se muestra
+          //    el renglón.
+          // 2) Ya la aprobó el Jefe pero todavía no se decide la paridad
+          //    (PENDIENTE_PARIDAD, sin tipo de cambio): se indica
+          //    "Pendiente de paridad".
+          // 3) Ya se decidió: con tipo de cambio (Agregar Paridad) o sin
+          //    él porque se eligió "Pago en Dólares" (N/A).
+          var estadosAntesDeJefe = ['CREADA', 'APROBADA_SOLICITANTE'];
+          if (datos.tipocambio) {
+            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: '$' + Number(datos.tipocambio).toFixed(4) + ' MXN/USD' });
+          } else if (datos.estado === 'PENDIENTE_PARIDAD') {
+            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'Pendiente de paridad' });
+          } else if (datos.estado && estadosAntesDeJefe.indexOf(datos.estado) === -1) {
+            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'N/A (Pago en Dólares)' });
+          }
+        }
+        var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
+
+        // Datos bancarios del proveedor (antes formaban parte de la misma
+        // tarjeta de "CONDICIONES COMERCIALES"; ahora van en su propia
+        // tarjeta, en la fila inferior).
+        var camposBancarios = [
+          { label: 'Banco:', value: datos.banco || 'No especificado' },
+          { label: 'CLABE:', value: datos.clabe || 'N/A' },
+          { label: 'Cuenta:', value: datos.cuenta || 'N/A' }
+        ];
+
+        // Condiciones de entrega: lugar, responsable, sucursal y, si
+        // aplica, la paquetería utilizada.
+        var camposEntregaCondiciones = [
+          { label: 'Lugar de entrega:', value: datos.direccionentrega || 'N/A' },
+          { label: 'Responsable de entrega:', value: datos.responsableentrega || 'N/A' },
+          { label: 'Sucursal:', value: datos.sucursalentrega || 'N/A' }
+        ];
+        if (datos.paqueteria) {
+          camposEntregaCondiciones.push({ label: 'Paquetería:', value: datos.paqueteria });
+        }
+
+        var bottomBodyPadding = 12;
+        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 9 + 12 + altoCamposCondiciones + bottomBodyPadding;
+        var altoFinanciero = bottomHeaderH + 3 * 17 + bottomBodyPadding;
+        var bottomH = Math.max(altoTerminos, altoFinanciero, 90);
+
+        var altoBancarios = alturaCampos(camposBancarios, bottomW - 28);
+        var altoEntregaCondiciones = alturaCampos(camposEntregaCondiciones, bottomW - 28);
+        var bottomH2 = Math.max(bottomHeaderH + 12 + altoBancarios + bottomBodyPadding, bottomHeaderH + 12 + altoEntregaCondiciones + bottomBodyPadding, 70);
+
+        // Estimado fijo del bloque de firmas (título "AUTORIZACIONES" +
+        // recuadros + fecha de cada una).
+        var alturaAutorizacionesOC = 90;
+
+        // Alto total de TODO lo que va después de la tabla: CONDICIONES
+        // COMERCIALES/RESUMEN FINANCIERO + DATOS BANCARIOS/INSTRUCCIONES DE
+        // ENTREGA + AUTORIZACIONES (mismos incrementos que se usan más abajo
+        // al dibujarlos: "y += bottomH + 8" y "y += bottomH2 + 9 + 11").
+        var alturaColaCompletaOC = bottomH + 8 + bottomH2 + 9 + 11 + alturaAutorizacionesOC;
+
         // ---------- 3. TABLA DE PRODUCTOS ----------
         var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         var rows = datos.productos.map(function(p, i) {
@@ -24530,7 +24642,12 @@
           head: [headers],
           body: rows,
           startY: y,
-          margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY },
+          // El margin.bottom incluye, además del pie de página, la altura
+          // completa de CONDICIONES COMERCIALES/RESUMEN FINANCIERO/DATOS
+          // BANCARIOS/INSTRUCCIONES DE ENTREGA/AUTORIZACIONES: así, si la
+          // tabla necesita cortar a una hoja nueva, esa fila ya queda junto
+          // con al menos una partida en la misma página (nunca sola).
+          margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + alturaColaCompletaOC },
           theme: 'plain',
           styles: {
             fontSize: 8, cellPadding: 5, font: 'helvetica',
@@ -24579,74 +24696,14 @@
         }
 
         // ---------- 4. PARTE INFERIOR (dos columnas) ----------
+        // bottomW/bottomX1/bottomX2/bottomHeaderH/camposCondicionesExtra/
+        // camposBancarios/camposEntregaCondiciones/bottomH/bottomH2 ya se
+        // calcularon ANTES de la tabla de productos (ver más arriba), para
+        // poder reservarles espacio en el margin.bottom del autoTable.
         y += 7;
-        var bottomGap = 14;
-        var bottomW = (pageWidth - 2 * margin - bottomGap) / 2;
-        var bottomX1 = margin;
-        var bottomX2 = margin + bottomW + bottomGap;
-        var bottomHeaderH = 22;
 
-        var textoCondiciones = datos.condicionpago
-          ? String(datos.condicionpago)
-          : 'Sin condiciones comerciales especificadas.';
-        var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
-
-        var camposCondicionesExtra = [
-          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
-          { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
-          { label: 'Notas:', value: datos.motivo || 'Sin notas.', saltoLinea: true }
-        ];
-        if (datos.moneda === 'USD') {
-          // Tres casos posibles para una OC en USD:
-          // 1) Aún no llega a la aprobación del Jefe (CREADA /
-          //    APROBADA_SOLICITANTE): todavía no aplica, no se muestra
-          //    el renglón.
-          // 2) Ya la aprobó el Jefe pero todavía no se decide la paridad
-          //    (PENDIENTE_PARIDAD, sin tipo de cambio): se indica
-          //    "Pendiente de paridad".
-          // 3) Ya se decidió: con tipo de cambio (Agregar Paridad) o sin
-          //    él porque se eligió "Pago en Dólares" (N/A).
-          var estadosAntesDeJefe = ['CREADA', 'APROBADA_SOLICITANTE'];
-          if (datos.tipocambio) {
-            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: '$' + Number(datos.tipocambio).toFixed(4) + ' MXN/USD' });
-          } else if (datos.estado === 'PENDIENTE_PARIDAD') {
-            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'Pendiente de paridad' });
-          } else if (datos.estado && estadosAntesDeJefe.indexOf(datos.estado) === -1) {
-            camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'N/A (Pago en Dólares)' });
-          }
-        }
-        var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
-
-        // Datos bancarios del proveedor (antes formaban parte de la misma
-        // tarjeta de "CONDICIONES COMERCIALES"; ahora van en su propia
-        // tarjeta, en la fila inferior).
-        var camposBancarios = [
-          { label: 'Banco:', value: datos.banco || 'No especificado' },
-          { label: 'CLABE:', value: datos.clabe || 'N/A' },
-          { label: 'Cuenta:', value: datos.cuenta || 'N/A' }
-        ];
-
-        // Condiciones de entrega: lugar, responsable, sucursal y, si
-        // aplica, la paquetería utilizada.
-        var camposEntregaCondiciones = [
-          { label: 'Lugar de entrega:', value: datos.direccionentrega || 'N/A' },
-          { label: 'Responsable de entrega:', value: datos.responsableentrega || 'N/A' },
-          { label: 'Sucursal:', value: datos.sucursalentrega || 'N/A' }
-        ];
-        if (datos.paqueteria) {
-          camposEntregaCondiciones.push({ label: 'Paquetería:', value: datos.paqueteria });
-        }
-
-        var bottomBodyPadding = 12;
-        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 9 + 12 + altoCamposCondiciones + bottomBodyPadding;
-        var altoFinanciero = bottomHeaderH + 3 * 17 + bottomBodyPadding;
-        var bottomH = Math.max(altoTerminos, altoFinanciero, 90);
-
-        // Siempre se muestra al menos una partida de la tabla de productos
-        // antes de CONDICIONES COMERCIALES/RESUMEN FINANCIERO (la tabla ya
-        // terminó de dibujarse por completo en este punto); si lo que resta
-        // no cabe en lo que queda de la hoja actual, se salta de página
-        // antes de dibujar esta fila para no cortar las tarjetas.
+        // Salvaguarda: normalmente ya no hace falta, porque el margin.bottom
+        // de la tabla reservó este espacio junto con al menos una partida.
         asegurarEspacioOC(bottomH);
 
         // Tarjeta izquierda: CONDICIONES COMERCIALES + NOTAS
@@ -24736,15 +24793,12 @@
           });
         }
 
-        var altoBancarios = alturaCampos(camposBancarios, bottomW - 28);
-        var altoEntregaCondiciones = alturaCampos(camposEntregaCondiciones, bottomW - 28);
-        var bottomH2 = Math.max(bottomHeaderH + 12 + altoBancarios + bottomBodyPadding, bottomHeaderH + 12 + altoEntregaCondiciones + bottomBodyPadding, 70);
-
         // DATOS BANCARIOS/INSTRUCCIONES DE ENTREGA y AUTORIZACIONES (firmas)
         // se tratan como un solo bloque indivisible: si no caben juntos en lo
         // que resta de la hoja, se pasan los DOS a una hoja nueva — así la
         // hoja de las firmas nunca queda sola, siempre las acompaña esta fila.
-        var alturaAutorizacionesOC = 90;
+        // (bottomH2/alturaAutorizacionesOC ya se calcularon antes de la
+        // tabla; esta llamada es una salvaguarda adicional.)
         asegurarEspacioOC(bottomH2 + 9 + 11 + alturaAutorizacionesOC);
 
         dibujarCajaSimple(bottomX1, y, bottomW, bottomH2, 'DATOS BANCARIOS PROVEEDOR', camposBancarios);
