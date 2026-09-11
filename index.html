@@ -8510,7 +8510,13 @@
       // visible la pantalla de "Crear OC" de fondo.
       window.cerrarBandejaOC = function() {
         window.cerrarModalCard('bandejaOCCard');
-        if (moduloOrigenBandejaOC === 'oc_menu') {
+        if (moduloOrigenBandejaOC === 'oc_menu' || moduloOrigenBandejaOC === 'oc') {
+          // Regresar a "oc" no basta con mostrarModulo('oc'): eso solo deja
+          // visible el mini-menú de fondo (#ocModalToolbar) sin volver a
+          // abrir la tarjeta "Crear OC" encima. irADirectoCrearOC() hace
+          // ambas cosas (y viste el fondo con el logo/estilo correcto), así
+          // se conserva exactamente la ventana que estaba abierta antes de
+          // entrar a "Bandeja de OC".
           irADirectoCrearOC();
         } else {
           window.mostrarModulo(moduloOrigenBandejaOC || 'oc');
@@ -8525,7 +8531,12 @@
       // se abrió desde el menú "📊 OC", regresa a ese menú.
       window.cerrarControlProyecto = function() {
         window.cerrarModalCard('tablaProyectosCard');
-        if (moduloOrigenControlProyecto === 'oc_menu') {
+        if (moduloOrigenControlProyecto === 'oc_menu' || moduloOrigenControlProyecto === 'oc') {
+          // Igual que en cerrarBandejaOC: si se venía de "oc", mostrarModulo('oc')
+          // por sí solo solo deja visible el mini-menú de fondo (#ocModalToolbar)
+          // sin la tarjeta "Crear OC" encima. irADirectoCrearOC() restaura la
+          // ventana completa (logo, fondo y formulario) tal como estaba antes
+          // de abrir "Control por Proyecto".
           irADirectoCrearOC();
           return;
         }
