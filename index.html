@@ -1263,6 +1263,14 @@
     flex-direction: column;
     box-sizing: border-box;
   }
+  /* Solo para la previsualización de la OC: además del max-height de arriba
+     (un tope), se fija una altura real (height) — sin ella, el contenedor
+     se ajusta al contenido y el iframe (height:100%) dentro de .modal-body
+     no tiene una altura de referencia confiable para llenarse por completo,
+     dejando una franja vacía color crema debajo del visor de PDF. Con una
+     altura definida, .modal-body (flex:1) sí ocupa todo el espacio restante
+     y el iframe lo llena completo. */
+  #pdfPreviewModal .modal-content { height: 95vh; }
   #pdfPreviewModal .modal-header, #facturaVerModal .modal-header, #facturaSeleccionModal .modal-header, #colaboradoresPreviewModal .modal-header {
     display: flex;
     justify-content: space-between;
@@ -1287,12 +1295,15 @@
     border: 1px solid var(--gray-300);
     border-radius: 8px
   }
-  /* En computadora, la ventana de previsualización de la OC es más grande
-     (más ancha y más alta) para ver mejor el contenido, sin dejar espacios
-     vacíos: el iframe siempre llena ese espacio (regla de arriba). */
+  /* En computadora, las ventanas de previsualización/visualización de
+     archivos son más grandes (más anchas y del doble de alto que antes)
+     para ver mejor el contenido, sin dejar espacios vacíos: el iframe
+     siempre llena ese espacio (regla de arriba). Se les da una altura
+     real (height, no solo max-height) por la misma razón explicada arriba
+     para #pdfPreviewModal. */
   @media (min-width: 900px) {
-    #pdfPreviewModal .modal-content { max-width: 1100px; max-height: 96vh; }
-    #pdfPreviewModal .modal-body { min-height: 80vh; }
+    #pdfPreviewModal .modal-content, #facturaVerModal .modal-content, #colaboradoresPreviewModal .modal-content { max-width: 1100px; max-height: 96vh; height: 96vh; }
+    #pdfPreviewModal .modal-body, #facturaVerModal .modal-body, #colaboradoresPreviewModal .modal-body { min-height: 80vh; }
   }
   #pdfPreviewModal .modal-header .pdfPreview-btn-group, #facturaVerModal .modal-header .pdfPreview-btn-group, #facturaSeleccionModal .modal-header .pdfPreview-btn-group, #colaboradoresPreviewModal .modal-header .pdfPreview-btn-group {
     display: flex;
@@ -1815,7 +1826,8 @@
   #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; }
   #visualizarModal .modal-body iframe {
     width: 100%;
-    height: 500px;
+    height: 100%;
+    min-height: 400px;
     border: 1px solid var(--gray-300);
     border-radius: 8px;
     display: block;
@@ -1875,8 +1887,10 @@
   #cxpPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #cxpPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px; }
   #cxpPreviewModal .modal-body iframe {
+    display: block;
     width: 100%;
-    height: 500px;
+    height: 100%;
+    min-height: 400px;
     border: 1px solid var(--gray-300);
     border-radius: 8px;
   }
@@ -1936,7 +1950,8 @@
   #ofDocModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; }
   #ofDocModal .modal-body iframe {
     width: 100%;
-    height: 500px;
+    height: 100%;
+    min-height: 400px;
     border: 1px solid var(--gray-300);
     border-radius: 8px;
     display: block;
@@ -1949,6 +1964,17 @@
     flex-wrap: wrap;
     border-top: 1px solid var(--modal-footer-border);
     margin-top: 4px;
+  }
+
+  /* En computadora, estas ventanas de visualización de archivos (Visualizar
+     OC, reporte de CXP/CXF, documento de OF) también quedan del doble de
+     altura que antes: se les da una altura real (height, no solo
+     max-height) para que .modal-body (flex:1) y el iframe (height:100%,
+     regla de arriba) llenen por completo la ventana, en vez de quedar con
+     un recuadro pequeño y espacio vacío color crema debajo. */
+  @media (min-width: 900px) {
+    #visualizarModal .modal-content, #cxpPreviewModal .modal-content, #ofDocModal .modal-content { max-width: 1100px; max-height: 96vh; height: 96vh; }
+    #visualizarModal .modal-body, #cxpPreviewModal .modal-body, #ofDocModal .modal-body { min-height: 80vh; }
   }
 
   .progress-bar { height: 10px; background: var(--gray-200); border-radius: 6px; overflow: hidden; margin-top: 4px }
@@ -4771,6 +4797,7 @@
           <div class="modal-header">
             <h3>📎 <span id="facturaVerTitulo">Factura</span></h3>
             <div class="pdfPreview-btn-group">
+              <button type="button" onclick="window.imprimirFacturaVer()">🖨️ Imprimir</button>
               <a id="facturaVerDescargarBtn" class="success" href="#" target="_blank" download style="text-decoration:none;">⬇️ Descargar</a>
               <button class="btn-modal-x" onclick="window.cerrarFacturaOC()">✕</button>
             </div>
@@ -7282,11 +7309,24 @@
             return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
           });
         }
-        if (usuarioTieneRol(usuario, 'Solicitante')) {
-          ocFiltradas = ocFiltradas.filter(function(o) { return o.solicitante === usuario.usuario; });
-        }
-        if (usuarioTieneRol(usuario, 'Elaborador')) {
-          ocFiltradas = ocFiltradas.filter(function(o) { return o.elaborador === usuario.usuario; });
+        // Antes, este filtro exigía por separado "o.solicitante ===
+        // usuario.usuario" (solo si el ROL de la cuenta incluía
+        // "Solicitante") Y, además, "o.elaborador === usuario.usuario"
+        // (solo si el rol incluía "Elaborador") — filtros encadenados
+        // (AND), no alternativos. El campo "solicitante" de una OC puede
+        // asignarse a cualquier Elaborador/Solicitante/Jefe de
+        // Departamento con acceso al proyecto (ver
+        // window.actualizarSelectSolicitanteOC), así que un usuario cuyo
+        // rol de cuenta es, por ejemplo, "Elaborador" pero que fue elegido
+        // como solicitante en una OC creada por alguien más no la veía en
+        // su Bandeja. Ahora, para cuentas Elaborador/Solicitante, la OC
+        // "pertenece" al usuario si él la elaboró O si él es el
+        // solicitante designado (sin importar cuál de los dos roles tenga
+        // su cuenta).
+        if (usuarioTieneAlgunRol(usuario, ['Elaborador', 'Solicitante'])) {
+          ocFiltradas = ocFiltradas.filter(function(o) {
+            return o.elaborador === usuario.usuario || o.solicitante === usuario.usuario;
+          });
         }
         return ocFiltradas;
       }
@@ -7816,7 +7856,7 @@
         // normalizan antes de comparar contra las listas de permitidos.
         // Sin esto, el sistema restringido las filtraba todas (ninguna
         // coincidía literalmente con "oc") y el submenú se veía vacío.
-        if (modulo === 'oc_crear' || modulo === 'oc_bandeja' || modulo === 'oc_control') modulo = 'oc';
+        if (modulo === 'oc_crear' || modulo === 'oc_bandeja' || modulo === 'oc_control' || modulo === 'bandeja_oc_egresos') modulo = 'oc';
         // El módulo CXP siempre queda libre para visualizar, sin importar
         // si el sistema está restringido o no.
         if (modulo === 'cxp') return true;
@@ -8063,6 +8103,13 @@
           if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
             modulos.push({ id: 'oc', icono: '📄', nombre: 'OC' });
           }
+          // Acceso directo a "Bandeja de OC" como módulo propio de EGRESOS
+          // (mismo alcance de roles que CXP, ya que ahí ya existía el
+          // botón "📬 Bandeja de Órdenes de Compra" que abre exactamente
+          // esta misma ventana modal — ver window.abrirBandejaOCDesdeMenu).
+          if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
+            modulos.push({ id: 'bandeja_oc_egresos', icono: '📬', nombre: 'BANDEJA DE OC' });
+          }
           if (actual && (usuarioPuedeCrearProyectos(actual) || actual.rol === 'Administrador')) {
             modulos.push({ id: 'proyectos', icono: '🏗️', nombre: 'PROYECTO' });
           }
@@ -8165,6 +8212,13 @@
                 window.abrirModalCard('tablaProyectosCard');
                 moduloOrigenControlProyecto = 'oc_menu';
               }, 0);
+            } else if (modulo === 'bandeja_oc_egresos') {
+              // La modal-card tiene su propio fondo/backdrop fijo que cubre
+              // toda la pantalla (#modalOverlayBackdrop), así que no hace
+              // falta preparar ningún "fondo": se abre igual que el botón
+              // "📬 Bandeja de Órdenes de Compra" de CXP (misma función).
+              window.abrirModalCard('bandejaOCCard');
+              moduloOrigenBandejaOC = 'egresos_menu';
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
             } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos' || modulo === 'empresas') {
@@ -8510,6 +8564,12 @@
       // visible la pantalla de "Crear OC" de fondo.
       window.cerrarBandejaOC = function() {
         window.cerrarModalCard('bandejaOCCard');
+        if (moduloOrigenBandejaOC === 'egresos_menu') {
+          // Se abrió como módulo propio del menú "📊 EGRESOS" (tarjeta
+          // "BANDEJA DE OC"): al cerrar regresa a ese menú, no a "oc".
+          window.mostrarMenuMaestro('egresos', 'EGRESOS');
+          return;
+        }
         if (moduloOrigenBandejaOC === 'oc_menu' || moduloOrigenBandejaOC === 'oc') {
           // Regresar a "oc" no basta con mostrarModulo('oc'): eso solo deja
           // visible el mini-menú de fondo (#ocModalToolbar) sin volver a
@@ -13389,6 +13449,26 @@
         if (frame) frame.src = '';
       };
 
+      // Botón "🖨️ Imprimir" de la ventana de previsualización (Factura /
+      // Comprobante de Pago). El archivo mostrado en el iframe viene de
+      // Storage de Supabase, es decir de otro origen: si el navegador deja
+      // llamar print() sobre ese iframe (visor nativo de PDF de Chrome,
+      // mismo caso ya usado en el resto de la app), se imprime directo;
+      // si el navegador lo bloquea por política de mismo origen, se abre
+      // el archivo en una pestaña nueva para que el usuario lo imprima
+      // desde ahí (con el propio botón de impresión del visor).
+      window.imprimirFacturaVer = function() {
+        var frame = document.getElementById('facturaVerFrame');
+        var url = frame && frame.src;
+        if (!url) return;
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.print();
+        } catch (e) {
+          window.open(url, '_blank');
+        }
+      };
+
       // ===== EDITAR PRODUCTO (incluye poder cambiar la foto) =====
       var productoEditandoId = null;
       var edProdFotoArchivo = null;
@@ -15614,106 +15694,17 @@
 
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
-        if (esDepartamentoSuministros(proyecto.departamento)) {
-          var montoEnMonedaProyectoSS = oc.montomxn || 0;
-          if (proyecto.moneda === 'USD') {
-            if (oc.paridadinicial) montoEnMonedaProyectoSS = oc.montomxn / oc.paridadinicial;
-            else montoEnMonedaProyectoSS = oc.montomxn / 20;
-          }
-
-          if (oc.moneda === 'USD' && !oc.tipocambio) {
-            var updatesSSpar = {
-              estado: 'PENDIENTE_PARIDAD',
-              fechaaprobacionsolicitante: new Date().toISOString(),
-              nombresolicitante: actual.u
-            };
-            var errSSpar = (await supabase.from('ordenes').update(updatesSSpar).eq('id', oc.id)).error;
-            if (errSSpar) return alert('Error al actualizar OC');
-            Object.assign(oc, updatesSSpar);
-            render();
-            alert('⏳ OC en USD. Requiere paridad final.');
-            return;
-          }
-
-          var comprometidoPrevioSS = gastoProyectoMoneda(proyecto.nombre);
-          var excedePorSiSolaSS = montoEnMonedaProyectoSS > proyecto.limite;
-          var excedeAcumuladoSS = (comprometidoPrevioSS + montoEnMonedaProyectoSS) >= proyecto.limite;
-
-          if (!excedePorSiSolaSS && !excedeAcumuladoSS) {
-            var updatesSSauto = {
-              estado: 'AUTORIZADA',
-              fechaaprobacionsolicitante: new Date().toISOString(),
-              nombresolicitante: actual.u,
-              fechaaprobacionjefe: new Date().toISOString(),
-              nombrejefe: actual.u,
-              fechaaprobaciondirector: new Date().toISOString(),
-              nombredirector: getDirector(),
-              estadopago: null,
-              notificacion_enviada: false
-            };
-            var errSSauto = (await supabase.from('ordenes').update(updatesSSauto).eq('id', oc.id)).error;
-            if (errSSauto) return alert('Error al actualizar OC');
-            Object.assign(oc, updatesSSauto);
-            render();
-            alert('✅ OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
-            return;
-          }
-
-          var updatesSSdir = {
-            estado: 'PENDIENTE_DIRECTOR',
-            fechaaprobacionsolicitante: new Date().toISOString(),
-            nombresolicitante: actual.u
-          };
-          var errSSdir = (await supabase.from('ordenes').update(updatesSSdir).eq('id', oc.id)).error;
-          if (errSSdir) return alert('Error al actualizar OC');
-          Object.assign(oc, updatesSSdir);
-
-          try {
-            var productosSS = oc.productos || [];
-            if (typeof productosSS === 'string') {
-              try { productosSS = JSON.parse(productosSS); } catch (e) { productosSS = []; }
-            }
-            if (!Array.isArray(productosSS)) productosSS = [];
-
-            var datosOCSS = {
-              codigo: oc.codigo,
-              proyectonombre: oc.proyecto,
-              empresa: proyecto.empresa,
-              departamento: proyecto.departamento,
-              cliente: oc.cliente || proyecto.cliente || 'No especificado',
-              proveedor: oc.proveedor,
-              rfc: oc.rfc || 'No especificado',
-              responsable: oc.responsable,
-              solicitante: oc.solicitante || 'No especificado',
-              elaborador: oc.elaborador || 'Desconocido',
-              moneda: oc.moneda || 'MXN',
-              montototal: oc.montototal || 0,
-              montomxn: oc.montomxn || 0,
-              fechapago: oc.fechapago || new Date().toISOString(),
-              fechaentrega: oc.fechaentrega || new Date().toISOString(),
-              productos: productosSS
-            };
-
-            var motivoExcesoSS = excedePorSiSolaSS ?
-              'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
-              'La suma de lo ya pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
-
-            var mensajeTelegramSS = formatearMensajeOC(datosOCSS, proyecto, oc.id, motivoExcesoSS);
-            var enviadoSS = await enviarNotificacionTelegram(mensajeTelegramSS);
-            if (enviadoSS) {
-              await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
-              oc.notificacion_enviada = true;
-              ocNotificadaId = oc.id;
-            }
-          } catch (error) {
-            console.error('❌ Error al enviar notificación:', error);
-          }
-
-          render();
-          alert('⏳ OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
-          return;
-        }
-
+        // Antes existía un atajo para el departamento de Suministros: la
+        // propia aprobación del Solicitante ya hacía las validaciones de
+        // presupuesto/paridad y podía dejar la OC AUTORIZADA (o enviada
+        // directo a Director) sin pasar nunca por el Jefe de Departamento
+        // (incluso registrando "nombrejefe: actual.u", como si el mismo
+        // solicitante también hubiera autorizado). Toda OC —sin excepción
+        // de departamento— debe ser autorizada por el Jefe de Departamento:
+        // primero aprueba el Solicitante (este paso) y después el Jefe
+        // (window.aprobarJefe, que ya hace las validaciones de
+        // presupuesto/paridad de forma genérica para cualquier
+        // departamento), así que ese atajo se eliminó.
         var updates = {
           estado: 'APROBADA_SOLICITANTE',
           fechaaprobacionsolicitante: new Date().toISOString(),
@@ -23119,13 +23110,40 @@
       // recopilarDatosOC); si el usuario no los tiene capturados, los
       // campos quedan vacíos y el mensaje de la vista avisa que deben
       // completarse en el catálogo de Colaboradores.
-      window.actualizarContactoSolicitanteOC = function() {
+      //
+      // Se consulta directo a Supabase (no solo el caché usuariosDB en
+      // memoria) porque ese caché se carga una sola vez al iniciar sesión:
+      // si un Administrador captura/actualiza el teléfono o email de un
+      // colaborador (p. ej. AAMS2) en Colaboradores DESPUÉS de que esta
+      // sesión ya cargó usuariosDB, el dato nuevo no se reflejaba aquí
+      // hasta cerrar sesión y volver a entrar — se veía "N/A" en el PDF
+      // aunque el colaborador sí tuviera los datos capturados. Se deja el
+      // caché como respaldo únicamente si la consulta falla (sin
+      // conexión).
+      window.actualizarContactoSolicitanteOC = async function() {
         var selectSol = document.getElementById('solicitanteOC');
         var inputTel = document.getElementById('solicitanteTelefonoOC');
         var inputEmail = document.getElementById('solicitanteEmailOC');
         if (!inputTel || !inputEmail) return;
         var usuarioSel = selectSol ? selectSol.value : '';
-        var u = usuarioSel ? (usuariosDB || []).find(function(x) { return x.usuario === usuarioSel; }) : null;
+        if (!usuarioSel) {
+          inputTel.value = '';
+          inputEmail.value = '';
+          return;
+        }
+        var u = null;
+        try {
+          var { data, error } = await supabase.from('usuarios').select('telefono,email').eq('usuario', usuarioSel).maybeSingle();
+          if (!error && data) u = data;
+        } catch (e) {
+          console.error('Error consultando teléfono/email del solicitante:', e);
+        }
+        if (!u) {
+          u = (usuariosDB || []).find(function(x) { return x.usuario === usuarioSel; });
+        }
+        // Si el usuario cambió la selección mientras la consulta estaba en
+        // curso, no pisar los campos con la respuesta ya obsoleta.
+        if (selectSol && selectSol.value !== usuarioSel) return;
         inputTel.value = (u && u.telefono) || '';
         inputEmail.value = (u && u.email) || '';
       };
