@@ -5913,7 +5913,7 @@
     <div class="modal-content">
       <div class="modal-header"><h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3><button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button></div>
       <div id="visualizarStepperOC" class="stepper-oc"></div>
-      <div class="modal-body"><iframe id="visualizarFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
+      <div class="modal-body"><iframe id="visualizarFrame"></iframe></div>
     </div>
   </div>
 
@@ -5967,7 +5967,7 @@
   <div id="cxpPreviewModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Previsualización del Reporte</h3><button class="btn-modal-x" onclick="window.cerrarPreviewCXP()">✕</button></div>
-      <div class="modal-body"><iframe id="cxpPreviewFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;"></iframe></div>
+      <div class="modal-body"><iframe id="cxpPreviewFrame"></iframe></div>
     </div>
   </div>
 
@@ -6297,7 +6297,7 @@
   <div id="ofDocModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Orden de Facturación</h3><button class="btn-modal-x" onclick="window.cerrarOfDocModal()">✕</button></div>
-      <div class="modal-body"><iframe id="ofDocFrame" style="width:100%;height:500px;border:1px solid var(--gray-300);border-radius:8px;display:block;"></iframe></div>
+      <div class="modal-body"><iframe id="ofDocFrame"></iframe></div>
     </div>
   </div>
 
@@ -8213,10 +8213,21 @@
                 moduloOrigenControlProyecto = 'oc_menu';
               }, 0);
             } else if (modulo === 'bandeja_oc_egresos') {
-              // La modal-card tiene su propio fondo/backdrop fijo que cubre
-              // toda la pantalla (#modalOverlayBackdrop), así que no hace
-              // falta preparar ningún "fondo": se abre igual que el botón
-              // "📬 Bandeja de Órdenes de Compra" de CXP (misma función).
+              // bandejaOCCard vive DENTRO de #contenidoApp (es un
+              // .modal-card más, junto a panelOC/panelCXP/etc.). Si
+              // #contenidoApp sigue oculto (display:none) — como aquí, al
+              // venir directo del menú "📊 EGRESOS" sin haber entrado antes
+              // a ningún módulo — la tarjeta no se ve aunque tenga la
+              // clase "abierta" (position:fixed no libera a un elemento de
+              // un ancestro con display:none). Por eso primero se muestra
+              // #contenidoApp (queda vacío detrás, sin ningún panel de
+              // módulo abierto, pero la propia modal-card + su fondo
+              // #modalOverlayBackdrop cubren toda la pantalla igual) y se
+              // oculta el menú "📊 EGRESOS".
+              document.getElementById('menuMaestro').classList.remove('visible');
+              document.getElementById('menuMaestro').classList.add('hidden');
+              document.getElementById('contenidoApp').classList.remove('hidden');
+              document.getElementById('contenidoApp').classList.add('visible');
               window.abrirModalCard('bandejaOCCard');
               moduloOrigenBandejaOC = 'egresos_menu';
             } else if (modulo === 'proyectos') {
