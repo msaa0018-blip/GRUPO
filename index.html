@@ -23946,6 +23946,11 @@
           productos: datos.productos,
           cliente: datos.cliente,
           elaborador: datos.elaborador,
+          // Ver el mismo comentario en window.confirmarOC: faltaba este
+          // campo y "solicitante" quedaba NULL en la base de datos, por lo
+          // que el botón "✅ Aprobar Sol." nunca aparecía en la Bandeja de
+          // OC para las OC creadas desde la previsualización.
+          solicitante: datos.solicitante,
           banco: datos.banco,
           cuenta: datos.cuenta,
           clabe: datos.clabe,
@@ -24052,6 +24057,13 @@
           productos: datos.productos,
           cliente: datos.cliente,
           elaborador: datos.elaborador,
+          // Faltaba este campo: sin él, "solicitante" quedaba NULL en la
+          // base de datos aunque el formulario sí lo capturara (y el PDF
+          // lo mostrara bien, porque el PDF usa "datos" en memoria, no lo
+          // guardado). Con solicitante en NULL, el botón "✅ Aprobar Sol."
+          // nunca aparecía en la Bandeja de OC porque su condición exige
+          // que "o.solicitante" coincida con el usuario actual.
+          solicitante: datos.solicitante,
           banco: datos.banco,
           cuenta: datos.cuenta,
           clabe: datos.clabe,
