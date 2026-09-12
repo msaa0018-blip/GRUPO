@@ -7325,7 +7325,7 @@
         // su cuenta).
         if (usuarioTieneAlgunRol(usuario, ['Elaborador', 'Solicitante'])) {
           ocFiltradas = ocFiltradas.filter(function(o) {
-            return o.elaborador === usuario.usuario || o.solicitante === usuario.usuario;
+            return o.elaborador === usuario.usuario || o.responsable === usuario.usuario;
           });
         }
         return ocFiltradas;
@@ -14378,7 +14378,7 @@
           var vendedores = {};
           var vendedoresConteo = {};
           ordenes.forEach(function(o) {
-            var sol = (o.solicitante || o.elaborador || 'Desconocido').toString().trim().toUpperCase();
+            var sol = (o.responsable || o.elaborador || 'Desconocido').toString().trim().toUpperCase();
             vendedores[sol] = (vendedores[sol] || 0) + (o.montototal || 0);
             vendedoresConteo[sol] = (vendedoresConteo[sol] || 0) + 1;
           });
@@ -15695,8 +15695,8 @@
         // Solo el solicitante/responsable designado en la propia OC puede
         // aprobarla en este paso: ningún otro usuario (incluido un Jefe de
         // Departamento que no sea el designado) puede hacerlo en su lugar.
-        if (actual.u !== oc.solicitante) {
-          return alert('❌ Solo el solicitante designado (' + oc.solicitante + ') puede aprobar esta OC.');
+        if (actual.u !== oc.responsable) {
+          return alert('❌ Solo el solicitante designado (' + oc.responsable + ') puede aprobar esta OC.');
         }
 
         if (actual.rol === 'Jefe Departamento' && !usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
@@ -15804,7 +15804,7 @@
             proveedor: oc.proveedor,
             rfc: oc.rfc || 'No especificado',
             responsable: oc.responsable,
-            solicitante: oc.solicitante || 'No especificado',
+            solicitante: oc.responsable || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
             moneda: oc.moneda || 'MXN',
             montototal: oc.montototal || 0,
@@ -16047,7 +16047,7 @@
             proveedor: oc.proveedor,
             rfc: oc.rfc || 'No especificado',
             responsable: oc.responsable,
-            solicitante: oc.solicitante || 'No especificado',
+            solicitante: oc.responsable || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
             moneda: oc.moneda || 'MXN',
             montototal: oc.montototal || 0,
@@ -16453,8 +16453,8 @@
         // La factura solo la puede subir el solicitante/responsable de esa
         // OC — ningún otro rol (ni Finanzas, ni Jefe de Departamento, ni
         // Administrador) puede subirla en su lugar.
-        if (actual.u !== oc.solicitante) {
-          return alert('❌ Solo el solicitante/responsable (' + oc.solicitante + ') puede subir la factura de esta OC.');
+        if (actual.u !== oc.responsable) {
+          return alert('❌ Solo el solicitante/responsable (' + oc.responsable + ') puede subir la factura de esta OC.');
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
@@ -16867,7 +16867,7 @@
       async function agregarNotaOC(oc, etiquetaAccion, motivo) {
         try {
           var destinatarios = [];
-          if (oc.solicitante) destinatarios.push(oc.solicitante);
+          if (oc.responsable) destinatarios.push(oc.responsable);
           if (oc.elaborador && destinatarios.indexOf(oc.elaborador) === -1) destinatarios.push(oc.elaborador);
           if (destinatarios.length === 0 && actual) destinatarios.push(actual.usuario);
 
@@ -20064,7 +20064,7 @@
         var ocVisibles;
         if (verSoloMisOC) {
           ocVisibles = filtrarOCParaCXP(actual).filter(function(o) {
-            return actual && (o.solicitante === actual.usuario || o.elaborador === actual.usuario);
+            return actual && (o.responsable === actual.usuario || o.elaborador === actual.usuario);
           });
         } else {
           ocVisibles = filtrarOCParaCXP(actual);
@@ -20232,7 +20232,7 @@
               }
 
               if (!o.pausada) {
-                if ((rolIncluye(rol, 'Solicitante') || rolIncluye(rol, 'Elaborador') || rol === 'Jefe Departamento') && o.estado === 'CREADA' && o.solicitante === actual.u) {
+                if ((rolIncluye(rol, 'Solicitante') || rolIncluye(rol, 'Elaborador') || rol === 'Jefe Departamento') && o.estado === 'CREADA' && o.responsable === actual.u) {
                   acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
                 }
                 if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
@@ -20245,7 +20245,7 @@
                 if (rolIncluye(rol, 'Elaborador') && o.estado === 'PENDIENTE_PARIDAD') {
                   acciones += '<button class="btn-warning" onclick="window.abrirModalParidadOC(' + idxOriginal + ')">💰 Paridad</button>';
                 }
-                if (o.solicitante === actual.u && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                if (o.responsable === actual.u && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
@@ -23946,11 +23946,11 @@
           productos: datos.productos,
           cliente: datos.cliente,
           elaborador: datos.elaborador,
-          // Ver el mismo comentario en window.confirmarOC: faltaba este
-          // campo y "solicitante" quedaba NULL en la base de datos, por lo
-          // que el botón "✅ Aprobar Sol." nunca aparecía en la Bandeja de
-          // OC para las OC creadas desde la previsualización.
-          solicitante: datos.solicitante,
+          // NOTA: la tabla "ordenes" no tiene columna "solicitante" (se
+          // confirmó contra el esquema real) — el solicitante se guarda en
+          // la columna "responsable", que ya se envía arriba. Insertar
+          // "solicitante" aquí hace fallar el INSERT completo (columna
+          // inexistente), así que se quitó.
           banco: datos.banco,
           cuenta: datos.cuenta,
           clabe: datos.clabe,
@@ -24057,13 +24057,10 @@
           productos: datos.productos,
           cliente: datos.cliente,
           elaborador: datos.elaborador,
-          // Faltaba este campo: sin él, "solicitante" quedaba NULL en la
-          // base de datos aunque el formulario sí lo capturara (y el PDF
-          // lo mostrara bien, porque el PDF usa "datos" en memoria, no lo
-          // guardado). Con solicitante en NULL, el botón "✅ Aprobar Sol."
-          // nunca aparecía en la Bandeja de OC porque su condición exige
-          // que "o.solicitante" coincida con el usuario actual.
-          solicitante: datos.solicitante,
+          // NOTA: la tabla "ordenes" no tiene columna "solicitante" — el
+          // solicitante se guarda en "responsable" (ya enviado arriba).
+          // Insertar "solicitante" aquí hacía fallar el INSERT completo
+          // (PostgREST: columna inexistente), así que se quitó.
           banco: datos.banco,
           cuenta: datos.cuenta,
           clabe: datos.clabe,
