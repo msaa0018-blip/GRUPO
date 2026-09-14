@@ -4446,16 +4446,27 @@
             <button class="btn-modal-x" onclick="window.cerrarModalParidadOC()">✕</button>
           </div>
           <div class="modal-body">
-            <p class="text-muted" style="margin-bottom:14px;">Esta OC está en Dólares. Elige cómo se va a manejar antes de continuar con la autorización:</p>
-            <div style="display:flex; flex-direction:column; gap:10px;">
-              <button class="success" style="width:100%; display:flex; flex-direction:column; gap:2px; padding:10px 14px;" onclick="window.elegirAgregarParidad()">
-                <span>💱 Agregar Paridad</span>
-                <span style="font-weight:400; font-size:11px;">Convertir a MXN con un tipo de cambio</span>
-              </button>
-              <button style="width:100%; display:flex; flex-direction:column; gap:2px; padding:10px 14px;" onclick="window.elegirPagoDolares()">
-                <span>💵 Pago en Dólares</span>
-                <span style="font-weight:400; font-size:11px;">Sin conversión — el PDF mostrará N/A</span>
-              </button>
+            <div id="paridadOCOpciones">
+              <p class="text-muted" style="margin-bottom:14px;">Esta OC está en Dólares. Elige cómo se va a manejar antes de continuar con la autorización:</p>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="success" style="width:100%; display:flex; flex-direction:column; gap:2px; padding:10px 14px;" onclick="window.mostrarCampoAgregarParidad()">
+                  <span>💱 Agregar Paridad</span>
+                  <span style="font-weight:400; font-size:11px;">Convertir a MXN con un tipo de cambio</span>
+                </button>
+                <button style="width:100%; display:flex; flex-direction:column; gap:2px; padding:10px 14px;" onclick="window.elegirPagoDolares()">
+                  <span>💵 Pago en Dólares</span>
+                  <span style="font-weight:400; font-size:11px;">Sin conversión — el PDF mostrará N/A</span>
+                </button>
+              </div>
+            </div>
+            <div id="paridadOCCampoTipoCambio" style="display:none;">
+              <p class="text-muted" style="margin-bottom:10px;">Ingresa el tipo de cambio (pesos por 1 dólar) con el que se pagó esta OC:</p>
+              <input id="inputTipoCambioParidad" type="number" step="0.0001" min="0" inputmode="decimal" placeholder="Ej. 18.50" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
+              <div id="msgParidadOC"></div>
+              <div style="display:flex; gap:8px;">
+                <button style="flex:1;" onclick="window.cancelarCampoAgregarParidad()">← Regresar</button>
+                <button class="success" style="flex:1;" onclick="window.confirmarAgregarParidad()">✔️ Confirmar</button>
+              </div>
             </div>
           </div>
         </div>
@@ -16006,6 +16017,16 @@
         indexParidadPendiente = index;
         var titulo = document.getElementById('paridadOCCodigo');
         if (titulo) titulo.textContent = oc.codigo;
+        // Siempre abre mostrando las dos opciones (no el campo de tipo de
+        // cambio), por si el modal se había quedado a medias en un uso previo.
+        var opciones = document.getElementById('paridadOCOpciones');
+        var campoTC = document.getElementById('paridadOCCampoTipoCambio');
+        if (opciones) opciones.style.display = '';
+        if (campoTC) campoTC.style.display = 'none';
+        var inputTC = document.getElementById('inputTipoCambioParidad');
+        if (inputTC) inputTC.value = '';
+        var msgTC = document.getElementById('msgParidadOC');
+        if (msgTC) msgTC.innerHTML = '';
         document.getElementById('modalParidadOC').classList.add('active');
       };
 
@@ -16014,16 +16035,44 @@
         document.getElementById('modalParidadOC').classList.remove('active');
       };
 
-      window.elegirAgregarParidad = async function() {
+      // Muestra, dentro del mismo modal, el campo para capturar el tipo de
+      // cambio (en vez de usar prompt(): en el navegador de algunos
+      // celulares/PWA, window.prompt() no se muestra o se descarta solo,
+      // lo que hacía parecer que "no dejaba elegir paridad" al seleccionar
+      // que la OC se pagó convertida a pesos).
+      window.mostrarCampoAgregarParidad = function() {
+        var opciones = document.getElementById('paridadOCOpciones');
+        var campoTC = document.getElementById('paridadOCCampoTipoCambio');
+        if (opciones) opciones.style.display = 'none';
+        if (campoTC) campoTC.style.display = '';
+        var msgTC = document.getElementById('msgParidadOC');
+        if (msgTC) msgTC.innerHTML = '';
+        var inputTC = document.getElementById('inputTipoCambioParidad');
+        if (inputTC) { inputTC.value = ''; inputTC.focus(); }
+      };
+
+      window.cancelarCampoAgregarParidad = function() {
+        var opciones = document.getElementById('paridadOCOpciones');
+        var campoTC = document.getElementById('paridadOCCampoTipoCambio');
+        if (campoTC) campoTC.style.display = 'none';
+        if (opciones) opciones.style.display = '';
+      };
+
+      window.confirmarAgregarParidad = async function() {
+        var msgTC = document.getElementById('msgParidadOC');
+        if (msgTC) msgTC.innerHTML = '';
         var index = indexParidadPendiente;
-        window.cerrarModalParidadOC();
         if (index === null) return;
         var oc = ordenes[index];
-        var tc = prompt('Ingrese el tipo de cambio (MXN/USD) para la OC ' + oc.codigo + ':');
-        if (tc === null) return;
-        var tipoCambio = parseFloat(tc);
-        if (!tipoCambio || tipoCambio <= 0) { alert('Tipo de cambio inválido.'); return; }
+        if (!oc) return;
+        var inputTC = document.getElementById('inputTipoCambioParidad');
+        var tipoCambio = parseFloat(inputTC ? inputTC.value : '');
+        if (!tipoCambio || tipoCambio <= 0) {
+          if (msgTC) msgTC.innerHTML = '<div class="alert">❌ Ingresa un tipo de cambio válido (mayor a 0).</div>';
+          return;
+        }
         var nuevoMontoMXN = oc.montototal * tipoCambio;
+        window.cerrarModalParidadOC();
         await window.finalizarDecisionParidadOC(index, tipoCambio, nuevoMontoMXN, 'Paridad ingresada (' + tipoCambio + ')');
       };
 
