@@ -1379,7 +1379,7 @@
   .almacen-kpi-card .almacen-kpi-valor { font-size: 16px; font-weight: 700; color: var(--primary); }
 
   /* ===== MODAL: NUEVA CUENTA POR COBRAR (CXC) ===== */
-  #agregarCXCModal, #agregarDocumentoCXPModal, #agregarSPMModal, #cxpFiltroEstadosModal, #cxcFiltroEstadosModal, #vehiculoAccionesModal, #agregarVehiculoModal, #agregarValeGasolinaModal, #valeAccionesModal, #valesGasolinaDashboardModal, #valeVisualizarModal, #valeComprobarModal, #vscCatalogoAccionesModal, #editarVscCatalogoModal, #modalParidadOC {
+  #agregarCXCModal, #agregarDocumentoCXPModal, #agregarSPMModal, #cxpFiltroEstadosModal, #cxcFiltroEstadosModal, #vehiculoAccionesModal, #agregarVehiculoModal, #agregarValeGasolinaModal, #valeAccionesModal, #valesGasolinaDashboardModal, #valeVisualizarModal, #valeComprobarModal, #vscCatalogoAccionesModal, #editarVscCatalogoModal, #modalParidadOC, #conflictoParteModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1396,8 +1396,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #agregarCXCModal.active, #agregarDocumentoCXPModal.active, #agregarSPMModal.active, #cxpFiltroEstadosModal.active, #cxcFiltroEstadosModal.active, #vehiculoAccionesModal.active, #agregarVehiculoModal.active, #agregarValeGasolinaModal.active, #valeAccionesModal.active, #valesGasolinaDashboardModal.active, #valeVisualizarModal.active, #valeComprobarModal.active, #vscCatalogoAccionesModal.active, #editarVscCatalogoModal.active, #modalParidadOC.active { display: flex }
-  #agregarCXCModal .modal-content, #agregarDocumentoCXPModal .modal-content, #agregarSPMModal .modal-content, #cxpFiltroEstadosModal .modal-content, #cxcFiltroEstadosModal .modal-content, #vehiculoAccionesModal .modal-content, #agregarVehiculoModal .modal-content, #agregarValeGasolinaModal .modal-content, #valeAccionesModal .modal-content, #valesGasolinaDashboardModal .modal-content, #valeVisualizarModal .modal-content, #valeComprobarModal .modal-content, #vscCatalogoAccionesModal .modal-content, #editarVscCatalogoModal .modal-content, #modalParidadOC .modal-content {
+  #agregarCXCModal.active, #agregarDocumentoCXPModal.active, #agregarSPMModal.active, #cxpFiltroEstadosModal.active, #cxcFiltroEstadosModal.active, #vehiculoAccionesModal.active, #agregarVehiculoModal.active, #agregarValeGasolinaModal.active, #valeAccionesModal.active, #valesGasolinaDashboardModal.active, #valeVisualizarModal.active, #valeComprobarModal.active, #vscCatalogoAccionesModal.active, #editarVscCatalogoModal.active, #modalParidadOC.active, #conflictoParteModal.active { display: flex }
+  #agregarCXCModal .modal-content, #agregarDocumentoCXPModal .modal-content, #agregarSPMModal .modal-content, #cxpFiltroEstadosModal .modal-content, #cxcFiltroEstadosModal .modal-content, #vehiculoAccionesModal .modal-content, #agregarVehiculoModal .modal-content, #agregarValeGasolinaModal .modal-content, #valeAccionesModal .modal-content, #valesGasolinaDashboardModal .modal-content, #valeVisualizarModal .modal-content, #valeComprobarModal .modal-content, #vscCatalogoAccionesModal .modal-content, #editarVscCatalogoModal .modal-content, #modalParidadOC .modal-content, #conflictoParteModal .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
     border: 1px solid var(--modal-border);
@@ -3853,6 +3853,7 @@
             <h3>🗞️ Nuevo Comunicado</h3>
             <div class="pdfPreview-btn-group">
               <button class="btn-modal-x" onclick="window.cerrarNuevoComunicado()">✕</button>
+              <button class="btn-modal-x" onclick="window.mostrarComunicadoComplejo()">📎 Comunicado complejo</button>
               <button class="success btn-modal-x" onclick="window.generarComunicado()">➜</button>
             </div>
           </div>
@@ -3921,6 +3922,15 @@
                 </table>
               </div>
               <button type="button" class="success" onclick="window.agregarFilaComunicadoCcp()" style="margin-top:6px;padding:8px 12px;">➕ Agregar</button>
+            </div>
+
+            <!-- "Comunicado complejo": permite adjuntar uno o varios
+                 documentos adicionales que se envían junto con el PDF
+                 del comunicado en la misma conversación del Buzón. -->
+            <div id="comunicadoAdjuntosWrap" style="display:none;margin-top:12px;">
+              <h4>📎 Documentos adjuntos (Comunicado complejo)</h4>
+              <input type="file" id="comunicadoAdjuntos" multiple style="width:100%;" onchange="window.actualizarNombresComunicadoAdjuntos()">
+              <div id="comunicadoAdjuntosNombres" style="margin-top:4px;font-size:12px;color:var(--gray-600);"></div>
             </div>
 
             <div id="msgComunicado" style="margin-top:10px;"></div>
@@ -4467,6 +4477,25 @@
                 <button style="flex:1;" onclick="window.cancelarCampoAgregarParidad()">← Regresar</button>
                 <button class="success" style="flex:1;" onclick="window.confirmarAgregarParidad()">✔️ Confirmar</button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MODAL: NÚMERO DE PARTE YA REGISTRADO CON OTRA DESCRIPCIÓN (Crear OC) ===== -->
+      <div id="conflictoParteModal">
+        <div class="modal-content" style="max-width:460px;">
+          <div class="modal-header">
+            <h3>⚠️ Número de parte ya registrado</h3>
+            <button class="btn-modal-x" onclick="window.cerrarConflictoParte()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div id="conflictoParteInfo" style="margin-bottom:12px;font-size:13px;background:var(--gray-100);padding:10px;border-radius:8px;"></div>
+            <p class="text-muted" style="margin-bottom:6px;">¿Deseas agregar este producto con los datos ya registrados con ese número de parte, o registrar otro nuevo cambiando el número de parte?</p>
+            <div id="conflictoParteMsg"></div>
+            <div style="display:flex; gap:8px; margin-top:14px;">
+              <button style="flex:1;" onclick="window.resolverConflictoParte(false)">✏️ Es otro, cambiar número</button>
+              <button class="success" style="flex:1;" onclick="window.resolverConflictoParte(true)">✔️ Sí, agregar este producto</button>
             </div>
           </div>
         </div>
@@ -5914,7 +5943,7 @@
   <div id="pdfPreviewModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>📄 Previsualización de la Orden de Compra</h3>
+        <h3>📄 <span id="pdfPreviewTitulo">Previsualización de la Orden de Compra</span></h3>
         <div class="pdfPreview-btn-group">
           <button onclick="window.cerrarPreview()">✕</button>
         </div>
@@ -6039,6 +6068,7 @@
       </div>
       <div class="modal-body">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="btnAccionDocCxpPrevisualizar" class="btn-accion-producto" data-accion="previsualizar" onclick="window.seleccionarAccionDocumentoCXP('previsualizar')">👁️ Previsualizar</button>
           <button type="button" id="btnAccionDocCxpImprimir" class="btn-accion-producto" data-accion="imprimir" onclick="window.seleccionarAccionDocumentoCXP('imprimir')">🖨️ Imprimir PDF</button>
           <button type="button" id="btnAccionDocCxpEditar" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionDocumentoCXP('editar')">✏️ Editar</button>
           <button type="button" id="btnAccionDocCxpAutorizar" class="btn-accion-producto" data-accion="autorizar" onclick="window.seleccionarAccionDocumentoCXP('autorizar')">🖋️ Autorizar (Director)</button>
@@ -6864,7 +6894,20 @@
         }
 
         var promesa = (async function() {
-          var response = await fetch(url);
+          // Timeout de seguridad: en una conexión móvil lenta/inestable,
+          // fetch() puede quedarse "colgado" sin resolver nunca ni fallar,
+          // lo que dejaba el PDF completo atorado en "Generando PDF…" para
+          // siempre (sin esta imagen no se podía continuar ni mostrar el
+          // error). Si no responde en 12s, se aborta y se sigue sin la
+          // imagen (el llamador ya maneja el caso "no se pudo cargar").
+          var controladorAbortoImg = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+          var timeoutImg = controladorAbortoImg ? setTimeout(function() { controladorAbortoImg.abort(); }, 12000) : null;
+          var response;
+          try {
+            response = await fetch(url, controladorAbortoImg ? { signal: controladorAbortoImg.signal } : undefined);
+          } finally {
+            if (timeoutImg) clearTimeout(timeoutImg);
+          }
           if (!response.ok) return null;
           var blob = await response.blob();
           var dataUrlOriginal = await new Promise(function(resolve) {
@@ -11096,7 +11139,7 @@
       // Mensual): datos generales, tabla de personal PMSYS y el resumen
       // de totales (PMSYS + comisión + PMVDC TKC). Sigue el mismo estilo
       // de reporte que la Orden de Facturación (generarPDFOF).
-      window.imprimirPDFSPM = async function(id) {
+      window.imprimirPDFSPM = async function(id, soloPreview) {
         var d = documentosCXPCache.find(function(x) { return x.id === id; });
         if (!d) return;
         if (d.tipo !== 'SPM') return;
@@ -11130,7 +11173,7 @@
               });
               var img = new Image();
               img.src = imgData;
-              await new Promise(function(resolve) { img.onload = resolve; });
+              await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = reject; });
               var imgWidth = 140;
               var imgHeight = (img.height / img.width) * imgWidth;
               doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
@@ -11350,7 +11393,20 @@
           doc.setFont('helvetica', 'normal');
           doc.text(d.folio || d.codigo || '', pageWidth / 2, pieY + 20, { align: 'center' });
 
-          doc.save((d.folio || d.codigo || 'SPM') + '.pdf');
+          if (soloPreview) {
+            // Vista previa: se muestra en el modal genérico de PDF (el
+            // mismo que usa "Previsualizar" en Crear OC) en vez de
+            // descargar el archivo directamente.
+            var pdfBlobSPM = doc.output('blob');
+            var pdfUrlSPM = URL.createObjectURL(pdfBlobSPM);
+            var tituloPreviewSPM = document.getElementById('pdfPreviewTitulo');
+            if (tituloPreviewSPM) tituloPreviewSPM.textContent = 'Previsualización de la SPM';
+            var framePreviewSPM = document.getElementById('pdfPreviewFrame');
+            if (framePreviewSPM) framePreviewSPM.src = pdfUrlSPM;
+            document.getElementById('pdfPreviewModal').classList.add('active');
+          } else {
+            doc.save((d.folio || d.codigo || 'SPM') + '.pdf');
+          }
         } catch (e) {
           console.error('Error generando el PDF de la SPM:', e);
           alert('❌ No se pudo generar el PDF: ' + e.message);
@@ -12585,6 +12641,9 @@
         document.getElementById('comunicadoAsunto').value = '';
         document.getElementById('comunicadoCuerpo').value = '';
         document.getElementById('cuerpoComunicadoCcp').innerHTML = '';
+        document.getElementById('comunicadoAdjuntosWrap').style.display = 'none';
+        document.getElementById('comunicadoAdjuntos').value = '';
+        document.getElementById('comunicadoAdjuntosNombres').textContent = '';
 
         // Remitente: se rellena solo con los datos del usuario en sesión.
         var permisoActual = (actual.permisos && actual.permisos[0]) || {};
@@ -12625,6 +12684,24 @@
 
       window.cerrarNuevoComunicado = function() {
         document.getElementById('comunicadoModal').classList.remove('active');
+      };
+
+      // "Comunicado complejo": muestra/oculta el selector de documentos
+      // adjuntos adicionales (además del PDF del propio comunicado, que
+      // siempre se genera). El envío sigue haciéndose con el mismo botón
+      // ➜ de siempre.
+      window.mostrarComunicadoComplejo = function() {
+        var wrap = document.getElementById('comunicadoAdjuntosWrap');
+        if (!wrap) return;
+        wrap.style.display = (wrap.style.display === 'none') ? '' : 'none';
+      };
+
+      window.actualizarNombresComunicadoAdjuntos = function() {
+        var input = document.getElementById('comunicadoAdjuntos');
+        var cont = document.getElementById('comunicadoAdjuntosNombres');
+        if (!input || !cont) return;
+        var nombres = Array.prototype.slice.call(input.files || []).map(function(f) { return f.name; });
+        cont.textContent = nombres.length ? ('Seleccionados: ' + nombres.join(', ')) : '';
       };
 
       window.actualizarDestinatarioComunicado = function() {
@@ -12720,19 +12797,8 @@
             var altoMembrete = propsMembrete ? (pageWidth * (propsMembrete.h / propsMembrete.w)) : 90;
             doc.addImage(dataMembrete, 'PNG', 0, 0, pageWidth, altoMembrete);
             y = altoMembrete + 14;
-
-            if (datos.formato !== 'SIN_LOGO') {
-              try {
-                var logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
-                var dataLogo = await obtenerImagenComoDataURL(logoUrl);
-                var logoTam = ajustarImagenACaja(await medirImagenPDF(dataLogo), 50, 36);
-                if (dataLogo && logoTam) {
-                  doc.addImage(dataLogo, 'PNG', pageWidth - margin - logoTam.w, 8, logoTam.w, logoTam.h);
-                }
-              } catch (eLogo) {
-                console.warn('No se pudo superponer el logo del comunicado:', eLogo);
-              }
-            }
+            // El comunicado ya no lleva el logo superpuesto sobre el
+            // membrete (a petición explícita) — solo el membrete oficial.
           } else {
             y = margin;
           }
@@ -12953,6 +13019,25 @@
             fecha: new Date().toISOString()
           }]);
           if (errorMsg2) throw errorMsg2;
+
+          // "Comunicado complejo": si se adjuntaron documentos
+          // adicionales, se suben y se agregan como mensajes propios en
+          // la misma conversación (uno por archivo), a continuación del
+          // mensaje del comunicado.
+          var inputAdjuntos = document.getElementById('comunicadoAdjuntos');
+          var archivosAdjuntos = inputAdjuntos ? Array.prototype.slice.call(inputAdjuntos.files || []) : [];
+          for (var iAdj = 0; iAdj < archivosAdjuntos.length; iAdj++) {
+            var archivoAdj = archivosAdjuntos[iAdj];
+            var subidoAdj = await subirDocumentoBuzon(archivoAdj);
+            await supabase.from('buzon_mensajes').insert([{
+              conversacion_id: convCreada.id,
+              autor: actual.usuario,
+              contenido: 'Documento adjunto: ' + archivoAdj.name,
+              adjunto_url: subidoAdj ? subidoAdj.url : null,
+              adjunto_nombre: subidoAdj ? subidoAdj.nombre : archivoAdj.name,
+              fecha: new Date().toISOString()
+            }]);
+          }
 
           await supabase.from('comunicados_internos').update({ conversacion_id: convCreada.id }).eq('id', comunicadoCreado.id);
 
@@ -15822,6 +15907,7 @@
         Object.assign(oc, updates);
         render();
         alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
+        window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
       window.aprobarJefe = async function(index) {
@@ -15850,6 +15936,7 @@
           Object.assign(oc, updates);
           render();
           alert('⏳ OC en USD. Requiere paridad final.');
+          window.mostrarMenuMaestro('egresos', 'EGRESOS');
           return;
         }
 
@@ -15872,6 +15959,7 @@
           Object.assign(oc, updates);
           render();
           alert('✅ OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
+          window.mostrarMenuMaestro('egresos', 'EGRESOS');
           return;
         }
 
@@ -15928,6 +16016,7 @@
 
         render();
         alert('⏳ OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
+        window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
       window.autorizarDirector = async function(index) {
@@ -15937,6 +16026,15 @@
         if (!puedeAutorizar) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+
+        // Se detecta ANTES de actualizar la OC (que abajo puede tocar otras
+        // variables) si esta autorización viene del link exclusivo de
+        // Telegram del Director (?oc=ID): en ese caso, al terminar se
+        // cierra la sesión de inmediato en vez de dejarlo navegando —
+        // si vuelve a abrir el mismo link, el candado de "link ya usado"
+        // que ya existe al iniciar sesión (más arriba, en el login) le
+        // mostrará "OC autorizada previamente".
+        var esViaLinkTelegram = actual && actual.rol === 'Director General' && oc.id === pendingOcId;
 
         var updates = {
           estado: 'AUTORIZADA',
@@ -15955,7 +16053,15 @@
         }
 
         render();
+
+        if (esViaLinkTelegram) {
+          alert('✅ OC autorizada.');
+          location.reload();
+          return;
+        }
+
         alert('✅ OC autorizada por Director.');
+        window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
       window.autorizarDirectorDirecto = async function(index) {
@@ -16155,6 +16261,7 @@
           Object.assign(oc, updates);
           render();
           alert('✅ ' + mensajeOrigen + '. OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
+          window.mostrarMenuMaestro('egresos', 'EGRESOS');
           return;
         }
 
@@ -16205,6 +16312,7 @@
         }
 
         alert('✅ ' + mensajeOrigen + '. OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
+        window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
       // ============================================================
@@ -16215,7 +16323,7 @@
       // la columna "Código" de la tabla de productos de la OC). Si el
       // código no existe en el catálogo, no hace nada (esa línea de la OC
       // no está ligada a inventario).
-      async function ajustarInventarioPorCodigo(codigo, delta, lineaOrigen) {
+      async function ajustarInventarioPorCodigo(codigo, delta, lineaOrigen, causaMotivo, ocCodigo) {
         if (!codigo || !delta) return;
         try {
           var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id').eq('codigo', codigo).maybeSingle();
@@ -16258,13 +16366,19 @@
           var nuevaCantidad = (prod.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
           await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', prod.id);
+          // El motivo siempre indica la causa del movimiento y, si viene de
+          // una OC, el código de esa OC al final separado por un guion —
+          // así el módulo de Inventario permite rastrear de qué OC vino
+          // cada entrada/salida.
+          var motivoFinal = causaMotivo || 'Movimiento por Orden de Compra';
+          if (ocCodigo) motivoFinal += ' - ' + ocCodigo;
           await registrarMovimientoInventario({
             producto_id: prod.id,
             codigo: codigo,
             descripcion: prod.descripcion || '',
             almacen: nombreAlmacenPorId(prod.almacen_id),
             cantidad: delta,
-            motivo: 'Movimiento por Orden de Compra'
+            motivo: motivoFinal
           });
         } catch (e) {
           console.error('Error ajustando inventario para código ' + codigo + ':', e);
@@ -16426,14 +16540,15 @@
       // Aplica el movimiento completo de una OC al inventario: signo +1
       // (al pagarse) suma la cantidad de cada línea con código al stock;
       // signo -1 (al revertir el pago) la resta.
-      async function aplicarMovimientoInventarioOC(productosOC, signo) {
+      async function aplicarMovimientoInventarioOC(productosOC, signo, ocCodigo) {
         if (!Array.isArray(productosOC)) return;
+        var causa = signo > 0 ? 'Entrada por conclusión de OC' : 'Reversión de inventario por OC';
         for (var i = 0; i < productosOC.length; i++) {
           var linea = productosOC[i];
           var codigo = (linea.codigo || '').trim();
           var cantidadLinea = Number(linea.cantidad) || 0;
           if (!codigo || cantidadLinea <= 0) continue;
-          await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea, linea);
+          await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea, linea, causa, ocCodigo);
         }
         if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
       }
@@ -16441,26 +16556,35 @@
       // Calcula, por código, la diferencia de cantidades entre la versión
       // anterior y la nueva versión de los productos de una OC ya pagada
       // (usado cuando el Administrador agrega/quita/modifica productos).
+      // Además de la cantidad neta, conserva los datos de la partida (para
+      // poder dar de alta el producto en el catálogo si es un código nuevo
+      // que todavía no existe — ver ajustarInventarioPorCodigo).
       function calcularDeltaInventarioOC(productosViejos, productosNuevos) {
         var mapa = {};
         (productosViejos || []).forEach(function(p) {
           var cod = (p.codigo || '').trim();
           if (!cod) return;
-          mapa[cod] = (mapa[cod] || 0) - (Number(p.cantidad) || 0);
+          if (!mapa[cod]) mapa[cod] = { delta: 0, linea: p };
+          mapa[cod].delta -= (Number(p.cantidad) || 0);
         });
         (productosNuevos || []).forEach(function(p) {
           var cod = (p.codigo || '').trim();
           if (!cod) return;
-          mapa[cod] = (mapa[cod] || 0) + (Number(p.cantidad) || 0);
+          if (!mapa[cod]) mapa[cod] = { delta: 0, linea: p };
+          mapa[cod].delta += (Number(p.cantidad) || 0);
+          mapa[cod].linea = p; // prioriza los datos vigentes (descripción/udm/precio actuales)
         });
         return mapa;
       }
 
-      async function aplicarDeltaInventarioOC(mapaDeltas) {
+      async function aplicarDeltaInventarioOC(mapaDeltas, ocCodigo) {
         var codigos = Object.keys(mapaDeltas);
         for (var i = 0; i < codigos.length; i++) {
           var codigo = codigos[i];
-          if (mapaDeltas[codigo]) await ajustarInventarioPorCodigo(codigo, mapaDeltas[codigo]);
+          var entrada = mapaDeltas[codigo];
+          if (entrada && entrada.delta) {
+            await ajustarInventarioPorCodigo(codigo, entrada.delta, entrada.linea, 'Ajuste de inventario por edición de productos de OC', ocCodigo);
+          }
         }
         if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
       }
@@ -17036,7 +17160,7 @@
           // Los productos de la OC se agregan al inventario solo hasta
           // este momento: cuando ya está pagada (estadopago === 'PAGADA',
           // verificado en registrarFactura) Y facturada/concluida.
-          await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1);
+          await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo);
 
           ocConclusionPendiente = null;
           facturaArchivoPendiente = null;
@@ -18705,6 +18829,12 @@
 
         var esSPM = d.tipo === 'SPM';
 
+        // Previsualizar (solo SPM): abre el PDF de reporte en una ventana
+        // de vista previa, sin descargarlo, igual que "Previsualizar" en
+        // Crear OC.
+        var btnPrevisualizar = document.getElementById('btnAccionDocCxpPrevisualizar');
+        if (btnPrevisualizar) btnPrevisualizar.style.display = esSPM ? '' : 'none';
+
         // Editar: las SPM no se pueden editar nunca, por nadie. VC/VI:
         // solo ADMIN y Jefe de Departamento.
         var btnEditar = document.getElementById('btnAccionDocCxpEditar');
@@ -18760,6 +18890,7 @@
         else if (accion === 'eliminar') window.eliminarDocumentoCXP(id);
         else if (accion === 'editar') window.editarDocumentoCXP(id);
         else if (accion === 'imprimir') window.imprimirPDFDocumentoCXP(id);
+        else if (accion === 'previsualizar') window.imprimirPDFSPM(id, true);
         else if (accion === 'autorizar') window.autorizarSPMDirector(id);
       };
 
@@ -20129,6 +20260,30 @@
         return 'PROD-' + String(maxNum + 1).padStart(5, '0');
       }
 
+      // Calcula el siguiente número de parte consecutivo, tomando como
+      // referencia el número de parte más alto ya usado (en el catálogo y
+      // en las filas ya capturadas en esta misma OC), conservando su
+      // mismo prefijo y el mismo ancho de dígitos. Se usa cuando el
+      // usuario confirma que un número de parte ya registrado en
+      // realidad corresponde a OTRO producto distinto, y hay que
+      // asignarle uno nuevo. Si no hay ningún número de parte con
+      // formato numérico del que partir, regresa cadena vacía (el campo
+      // se deja en blanco para captura manual).
+      function siguienteNumeroParteConsecutivo() {
+        var maxNum = -1, prefijo = '', ancho = 0;
+        function considerar(valor) {
+          var m = /^(.*?)(\d+)$/.exec((valor || '').trim());
+          if (!m) return;
+          var num = parseInt(m[2], 10);
+          if (num > maxNum) { maxNum = num; prefijo = m[1]; ancho = m[2].length; }
+        }
+        (productosCatalogoCache || []).forEach(function(p) { considerar(p && p.numero_parte); });
+        var tbody = document.getElementById('cuerpoProductos');
+        if (tbody) tbody.querySelectorAll('.part').forEach(function(inp) { considerar(inp.value); });
+        if (ancho === 0) return '';
+        return prefijo + String(maxNum + 1).padStart(ancho, '0');
+      }
+
       // Busca en el catálogo un producto cuyo número de parte coincida
       // (sin distinguir mayúsculas/espacios) con el capturado en la fila.
       function buscarProductoCatalogoPorParte(parte) {
@@ -20156,6 +20311,78 @@
         codigoInput.value = existente ? (existente.codigo || '') : siguienteCodigoProductoPreview();
       };
 
+      // Si el número de parte capturado ya existe en el catálogo pero la
+      // descripción que se está escribiendo en la partida NO coincide con
+      // la del producto ya registrado, se pregunta al usuario si de
+      // verdad es el mismo producto (y entonces se precargan todos sus
+      // datos) o si es uno distinto (y entonces se le asigna un número de
+      // parte nuevo, consecutivo al último usado).
+      var conflictoPartePendiente = null;
+
+      window.verificarConflictoParteDescripcion = function(inputDesc) {
+        var fila = inputDesc.closest ? inputDesc.closest('tr') : null;
+        if (!fila) return;
+        var parteInput = fila.querySelector('.part');
+        var parte = parteInput ? parteInput.value.trim() : '';
+        if (!parte) return;
+        var existente = buscarProductoCatalogoPorParte(parte);
+        if (!existente) return;
+        var descripcionIngresada = (inputDesc.value || '').trim().toUpperCase();
+        var descripcionCatalogo = (existente.descripcion || '').trim().toUpperCase();
+        if (!descripcionIngresada || descripcionIngresada === descripcionCatalogo) return;
+
+        conflictoPartePendiente = { fila: fila, existente: existente };
+        var infoEl = document.getElementById('conflictoParteInfo');
+        if (infoEl) {
+          infoEl.innerHTML =
+            '<strong>Producto ya registrado:</strong> ' + escapeHTML(existente.descripcion || '') +
+            '<br><strong>Número de parte:</strong> ' + escapeHTML(existente.numero_parte || parte);
+        }
+        var msgEl = document.getElementById('conflictoParteMsg');
+        if (msgEl) msgEl.innerHTML = '';
+        document.getElementById('conflictoParteModal').classList.add('active');
+      };
+
+      window.cerrarConflictoParte = function() {
+        document.getElementById('conflictoParteModal').classList.remove('active');
+        conflictoPartePendiente = null;
+      };
+
+      window.resolverConflictoParte = function(usarExistente) {
+        var ctx = conflictoPartePendiente;
+        document.getElementById('conflictoParteModal').classList.remove('active');
+        conflictoPartePendiente = null;
+        if (!ctx) return;
+        var fila = ctx.fila;
+        var existente = ctx.existente;
+
+        if (usarExistente) {
+          // Es el mismo producto: se precargan todos los datos ya
+          // registrados con ese número de parte en la partida.
+          var codigoInput = fila.querySelector('.codigo');
+          var parteInput = fila.querySelector('.part');
+          var descInput = fila.querySelector('.desc');
+          var udmSelect = fila.querySelector('.udm');
+          var precioInput = fila.querySelector('.precio');
+          if (codigoInput) codigoInput.value = (existente.codigo || '').toUpperCase();
+          if (parteInput) parteInput.value = (existente.numero_parte || '').toUpperCase();
+          if (descInput) { descInput.value = (existente.descripcion || '').toUpperCase(); window.autoAjustar(descInput); }
+          if (udmSelect && existente.udm) udmSelect.value = existente.udm;
+          if (precioInput && existente.precio_referencia != null) precioInput.value = existente.precio_referencia;
+          window.recalcularFila(fila);
+        } else {
+          // Es otro producto distinto: se conserva la descripción
+          // capturada y se asigna un número de parte nuevo (consecutivo
+          // al último usado), ya que el escrito pertenece a otro producto.
+          var parteInput2 = fila.querySelector('.part');
+          var codigoInput2 = fila.querySelector('.codigo');
+          var nuevaParte = siguienteNumeroParteConsecutivo();
+          alert('ℹ️ El número de parte se modificará por uno nuevo' + (nuevaParte ? (' (' + nuevaParte + ')') : '') + ', ya que "' + (existente.numero_parte || '') + '" corresponde a otro producto.');
+          if (parteInput2) parteInput2.value = nuevaParte;
+          if (codigoInput2) codigoInput2.value = siguienteCodigoProductoPreview();
+        }
+      };
+
       window.agregarFilaProducto = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
         codigo = codigo || '';
         parte = parte || '';
@@ -20178,7 +20405,7 @@
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
         var proyectoPartidaVisible = document.getElementById('ocEsMultiproyecto') && document.getElementById('ocEsMultiproyecto').checked;
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se asigna automáticamente: si el número de parte ya existe en el catálogo se usa ese mismo código (sumará existencia al pagar la OC); si es nuevo, se asigna el siguiente consecutivo."></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte" oninput="window.actualizarCodigoDesdeParte(this)" onchange="window.actualizarCodigoDesdeParte(this)"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:110px;width:120px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td class="' + (proyectoPartidaVisible ? '' : 'hidden ') + 'col-proyecto-partida"><select class="prod-proyecto" onchange="window.recalcularFila(this)">' + opcionesProyectoPartidaHTML(null) + '</select></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se asigna automáticamente: si el número de parte ya existe en el catálogo se usa ese mismo código (sumará existencia al pagar la OC); si es nuevo, se asigna el siguiente consecutivo."></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte" oninput="window.actualizarCodigoDesdeParte(this)" onchange="window.actualizarCodigoDesdeParte(this)"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)" onchange="window.verificarConflictoParteDescripcion(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:110px;width:120px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td class="' + (proyectoPartidaVisible ? '' : 'hidden ') + 'col-proyecto-partida"><select class="prod-proyecto" onchange="window.recalcularFila(this)">' + opcionesProyectoPartidaHTML(null) + '</select></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -20924,6 +21151,26 @@
           return (match && match.proyecto) || null;
         }
 
+        // Si un producto se agrega manualmente en este editor sin capturar
+        // "Código" (el campo aquí es libre, a diferencia de "Crear OC"),
+        // antes se guardaba con código vacío y esa partida nunca llegaba
+        // al inventario aunque la OC se concluyera. Se le asigna un
+        // consecutivo PROD-XXXXX nuevo (igual criterio que "Crear OC"),
+        // arrancando después del número más alto ya usado en el catálogo
+        // o en las demás filas de esta misma OC.
+        var numeroAutoDisponible = (function() {
+          var maxNum = 0;
+          (productosCatalogoCache || []).forEach(function(p) {
+            var m = /^PROD-(\d+)$/.exec(((p && p.codigo) || '').trim());
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+          });
+          document.querySelectorAll('#cuerpoEditarProductosOC .codigo').forEach(function(inp) {
+            var m = /^PROD-(\d+)$/.exec((inp.value || '').trim().toUpperCase());
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+          });
+          return maxNum;
+        })();
+
         var productosNuevos = [];
         var invalido = false;
         filas.forEach(function(fila) {
@@ -20935,8 +21182,13 @@
           var codigoFila = (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase();
           var parteFila = (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase();
           var udmFila = fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA';
+          var codigoFinal = codigoAutoParaPartida(descripcion, udmFila, codigoFila);
+          if (!codigoFinal) {
+            numeroAutoDisponible += 1;
+            codigoFinal = 'PROD-' + String(numeroAutoDisponible).padStart(5, '0');
+          }
           productosNuevos.push({
-            codigo: codigoAutoParaPartida(descripcion, udmFila, codigoFila),
+            codigo: codigoFinal,
             parte: parteFila,
             descripcion: descripcion,
             cantidad: cantidad,
@@ -20968,7 +21220,7 @@
           var inventarioAjustado = false;
           if (oc.estado === 'CONCLUIDA') {
             var deltas = calcularDeltaInventarioOC(productosViejos, productosNuevos);
-            await aplicarDeltaInventarioOC(deltas);
+            await aplicarDeltaInventarioOC(deltas, oc.codigo);
             inventarioAjustado = true;
           }
 
@@ -21993,7 +22245,7 @@
             });
             var img = new Image();
             img.src = imgData;
-            await new Promise(function(resolve) { img.onload = resolve; });
+            await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = reject; });
             var imgWidth = 140;
             var imgHeight = (img.height / img.width) * imgWidth;
             doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
@@ -24133,6 +24385,8 @@
         document.getElementById('pdfPreviewModal').classList.remove('active');
         ocPreviewData = null;
         ocPreviewPDF = null;
+        var tituloPreviewReset = document.getElementById('pdfPreviewTitulo');
+        if (tituloPreviewReset) tituloPreviewReset.textContent = 'Previsualización de la Orden de Compra';
       };
 
       window.confirmarDesdePreview = async function() {
@@ -24544,7 +24798,7 @@
           if (imgData) {
             var img = new Image();
             img.src = imgData;
-            await new Promise(function(resolve) { img.onload = resolve; });
+            await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = reject; });
             var imgWidth = 140;
             var imgHeight = (img.height / img.width) * imgWidth;
 
