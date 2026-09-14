@@ -4748,7 +4748,7 @@
                 <input id="facturaUUIDInput" placeholder="UUID de la factura" style="width:100%;">
               </div>
               <div class="grupo-formulario">
-                <label style="font-weight:500;">Monto de la factura (misma moneda de la OC) *</label>
+                <label style="font-weight:500;">Monto de la factura <span id="facturaMontoLabelMoneda">(misma moneda de la OC)</span> *</label>
                 <input id="facturaMontoInput" type="number" placeholder="Monto" style="width:100%;">
               </div>
               <div class="grupo-formulario">
@@ -16668,6 +16668,14 @@
         var codigoEl = document.getElementById('facturaOCCodigo');
         if (codigoEl) codigoEl.textContent = '— ' + (oc.codigo || ('OC-' + oc.id));
 
+        var esperadoLabel = montoEsperadoFacturaOC(oc);
+        var labelMonedaEl = document.getElementById('facturaMontoLabelMoneda');
+        if (labelMonedaEl) {
+          labelMonedaEl.textContent = (oc.moneda === 'USD' && !!oc.tipocambio)
+            ? '(en pesos MXN — esta OC se pagó convertida con paridad de $' + Number(oc.tipocambio).toFixed(4) + ')'
+            : '(misma moneda de la OC: ' + esperadoLabel.moneda + ')';
+        }
+
         window.limpiarFormularioFactura();
         window.renderFacturasAgregadasOC();
 
@@ -16719,7 +16727,7 @@
         }
         var html = '<div style="background:var(--gray-50);border-radius:8px;padding:10px;margin-bottom:10px;"><strong>Facturas comprobadas (' + facturas.length + '/' + MAX_FACTURAS_POR_OC + '):</strong><ul style="margin:6px 0 0 18px;padding:0;">';
         facturas.forEach(function(f) {
-          html += '<li>' + escapeHTML(f.uuid || '') + ' — ' + formatoMoneda(f.monto || 0, ocConclusionPendiente.oc.moneda || 'MXN') + ' — ' + f.tipo + (f.tipo === 'PPD' ? ' (' + (f.estado === 'PENDIENTE_PPD' ? 'PENDIENTE PPD' : f.estado) + ')' : '') + '</li>';
+          html += '<li>' + escapeHTML(f.uuid || '') + ' — ' + formatoMoneda(f.monto || 0, montoEsperadoFacturaOC(ocConclusionPendiente.oc).moneda) + ' — ' + f.tipo + (f.tipo === 'PPD' ? ' (' + (f.estado === 'PENDIENTE_PPD' ? 'PENDIENTE PPD' : f.estado) + ')' : '') + '</li>';
         });
         html += '</ul></div>';
         cont.innerHTML = html;
@@ -16773,6 +16781,23 @@
 
       var TOLERANCIA_MONTO_FACTURA = 0.01;
 
+      // Determina contra qué monto/moneda debe comprobarse la factura de
+      // una OC. Normalmente es el propio montototal en la moneda de la OC,
+      // PERO si la OC se generó en Dólares y, al autorizarla, se eligió
+      // "Agregar Paridad" (se convirtió y se pagó en pesos — ver
+      // window.elegirAgregarParidad/finalizarDecisionParidadOC), la
+      // factura real del proveedor refleja el monto ya convertido a pesos
+      // que efectivamente se pagó, no el monto original en dólares. En ese
+      // caso se compara contra montomxn (el equivalente en pesos con la
+      // paridad aplicada) en vez de montototal.
+      function montoEsperadoFacturaOC(oc) {
+        var seConvirtioAPesos = oc.moneda === 'USD' && !!oc.tipocambio;
+        return {
+          monto: seConvirtioAPesos ? oc.montomxn : oc.montototal,
+          moneda: seConvirtioAPesos ? 'MXN' : (oc.moneda || 'MXN')
+        };
+      }
+
       function sumaFacturasOC() {
         if (!ocConclusionPendiente) return 0;
         return ocConclusionPendiente.facturas.reduce(function(s, f) { return s + (Number(f.monto) || 0); }, 0);
@@ -16823,16 +16848,20 @@
           return;
         }
 
-        // Validación de monto antes de subir/guardar nada.
+        // Validación de monto antes de subir/guardar nada. Si la OC se
+        // generó en USD y se pagó convertida a pesos (paridad aplicada),
+        // se compara contra el equivalente en pesos, no contra el monto
+        // original en dólares (ver montoEsperadoFacturaOC).
+        var esperado = montoEsperadoFacturaOC(oc);
         if (tipo === 'PUE') {
-          if (Math.abs(monto - oc.montototal) > TOLERANCIA_MONTO_FACTURA) {
-            if (msg) msg.innerHTML = '<div class="alert">❌ Factura ingresada no coincide con monto.</div>';
+          if (Math.abs(monto - esperado.monto) > TOLERANCIA_MONTO_FACTURA) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ La factura ingresada (' + formatoMoneda(monto, esperado.moneda) + ') no coincide con el monto esperado de la OC (' + formatoMoneda(esperado.monto, esperado.moneda) + (esperado.moneda !== (oc.moneda || 'MXN') ? ', ya convertido con la paridad aplicada' : '') + '). Verifica el monto y vuelve a intentar, o si es un pago parcial cambia el Tipo de factura a PPD para poder agregar otra factura después.</div>';
             return;
           }
         } else {
           var sumaPrevia = sumaFacturasOC();
-          if ((sumaPrevia + monto) - oc.montototal > TOLERANCIA_MONTO_FACTURA) {
-            if (msg) msg.innerHTML = '<div class="alert">❌ El monto ingresado excede el saldo pendiente de la OC (' + formatoMoneda(oc.montototal - sumaPrevia, oc.moneda || 'MXN') + ').</div>';
+          if ((sumaPrevia + monto) - esperado.monto > TOLERANCIA_MONTO_FACTURA) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ El monto ingresado excede el saldo pendiente de la OC (' + formatoMoneda(esperado.monto - sumaPrevia, esperado.moneda) + ').</div>';
             return;
           }
         }
@@ -16869,7 +16898,7 @@
           // Esta ventana solo sirve para SUBIR factura(s); confirmar y
           // concluir la OC se hace aparte, desde "🏁 Concluir" (Finanzas).
           var sumaActual = sumaFacturasOC();
-          var montoCompleto = (sumaActual - oc.montototal) >= -TOLERANCIA_MONTO_FACTURA;
+          var montoCompleto = (sumaActual - esperado.monto) >= -TOLERANCIA_MONTO_FACTURA;
           var alcanzoLimite = ocConclusionPendiente.facturas.length >= MAX_FACTURAS_POR_OC;
 
           document.getElementById('facturaFormularioContainer').classList.add('hidden');
@@ -16878,13 +16907,13 @@
           var btnContinuar = document.getElementById('btnContinuarFactura');
 
           if (montoCompleto) {
-            if (textoPaso) textoPaso.textContent = '✅ El monto acumulado (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') cubre el total de la OC. Finanzas puede concluirla desde "🏁 Concluir".';
+            if (textoPaso) textoPaso.textContent = '✅ El monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') cubre el total de la OC. Finanzas puede concluirla desde "🏁 Concluir".';
             if (btnContinuar) { btnContinuar.disabled = alcanzoLimite; btnContinuar.classList.remove('hidden'); }
           } else if (alcanzoLimite) {
-            if (textoPaso) textoPaso.textContent = '⚠️ Se alcanzó el máximo de ' + MAX_FACTURAS_POR_OC + ' facturas y el monto acumulado (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') no cubre el total de la OC (' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') + '). No es posible concluir el proceso; contacta a Finanzas/Administración.';
+            if (textoPaso) textoPaso.textContent = '⚠️ Se alcanzó el máximo de ' + MAX_FACTURAS_POR_OC + ' facturas y el monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') no cubre el total de la OC (' + formatoMoneda(esperado.monto, esperado.moneda) + '). No es posible concluir el proceso; contacta a Finanzas/Administración.';
             if (btnContinuar) btnContinuar.classList.add('hidden');
           } else {
-            if (textoPaso) textoPaso.textContent = '⚠️ El monto acumulado (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') aún no cubre el total de la OC (' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') + '). Agrega otra factura para continuar.';
+            if (textoPaso) textoPaso.textContent = '⚠️ El monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') aún no cubre el total de la OC (' + formatoMoneda(esperado.monto, esperado.moneda) + '). Agrega otra factura para continuar.';
             if (btnContinuar) { btnContinuar.disabled = false; btnContinuar.classList.remove('hidden'); }
           }
         } catch (e) {
@@ -16948,18 +16977,19 @@
                 : '<span class="text-muted" style="font-size:12px;">Sin PDF</span>';
               return '<div style="border:1px solid var(--gray-200); border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">' +
                 '<div><strong>Factura ' + (i + 1) + '</strong> — ' + escapeHTML(f.uuid || '') + '<br>' +
-                '<span style="font-size:12px; color:var(--gray-600);">' + formatoMoneda(f.monto || 0, oc.moneda || 'MXN') + ' — ' + etiquetaTipo + '</span></div>' +
+                '<span style="font-size:12px; color:var(--gray-600);">' + formatoMoneda(f.monto || 0, montoEsperadoFacturaOC(oc).moneda) + ' — ' + etiquetaTipo + '</span></div>' +
                 botonVer +
                 '</div>';
             }).join('');
           }
         }
 
+        var esperadoResumen = montoEsperadoFacturaOC(oc);
         var resumen = document.getElementById('concluirOCResumen');
-        var montoCompleto = (sumaActual - oc.montototal) >= -TOLERANCIA_MONTO_FACTURA;
+        var montoCompleto = (sumaActual - esperadoResumen.monto) >= -TOLERANCIA_MONTO_FACTURA;
         if (resumen) {
-          resumen.innerHTML = 'Total facturado: ' + formatoMoneda(sumaActual, oc.moneda || 'MXN') +
-            ' &nbsp;|&nbsp; Total de la OC: ' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') +
+          resumen.innerHTML = 'Total facturado: ' + formatoMoneda(sumaActual, esperadoResumen.moneda) +
+            ' &nbsp;|&nbsp; Total de la OC: ' + formatoMoneda(esperadoResumen.monto, esperadoResumen.moneda) +
             (montoCompleto ? ' &nbsp;✅' : ' &nbsp;⚠️ incompleto');
         }
 
@@ -16990,8 +17020,9 @@
         var ultimoTipo = ocConclusionPendiente.facturas.length ? ocConclusionPendiente.facturas[ocConclusionPendiente.facturas.length - 1].tipo : null;
         if (ultimoTipo === 'PPD') {
           var sumaActual = sumaFacturasOC();
-          if ((sumaActual - oc.montototal) < -TOLERANCIA_MONTO_FACTURA) {
-            alert('⚠️ El monto acumulado de las facturas (' + formatoMoneda(sumaActual, oc.moneda || 'MXN') + ') no cubre el total de la OC (' + formatoMoneda(oc.montototal, oc.moneda || 'MXN') + '). No se puede concluir el proceso.');
+          var esperadoFinal = montoEsperadoFacturaOC(oc);
+          if ((sumaActual - esperadoFinal.monto) < -TOLERANCIA_MONTO_FACTURA) {
+            alert('⚠️ El monto acumulado de las facturas (' + formatoMoneda(sumaActual, esperadoFinal.moneda) + ') no cubre el total de la OC (' + formatoMoneda(esperadoFinal.monto, esperadoFinal.moneda) + '). No se puede concluir el proceso.');
             return;
           }
         }
