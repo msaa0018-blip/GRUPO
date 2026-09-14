@@ -24085,6 +24085,14 @@
 
         } catch (error) {
           console.error('❌ Error al visualizar OC:', error);
+          // Si algo falla (o se agota el tiempo de espera), la ventana ya
+          // no debe quedarse congelada en "Generando PDF…": se reemplaza
+          // por un mensaje de error explícito, además de la alerta.
+          var frameError = document.getElementById('visualizarFrame');
+          if (frameError) {
+            frameError.removeAttribute('src');
+            frameError.srcdoc = '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#c0392b;text-align:center;padding:20px;box-sizing:border-box;">❌ No se pudo generar el PDF.<br>' + escapeHTML(error.message || '') + '<br><br>Cierra esta ventana e inténtalo de nuevo.</body>';
+          }
           alert('Error al visualizar la OC: ' + error.message);
         } finally {
           window._visualizandoOC = false;
@@ -24720,7 +24728,24 @@
         }
       };
 
-      async function generarPDFParaPreview(datos, ocExistente) {
+      // Límite duro de tiempo total para armar el PDF de la OC: aunque cada
+      // descarga de imagen ya tiene su propio timeout de 12s, si algo
+      // inesperado se queda esperando sin nunca resolver NI rechazar (por
+      // ejemplo, en una conexión móvil que ni siquiera dispara el aborto),
+      // esta carrera garantiza que el usuario vea un error accionable en
+      // vez de la ventana "Generando PDF…" congelada para siempre.
+      function generarPDFParaPreview(datos, ocExistente) {
+        return Promise.race([
+          generarPDFParaPreviewInterno(datos, ocExistente),
+          new Promise(function(_, reject) {
+            setTimeout(function() {
+              reject(new Error('La generación del PDF tardó demasiado (posible problema de conexión). Verifica tu internet e inténtalo de nuevo.'));
+            }, 25000);
+          })
+        ]);
+      }
+
+      async function generarPDFParaPreviewInterno(datos, ocExistente) {
         ocExistente = ocExistente || null;
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
