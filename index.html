@@ -16166,11 +16166,46 @@
       // la columna "Código" de la tabla de productos de la OC). Si el
       // código no existe en el catálogo, no hace nada (esa línea de la OC
       // no está ligada a inventario).
-      async function ajustarInventarioPorCodigo(codigo, delta) {
+      async function ajustarInventarioPorCodigo(codigo, delta, lineaOrigen) {
         if (!codigo || !delta) return;
         try {
           var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id').eq('codigo', codigo).maybeSingle();
-          if (errGet || !prod) return;
+          if (errGet) return;
+          if (!prod) {
+            // La partida trae un código (p. ej. "PROD-00016") que el
+            // formulario de Crear OC generó como VISTA PREVIA para un
+            // producto nuevo (ver siguienteCodigoProductoPreview) pero que
+            // nunca se llegó a registrar de verdad en el catálogo de
+            // 📦 Productos — sin esto, la entrada de inventario se perdía
+            // en silencio porque ese código nunca coincidía con ningún
+            // producto real. Si es una entrada (delta > 0) y la partida
+            // trae descripción, se da de alta el producto en el catálogo
+            // en ese momento, con el mismo código, en vez de perder el
+            // movimiento.
+            if (delta > 0 && lineaOrigen && lineaOrigen.descripcion) {
+              try {
+                var { data: nuevoProd, error: errIns } = await supabase.from('productos').insert([{
+                  codigo: codigo,
+                  descripcion: lineaOrigen.descripcion,
+                  udm: lineaOrigen.udm || 'PZA',
+                  numero_parte: lineaOrigen.parte || null,
+                  cantidad: 0,
+                  precio_referencia: lineaOrigen.precioUnitario || 0,
+                  activo: true
+                }]).select().maybeSingle();
+                if (errIns || !nuevoProd) {
+                  console.error('No se pudo registrar automáticamente el producto ' + codigo + ' en el catálogo:', errIns);
+                  return;
+                }
+                prod = nuevoProd;
+              } catch (eIns) {
+                console.error('No se pudo registrar automáticamente el producto ' + codigo + ' en el catálogo:', eIns);
+                return;
+              }
+            } else {
+              return;
+            }
+          }
           var nuevaCantidad = (prod.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
           await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', prod.id);
@@ -16349,7 +16384,7 @@
           var codigo = (linea.codigo || '').trim();
           var cantidadLinea = Number(linea.cantidad) || 0;
           if (!codigo || cantidadLinea <= 0) continue;
-          await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea);
+          await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea, linea);
         }
         if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
       }
