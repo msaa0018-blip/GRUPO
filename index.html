@@ -24015,16 +24015,13 @@
         var tituloVisualizarOC = document.getElementById('visualizarModalTitulo');
         if (tituloVisualizarOC) tituloVisualizarOC.textContent = 'Visualizar Orden de Compra';
 
-        // Abre la ventana de inmediato (con un aviso de "Generando…"): así
-        // el clic se siente instantáneo, y el PDF real se inserta unos
-        // instantes después, cuando termina de armarse.
-        var frameInicial = document.getElementById('visualizarFrame');
-        if (frameInicial) {
-          frameInicial.removeAttribute('src');
-          frameInicial.srcdoc = '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#888;">Generando PDF…</body>';
-          frameInicial.style.display = 'block';
-        }
-        document.getElementById('visualizarModal').classList.add('active');
+        // Ya NO se abre la ventana de inmediato con un aviso de "Generando
+        // PDF…": la ventana se abre directamente ya con el PDF cargado, en
+        // cuanto está listo (ver generarPDFParaPreview: precarga en
+        // paralelo de las imágenes para que esto tome el menor tiempo
+        // posible). Mientras tanto solo cambia el cursor, como única señal
+        // de que el clic sí se registró.
+        document.body.style.cursor = 'wait';
 
         try {
           var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
@@ -24075,26 +24072,23 @@
           var pdfBlob = doc.output('blob');
           var pdfUrl = URL.createObjectURL(pdfBlob);
 
+          // El PDF ya está listo: se muestra la ventana directamente con
+          // el documento cargado, sin ningún paso intermedio.
           var frame = document.getElementById('visualizarFrame');
           if (frame) {
+            frame.removeAttribute('srcdoc');
             frame.src = pdfUrl;
             frame.style.display = 'block';
           }
+          document.getElementById('visualizarModal').classList.add('active');
 
           renderStepperOC(oc);
 
         } catch (error) {
           console.error('❌ Error al visualizar OC:', error);
-          // Si algo falla (o se agota el tiempo de espera), la ventana ya
-          // no debe quedarse congelada en "Generando PDF…": se reemplaza
-          // por un mensaje de error explícito, además de la alerta.
-          var frameError = document.getElementById('visualizarFrame');
-          if (frameError) {
-            frameError.removeAttribute('src');
-            frameError.srcdoc = '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#c0392b;text-align:center;padding:20px;box-sizing:border-box;">❌ No se pudo generar el PDF.<br>' + escapeHTML(error.message || '') + '<br><br>Cierra esta ventana e inténtalo de nuevo.</body>';
-          }
           alert('Error al visualizar la OC: ' + error.message);
         } finally {
+          document.body.style.cursor = '';
           window._visualizandoOC = false;
         }
       };
@@ -24759,6 +24753,31 @@
         var margin = 40;
 
         var formatoElegido = (ocExistente && ocExistente.formatomembrete) || datos.formatomembrete || '1';
+
+        // Precarga en PARALELO de todas las imágenes remotas que este PDF
+        // va a necesitar (membrete superior/inferior, fondo de GRUPO
+        // INDUSTRIAL EXTINGUE y logo). Antes se descargaban una por una en
+        // serie, esperando a que cada await terminara antes de empezar la
+        // siguiente — sumando varios segundos. obtenerImagenComoDataURL
+        // cachea la PROMESA de cada URL (no solo el resultado), así que
+        // lanzarlas aquí todas de una vez, sin esperarlas, hace que se
+        // descarguen al mismo tiempo; el código de abajo que las espera
+        // una por una en su momento ya las encuentra listas (o a punto de
+        // estarlo), reduciendo el tiempo total de "Generando PDF…" al de
+        // la más lenta de todas en vez de la suma de todas.
+        (function precargarImagenesPDFOC() {
+          var configPrecarga = FORMATOS_MEMBRETE_OC[formatoElegido] || FORMATOS_MEMBRETE_OC['1'];
+          if (configPrecarga && configPrecarga.superior) obtenerImagenComoDataURL(configPrecarga.superior.url);
+          if (configPrecarga && configPrecarga.inferior) obtenerImagenComoDataURL(configPrecarga.inferior.url);
+          if (datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) {
+            obtenerImagenComoDataURL('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg');
+          }
+          if (formatoElegido !== '7' && formatoElegido !== '8' && formatoElegido !== '9' && formatoElegido !== '10') {
+            var logoInfoPrecarga = getLogoPorDepartamento(datos.empresa, datos.departamento);
+            obtenerImagenComoDataURL((logoInfoPrecarga && logoInfoPrecarga.url) || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png');
+          }
+        })();
+
         var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formatoElegido);
         var y = franjas.yInicio + 6.25;
 
