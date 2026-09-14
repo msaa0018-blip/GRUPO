@@ -5046,6 +5046,21 @@
           </div>
         </div>
 
+        <!-- KPI "Paquetería acumulada": partidas de servicio PROD-01004, por empresa/departamento -->
+        <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorPaqueteriaCard">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">📦 Paquetería acumulada por departamento</h4>
+            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorPaqueteriaCard')">✕</button>
+          </div>
+          <div id="indicadorPaqueteriaResumen" class="cxp-resumen"></div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Empresa</th><th>Departamento</th><th>Acumulado</th><th>OC con paquetería</th></tr></thead>
+              <tbody id="indicadorPaqueteriaCuerpo"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- KPI "Proyectos activos": lista de proyectos activos -->
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorProyectosActivosCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -5883,7 +5898,7 @@
     <div id="dashboardContent" style="margin-top:52px;"></div>
   </div>
 
-  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarPanelOC(); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard');"></div>
+  <div id="modalOverlayBackdrop" onclick="window.cerrarModalCard('bandejaOCCard'); window.cerrarModalCard('tablaProyectosCard'); window.cerrarModalCard('bandejaOFCard'); window.cerrarPanelOC(); window.cerrarModalCard('cxpDetalleProyectoCard'); window.cerrarModalCard('ofFormularioNuevo'); window.cerrarModalCard('ocPendientesIndicadoresCard'); window.cerrarModalCard('indicadorComprasMesCard'); window.cerrarModalCard('indicadorVentasMesCard'); window.cerrarModalCard('indicadorProyectosActivosCard'); window.cerrarModalCard('indicadorCXPCard'); window.cerrarModalCard('indicadorClientesCard'); window.cerrarModalCard('indicadorProveedoresCard'); window.cerrarModalCard('indicadorAlertasCard'); window.cerrarModalCard('indicadorPaqueteriaCard');"></div>
 
   <div id="pdfPreviewModal">
     <div class="modal-content">
@@ -14311,6 +14326,34 @@
             return g;
           }).sort(function(a, b) { return b.balance - a.balance; });
 
+          // 2c. Paquetería: partidas de servicio con código PROD-01004
+          // (ver codigoAutoParaPartida), acumuladas por empresa/departamento
+          // — representa el costo real de paquetería/envíos, sin importar
+          // si la OC ya está pagada o no. Se prorratea al equivalente en
+          // MXN por la proporción que estas partidas representan del total
+          // de la OC (mismo criterio que gastoProyectoMoneda), para que el
+          // acumulado sea comparable entre OC en distinta moneda.
+          var paqueteriaPorGrupo = {};
+          ordenes.forEach(function(o) {
+            if (o.estado === 'CANCELADA') return;
+            var partidasOC = partidasOCParaProrrateo(o);
+            var partidasPaqueteria = partidasOC.filter(function(p) { return p.codigo === 'PROD-01004'; });
+            if (partidasPaqueteria.length === 0) return;
+            var proyectoOC = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var emp = proyectoOC ? (proyectoOC.empresa || 'Sin empresa') : 'Sin empresa';
+            var depto = proyectoOC ? (proyectoOC.departamento || 'Sin departamento') : 'Sin departamento';
+            var keyPaq = emp + '|' + depto;
+            var sumaPartidasPaqueteria = partidasPaqueteria.reduce(function(s, p) { return s + (Number(p.importe) || 0); }, 0);
+            var sumaTotalPartidasOC = partidasOC.reduce(function(s, p) { return s + (Number(p.importe) || 0); }, 0);
+            var montoMXN = sumaTotalPartidasOC > 0 ? (o.montomxn || 0) * (sumaPartidasPaqueteria / sumaTotalPartidasOC) : 0;
+            if (!paqueteriaPorGrupo[keyPaq]) paqueteriaPorGrupo[keyPaq] = { empresa: emp, departamento: depto, monto: 0, ocCount: 0 };
+            paqueteriaPorGrupo[keyPaq].monto += montoMXN;
+            paqueteriaPorGrupo[keyPaq].ocCount += 1;
+          });
+          var paqueteriaLista = Object.keys(paqueteriaPorGrupo).map(function(k) { return paqueteriaPorGrupo[k]; })
+            .sort(function(a, b) { return b.monto - a.monto; });
+          var paqueteriaTotal = paqueteriaLista.reduce(function(s, g) { return s + g.monto; }, 0);
+
           // 3. Presupuesto consumido por proyecto (promedio)
           var totalPresupuesto = 0;
           var totalGastado = 0;
@@ -14539,7 +14582,9 @@
             radarGastoProyecto: radarGastoProyecto,
             radarGastoEmpresa: radarGastoEmpresa,
             balanceMesLista: balanceMesLista,
-            balanceMesTotal: totalVentasMes - totalComprasMes
+            balanceMesTotal: totalVentasMes - totalComprasMes,
+            paqueteriaLista: paqueteriaLista,
+            paqueteriaTotal: paqueteriaTotal
           };
 
           // Renderizar KPI
@@ -14600,6 +14645,13 @@
           cambio: 'Compras vs Ventas',
           clase: d.balanceMesTotal >= 0 ? 'border-green' : 'border-red',
           click: function() { window.abrirIndicadorBalanceMes(); }
+        }, {
+          icono: '📦',
+          valor: '$' + formatearNumeroMexico(d.paqueteriaTotal, true),
+          label: 'Paquetería acumulada',
+          cambio: 'Por departamento',
+          clase: 'border-primary',
+          click: function() { window.abrirIndicadorPaqueteria(); }
         }, {
           icono: '💰',
           valor: '$' + formatearNumeroMexico(d.totalCXC, true),
@@ -14782,6 +14834,39 @@
                 '<td data-label="Compras del mes">' + formatoMoneda(g.compras, 'MXN') + '</td>' +
                 '<td data-label="Ventas del mes">' + formatoMoneda(g.ventas, 'MXN') + '</td>' +
                 '<td data-label="Balance" style="' + colorBalance + '">' + (g.balance >= 0 ? '+' : '-') + formatoMoneda(Math.abs(g.balance), 'MXN') + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+      };
+
+      // ---- Paquetería acumulada por departamento (partidas con código
+      // PROD-01004, ver codigoAutoParaPartida) ----
+      window.abrirIndicadorPaqueteria = function() {
+        window.renderIndicadorPaqueteria();
+        window.abrirModalCard('indicadorPaqueteriaCard');
+      };
+
+      window.renderIndicadorPaqueteria = function() {
+        var d = indicadoresData;
+        if (!d) return;
+        var lista = d.paqueteriaLista || [];
+        var total = d.paqueteriaTotal || 0;
+
+        var resumen = document.getElementById('indicadorPaqueteriaResumen');
+        if (resumen) {
+          resumen.innerHTML =
+            '<div class="cxp-tarjeta"><div class="numero">' + formatoMoneda(total, 'MXN') + '</div><div class="etiqueta">📦 Acumulado total de paquetería</div></div>';
+        }
+
+        var cuerpo = document.getElementById('indicadorPaqueteriaCuerpo');
+        if (cuerpo) {
+          cuerpo.innerHTML = lista.length === 0 ? '<tr><td colspan="4" class="mensaje-sin-datos">No hay partidas de paquetería (PROD-01004) registradas</td></tr>' :
+            lista.map(function(g) {
+              return '<tr>' +
+                '<td data-label="Empresa">' + escapeHTML(getAbreviaturaEmpresa(g.empresa) || g.empresa) + '</td>' +
+                '<td data-label="Departamento">' + escapeHTML(mostrarDepto(getAbreviaturaDepartamento(g.departamento, g.empresa) || g.departamento)) + '</td>' +
+                '<td data-label="Acumulado">' + formatoMoneda(g.monto, 'MXN') + '</td>' +
+                '<td data-label="OC con paquetería">' + g.ocCount + '</td>' +
                 '</tr>';
             }).join('');
         }
@@ -16294,6 +16379,19 @@
           if (mapaDeltas[codigo]) await ajustarInventarioPorCodigo(codigo, mapaDeltas[codigo]);
         }
         if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
+      }
+
+      // Regla de negocio: una partida de tipo servicio (udm === 'SERVICIO')
+      // cuyo concepto es "PAQUETERIA" se identifica siempre con el código
+      // PROD-01004, sin que el elaborador tenga que capturarlo a mano.
+      // Así se puede acumular cuánto se ha gastado en paquetería por
+      // departamento (ver window.abrirIndicadorPaqueteria) sin depender de
+      // que cada quien haya tecleado el mismo código a mano.
+      function codigoAutoParaPartida(descripcion, udm, codigoCapturado) {
+        if (udm === 'SERVICIO' && (descripcion || '').trim().toUpperCase() === 'PAQUETERIA') {
+          return 'PROD-01004';
+        }
+        return codigoCapturado;
       }
 
       function parsearProductosOC(oc) {
@@ -20721,12 +20819,13 @@
           if (!descripcion || cantidad <= 0 || precioUnitario <= 0) invalido = true;
           var codigoFila = (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase();
           var parteFila = (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase();
+          var udmFila = fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA';
           productosNuevos.push({
-            codigo: codigoFila,
+            codigo: codigoAutoParaPartida(descripcion, udmFila, codigoFila),
             parte: parteFila,
             descripcion: descripcion,
             cantidad: cantidad,
-            udm: fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA',
+            udm: udmFila,
             precioUnitario: precioUnitario,
             descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
             impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
@@ -23535,12 +23634,31 @@
       }
 
       window.visualizarOC = async function(index) {
+        // Evita que un doble clic (mientras el PDF todavía se está
+        // generando) dispare una segunda generación en paralelo — eso
+        // era lo que hacía sentir que "no abre al primer clic": el primer
+        // clic sí estaba trabajando, pero no había ninguna señal visual
+        // hasta que el PDF completo terminaba de armarse.
+        if (window._visualizandoOC) return;
+        window._visualizandoOC = true;
         var oc = ordenes[index];
-        if (!oc) return alert('OC no encontrada');
+        if (!oc) { window._visualizandoOC = false; return alert('OC no encontrada'); }
         visualizarModalTipoActual = 'oc';
         visualizarModalIdActual = oc.id;
         var tituloVisualizarOC = document.getElementById('visualizarModalTitulo');
         if (tituloVisualizarOC) tituloVisualizarOC.textContent = 'Visualizar Orden de Compra';
+
+        // Abre la ventana de inmediato (con un aviso de "Generando…"): así
+        // el clic se siente instantáneo, y el PDF real se inserta unos
+        // instantes después, cuando termina de armarse.
+        var frameInicial = document.getElementById('visualizarFrame');
+        if (frameInicial) {
+          frameInicial.removeAttribute('src');
+          frameInicial.srcdoc = '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#888;">Generando PDF…</body>';
+          frameInicial.style.display = 'block';
+        }
+        document.getElementById('visualizarModal').classList.add('active');
+
         try {
           var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
           if (!proyecto) return alert('Proyecto no encontrado');
@@ -23598,10 +23716,11 @@
 
           renderStepperOC(oc);
 
-          document.getElementById('visualizarModal').classList.add('active');
         } catch (error) {
           console.error('❌ Error al visualizar OC:', error);
           alert('Error al visualizar la OC: ' + error.message);
+        } finally {
+          window._visualizandoOC = false;
         }
       };
 
@@ -23751,12 +23870,13 @@
           if (proyectoPartida) {
             gastoPorProyectoPartida[proyectoPartida] = (gastoPorProyectoPartida[proyectoPartida] || 0) + importe;
           }
+          var udmPartida = fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA';
           productos.push({
-            codigo: (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase(),
+            codigo: codigoAutoParaPartida(descripcion, udmPartida, (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase()),
             parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
             descripcion: descripcion,
             cantidad: cantidad,
-            udm: fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA',
+            udm: udmPartida,
             precioUnitario: precioUnitario,
             descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
             impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
