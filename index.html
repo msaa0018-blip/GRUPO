@@ -1750,6 +1750,10 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    /* El visor de PDF (con su propia barra de herramientas) nunca debe
+       sobresalir del recuadro crema redondeado, sin importar cuánto
+       espacio ocupen el encabezado y el stepper arriba de él. */
+    overflow: hidden;
   }
   #visualizarModal .modal-header {
     display: flex;
@@ -1823,11 +1827,11 @@
   }
   .stepper-oc .stepper-oc-sub.completado { color: #2e7d32; }
 
-  #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; }
+  #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
   #visualizarModal .modal-body iframe {
     width: 100%;
     height: 100%;
-    min-height: 400px;
+    min-height: 0;
     border: 1px solid var(--gray-300);
     border-radius: 8px;
     display: block;
@@ -1974,7 +1978,12 @@
      un recuadro pequeño y espacio vacío color crema debajo. */
   @media (min-width: 900px) {
     #visualizarModal .modal-content, #cxpPreviewModal .modal-content, #ofDocModal .modal-content { max-width: 1100px; max-height: 96vh; height: 96vh; }
-    #visualizarModal .modal-body, #cxpPreviewModal .modal-body, #ofDocModal .modal-body { min-height: 80vh; }
+    /* #visualizarModal queda fuera de este min-height: ya tiene el
+       stepper de la OC arriba del PDF, y forzar un mínimo fijo (80vh)
+       sin importar cuánto ocupe el encabezado + stepper era justo lo
+       que hacía que el visor de PDF se saliera del recuadro crema
+       (flex:1 ya se encarga de llenar el espacio restante). */
+    #cxpPreviewModal .modal-body, #ofDocModal .modal-body { min-height: 80vh; }
   }
 
   .progress-bar { height: 10px; background: var(--gray-200); border-radius: 6px; overflow: hidden; margin-top: 4px }
@@ -5898,6 +5907,7 @@
               <tr>
                 <th>Código</th>
                 <th>Proveedor</th>
+                <th>Concepto</th>
                 <th>Moneda</th>
                 <th>Total</th>
                 <th>F.Pago</th>
@@ -6565,7 +6575,8 @@
               { id: 'GIE-VC', nombre: 'VENTAS CORPORATIVAS EXTINGUE', abreviatura: 'VC', estado: 'Activo' },
               { id: 'GIE-FIN', nombre: 'FINANZAS', abreviatura: 'FIN', estado: 'Activo' },
               { id: 'GIE-DIR', nombre: 'DIRECCIÓN', abreviatura: 'DIR', estado: 'Activo' },
-              { id: 'GIE-ADM', nombre: 'ADMINISTRACION', abreviatura: 'ADM', estado: 'Activo' }
+              { id: 'GIE-ADM', nombre: 'ADMINISTRACION', abreviatura: 'ADM', estado: 'Activo' },
+              { id: 'GIE-TI', nombre: 'TI', abreviatura: 'TI', estado: 'Activo' }
             ]
           },
           {
@@ -8105,6 +8116,20 @@
       // MENÚ MMD — Módulos disponibles del Menú Maestro seleccionado
       // ============================================================
       window.mostrarMenuMaestro = function(tipo, titulo) {
+        // Si se llega aquí con alguna ventana modal tipo "tarjeta" todavía
+        // abierta (Bandeja de OC, Control x Proyecto, etc. — .modal-card),
+        // esa ventana y su fondo oscuro/difuminado (#modalOverlayBackdrop)
+        // deben cerrarse SIEMPRE antes de mostrar el menú: de lo contrario
+        // el menú queda pintado detrás de ese fondo y se ve "transparente"
+        // o borroso (por ejemplo, al aprobar una OC desde dentro de la
+        // Bandeja de OC y regresar directo a 📊 EGRESOS).
+        document.querySelectorAll('.modal-card.abierta').forEach(function(card) {
+          card.classList.add('hidden');
+          card.classList.remove('abierta');
+        });
+        var backdropGlobalMenu = document.getElementById('modalOverlayBackdrop');
+        if (backdropGlobalMenu) backdropGlobalMenu.classList.remove('active');
+
         if (!moduloPermitidoPorBloqueo(tipo)) {
           alert('🔒 Módulo bloqueado por restricción del sistema.');
           window.mostrarMenuMaestroPrincipal();
@@ -16003,10 +16028,11 @@
             'La suma de lo ya pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
 
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
-          var enviado = await enviarNotificacionTelegram(mensajeTelegram);
-          if (enviado) {
-            await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
+          if (telegramMessageId) {
+            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: telegramMessageId }).eq('id', oc.id);
             oc.notificacion_enviada = true;
+            oc.telegram_message_id = telegramMessageId;
             ocNotificadaId = oc.id;
             console.log('✅ Notificación enviada al Director');
           }
@@ -16052,10 +16078,20 @@
           window.ocultarBannerLocalizacion();
         }
 
+        reaccionarMensajeTelegramOC(oc, '✅');
+
         render();
 
         if (esViaLinkTelegram) {
-          alert('✅ OC autorizada.');
+          // Se limpia el acceso por link ANTES de recargar: así, si el
+          // Director vuelve a entrar por el mismo link de Telegram, el
+          // candado de "link ya usado" del login (más arriba) es quien
+          // decide qué mostrarle ("OC autorizada previamente..."), no
+          // este flujo, y ya no vuelve a entrar automáticamente vía link.
+          pendingOcId = null;
+          var urlLimpiaAutorizarOC = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, '', urlLimpiaAutorizarOC);
+          alert('¡OC aprobada gracias!');
           location.reload();
           return;
         }
@@ -16086,6 +16122,13 @@
           return;
         }
 
+        // Misma lógica que en autorizarDirector: si esta cancelación viene
+        // del link exclusivo de Telegram, al terminar se cierra la sesión
+        // de inmediato (ya no entra "vía link"); si vuelve a abrir el
+        // mismo link, el candado de "link ya usado" del login le mostrará
+        // "esta OC se canceló el día...".
+        var esViaLinkTelegramCancelar = actual && actual.rol === 'Director General' && oc.id === pendingOcId;
+
         var updates = { estado: 'CANCELADA', motivo_cancelacion: motivoCancelacion, cancelado_por: actual.u, fecha_cancelacion: new Date().toISOString() };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
@@ -16097,7 +16140,19 @@
           window.ocultarBannerLocalizacion();
         }
 
+        reaccionarMensajeTelegramOC(oc, '❌');
+
         render();
+
+        if (esViaLinkTelegramCancelar) {
+          pendingOcId = null;
+          var urlLimpiaCancelarOC = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, '', urlLimpiaCancelarOC);
+          alert('❌ OC cancelada.');
+          location.reload();
+          return;
+        }
+
         alert('❌ OC cancelada por Director.');
       };
 
@@ -16301,10 +16356,11 @@
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
             'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
-          var enviado = await enviarNotificacionTelegram(mensajeTelegram);
-          if (enviado) {
-            await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
+          if (telegramMessageId) {
+            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: telegramMessageId }).eq('id', oc.id);
             oc.notificacion_enviada = true;
+            oc.telegram_message_id = telegramMessageId;
             ocNotificadaId = oc.id;
           }
         } catch (errNotif) {
@@ -17349,6 +17405,9 @@
       // ============================================================
       // NOTIFICACIONES TELEGRAM
       // ============================================================
+      // Devuelve el message_id del mensaje enviado en Telegram (para poder
+      // reaccionarle después con ✅/❌ cuando el Director apruebe o cancele
+      // la OC — ver reaccionarMensajeTelegramOC), o null si falló el envío.
       async function enviarNotificacionTelegram(mensaje) {
         try {
           var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
@@ -17364,13 +17423,46 @@
           var data = await response.json();
           if (data.ok) {
             console.log('✅ Notificación enviada a Telegram');
-            return true;
+            return (data.result && data.result.message_id) || null;
           } else {
             console.error('❌ Error al enviar notificación:', data);
-            return false;
+            return null;
           }
         } catch (error) {
           console.error('❌ Error al enviar notificación:', error);
+          return null;
+        }
+      }
+
+      // Hace que el bot de Telegram reaccione (palomita ✅ al aprobar, X ❌
+      // al cancelar) al mensaje original de la OC enviado al Director, para
+      // que se vea de un vistazo en el chat cómo quedó cada OC. Requiere
+      // que la OC tenga guardado telegram_message_id (columna nueva en
+      // "ordenes"; ver script SQL). Si Telegram rechaza el emoji o la OC no
+      // tiene message_id guardado (notificaciones anteriores a este
+      // cambio), falla en silencio: nunca debe romper el flujo de
+      // aprobar/cancelar la OC.
+      async function reaccionarMensajeTelegramOC(oc, emoji) {
+        try {
+          if (!oc || !oc.telegram_message_id) return false;
+          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/setMessageReaction';
+          var response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CHAT_ID,
+              message_id: oc.telegram_message_id,
+              reaction: [{ type: 'emoji', emoji: emoji }]
+            })
+          });
+          var data = await response.json();
+          if (!data.ok) {
+            console.warn('⚠️ Telegram no aceptó la reacción "' + emoji + '":', data);
+            return false;
+          }
+          return true;
+        } catch (error) {
+          console.warn('⚠️ Error al reaccionar al mensaje de Telegram:', error);
           return false;
         }
       }
@@ -20565,7 +20657,7 @@
         tablaOC.innerHTML = '';
 
         if (datos.length === 0) {
-          tablaOC.innerHTML = '<tr><td colspan="8" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
+          tablaOC.innerHTML = '<tr><td colspan="9" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
         } else {
           ocPagina.forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
@@ -20721,7 +20813,8 @@
             tablaOC.innerHTML +=
               '<tr class="fila-oc-info ' + rowClass + '" data-oc-id="' + o.id + '">' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
-              '<td data-label="Proveedor">' + String(o.proveedor || '').slice(0, 20) + '</td>' +
+              '<td data-label="Proveedor" title="' + escapeHTML(o.proveedor || '') + '">' + escapeHTML(String(o.proveedor || '').slice(0, 8)) + '</td>' +
+              '<td data-label="Concepto" title="' + escapeHTML(o.concepto || '') + '">' + escapeHTML(o.concepto || '—') + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="F.Pago">' + fechaPago + '</td>' +
@@ -20732,7 +20825,7 @@
 
             tablaOC.innerHTML +=
               '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
-              '<td colspan="8">' +
+              '<td colspan="9">' +
               '<div class="oc-acciones-container">' + acciones + '</div>' +
               '</td>' +
               '</tr>';
@@ -21664,7 +21757,19 @@
             // (misma lógica que el enlace QR de los vales de gasolina).
             var ocEnlace = ordenes.find(function(o) { return o.id === ocId; });
             if (ocEnlace && ocEnlace.estado !== 'PENDIENTE_DIRECTOR') {
-              alert('⚠️ Esta OC ya ha sido autorizada previamente. El link ya ha sido utilizado.');
+              var formatearFechaCortaOC = function(fechaISO) {
+                if (!fechaISO) return '';
+                var f = new Date(fechaISO);
+                if (isNaN(f.getTime())) return '';
+                return String(f.getDate()).padStart(2, '0') + '/' + String(f.getMonth() + 1).padStart(2, '0') + '/' + f.getFullYear();
+              };
+              var mensajeLinkUsadoOC;
+              if (ocEnlace.estado === 'CANCELADA') {
+                mensajeLinkUsadoOC = '❌ Esta OC se canceló el día ' + formatearFechaCortaOC(ocEnlace.fecha_cancelacion) + ', el link ha sido autorizado.';
+              } else {
+                mensajeLinkUsadoOC = '✅ OC autorizada previamente (' + formatearFechaCortaOC(ocEnlace.fechaaprobaciondirector) + '). Esta OC se autorizó el día ' + formatearFechaCortaOC(ocEnlace.fechaaprobaciondirector) + ', el link ha sido autorizado.';
+              }
+              alert(mensajeLinkUsadoOC);
               pendingOcId = null;
               var urlLimpiaOC = window.location.origin + window.location.pathname;
               window.history.replaceState({}, '', urlLimpiaOC);
@@ -21718,7 +21823,12 @@
             if (puedeVerCXC) document.getElementById('panelCXC').classList.remove('hidden');
             if (puedeVerOF) document.getElementById('panelOF').classList.remove('hidden');
 
-            document.getElementById('bandejaOCCard').classList.remove('hidden');
+            // Se muestra como ventana modal real (con fondo difuminado),
+            // igual que cuando se abre desde el menú, y se deja registrado
+            // que viene de "EGRESOS" para que al cerrarla con la "✕" el
+            // Director regrese a esa pantalla y no a un fondo vacío.
+            moduloOrigenBandejaOC = 'egresos_menu';
+            window.abrirModalCard('bandejaOCCard');
 
             if (esJefe) {
               document.getElementById('tablaProyectosCard').classList.remove('hidden');
