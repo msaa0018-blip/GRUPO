@@ -24919,9 +24919,6 @@
           var configPrecarga = FORMATOS_MEMBRETE_OC[formatoElegido] || FORMATOS_MEMBRETE_OC['1'];
           if (configPrecarga && configPrecarga.superior) obtenerImagenComoDataURL(configPrecarga.superior.url);
           if (configPrecarga && configPrecarga.inferior) obtenerImagenComoDataURL(configPrecarga.inferior.url);
-          if (datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) {
-            obtenerImagenComoDataURL('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg');
-          }
           if (formatoElegido !== '7' && formatoElegido !== '8' && formatoElegido !== '9' && formatoElegido !== '10') {
             var logoInfoPrecarga = getLogoPorDepartamento(datos.empresa, datos.departamento);
             obtenerImagenComoDataURL((logoInfoPrecarga && logoInfoPrecarga.url) || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png');
@@ -24935,41 +24932,12 @@
         // del membrete, fondo de GRUPO INDUSTRIAL EXTINGUE y logo) para poder
         // repetirlo de forma SÍNCRONA en cualquier página nueva que se agregue
         // más adelante (OC de más de una hoja) — ver dibujarDecoracionPaginaOC.
-        var instruccionFondoExtingue = null;
         var instruccionLogo = null;
 
-        // Imagen de fondo exclusiva de las OC de GRUPO INDUSTRIAL EXTINGUE.
-        // Se dibuja primero (como fondo) justo a partir de donde termina
-        // el membrete superior, para que el resto del contenido se
-        // superponga encima.
-        if (datos.empresa && datos.empresa.indexOf('GRUPO INDUSTRIAL EXTINGUE') !== -1) {
-          try {
-            var dataFondoExtingue = await obtenerImagenComoDataURLSaturada('https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FONDO%20MEMBRETE.jpg', 1.2);
-            if (dataFondoExtingue) {
-              var tipoFondoExtingue = dataFondoExtingue.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG';
-              var gStateFondoExtingue = null;
-              try {
-                gStateFondoExtingue = new doc.GState({ opacity: 1 });
-                doc.setGState(gStateFondoExtingue);
-              } catch (eOpacidad) {
-                console.warn('No se pudo aplicar opacidad al fondo (GState no disponible):', eOpacidad);
-              }
-              doc.addImage(dataFondoExtingue, tipoFondoExtingue, 0, franjas.yInicio, pageWidth, franjas.yFin - franjas.yInicio);
-              instruccionFondoExtingue = { dataUrl: dataFondoExtingue, tipo: tipoFondoExtingue, x: 0, y: franjas.yInicio, w: pageWidth, h: franjas.yFin - franjas.yInicio };
-              if (gStateFondoExtingue) {
-                try {
-                  doc.setGState(new doc.GState({ opacity: 1 }));
-                } catch (eRestaurar) {
-                  console.warn('No se pudo restaurar la opacidad tras el fondo:', eRestaurar);
-                }
-              }
-            } else {
-              console.warn('⚠️ obtenerImagenComoDataURL devolvió null para la imagen de fondo (GRUPO INDUSTRIAL EXTINGUE)');
-            }
-          } catch (e) {
-            console.warn('No se pudo cargar la imagen de fondo (GRUPO INDUSTRIAL EXTINGUE):', e.stack || e);
-          }
-        }
+        // A propósito, la OC ya NO lleva ninguna imagen de fondo detrás del
+        // contenido (antes había una exclusiva de GRUPO INDUSTRIAL
+        // EXTINGUE): la hoja debe mostrar únicamente el membrete
+        // (franjas superior/inferior) y el logo, sin ninguna otra imagen.
 
         var nombreEmpresa = getNombreMembrete(datos.empresa);
         var leyendaPie = getLeyendaPie(datos.empresa);
@@ -25046,16 +25014,14 @@
         var pieYOC = pageHeight - alturaPiePaginaOC;
         var limiteContenidoY = pieYOC - 16;
 
-        // Repite, de forma síncrona (sin await), el membrete + fondo + logo
-        // ya calculados para la página 1, en cualquier página nueva que se
-        // agregue por desbordamiento de contenido.
+        // Repite, de forma síncrona (sin await), el membrete + logo ya
+        // calculados para la página 1, en cualquier página nueva que se
+        // agregue por desbordamiento de contenido (sin ninguna imagen de
+        // fondo adicional).
         function dibujarDecoracionPaginaOC() {
           (franjas.instrucciones || []).forEach(function(ins) {
             try { doc.addImage(ins.dataUrl, ins.tipo, ins.x, ins.y, ins.w, ins.h); } catch (eDec) { console.warn('No se pudo repetir una imagen del membrete en la nueva página:', eDec); }
           });
-          if (instruccionFondoExtingue) {
-            try { doc.addImage(instruccionFondoExtingue.dataUrl, instruccionFondoExtingue.tipo, instruccionFondoExtingue.x, instruccionFondoExtingue.y, instruccionFondoExtingue.w, instruccionFondoExtingue.h); } catch (eDec2) { console.warn('No se pudo repetir el fondo en la nueva página:', eDec2); }
-          }
           if (instruccionLogo) {
             if (instruccionLogo.tipo === 'imagen') {
               try { doc.addImage(instruccionLogo.dataUrl, instruccionLogo.formato, instruccionLogo.x, instruccionLogo.y, instruccionLogo.w, instruccionLogo.h); } catch (eDec3) { console.warn('No se pudo repetir el logo en la nueva página:', eDec3); }
