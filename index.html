@@ -6475,7 +6475,7 @@
       var indicadoresTimer = null;
       var indicadoresData = {};
 
-      var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES'];
+      var UDM_LIST = ['PZA', 'SER', 'KG', 'L', 'M', 'M2', 'LT', 'KIT', 'JGO', 'ROL', 'TON', 'TAMBO', 'CUBETA', 'PARES', 'PAQUETE'];
 
       // ============================================================
       // FUNCIÓN DE FORMATEO DE NÚMEROS (MEXICANO)
@@ -6657,12 +6657,33 @@
         return v === n || v === a || n.indexOf(v) !== -1 || v.indexOf(n) !== -1;
       }
 
+      // Coincidencia estricta (sin el fallback por substring de coincideOrg)
+      // — se usa como PRIMER intento en las búsquedas sobre listas, para
+      // que una abreviatura corta (ej. "TI") no empareje por accidente con
+      // otro departamento cuyo nombre simplemente CONTIENE esas letras
+      // (ej. "VENTAS CORPORATIVAS EXTINGUE" contiene "TI" dentro de
+      // "CORPORATIVAS" y de "EXTINGUE"). Bug real detectado: por eso una
+      // OC generada por un usuario del departamento "TI" salía con el
+      // código de "VC" en vez de "TI", ya que "VC" aparecía antes que
+      // "TI" en el catálogo y "coincideOrg" la emparejaba primero por
+      // substring. El fallback flexible (coincideOrg) solo se usa después,
+      // si ninguna entrada de la lista tuvo coincidencia exacta.
+      function coincideOrgExacto(valorGuardado, nombreCatalogo, abreviaturaCatalogo) {
+        if (!valorGuardado) return false;
+        var v = normalizarOrg(valorGuardado);
+        return v === normalizarOrg(nombreCatalogo) || v === normalizarOrg(abreviaturaCatalogo);
+      }
+
       function getEmpresasCatalogo() {
         return ORG_CATALOGO.empresas.filter(function(e) { return e.estado === 'Activo'; });
       }
 
       function getEmpresaCatalogoPorNombre(nombreEmpresa) {
         if (!nombreEmpresa) return null;
+        var exacto = ORG_CATALOGO.empresas.find(function(e) {
+          return coincideOrgExacto(nombreEmpresa, e.nombre, e.abreviatura);
+        });
+        if (exacto) return exacto;
         return ORG_CATALOGO.empresas.find(function(e) {
           return coincideOrg(nombreEmpresa, e.nombre, e.abreviatura);
         }) || null;
@@ -6713,6 +6734,10 @@
       function getDepartamentoCatalogo(nombreEmpresa, nombreDepartamento) {
         var empresa = getEmpresaCatalogoPorNombre(nombreEmpresa);
         if (!empresa || !nombreDepartamento) return null;
+        var exacto = empresa.departamentos.find(function(d) {
+          return coincideOrgExacto(nombreDepartamento, d.nombre, d.abreviatura);
+        });
+        if (exacto) return exacto;
         return empresa.departamentos.find(function(d) {
           return coincideOrg(nombreDepartamento, d.nombre, d.abreviatura);
         }) || null;
@@ -6779,9 +6804,18 @@
           var depto = getDepartamentoCatalogo(empresa, departamento);
           if (depto) return depto.abreviatura;
         }
-        // Búsqueda sin empresa (compatibilidad con llamadas existentes)
+        // Búsqueda sin empresa (compatibilidad con llamadas existentes).
+        // Igual que getDepartamentoCatalogo: primero coincidencia exacta
+        // en TODAS las empresas/departamentos, y solo si ninguna aplica
+        // se recurre al fallback flexible por substring.
         for (var i = 0; i < ORG_CATALOGO.empresas.length; i++) {
-          var d = ORG_CATALOGO.empresas[i].departamentos.find(function(dep) {
+          var dExacto = ORG_CATALOGO.empresas[i].departamentos.find(function(dep) {
+            return coincideOrgExacto(departamento, dep.nombre, dep.abreviatura);
+          });
+          if (dExacto) return dExacto.abreviatura;
+        }
+        for (var j = 0; j < ORG_CATALOGO.empresas.length; j++) {
+          var d = ORG_CATALOGO.empresas[j].departamentos.find(function(dep) {
             return coincideOrg(departamento, dep.nombre, dep.abreviatura);
           });
           if (d) return d.abreviatura;
