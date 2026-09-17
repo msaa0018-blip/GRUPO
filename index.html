@@ -5990,13 +5990,33 @@
   <div id="editarProductosOCModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>✏️ Editar Productos — <span id="editarProductosOCCodigo"></span></h3>
+        <h3>✏️ Editar Productos y Formato — <span id="editarProductosOCCodigo"></span></h3>
         <div class="pdfPreview-btn-group">
           <button onclick="window.cerrarEditarProductosOC()">✕</button>
           <button class="success" onclick="window.guardarEdicionProductosOC()">✔️</button>
         </div>
       </div>
       <div class="modal-body">
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Formato de membrete:</label>
+            <select id="editarFormatoMembreteOC" style="flex:1.5;">
+              <option value="1">Formato 1</option>
+              <option value="2">Formato 2</option>
+              <option value="3">Formato 3</option>
+              <option value="4">Formato 4</option>
+              <option value="5">Formato 5 (Azul)</option>
+              <option value="6">Formato 6 (Rojo)</option>
+              <option value="7">Formato 7</option>
+              <option value="8">Formato 8</option>
+              <option value="9">Membrete Dálmata</option>
+              <option value="10">Membrete Formal</option>
+            </select>
+          </div>
+          <p style="margin:4px 0 0;font-size:12px;color:var(--gray-600);">
+            ℹ️ Solo el Administrador puede cambiar el formato de una OC ya creada, sin importar qué usuario la haya generado.
+          </p>
+        </div>
         <div class="table-wrapper">
           <table class="productos-tabla" id="tablaEditarProductosOC">
             <thead>
@@ -21138,6 +21158,12 @@
         var elCodigo = document.getElementById('editarProductosOCCodigo');
         if (elCodigo) elCodigo.textContent = oc.codigo || '';
 
+        // El formato de membrete se puede cambiar aquí sin importar quién
+        // haya generado la OC (esta ventana ya es exclusiva del
+        // Administrador — ver el candado de rol al inicio de esta función).
+        var selectFormatoEditarOC = document.getElementById('editarFormatoMembreteOC');
+        if (selectFormatoEditarOC) selectFormatoEditarOC.value = oc.formatomembrete || '1';
+
         var productosOC = parsearProductosOC(oc);
         var cuerpo = document.getElementById('cuerpoEditarProductosOC');
         cuerpo.innerHTML = '';
@@ -21309,8 +21335,13 @@
         var tipoCambio = oc.tipocambio || 1;
         var nuevoMontoMXN = oc.moneda === 'USD' ? nuevoTotal * tipoCambio : nuevoTotal;
 
+        // El formato de membrete lo puede cambiar el Administrador aquí
+        // mismo, sin importar qué usuario haya generado originalmente la OC.
+        var selectFormatoGuardarOC = document.getElementById('editarFormatoMembreteOC');
+        var nuevoFormatoOC = (selectFormatoGuardarOC && selectFormatoGuardarOC.value) || oc.formatomembrete || '1';
+
         try {
-          var updates = { productos: productosNuevos, montototal: nuevoTotal, montomxn: nuevoMontoMXN };
+          var updates = { productos: productosNuevos, montototal: nuevoTotal, montomxn: nuevoMontoMXN, formatomembrete: nuevoFormatoOC };
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
 
@@ -21328,6 +21359,7 @@
           oc.productos = productosNuevos;
           oc.montototal = nuevoTotal;
           oc.montomxn = nuevoMontoMXN;
+          oc.formatomembrete = nuevoFormatoOC;
 
           window.cerrarEditarProductosOC();
           render();
@@ -25339,51 +25371,105 @@
           ];
         });
 
-        doc.autoTable({
-          head: [headers],
-          body: rows,
-          startY: y,
-          // El margin.bottom incluye, además del pie de página, la altura
-          // completa de CONDICIONES COMERCIALES/RESUMEN FINANCIERO/DATOS
-          // BANCARIOS/INSTRUCCIONES DE ENTREGA/AUTORIZACIONES: así, si la
-          // tabla necesita cortar a una hoja nueva, esa fila ya queda junto
-          // con al menos una partida en la misma página (nunca sola).
-          margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + alturaColaCompletaOC },
-          theme: 'plain',
-          styles: {
-            fontSize: 8, cellPadding: 5, font: 'helvetica',
-            lineColor: colorBorde, lineWidth: { top: 0, left: 0, right: 0, bottom: 0.5 },
-            textColor: colorTexto
-          },
-          headStyles: {
-            fillColor: azulCorp, textColor: [255, 255, 255], fontSize: 8,
-            font: 'helvetica', fontStyle: 'bold', lineWidth: { top: 0, left: 0, right: 0, bottom: 0 }
-          },
-          bodyStyles: { fillColor: [255, 255, 255] },
-          columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 'auto' },
-            3: { cellWidth: 42 },
-            4: { cellWidth: 35 },
-            5: { cellWidth: 68 },
-            6: { cellWidth: 35 },
-            7: { cellWidth: 48 },
-            8: { cellWidth: 60 }
-          },
-          // Si la tabla de productos por sí sola necesita más de una hoja,
-          // cada página adicional que agrega jsPDF-autoTable internamente
-          // debe llevar también el membrete/logo — "willDrawPage" corre
-          // ANTES de dibujar las filas de esa página, así la decoración
-          // queda detrás del contenido (nunca lo tapa). La página 1 ya
-          // tiene su decoración dibujada más arriba, así que se omite aquí.
-          willDrawPage: function(data) {
-            if (data.pageNumber > 1) { dibujarDecoracionPaginaOC(); }
-          },
-          didDrawPage: function(data) { window._tableFinalY = data.cursor.y; }
-        });
+        // Si hay más de una partida, la ÚLTIMA se dibuja en un autoTable
+        // APARTE (ver "tablaUltimaPartida" más abajo), reservándole ahí SU
+        // margin.bottom la altura completa del pie (CONDICIONES
+        // COMERCIALES/RESUMEN FINANCIERO/DATOS BANCARIOS/INSTRUCCIONES DE
+        // ENTREGA/AUTORIZACIONES). Las partidas ANTERIORES a la última se
+        // dibujan aquí con un margin.bottom normal (sin ese hueco extra),
+        // así estas hojas se llenan de partidas con normalidad — antes,
+        // al reservar el pie completo en TODA página (no solo la última),
+        // cada hoja desperdiciaba ese espacio aunque no fuera a llevar el
+        // pie, generando más hojas de las necesarias. Con esto: solo la
+        // última partida queda junto con todo el pie (como pide la imagen
+        // de referencia), y las hojas previas no pierden espacio.
+        var hayMasDeUnaPartida = rows.length > 1;
+        var filasPrevias = hayMasDeUnaPartida ? rows.slice(0, -1) : [];
+        var filaUltima = hayMasDeUnaPartida ? rows.slice(-1) : rows;
 
-        y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
+        var estilosComunesTablaOC = {
+          fontSize: 8, cellPadding: 5, font: 'helvetica',
+          lineColor: colorBorde, lineWidth: { top: 0, left: 0, right: 0, bottom: 0.5 },
+          textColor: colorTexto
+        };
+        var headStylesComunesTablaOC = {
+          fillColor: azulCorp, textColor: [255, 255, 255], fontSize: 8,
+          font: 'helvetica', fontStyle: 'bold', lineWidth: { top: 0, left: 0, right: 0, bottom: 0 }
+        };
+        var columnStylesComunesTablaOC = {
+          0: { cellWidth: 20 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 42 },
+          4: { cellWidth: 35 },
+          5: { cellWidth: 68 },
+          6: { cellWidth: 35 },
+          7: { cellWidth: 48 },
+          8: { cellWidth: 60 }
+        };
+        // Si la tabla de productos por sí sola necesita más de una hoja,
+        // cada página adicional que agrega jsPDF-autoTable internamente
+        // debe llevar también el membrete/logo — "willDrawPage" corre
+        // ANTES de dibujar las filas de esa página, así la decoración
+        // queda detrás del contenido (nunca lo tapa). La "página 1" de
+        // CADA autoTable de abajo cae siempre sobre una hoja física que
+        // YA quedó decorada (la hoja 1 del documento, decorada más arriba
+        // a mano, o una hoja posterior ya decorada por el autoTable
+        // anterior), así que solo hace falta decorar de nuevo cuando el
+        // propio autoTable corta internamente a una página siguiente.
+        function willDrawPageTablaOC(data) {
+          if (data.pageNumber > 1) { dibujarDecoracionPaginaOC(); }
+        }
+        function didDrawPageTablaOC(data) { window._tableFinalY = data.cursor.y; }
+
+        if (filasPrevias.length) {
+          doc.autoTable({
+            head: [headers],
+            body: filasPrevias,
+            startY: y,
+            // Margin.bottom normal (sin reservar el pie completo): estas
+            // hojas no llevan el pie, así que se llenan de partidas igual
+            // que cualquier tabla normal.
+            margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY },
+            theme: 'plain',
+            styles: estilosComunesTablaOC,
+            headStyles: headStylesComunesTablaOC,
+            bodyStyles: { fillColor: [255, 255, 255] },
+            columnStyles: columnStylesComunesTablaOC,
+            willDrawPage: willDrawPageTablaOC,
+            didDrawPage: didDrawPageTablaOC
+          });
+          y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
+        }
+
+        if (filaUltima.length) {
+          doc.autoTable({
+            // Si ya hubo partidas previas en su propia tabla, esta última
+            // partida continúa sin repetir el encabezado de columnas (se
+            // vería como una fila suelta con su propio título justo debajo
+            // de las demás). Si esta es la ÚNICA partida (OC con una sola
+            // partida), sí se muestra el encabezado, igual que siempre.
+            head: filasPrevias.length ? undefined : [headers],
+            showHead: filasPrevias.length ? 'never' : 'everyPage',
+            body: filaUltima,
+            startY: y,
+            // Aquí SÍ se reserva la altura completa del pie: si la última
+            // partida no cabe junto con todo el pie en lo que resta de la
+            // hoja actual, autoTable manda la partida completa a una hoja
+            // nueva — nunca queda sola sin su pie, ni el pie queda solo
+            // sin al menos esta última partida (igual que antes).
+            margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + alturaColaCompletaOC },
+            theme: 'plain',
+            styles: estilosComunesTablaOC,
+            headStyles: headStylesComunesTablaOC,
+            bodyStyles: { fillColor: [255, 255, 255] },
+            columnStyles: columnStylesComunesTablaOC,
+            willDrawPage: willDrawPageTablaOC,
+            didDrawPage: didDrawPageTablaOC
+          });
+          y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
+        }
+
         var subtotal = 0,
           iva = 0,
           impuestoPorcentaje = 0;
