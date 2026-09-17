@@ -16082,7 +16082,7 @@
           window.ocultarBannerLocalizacion();
         }
 
-        reaccionarMensajeTelegramOC(oc, '✅');
+        reaccionarMensajeTelegramOC(oc, '👍');
 
         render();
 
@@ -16144,7 +16144,7 @@
           window.ocultarBannerLocalizacion();
         }
 
-        reaccionarMensajeTelegramOC(oc, '❌');
+        reaccionarMensajeTelegramOC(oc, '👎');
 
         render();
 
@@ -17438,14 +17438,18 @@
         }
       }
 
-      // Hace que el bot de Telegram reaccione (palomita ✅ al aprobar, X ❌
-      // al cancelar) al mensaje original de la OC enviado al Director, para
-      // que se vea de un vistazo en el chat cómo quedó cada OC. Requiere
-      // que la OC tenga guardado telegram_message_id (columna nueva en
-      // "ordenes"; ver script SQL). Si Telegram rechaza el emoji o la OC no
-      // tiene message_id guardado (notificaciones anteriores a este
-      // cambio), falla en silencio: nunca debe romper el flujo de
-      // aprobar/cancelar la OC.
+      // Hace que el bot de Telegram reaccione (👍 al aprobar, 👎 al
+      // cancelar) al mensaje original de la OC enviado al Director, para
+      // que se vea de un vistazo en el chat cómo quedó cada OC. Se usan
+      // 👍/👎 y NO ✅/❌ porque, probado en vivo contra la API de Telegram,
+      // "setMessageReaction" rechaza ✅ y ❌ con el error "REACTION_INVALID"
+      // (no están en la lista fija de emoji que Telegram permite para
+      // reacciones nativas de bot); 👍/👎 sí están permitidos y transmiten
+      // lo mismo (aprobada / cancelada). Requiere que la OC tenga guardado
+      // telegram_message_id (columna nueva en "ordenes"; ver script SQL).
+      // Si Telegram rechaza el emoji o la OC no tiene message_id guardado
+      // (notificaciones anteriores a este cambio), falla en silencio:
+      // nunca debe romper el flujo de aprobar/cancelar la OC.
       async function reaccionarMensajeTelegramOC(oc, emoji) {
         try {
           if (!oc || !oc.telegram_message_id) return false;
