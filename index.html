@@ -25374,17 +25374,28 @@
           8: { cellWidth: 60 }
         };
         // Si la tabla de productos por sí sola necesita más de una hoja,
-        // cada página adicional que agrega jsPDF-autoTable internamente
-        // debe llevar también el membrete/logo — "willDrawPage" corre
-        // ANTES de dibujar las filas de esa página, así la decoración
-        // queda detrás del contenido (nunca lo tapa). La "página 1" de
-        // CADA autoTable de abajo cae siempre sobre una hoja física que
-        // YA quedó decorada (la hoja 1 del documento, decorada más arriba
-        // a mano, o una hoja posterior ya decorada por el autoTable
-        // anterior), así que solo hace falta decorar de nuevo cuando el
-        // propio autoTable corta internamente a una página siguiente.
+        // cada página adicional debe llevar también el membrete/logo —
+        // "willDrawPage" corre ANTES de dibujar las filas de esa página,
+        // así la decoración queda detrás del contenido (nunca lo tapa).
+        // IMPORTANTE: "data.pageNumber" es relativo a CADA llamada de
+        // autoTable por separado (siempre arranca en 1 para esa llamada),
+        // NO es el número de página física del documento. Como la tabla
+        // se divide en dos llamadas (filasPrevias y filaUltima), si la
+        // segunda llamada necesita empezar en una hoja física nueva, esa
+        // hoja es la "página 1" de ESA llamada y la condición anterior
+        // (data.pageNumber > 1) nunca se cumplía, dejando esa hoja sin
+        // membrete. Por eso aquí se compara contra el número de página
+        // FÍSICO real del documento (doc.internal.getNumberOfPages()),
+        // llevando la cuenta en una variable compartida entre ambas
+        // llamadas, iniciada en 1 porque la hoja 1 ya se decoró a mano
+        // antes de estas tablas.
+        var paginaFisicaYaDecoradaTablaOC = doc.internal.getNumberOfPages();
         function willDrawPageTablaOC(data) {
-          if (data.pageNumber > 1) { dibujarDecoracionPaginaOC(); }
+          var paginaFisicaActualTablaOC = doc.internal.getNumberOfPages();
+          if (paginaFisicaActualTablaOC > paginaFisicaYaDecoradaTablaOC) {
+            dibujarDecoracionPaginaOC();
+            paginaFisicaYaDecoradaTablaOC = paginaFisicaActualTablaOC;
+          }
         }
         function didDrawPageTablaOC(data) { window._tableFinalY = data.cursor.y; }
 
