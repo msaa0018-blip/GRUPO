@@ -24247,6 +24247,12 @@
             swift: oc.swift || 'N/A',
             cie: oc.cie || 'N/A',
             referencia: oc.referencia || 'N/A',
+            metodopago: oc.metodopago || '',
+            solicitantetelefono: oc.solicitantetelefono || '',
+            solicitanteemail: oc.solicitanteemail || '',
+            responsableentrega: oc.responsableentrega || '',
+            sucursalentrega: oc.sucursalentrega || '',
+            paqueteria: oc.paqueteria || '',
             codigo: oc.codigo
           };
           var doc = await generarPDFParaPreview(datosOC, oc);
@@ -24925,6 +24931,23 @@
 
       async function generarPDFParaPreviewInterno(datos, ocExistente) {
         ocExistente = ocExistente || null;
+        // Blindaje contra el bug de "AAMS | N/A | N/A": si quien llama a
+        // esta función construye "datos" a partir de una OC ya guardada
+        // (ocExistente) y olvida copiar alguno de estos campos —como
+        // pasó en visualizarOC—, aquí se rellenan automáticamente desde
+        // la OC real en BD. Así, sin importar cuántas funciones nuevas
+        // se agreguen en el futuro para regenerar/reimprimir/visualizar
+        // una OC, el PDF nunca vuelve a mostrar "N/A" para estos datos
+        // mientras la OC guardada sí los tenga.
+        if (ocExistente) {
+          if (datos.solicitante == null || datos.solicitante === '') datos.solicitante = ocExistente.responsable || ocExistente.nombresolicitante || datos.solicitante;
+          if (datos.solicitantetelefono == null || datos.solicitantetelefono === '') datos.solicitantetelefono = ocExistente.solicitantetelefono || datos.solicitantetelefono;
+          if (datos.solicitanteemail == null || datos.solicitanteemail === '') datos.solicitanteemail = ocExistente.solicitanteemail || datos.solicitanteemail;
+          if (datos.metodopago == null || datos.metodopago === '') datos.metodopago = ocExistente.metodopago || datos.metodopago;
+          if (datos.responsableentrega == null || datos.responsableentrega === '') datos.responsableentrega = ocExistente.responsableentrega || datos.responsableentrega;
+          if (datos.sucursalentrega == null || datos.sucursalentrega === '') datos.sucursalentrega = ocExistente.sucursalentrega || datos.sucursalentrega;
+          if (datos.paqueteria == null || datos.paqueteria === '') datos.paqueteria = ocExistente.paqueteria || datos.paqueteria;
+        }
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('p', 'pt', 'a4');
         doc.setLineHeightFactor(1.05);
