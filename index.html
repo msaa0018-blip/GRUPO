@@ -15914,16 +15914,30 @@
       // No se utilizan comparaciones parciales (includes/startsWith/etc.)
       var DEPARTAMENTO_ISCI_EXACTO = 'INGENIERIA EN SISTEMAS CONTRA INCENDIO';
       var LOGO_ISCI_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20ISCI.png';
+      var LOGO_TI_URL = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20TI.png';
 
       function esDepartamentoISCI(departamento) {
         var deptoNormalizado = (departamento || '').toString().trim().toUpperCase();
         return deptoNormalizado === DEPARTAMENTO_ISCI_EXACTO;
       }
 
+      // El departamento TI (único en el catálogo, dentro de GRUPO
+      // INDUSTRIAL EXTINGUE) usa su propio logo en vez del logo general
+      // de la empresa — misma regla que ya existe para ISCI.
+      function esDepartamentoTI(departamento) {
+        var deptoNormalizado = (departamento || '').toString().trim().toUpperCase();
+        return deptoNormalizado === 'TI';
+      }
+
       function getLogoPorDepartamento(empresa, departamento) {
         // Regla de negocio prioritaria: coincidencia exacta del departamento ISCI
         if (esDepartamentoISCI(departamento)) {
           return { url: LOGO_ISCI_URL, tipo: 'PNG', nombre: 'ISCI' };
+        }
+
+        // Regla de negocio prioritaria: coincidencia exacta del departamento TI
+        if (esDepartamentoTI(departamento)) {
+          return { url: LOGO_TI_URL, tipo: 'PNG', nombre: 'TI' };
         }
 
         // Fuente única de verdad: catálogo organizacional
