@@ -17,6 +17,14 @@
 <!-- QRious para generar códigos QR (vales de gasolina VSC) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js">
 </script>
+<!-- pdf.js: dibuja el PDF como <canvas> dentro del modal "Visualizar" en
+     vez de depender de un <iframe src="blob:...">. Varios navegadores
+     móviles (Safari iOS, Chrome Android en ciertas versiones) no
+     renderizan un PDF embebido en un iframe -lo dejan en blanco o lo
+     mandan a abrir en otra app/pestaña-, así que se usa esta librería
+     para que la vista previa siempre se vea dentro del propio modal. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -1827,14 +1835,38 @@
   }
   .stepper-oc .stepper-oc-sub.completado { color: #2e7d32; }
 
-  #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
-  #visualizarModal .modal-body iframe {
+  #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 0; display: flex; align-items: flex-start; justify-content: center; }
+  /* El PDF se dibuja como una serie de <canvas> (uno por página) dentro
+     de este contenedor, en vez de un <iframe>: así se ve siempre dentro
+     del propio modal, incluso en navegadores móviles que no muestran un
+     PDF embebido en un iframe. */
+  #visualizarModal .modal-body .visualizar-pdf-viewer {
     width: 100%;
     height: 100%;
     min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+  #visualizarModal .modal-body .visualizar-pdf-viewer canvas.visualizar-pdf-pagina {
+    max-width: 100%;
+    height: auto;
     border: 1px solid var(--gray-300);
     border-radius: 8px;
-    display: block;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    background: #fff;
+  }
+  #visualizarModal .modal-body .visualizar-pdf-cargando,
+  #visualizarModal .modal-body .visualizar-pdf-error {
+    color: var(--gray-600);
+    font-size: 14px;
+    padding: 24px;
+    text-align: center;
+    margin: auto;
   }
   #visualizarModal .modal-footer {
     padding-top: 12px;
@@ -5982,7 +6014,7 @@
     <div class="modal-content">
       <div class="modal-header"><h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3><button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button></div>
       <div id="visualizarStepperOC" class="stepper-oc"></div>
-      <div class="modal-body"><iframe id="visualizarFrame"></iframe></div>
+      <div class="modal-body"><div id="visualizarFrame" class="visualizar-pdf-viewer"></div></div>
     </div>
   </div>
 
@@ -22771,19 +22803,11 @@
           };
           var doc = await generarPDFOF(datos);
 
-          var pdfBlob = doc.output('blob');
-          var pdfUrl = URL.createObjectURL(pdfBlob);
-
-          var frame = document.getElementById('visualizarFrame');
-          if (frame) {
-            frame.src = pdfUrl;
-            frame.style.display = 'block';
-          }
-
           var stepperOF = document.getElementById('visualizarStepperOC');
           if (stepperOF) stepperOF.innerHTML = '';
 
           document.getElementById('visualizarModal').classList.add('active');
+          await renderizarPDFEnVisualizarFrame(doc);
         } catch (error) {
           console.error('❌ Error al visualizar la OF:', error);
           alert('Error al visualizar la OF: ' + error.message);
@@ -24198,6 +24222,53 @@
         contenedor.innerHTML = html;
       }
 
+      // pdf.js necesita saber de dónde descargar su "worker" (el script
+      // que hace el trabajo pesado de decodificar el PDF en segundo
+      // plano). Se apunta a la misma versión que se cargó en el <head>.
+      if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      // Dibuja un documento jsPDF ya generado (doc) dentro del
+      // contenedor #visualizarFrame del modal "Visualizar", como una
+      // serie de <canvas> (uno por página) en vez de un <iframe> con el
+      // PDF: esto es lo que corrige que en varios celulares la OC no se
+      // viera dentro del modal (el iframe se quedaba en blanco o el
+      // navegador intentaba abrir el PDF en otra pestaña/app). Se usa
+      // tanto para "Visualizar OC" como para "Visualizar OF", que
+      // comparten este mismo modal.
+      async function renderizarPDFEnVisualizarFrame(doc) {
+        var contenedor = document.getElementById('visualizarFrame');
+        if (!contenedor) return;
+        contenedor.innerHTML = '<div class="visualizar-pdf-cargando">Generando vista previa…</div>';
+        try {
+          if (!window.pdfjsLib) throw new Error('pdf.js no está disponible');
+          var arrayBuffer = doc.output('arraybuffer');
+          var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          contenedor.innerHTML = '';
+          var anchoDisponible = Math.max(contenedor.clientWidth - 4, 280);
+          var dpr = window.devicePixelRatio || 1;
+          for (var numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+            var pagina = await pdf.getPage(numPagina);
+            var viewportBase = pagina.getViewport({ scale: 1 });
+            var escala = anchoDisponible / viewportBase.width;
+            var viewport = pagina.getViewport({ scale: escala * dpr });
+            var canvas = document.createElement('canvas');
+            canvas.className = 'visualizar-pdf-pagina';
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.width = (viewport.width / dpr) + 'px';
+            canvas.style.height = (viewport.height / dpr) + 'px';
+            var ctx = canvas.getContext('2d');
+            await pagina.render({ canvasContext: ctx, viewport: viewport }).promise;
+            contenedor.appendChild(canvas);
+          }
+        } catch (errorRenderPDF) {
+          console.error('❌ Error al renderizar el PDF en el modal:', errorRenderPDF);
+          contenedor.innerHTML = '<div class="visualizar-pdf-error">⚠️ No se pudo mostrar la vista previa del PDF.<br>Usa el botón de descarga/imprimir.</div>';
+        }
+      }
+
       window.visualizarOC = async function(index) {
         // Evita que un doble clic (mientras el PDF todavía se está
         // generando) dispare una segunda generación en paralelo — eso
@@ -24273,20 +24344,15 @@
           visualizarOCPDF = doc;
           visualizarOCData = datosOC;
 
-          var pdfBlob = doc.output('blob');
-          var pdfUrl = URL.createObjectURL(pdfBlob);
-
           // El PDF ya está listo: se muestra la ventana directamente con
-          // el documento cargado, sin ningún paso intermedio.
-          var frame = document.getElementById('visualizarFrame');
-          if (frame) {
-            frame.removeAttribute('srcdoc');
-            frame.src = pdfUrl;
-            frame.style.display = 'block';
-          }
+          // el documento cargado, sin ningún paso intermedio. Se dibuja
+          // como páginas <canvas> dentro del propio modal (ver
+          // renderizarPDFEnVisualizarFrame) en vez de un iframe, para
+          // que se vea igual en computadora y en celular.
           document.getElementById('visualizarModal').classList.add('active');
 
           renderStepperOC(oc);
+          await renderizarPDFEnVisualizarFrame(doc);
 
         } catch (error) {
           console.error('❌ Error al visualizar OC:', error);
@@ -24299,14 +24365,8 @@
 
       window.cerrarVisualizar = function() {
         document.getElementById('visualizarModal').classList.remove('active');
-        var frame = document.getElementById('visualizarFrame');
-        if (frame && frame.src) {
-          try {
-            URL.revokeObjectURL(frame.src);
-          } catch (e) {}
-          frame.src = '';
-          frame.style.display = 'block';
-        }
+        var contenedor = document.getElementById('visualizarFrame');
+        if (contenedor) contenedor.innerHTML = '';
         visualizarOCData = null;
         visualizarOCPDF = null;
         visualizarModalTipoActual = null;
