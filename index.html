@@ -2,7 +2,7 @@
 <html lang="es" data-theme="ejecutivo">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes">
 <title>Workflow OC ERP v58</title>
 <link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/FAVICON%201.jpg">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
@@ -252,6 +252,15 @@
   }
 
   /* === BOTONES === */
+  /* El ancho de estos 3 botones es el doble de su alto (antes eran
+     cuadrados de 36x36): al ser más anchos, el bloque .header-right
+     (que ya está pegado al borde derecho del header con
+     justify-content:flex-end) simplemente crece hacia la izquierda esa
+     misma cantidad — su borde derecho no se mueve, así que nunca se
+     sale de la página. El header ya tiene overflow-x:hidden como
+     respaldo. El candado (btn-bloqueo-sistema) usa siempre el mismo
+     ancho/alto que volver y cerrar, en la base y en cada punto de
+     quiebre de abajo. */
   .header-right .btn-volver-menu,
   .header-right .btn-cerrar-sesion-header,
   .header-right .btn-bloqueo-sistema {
@@ -264,9 +273,9 @@
     font-size: 16px;
     transition: background 0.2s, transform 0.15s;
     height: 36px;
-    width: 36px;
-    min-width: 36px;
-    max-width: 36px;
+    width: 72px;
+    min-width: 72px;
+    max-width: 72px;
     padding: 0;
     flex: 0 0 auto;
     display: inline-flex;
@@ -338,14 +347,16 @@
     }
     .header-right {
       gap: 6px;
+      max-width: 60%;
     }
     .header-right .btn-volver-menu,
-    .header-right .btn-cerrar-sesion-header {
+    .header-right .btn-cerrar-sesion-header,
+    .header-right .btn-bloqueo-sistema {
       font-size: 16px;
       height: 34px;
-      width: 34px;
-      min-width: 34px;
-      max-width: 34px;
+      width: 68px;
+      min-width: 68px;
+      max-width: 68px;
     }
   }
 
@@ -374,14 +385,16 @@
     }
     .header-right {
       gap: 4px;
+      max-width: 65%;
     }
     .header-right .btn-volver-menu,
-    .header-right .btn-cerrar-sesion-header {
+    .header-right .btn-cerrar-sesion-header,
+    .header-right .btn-bloqueo-sistema {
       font-size: 15px;
       height: 30px;
-      width: 30px;
-      min-width: 30px;
-      max-width: 30px;
+      width: 60px;
+      min-width: 60px;
+      max-width: 60px;
       border-radius: 6px;
     }
   }
@@ -415,14 +428,16 @@
       gap: 3px;
       flex: 1 0 auto;
       justify-content: flex-end;
+      max-width: 70%;
     }
     .header-right .btn-volver-menu,
-    .header-right .btn-cerrar-sesion-header {
+    .header-right .btn-cerrar-sesion-header,
+    .header-right .btn-bloqueo-sistema {
       font-size: 14px;
       height: 26px;
-      width: 26px;
-      min-width: 26px;
-      max-width: 26px;
+      width: 52px;
+      min-width: 52px;
+      max-width: 52px;
       border-radius: 5px;
     }
   }
@@ -448,14 +463,16 @@
     }
     .header-right {
       gap: 2px;
+      max-width: 75%;
     }
     .header-right .btn-volver-menu,
-    .header-right .btn-cerrar-sesion-header {
+    .header-right .btn-cerrar-sesion-header,
+    .header-right .btn-bloqueo-sistema {
       font-size: 12px;
       height: 22px;
-      width: 22px;
-      min-width: 22px;
-      max-width: 22px;
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
       border-radius: 4px;
     }
   }
@@ -1291,17 +1308,16 @@
   }
   #pdfPreviewModal .modal-header h3, #facturaVerModal .modal-header h3, #facturaSeleccionModal .modal-header h3, #colaboradoresPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #pdfPreviewModal .modal-body, #facturaVerModal .modal-body, #colaboradoresPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px }
-  /* El iframe llena exactamente el alto disponible del modal (.modal-body
-     ya reparte el espacio con flex: 1) — así el visor de PDF del navegador
-     no deja franjas vacías debajo de una OC corta de 1 sola hoja; si la OC
-     tiene más hojas, el propio visor de PDF hace scroll interno. */
-  #pdfPreviewModal .modal-body iframe, #facturaVerModal .modal-body iframe, #colaboradoresPreviewModal .modal-body iframe {
-    display: block;
+  /* El PDF se dibuja como páginas <canvas> (ver .visualizar-pdf-viewer
+     más abajo) dentro de este contenedor, que llena el alto disponible
+     del modal y tiene su propio scroll — así se ve siempre dentro del
+     propio modal, en cualquier navegador o celular, en vez de un
+     iframe que en varios dispositivos no muestra el PDF embebido. */
+  #pdfPreviewModal .modal-body .visualizar-pdf-viewer, #facturaVerModal .modal-body .visualizar-pdf-viewer, #colaboradoresPreviewModal .modal-body .visualizar-pdf-viewer {
+    display: flex;
     width: 100%;
     height: 100%;
     min-height: 400px;
-    border: 1px solid var(--gray-300);
-    border-radius: 8px
   }
   /* En computadora, las ventanas de previsualización/visualización de
      archivos son más grandes (más anchas y del doble de alto que antes)
@@ -1774,6 +1790,7 @@
     padding-bottom: 12px;
   }
   #visualizarModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
+  #visualizarModal .modal-header .pdfPreview-btn-group { display: flex; gap: 8px; flex-shrink: 0; margin-left: auto; }
 
   /* ===== STEPPER: FLUJO DE LA OC (modal Visualizar OC) ===== */
   .stepper-oc {
@@ -1783,6 +1800,14 @@
     padding: 14px 6px 10px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--gray-200);
+    width: 100%;
+    box-sizing: border-box;
+    /* Salvaguarda: aunque algo no encoja como se espera, esto evita que
+       las 5 etapas alguna vez empujen un scroll horizontal de la página
+       (el requisito es que se vean TODAS a la vez, no que se recorten,
+       así que el ajuste real de tamaños/espacios está en las reglas de
+       abajo — esto es solo un tope de seguridad). */
+    overflow: hidden;
   }
   .stepper-oc .stepper-oc-paso {
     display: flex;
@@ -1791,6 +1816,9 @@
     flex: 1 1 0;
     position: relative;
     min-width: 0;
+    max-width: 100%;
+    padding: 0 2px;
+    box-sizing: border-box;
   }
   .stepper-oc .stepper-oc-linea {
     position: absolute;
@@ -1825,22 +1853,54 @@
     text-align: center;
     margin-top: 6px;
     line-height: 1.2;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
   }
   .stepper-oc .stepper-oc-titulo.completado { color: #2e7d32; }
   .stepper-oc .stepper-oc-sub {
     font-size: 9.5px;
     color: var(--gray-400);
     text-align: center;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
     margin-top: 2px;
   }
   .stepper-oc .stepper-oc-sub.completado { color: #2e7d32; }
 
+  /* En móvil, las 5 etapas deben verse TODAS a la vez en una sola fila
+     horizontal (nunca apiladas ni con scroll) — se reducen círculos,
+     tipografía y espacios entre ellas para que quepan sin desbordar. */
+  @media (max-width: 550px) {
+    .stepper-oc { padding: 10px 2px 8px; }
+    .stepper-oc .stepper-oc-paso { padding: 0 1px; }
+    .stepper-oc .stepper-oc-circulo { width: 20px; height: 20px; font-size: 10px; }
+    .stepper-oc .stepper-oc-linea { top: 10px; }
+    .stepper-oc .stepper-oc-titulo { font-size: 8.5px; margin-top: 4px; }
+    .stepper-oc .stepper-oc-sub { font-size: 7px; margin-top: 1px; }
+  }
+  @media (max-width: 400px) {
+    .stepper-oc .stepper-oc-circulo { width: 16px; height: 16px; font-size: 9px; }
+    .stepper-oc .stepper-oc-linea { top: 8px; }
+    .stepper-oc .stepper-oc-titulo { font-size: 7.5px; }
+    .stepper-oc .stepper-oc-sub { font-size: 6.5px; }
+  }
+
   #visualizarModal .modal-body { flex: 1; overflow: auto; min-height: 0; display: flex; align-items: flex-start; justify-content: center; }
-  /* El PDF se dibuja como una serie de <canvas> (uno por página) dentro
+  /* ===== VISOR DE PDF COMPARTIDO (.visualizar-pdf-viewer) =====
+     El PDF se dibuja como una serie de <canvas> (uno por página) dentro
      de este contenedor, en vez de un <iframe>: así se ve siempre dentro
-     del propio modal, incluso en navegadores móviles que no muestran un
-     PDF embebido en un iframe. */
-  #visualizarModal .modal-body .visualizar-pdf-viewer {
+     del propio modal, en cualquier navegador o celular, sin depender
+     del visor de PDF nativo (que en varios móviles deja el iframe en
+     blanco o intenta abrir el PDF en otra pestaña/app). Esta misma
+     clase se usa en TODOS los modales que muestran un PDF: Visualizar
+     OC/OF, Previsualizar OC/SPM, Colaboradores, Factura y Reportes
+     CXP/CXC/CXF — cada modal solo ajusta el tamaño del contenedor
+     (ancho/alto) según su propio diseño. */
+  .visualizar-pdf-viewer {
     width: 100%;
     height: 100%;
     min-height: 0;
@@ -1852,7 +1912,7 @@
     padding: 4px;
     box-sizing: border-box;
   }
-  #visualizarModal .modal-body .visualizar-pdf-viewer canvas.visualizar-pdf-pagina {
+  .visualizar-pdf-viewer canvas.visualizar-pdf-pagina {
     max-width: 100%;
     height: auto;
     border: 1px solid var(--gray-300);
@@ -1860,8 +1920,8 @@
     box-shadow: 0 1px 4px rgba(0,0,0,.12);
     background: #fff;
   }
-  #visualizarModal .modal-body .visualizar-pdf-cargando,
-  #visualizarModal .modal-body .visualizar-pdf-error {
+  .visualizar-pdf-cargando,
+  .visualizar-pdf-error {
     color: var(--gray-600);
     font-size: 14px;
     padding: 24px;
@@ -1922,13 +1982,10 @@
   }
   #cxpPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #cxpPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px; }
-  #cxpPreviewModal .modal-body iframe {
-    display: block;
+  #cxpPreviewModal .modal-body .visualizar-pdf-viewer {
     width: 100%;
     height: 100%;
     min-height: 400px;
-    border: 1px solid var(--gray-300);
-    border-radius: 8px;
   }
   #cxpPreviewModal .modal-footer {
     padding-top: 12px;
@@ -1983,14 +2040,11 @@
     padding-bottom: 12px;
   }
   #ofDocModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #ofDocModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; }
-  #ofDocModal .modal-body iframe {
+  #ofDocModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: flex-start; justify-content: center; }
+  #ofDocModal .modal-body .visualizar-pdf-viewer {
     width: 100%;
     height: 100%;
     min-height: 400px;
-    border: 1px solid var(--gray-300);
-    border-radius: 8px;
-    display: block;
   }
   #ofDocModal .modal-footer {
     padding-top: 12px;
@@ -4883,7 +4937,7 @@
               <button class="btn-modal-x" onclick="window.cerrarFacturaOC()">✕</button>
             </div>
           </div>
-          <div class="modal-body"><iframe id="facturaVerFrame"></iframe></div>
+          <div class="modal-body"><div id="facturaVerFrame" class="visualizar-pdf-viewer"></div></div>
         </div>
       </div>
 
@@ -5855,7 +5909,13 @@
       <div class="card modal-card hidden" id="bandejaOCCard">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h2 style="margin:0;">📬 Bandeja de Órdenes de Compra</h2>
-          <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarBandejaOC()">✕</button>
+          <!-- margin-left:auto: si el título es tan largo que el botón
+               cae solo a su propia línea (flex-wrap:wrap en pantallas
+               angostas), "justify-content:space-between" con un único
+               elemento en esa línea lo pega a la izquierda en vez de
+               dejarlo a la derecha. margin-left:auto lo mantiene siempre
+               pegado al borde derecho sin importar si hay wrap o no. -->
+          <button class="cerrar-modal-btn btn-modal-x" style="margin-left:auto;" onclick="window.cerrarBandejaOC()">✕</button>
         </div>
 
         <div id="deptoLogoContainer" class="depto-logo-container hidden">
@@ -5994,7 +6054,7 @@
           <button onclick="window.cerrarPreview()">✕</button>
         </div>
       </div>
-      <div class="modal-body"><iframe id="pdfPreviewFrame"></iframe></div>
+      <div class="modal-body"><div id="pdfPreviewFrame" class="visualizar-pdf-viewer"></div></div>
     </div>
   </div>
 
@@ -6006,13 +6066,20 @@
           <button onclick="window.cerrarPreviewColaboradores()">✕</button>
         </div>
       </div>
-      <div class="modal-body"><iframe id="colaboradoresPreviewFrame"></iframe></div>
+      <div class="modal-body"><div id="colaboradoresPreviewFrame" class="visualizar-pdf-viewer"></div></div>
     </div>
   </div>
 
   <div id="visualizarModal">
     <div class="modal-content">
-      <div class="modal-header"><h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3><button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button></div>
+      <div class="modal-header">
+        <h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3>
+        <div class="pdfPreview-btn-group">
+          <button class="btn-modal-x" title="Alejar" onclick="window.zoomVisualizarPDF(-1)">➖</button>
+          <button class="btn-modal-x" title="Acercar" onclick="window.zoomVisualizarPDF(1)">➕</button>
+          <button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button>
+        </div>
+      </div>
       <div id="visualizarStepperOC" class="stepper-oc"></div>
       <div class="modal-body"><div id="visualizarFrame" class="visualizar-pdf-viewer"></div></div>
     </div>
@@ -6088,7 +6155,7 @@
   <div id="cxpPreviewModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Previsualización del Reporte</h3><button class="btn-modal-x" onclick="window.cerrarPreviewCXP()">✕</button></div>
-      <div class="modal-body"><iframe id="cxpPreviewFrame"></iframe></div>
+      <div class="modal-body"><div id="cxpPreviewFrame" class="visualizar-pdf-viewer"></div></div>
     </div>
   </div>
 
@@ -6419,7 +6486,7 @@
   <div id="ofDocModal">
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Orden de Facturación</h3><button class="btn-modal-x" onclick="window.cerrarOfDocModal()">✕</button></div>
-      <div class="modal-body"><iframe id="ofDocFrame"></iframe></div>
+      <div class="modal-body"><div id="ofDocFrame" class="visualizar-pdf-viewer"></div></div>
     </div>
   </div>
 
@@ -11512,13 +11579,10 @@
             // Vista previa: se muestra en el modal genérico de PDF (el
             // mismo que usa "Previsualizar" en Crear OC) en vez de
             // descargar el archivo directamente.
-            var pdfBlobSPM = doc.output('blob');
-            var pdfUrlSPM = URL.createObjectURL(pdfBlobSPM);
             var tituloPreviewSPM = document.getElementById('pdfPreviewTitulo');
             if (tituloPreviewSPM) tituloPreviewSPM.textContent = 'Previsualización de la SPM';
-            var framePreviewSPM = document.getElementById('pdfPreviewFrame');
-            if (framePreviewSPM) framePreviewSPM.src = pdfUrlSPM;
             document.getElementById('pdfPreviewModal').classList.add('active');
+            await renderizarPDFEnContenedor('pdfPreviewFrame', doc);
           } else {
             doc.save((d.folio || d.codigo || 'SPM') + '.pdf');
           }
@@ -12079,7 +12143,7 @@
       // mismo catálogo ya cargado en pantalla, sin nueva consulta a
       // Supabase) y lo muestra en una ventana modal, con el mismo patrón
       // de blob + iframe que ya usa la previsualización de la OC.
-      window.imprimirListaColaboradores = function() {
+      window.imprimirListaColaboradores = async function() {
         if (!usuarioPuedeGestionarColaboradores()) return alert('⚠️ Solo ADMIN puede imprimir la lista de colaboradores.');
         if (!colaboradoresCache.length) return alert('No hay colaboradores registrados para imprimir.');
         try {
@@ -12122,11 +12186,8 @@
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
           });
 
-          var pdfBlob = doc.output('blob');
-          var pdfUrl = URL.createObjectURL(pdfBlob);
-          var frame = document.getElementById('colaboradoresPreviewFrame');
-          frame.src = pdfUrl;
           document.getElementById('colaboradoresPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('colaboradoresPreviewFrame', doc);
         } catch (e) {
           console.error('❌ Error generando el PDF de colaboradores:', e.stack || e);
           alert('No se pudo generar el PDF de colaboradores.\n\nDetalle: ' + (e.message || e));
@@ -12135,6 +12196,8 @@
 
       window.cerrarPreviewColaboradores = function() {
         document.getElementById('colaboradoresPreviewModal').classList.remove('active');
+        var contenedorColab = document.getElementById('colaboradoresPreviewFrame');
+        if (contenedorColab) contenedorColab.innerHTML = '';
       };
 
       window.actualizarDeptosColaborador = function() {
@@ -13666,44 +13729,38 @@
         document.getElementById('facturaSeleccionModal').classList.remove('active');
       };
 
-      window.abrirFacturaVer = function(url, titulo) {
+      var facturaVerUrlActual = null;
+
+      window.abrirFacturaVer = async function(url, titulo) {
         if (!url) return;
         var modal = document.getElementById('facturaVerModal');
-        var frame = document.getElementById('facturaVerFrame');
+        var contenedor = document.getElementById('facturaVerFrame');
         var btnDescargar = document.getElementById('facturaVerDescargarBtn');
         var tituloEl = document.getElementById('facturaVerTitulo');
-        if (!modal || !frame) return;
+        if (!modal || !contenedor) return;
         if (tituloEl) tituloEl.textContent = titulo || 'Factura';
-        frame.src = url;
+        facturaVerUrlActual = url;
         if (btnDescargar) btnDescargar.href = url;
         modal.classList.add('active');
+        await renderizarPDFEnContenedor('facturaVerFrame', url);
       };
 
       window.cerrarFacturaOC = function() {
         var modal = document.getElementById('facturaVerModal');
-        var frame = document.getElementById('facturaVerFrame');
+        var contenedor = document.getElementById('facturaVerFrame');
         if (modal) modal.classList.remove('active');
-        if (frame) frame.src = '';
+        if (contenedor) contenedor.innerHTML = '';
+        facturaVerUrlActual = null;
       };
 
       // Botón "🖨️ Imprimir" de la ventana de previsualización (Factura /
-      // Comprobante de Pago). El archivo mostrado en el iframe viene de
-      // Storage de Supabase, es decir de otro origen: si el navegador deja
-      // llamar print() sobre ese iframe (visor nativo de PDF de Chrome,
-      // mismo caso ya usado en el resto de la app), se imprime directo;
-      // si el navegador lo bloquea por política de mismo origen, se abre
-      // el archivo en una pestaña nueva para que el usuario lo imprima
-      // desde ahí (con el propio botón de impresión del visor).
+      // Comprobante de Pago). El archivo viene de Storage de Supabase
+      // (otro origen): se abre en una pestaña nueva con el visor nativo
+      // de PDF del navegador, desde donde el usuario puede imprimirlo
+      // con su propio botón de impresión.
       window.imprimirFacturaVer = function() {
-        var frame = document.getElementById('facturaVerFrame');
-        var url = frame && frame.src;
-        if (!url) return;
-        try {
-          frame.contentWindow.focus();
-          frame.contentWindow.print();
-        } catch (e) {
-          window.open(url, '_blank');
-        }
+        if (!facturaVerUrlActual) return;
+        window.open(facturaVerUrlActual, '_blank');
       };
 
       // ===== EDITAR PRODUCTO (incluye poder cambiar la foto) =====
@@ -22612,11 +22669,8 @@
           var doc = await generarPDFOF(datos);
           ofDocPDF = doc;
           ofDocData = datos;
-          var pdfBlob = doc.output('blob');
-          var pdfUrl = URL.createObjectURL(pdfBlob);
-          var frame = document.getElementById('ofDocFrame');
-          if (frame) frame.src = pdfUrl;
           document.getElementById('ofDocModal').classList.add('active');
+          await renderizarPDFEnContenedor('ofDocFrame', doc);
         } catch (error) {
           console.error('❌ Error al previsualizar la OF:', error);
           alert('Error al previsualizar la OF: ' + error.message);
@@ -22625,11 +22679,8 @@
 
       window.cerrarOfDocModal = function() {
         document.getElementById('ofDocModal').classList.remove('active');
-        var frame = document.getElementById('ofDocFrame');
-        if (frame && frame.src) {
-          try { URL.revokeObjectURL(frame.src); } catch (e) {}
-          frame.src = '';
-        }
+        var contenedorOF = document.getElementById('ofDocFrame');
+        if (contenedorOF) contenedorOF.innerHTML = '';
         ofDocPDF = null;
         ofDocData = null;
       };
@@ -24229,24 +24280,42 @@
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       }
 
-      // Dibuja un documento jsPDF ya generado (doc) dentro del
-      // contenedor #visualizarFrame del modal "Visualizar", como una
-      // serie de <canvas> (uno por página) en vez de un <iframe> con el
-      // PDF: esto es lo que corrige que en varios celulares la OC no se
-      // viera dentro del modal (el iframe se quedaba en blanco o el
-      // navegador intentaba abrir el PDF en otra pestaña/app). Se usa
-      // tanto para "Visualizar OC" como para "Visualizar OF", que
-      // comparten este mismo modal.
-      async function renderizarPDFEnVisualizarFrame(doc) {
-        var contenedor = document.getElementById('visualizarFrame');
+      // Dibuja un PDF (doc de jsPDF ya generado, o una URL/data-URI de un
+      // archivo existente, p.ej. una factura subida a Storage) dentro de
+      // un contenedor div, como una serie de <canvas> (uno por página)
+      // en vez de un <iframe> con el PDF: esto es lo que corrige que en
+      // varios celulares el documento no se viera dentro del modal (el
+      // iframe se quedaba en blanco o el navegador intentaba abrir el
+      // PDF en otra pestaña/app, mostrando un botón de "Abrir" en vez de
+      // la vista previa). Se usa en TODAS las ventanas de
+      // Previsualización/Visualización de PDF de la app (Visualizar
+      // OC/OF, Previsualizar OC/SPM, Colaboradores, Reportes CXP/CXC/CXF,
+      // Factura) para que todas se comporten igual en móvil.
+      // "zoomFactor" (por defecto 1) permite acercar/alejar el
+      // documento: al aumentar, las páginas se dibujan más grandes y el
+      // contenedor (que ya tiene scroll propio) permite desplazarse para
+      // ver el resto.
+      async function renderizarPDFEnContenedor(contenedorId, fuente, zoomFactor) {
+        var contenedor = document.getElementById(contenedorId);
         if (!contenedor) return;
         contenedor.innerHTML = '<div class="visualizar-pdf-cargando">Generando vista previa…</div>';
         try {
           if (!window.pdfjsLib) throw new Error('pdf.js no está disponible');
-          var arrayBuffer = doc.output('arraybuffer');
-          var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          var origenPDF;
+          if (fuente && typeof fuente.output === 'function') {
+            origenPDF = { data: fuente.output('arraybuffer') };
+          } else if (typeof fuente === 'string' && fuente.indexOf('data:') === 0) {
+            var base64PDF = fuente.substring(fuente.indexOf(',') + 1);
+            var binarioPDF = atob(base64PDF);
+            var bytesPDF = new Uint8Array(binarioPDF.length);
+            for (var biPDF = 0; biPDF < binarioPDF.length; biPDF++) bytesPDF[biPDF] = binarioPDF.charCodeAt(biPDF);
+            origenPDF = { data: bytesPDF };
+          } else {
+            origenPDF = { url: fuente };
+          }
+          var pdf = await window.pdfjsLib.getDocument(origenPDF).promise;
           contenedor.innerHTML = '';
-          var anchoDisponible = Math.max(contenedor.clientWidth - 4, 280);
+          var anchoDisponible = Math.max(contenedor.clientWidth - 4, 280) * (zoomFactor || 1);
           var dpr = window.devicePixelRatio || 1;
           for (var numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
             var pagina = await pdf.getPage(numPagina);
@@ -24264,10 +24333,34 @@
             contenedor.appendChild(canvas);
           }
         } catch (errorRenderPDF) {
-          console.error('❌ Error al renderizar el PDF en el modal:', errorRenderPDF);
-          contenedor.innerHTML = '<div class="visualizar-pdf-error">⚠️ No se pudo mostrar la vista previa del PDF.<br>Usa el botón de descarga/imprimir.</div>';
+          console.error('❌ Error al renderizar el PDF en "' + contenedorId + '":', errorRenderPDF);
+          contenedor.innerHTML = '<div class="visualizar-pdf-error">⚠️ No se pudo mostrar la vista previa del PDF.<br>Usa el botón de descarga.</div>';
         }
       }
+
+      // Zoom del modal "Visualizar" (OC/OF): factor aplicado sobre el
+      // ancho de página calculado en renderizarPDFEnContenedor. Se
+      // reinicia a 1 cada vez que el modal se cierra (ver
+      // window.cerrarVisualizar) para que la siguiente OC/OF siempre
+      // abra a tamaño normal.
+      var visualizarModalPDFFuente = null;
+      var visualizarPDFZoom = 1;
+      var ZOOM_PDF_PASOS = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3];
+
+      async function renderizarPDFEnVisualizarFrame(doc) {
+        visualizarModalPDFFuente = doc;
+        await renderizarPDFEnContenedor('visualizarFrame', doc, visualizarPDFZoom);
+      }
+
+      window.zoomVisualizarPDF = function(direccion) {
+        var idxActual = 0;
+        for (var zi = 0; zi < ZOOM_PDF_PASOS.length; zi++) {
+          if (Math.abs(ZOOM_PDF_PASOS[zi] - visualizarPDFZoom) < Math.abs(ZOOM_PDF_PASOS[idxActual] - visualizarPDFZoom)) idxActual = zi;
+        }
+        var idxNuevo = Math.min(ZOOM_PDF_PASOS.length - 1, Math.max(0, idxActual + direccion));
+        visualizarPDFZoom = ZOOM_PDF_PASOS[idxNuevo];
+        if (visualizarModalPDFFuente) renderizarPDFEnContenedor('visualizarFrame', visualizarModalPDFFuente, visualizarPDFZoom);
+      };
 
       window.visualizarOC = async function(index) {
         // Evita que un doble clic (mientras el PDF todavía se está
@@ -24371,6 +24464,8 @@
         visualizarOCPDF = null;
         visualizarModalTipoActual = null;
         visualizarModalIdActual = null;
+        visualizarModalPDFFuente = null;
+        visualizarPDFZoom = 1;
       };
 
       // Si el usuario tiene abierta la ventana "Visualizar" de una OC, una
@@ -24629,18 +24724,8 @@
         try {
           var doc = await generarPDFParaPreview(datos);
           ocPreviewPDF = doc;
-          // Se usa blob + URL.createObjectURL en vez de
-          // doc.output('datauristring'): con membretes que incluyen varias
-          // imágenes (franjas, logo, fondo) el data URI resultante puede
-          // ser demasiado grande para cargarse como src de un iframe en
-          // algunos navegadores, dejando la vista previa en blanco. El
-          // blob no tiene ese límite (mismo método que ya usa "Visualizar
-          // OC", que sí funciona de forma confiable).
-          var pdfBlob = doc.output('blob');
-          var pdfUrl = URL.createObjectURL(pdfBlob);
-          var frame = document.getElementById('pdfPreviewFrame');
-          frame.src = pdfUrl;
           document.getElementById('pdfPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('pdfPreviewFrame', doc);
         } catch (e) {
           console.error('❌ Error generando la vista previa del PDF:', e.stack || e);
           alert('No se pudo generar la vista previa del PDF.\n\nDetalle: ' + (e.message || e) + '\n\nRevisa la consola (F12) para más información.');
@@ -24651,6 +24736,8 @@
         document.getElementById('pdfPreviewModal').classList.remove('active');
         ocPreviewData = null;
         ocPreviewPDF = null;
+        var contenedorPreview = document.getElementById('pdfPreviewFrame');
+        if (contenedorPreview) contenedorPreview.innerHTML = '';
         var tituloPreviewReset = document.getElementById('pdfPreviewTitulo');
         if (tituloPreviewReset) tituloPreviewReset.textContent = 'Previsualización de la Orden de Compra';
       };
@@ -25909,8 +25996,8 @@
           var doc = await generarPDFReporteCXP(datos);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXP_' + new Date().toISOString().split('T')[0] + '.pdf';
-          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
           document.getElementById('cxpPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('cxpPreviewFrame', doc);
         } catch (error) {
           console.error('❌ Error al generar reporte CXP:', error);
           alert('Error al generar el reporte: ' + error.message);
@@ -25927,8 +26014,8 @@
           var doc = await generarPDFReporteCXC(cuentas);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXC_' + new Date().toISOString().split('T')[0] + '.pdf';
-          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
           document.getElementById('cxpPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('cxpPreviewFrame', doc);
         } catch (error) {
           console.error('❌ Error al generar reporte CXC:', error);
           alert('Error al generar el reporte: ' + error.message);
@@ -25955,8 +26042,8 @@
           var doc = await generarPDFReporteCXF(ofsVisibles);
           reportePreviewPDF = doc;
           reportePreviewNombre = 'Reporte_CXF_' + new Date().toISOString().split('T')[0] + '.pdf';
-          document.getElementById('cxpPreviewFrame').src = doc.output('datauristring');
           document.getElementById('cxpPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('cxpPreviewFrame', doc);
         } catch (error) {
           console.error('❌ Error al generar reporte CXF:', error);
           alert('Error al generar el reporte: ' + error.message);
@@ -26003,7 +26090,8 @@
 
       window.cerrarPreviewCXP = function() {
         document.getElementById('cxpPreviewModal').classList.remove('active');
-        document.getElementById('cxpPreviewFrame').src = '';
+        var contenedorCXP = document.getElementById('cxpPreviewFrame');
+        if (contenedorCXP) contenedorCXP.innerHTML = '';
         reportePreviewPDF = null;
       };
 
