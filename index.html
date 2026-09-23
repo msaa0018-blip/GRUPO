@@ -3183,7 +3183,7 @@
   <header id="mainHeader" class="hidden">
     <!-- ZONA IZQUIERDA -->
     <div class="header-left">
-      <img class="logo-img" id="headerEmpresaLogo" src="https://extingue.com.mx/img/logo.png" alt="Logo empresa" onerror="this.style.display='none'">
+      <img class="logo-img" id="headerEmpresaLogo" src="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png" alt="Logo empresa" onerror="this.style.display='none'">
       <div class="company">
         <span class="name name-full" id="headerEmpresaNombreFull">GRUPO INDUSTRIAL EXTINGUE</span>
         <span class="name name-abbr" id="headerEmpresaNombreAbbr">GIE</span>
@@ -15954,14 +15954,21 @@
         var nombreAbbr = document.getElementById('headerEmpresaNombreAbbr');
         if (!logoImg || !nombreFull || !nombreAbbr) return;
 
-        var DEFAULT_LOGO = 'https://extingue.com.mx/img/logo.png';
-        var DEFAULT_NOMBRE = 'GRUPO INDUSTRIAL EXTINGUE';
-        var DEFAULT_ABBR = 'GIE';
+        // El logo/nombre por defecto se toma del propio catálogo (empresa
+        // GIE), en vez de una URL externa aparte (extingue.com.mx, que no
+        // es un asset propio del proyecto y podía no cargar): así queda
+        // garantizado que sea el mismo logo de Grupo Industrial Extingue
+        // que ya se usa en el resto de la app (PDFs, etc.), y cualquier
+        // cambio futuro del logo en ORG_CATALOGO se refleja aquí también.
+        var empresaGIEDefault = getEmpresaCatalogoPorNombre('GRUPO INDUSTRIAL EXTINGUE');
+        var DEFAULT_LOGO = (empresaGIEDefault && empresaGIEDefault.logo) || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+        var DEFAULT_NOMBRE = (empresaGIEDefault && empresaGIEDefault.nombre) || 'GRUPO INDUSTRIAL EXTINGUE';
+        var DEFAULT_ABBR = (empresaGIEDefault && empresaGIEDefault.abreviatura) || 'GIE';
 
         // Sin sesión, o roles sin empresa fija (Director General,
         // Administrador, Finanzas, Contabilidad): se muestra el logo/
-        // nombre corporativo por defecto, ya que no pertenecen a una sola
-        // empresa del grupo.
+        // nombre corporativo por defecto (GIE), ya que no pertenecen a una
+        // sola empresa del grupo.
         var defaultData = actual ? obtenerEmpresaDeptoDefault(actual) : { libre: true, empresa: '' };
         if (!actual || defaultData.libre || !defaultData.empresa) {
           logoImg.src = DEFAULT_LOGO;
@@ -15983,8 +15990,32 @@
         nombreAbbr.textContent = empresaCatalogo.abreviatura;
       }
 
+      var TITULO_PAGINA_DEFAULT = document.title;
+
+      // Título de la pestaña del navegador: "ALLIN-<iniciales del usuario>-
+      // <abreviatura del departamento>", p.ej. "ALLIN-AAM-CONT". Usa el
+      // departamento real asignado al usuario (permisos[0]) aunque su rol
+      // tenga visión global de todas las empresas (Finanzas, Contabilidad,
+      // Director General, Administrador) — a diferencia del logo del
+      // header, aquí SÍ debe reflejar a qué departamento pertenece la
+      // persona, no de qué datos tiene alcance.
+      function actualizarTituloPagina() {
+        if (!actual) {
+          document.title = TITULO_PAGINA_DEFAULT;
+          return;
+        }
+        var permiso = (actual.permisos && actual.permisos[0]) || null;
+        var titulo = 'ALLIN-' + actual.usuario;
+        if (permiso && permiso.depto) {
+          var deptoAbrev = getAbreviaturaDepartamento(permiso.depto, permiso.empresa) || permiso.depto;
+          titulo += '-' + deptoAbrev;
+        }
+        document.title = titulo;
+      }
+
       function actualizarHeaderLogo() {
         actualizarHeaderEmpresa();
+        actualizarTituloPagina();
 
         var headerLogo = document.getElementById('headerDeptoLogo');
         var headerUsuarioRol = document.getElementById('headerUsuarioRol');
@@ -26109,8 +26140,12 @@
       }
 
       async function agregarLogoUsuarioReporte(doc, pageWidth, margin) {
-        var DEFAULT_LOGO = 'https://extingue.com.mx/img/logo.png';
-        var DEFAULT_NOMBRE = 'GRUPO INDUSTRIAL EXTINGUE';
+        // Igual que actualizarHeaderEmpresa(): el logo/nombre por defecto
+        // se toma del propio catálogo (empresa GIE), no de una URL externa
+        // aparte que podía no cargar.
+        var empresaGIEReporte = getEmpresaCatalogoPorNombre('GRUPO INDUSTRIAL EXTINGUE');
+        var DEFAULT_LOGO = (empresaGIEReporte && empresaGIEReporte.logo) || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
+        var DEFAULT_NOMBRE = (empresaGIEReporte && empresaGIEReporte.nombre) || 'GRUPO INDUSTRIAL EXTINGUE';
         var empresaUsuario = '';
         var nombreEmpresa = DEFAULT_NOMBRE;
 
