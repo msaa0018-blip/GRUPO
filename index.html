@@ -4957,7 +4957,6 @@
             <h3>📎 <span id="facturaVerTitulo">Factura</span></h3>
             <div class="pdfPreview-btn-group">
               <button type="button" onclick="window.imprimirFacturaVer()">🖨️ Imprimir</button>
-              <a id="facturaVerDescargarBtn" class="success" href="#" target="_blank" download style="text-decoration:none;">⬇️ Descargar</a>
               <button class="btn-modal-x" onclick="window.cerrarFacturaOC()">✕</button>
             </div>
           </div>
@@ -7497,6 +7496,18 @@
         return [];
       }
 
+      // Marcar una OC como PAGADA (subir el comprobante de pago) es
+      // exclusivo del usuario CCHF, sin importar la empresa/departamento
+      // de la OC -- Administrador siempre puede como respaldo, igual que
+      // en el resto del sistema. El resto del ciclo de vida de la OC no
+      // cambia: la OC debe seguir habiendo sido aprobada por su Jefe de
+      // Departamento y estar en el punto correcto (AUTORIZADA) antes de
+      // poder pagarse (ver window.abrirComprobantePago).
+      function usuarioPuedeMarcarOCPagada(usuario) {
+        if (!usuario) return false;
+        return usuario.usuario === 'CCHF' || usuario.rol === 'Administrador';
+      }
+
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
         // Finanzas/Administrador (gestionan aprobaciones y pagos) y Director
@@ -7570,6 +7581,19 @@
             if (!p) return false;
             return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
           });
+          // CCHF necesita ver TODAS las OC ya autorizadas/concluidas (listas
+          // para pagar o ya pagadas), sin importar empresa/departamento,
+          // para poder subir el pago de cualquiera -- pero NO las OC que
+          // todavía están en trámite de aprobación en otros departamentos
+          // (esas se quedan ocultas, igual que para cualquier otro Jefe de
+          // Departamento normal).
+          if (usuario.usuario === 'CCHF') {
+            var idsYaIncluidos = ocFiltradas.map(function(o) { return o.id; });
+            var ocsListasParaPago = ordenes.filter(function(o) {
+              return idsYaIncluidos.indexOf(o.id) === -1 && (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA');
+            });
+            ocFiltradas = ocFiltradas.concat(ocsListasParaPago);
+          }
         }
         // Antes, este filtro exigía por separado "o.solicitante ===
         // usuario.usuario" (solo si el ROL de la cuenta incluía
@@ -8978,6 +9002,22 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      // Límite de peso para cualquier archivo que el usuario suba (fotos,
+      // PDFs de facturas/comprobantes/complementos, adjuntos del buzón,
+      // etc.). Se valida en el momento de elegir/soltar el archivo, antes
+      // de subirlo a Storage.
+      var TAMANO_MAXIMO_ARCHIVO_MB = 20;
+      var TAMANO_MAXIMO_ARCHIVO_BYTES = TAMANO_MAXIMO_ARCHIVO_MB * 1024 * 1024;
+
+      function validarPesoArchivo(archivo) {
+        if (!archivo) return true;
+        if (archivo.size > TAMANO_MAXIMO_ARCHIVO_BYTES) {
+          alert('⚠️ El archivo "' + archivo.name + '" pesa ' + (archivo.size / (1024 * 1024)).toFixed(1) + ' MB. El máximo permitido es ' + TAMANO_MAXIMO_ARCHIVO_MB + ' MB.');
+          return false;
+        }
+        return true;
       }
 
       // ===== CATÁLOGO DE PROVEEDORES =====
@@ -11711,6 +11751,7 @@
 
       window.manejarSeleccionFotoTicket = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         valeTicketFotoArchivo = input.files[0];
         mostrarPreviewFotoTicket(valeTicketFotoArchivo);
       };
@@ -11724,6 +11765,7 @@
           alert('⚠️ Solo se aceptan imágenes.');
           return;
         }
+        if (!validarPesoArchivo(archivos[0])) return;
         valeTicketFotoArchivo = archivos[0];
         mostrarPreviewFotoTicket(valeTicketFotoArchivo);
       };
@@ -12707,6 +12749,11 @@
       window.mostrarNombreArchivoBuzon = function(input, idDestino) {
         var destino = document.getElementById(idDestino);
         if (!destino) return;
+        if (input.files && input.files[0] && !validarPesoArchivo(input.files[0])) {
+          input.value = '';
+          destino.textContent = '';
+          return;
+        }
         destino.textContent = (input.files && input.files[0]) ? '📎 ' + input.files[0].name : '';
       };
 
@@ -12903,7 +12950,15 @@
         var input = document.getElementById('comunicadoAdjuntos');
         var cont = document.getElementById('comunicadoAdjuntosNombres');
         if (!input || !cont) return;
-        var nombres = Array.prototype.slice.call(input.files || []).map(function(f) { return f.name; });
+        var archivos = Array.prototype.slice.call(input.files || []);
+        var validos = archivos.filter(function(f) { return validarPesoArchivo(f); });
+        if (validos.length !== archivos.length) {
+          // Reconstruye el input sin los archivos que exceden el límite.
+          var dt = new DataTransfer();
+          validos.forEach(function(f) { dt.items.add(f); });
+          input.files = dt.files;
+        }
+        var nombres = validos.map(function(f) { return f.name; });
         cont.textContent = nombres.length ? ('Seleccionados: ' + nombres.join(', ')) : '';
       };
 
@@ -13649,6 +13704,7 @@
 
       window.manejarSeleccionFoto = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         nvoProdFotoArchivo = input.files[0];
         mostrarPreviewFoto(nvoProdFotoArchivo);
       };
@@ -13671,6 +13727,7 @@
           alert('⚠️ Solo se aceptan imágenes.');
           return;
         }
+        if (!validarPesoArchivo(archivos[0])) return;
         nvoProdFotoArchivo = archivos[0];
         mostrarPreviewFoto(nvoProdFotoArchivo);
       };
@@ -13760,12 +13817,10 @@
         if (!url) return;
         var modal = document.getElementById('facturaVerModal');
         var contenedor = document.getElementById('facturaVerFrame');
-        var btnDescargar = document.getElementById('facturaVerDescargarBtn');
         var tituloEl = document.getElementById('facturaVerTitulo');
         if (!modal || !contenedor) return;
         if (tituloEl) tituloEl.textContent = titulo || 'Factura';
         facturaVerUrlActual = url;
-        if (btnDescargar) btnDescargar.href = url;
         modal.classList.add('active');
         await renderizarPDFEnContenedor('facturaVerFrame', url);
       };
@@ -13838,6 +13893,7 @@
 
       window.manejarSeleccionFotoEditar = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         edProdFotoArchivo = input.files[0];
         mostrarPreviewFotoEditar(edProdFotoArchivo);
       };
@@ -13851,6 +13907,7 @@
           alert('⚠️ Solo se aceptan imágenes.');
           return;
         }
+        if (!validarPesoArchivo(archivos[0])) return;
         edProdFotoArchivo = archivos[0];
         mostrarPreviewFotoEditar(edProdFotoArchivo);
       };
@@ -16902,7 +16959,7 @@
 
       window.abrirComprobantePago = function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
+        if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF puede subir el pago y marcar una OC como pagada.');
         var oc = ordenes[index];
         if (!oc) return;
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
@@ -16949,6 +17006,7 @@
 
       window.manejarSeleccionComprobantePago = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         comprobantePagoArchivoPendiente = input.files[0];
         var texto = document.getElementById('comprobantePagoDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + comprobantePagoArchivoPendiente.name;
@@ -16959,6 +17017,7 @@
         el.classList.remove('arrastrando');
         var archivos = event.dataTransfer.files;
         if (!archivos || !archivos[0]) return;
+        if (!validarPesoArchivo(archivos[0])) return;
         comprobantePagoArchivoPendiente = archivos[0];
         var texto = document.getElementById('comprobantePagoDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + comprobantePagoArchivoPendiente.name;
@@ -17145,6 +17204,7 @@
       };
 
       function mostrarArchivoElegidoFactura(archivo) {
+        if (!validarPesoArchivo(archivo)) return;
         facturaArchivoPendiente = archivo;
         var texto = document.getElementById('facturaDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivo.name;
@@ -17380,6 +17440,7 @@
 
       window.manejarSeleccionComplementoPagoOC = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         archivoComplementoPagoOCPendiente = input.files[0];
         var texto = document.getElementById('complementoPagoOCDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoComplementoPagoOCPendiente.name;
@@ -17390,6 +17451,7 @@
         el.classList.remove('arrastrando');
         var archivos = event.dataTransfer.files;
         if (!archivos || !archivos[0]) return;
+        if (!validarPesoArchivo(archivos[0])) return;
         archivoComplementoPagoOCPendiente = archivos[0];
         var texto = document.getElementById('complementoPagoOCDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoComplementoPagoOCPendiente.name;
@@ -17578,7 +17640,7 @@
 
       window.marcarPendiente = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador') return alert('No tienes permiso');
+        if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF puede revertir el estado de pago de una OC.');
         var oc = ordenes[index];
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
         var updates = { estadopago: 'PENDIENTE' };
@@ -18502,6 +18564,7 @@
 
       window.manejarSeleccionComplementoPagoCXC = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         archivoComplementoPagoCXCPendiente = input.files[0];
         var texto = document.getElementById('complementoPagoCXCDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoComplementoPagoCXCPendiente.name;
@@ -18512,6 +18575,7 @@
         el.classList.remove('arrastrando');
         var archivos = event.dataTransfer.files;
         if (!archivos || !archivos[0]) return;
+        if (!validarPesoArchivo(archivos[0])) return;
         archivoComplementoPagoCXCPendiente = archivos[0];
         var texto = document.getElementById('complementoPagoCXCDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoComplementoPagoCXCPendiente.name;
@@ -21138,7 +21202,11 @@
                 }
               }
 
-              if (rol === 'Finanzas' || rol === 'Administrador') {
+              // Subir el pago y marcar la OC como PAGADA/Pendiente es
+              // exclusivo del usuario CCHF (más Administrador de respaldo),
+              // para cualquier empresa/departamento -- ver
+              // usuarioPuedeMarcarOCPagada. Ya no depende del rol Finanzas.
+              if (usuarioPuedeMarcarOCPagada(actual)) {
                 if (o.estado === 'AUTORIZADA' && o.estado !== 'CONCLUIDA' && !o.pausada) {
                   if (o.estadopago === 'PAGADA') {
                     acciones += '<button class="btn-warning" onclick="window.marcarPendiente(' + idxOriginal + ')">⏳ Pendiente</button>';
@@ -21146,6 +21214,8 @@
                     acciones += '<button class="btn-success" onclick="window.abrirComprobantePago(' + idxOriginal + ')">💰 Pagar</button>';
                   }
                 }
+              }
+              if (rol === 'Finanzas' || rol === 'Administrador') {
                 // Subir factura es exclusivo del solicitante/responsable de la OC: Finanzas ya no tiene aquí el botón "📄 Factura".
                 // El complemento de pago sí le corresponde a Finanzas, después de que ya se registró la factura.
                 if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && o.uuidfactura && !o.complemento_pago_url) {
@@ -23221,6 +23291,7 @@
 
       window.manejarSeleccionAprobarOF = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         archivoAprobarOFPendiente = input.files[0];
         var texto = document.getElementById('aprobarOFDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoAprobarOFPendiente.name;
@@ -23231,6 +23302,7 @@
         el.classList.remove('arrastrando');
         var archivos = event.dataTransfer.files;
         if (!archivos || !archivos[0]) return;
+        if (!validarPesoArchivo(archivos[0])) return;
         archivoAprobarOFPendiente = archivos[0];
         var texto = document.getElementById('aprobarOFDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoAprobarOFPendiente.name;
@@ -23432,6 +23504,7 @@
 
       window.manejarSeleccionComprobantePagoOF = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         archivoComprobantePagoOFPendiente = input.files[0];
         var texto = document.getElementById('comprobantePagoOFDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoComprobantePagoOFPendiente.name;
@@ -23442,6 +23515,7 @@
         el.classList.remove('arrastrando');
         var archivos = event.dataTransfer.files;
         if (!archivos || !archivos[0]) return;
+        if (!validarPesoArchivo(archivos[0])) return;
         archivoComprobantePagoOFPendiente = archivos[0];
         var texto = document.getElementById('comprobantePagoOFDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoComprobantePagoOFPendiente.name;
@@ -23449,6 +23523,7 @@
 
       window.manejarSeleccionNotaCreditoOF = function(input) {
         if (!input.files || !input.files[0]) return;
+        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
         archivoNotaCreditoOFPendiente = input.files[0];
         var texto = document.getElementById('notaCreditoOFDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoNotaCreditoOFPendiente.name;
@@ -23459,6 +23534,7 @@
         el.classList.remove('arrastrando');
         var archivos = event.dataTransfer.files;
         if (!archivos || !archivos[0]) return;
+        if (!validarPesoArchivo(archivos[0])) return;
         archivoNotaCreditoOFPendiente = archivos[0];
         var texto = document.getElementById('notaCreditoOFDropzoneTexto');
         if (texto) texto.textContent = '📄 ' + archivoNotaCreditoOFPendiente.name;
