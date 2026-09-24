@@ -3332,6 +3332,9 @@
       <!-- ===== ALTA DE REGISTROS: PROVEEDORES ===== -->
       <div id="panelProveedores" class="card hidden">
         <h2>🏢 Proveedores</h2>
+        <div style="margin-bottom:12px;">
+          <button onclick="window.imprimirListaProveedores()">🖨️ Imprimir Lista</button>
+        </div>
         <div class="table-wrapper productos-tabla">
           <table id="tablaProveedoresCatalogo">
             <thead>
@@ -5430,7 +5433,7 @@
             <input id="proveedor" list="listaProveedoresOC" placeholder="Proveedor *" style="flex:1.5;" autocomplete="off">
             <datalist id="listaProveedoresOC"></datalist>
             <input id="sucursal" placeholder="Sucursal (opcional)" style="flex:1;">
-            <input id="rfc" placeholder="RFC (opcional)" style="flex:1;">
+            <input id="rfc" placeholder="RFC *" style="flex:1;" required>
             <input id="direccion" placeholder="Dirección *" style="flex:1.5;">
           </div>
         </div>
@@ -9034,8 +9037,16 @@
           cuerpo.innerHTML = '';
           (data || []).forEach(function(p) {
             var fila = document.createElement('tr');
+            // Proveedor dado de alta automáticamente desde una OC (con
+            // datos incompletos): se pinta de amarillo hasta que el
+            // Administrador lo complete y guarde (ver
+            // registrarProveedorNuevoSiAplica / guardarEdicionProveedor).
+            if (p.pendiente_aprobacion) {
+              fila.style.background = '#fff3cd';
+              fila.title = '⏳ Pendiente de completar/aprobar';
+            }
             fila.innerHTML =
-              '<td>' + escapeHTML(p.nombre) + '</td>' +
+              '<td>' + (p.pendiente_aprobacion ? '🟡 ' : '') + escapeHTML(p.nombre) + '</td>' +
               '<td>' + escapeHTML(p.sucursal) + '</td>' +
               '<td>' + escapeHTML(p.rfc) + '</td>' +
               '<td>' + escapeHTML(p.contacto) + '</td>' +
@@ -9065,6 +9076,89 @@
           console.error('Error cargando proveedores:', e);
           var msg = document.getElementById('msgProveedores');
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo cargar el catálogo de proveedores: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      // Genera el PDF del catálogo de proveedores y abre directamente el
+      // diálogo de impresión del navegador (mismo mecanismo que
+      // window.imprimirReporteCXP: PDF en un iframe invisible + print()).
+      // Los proveedores aún pendientes de aprobación (amarillo en la
+      // tabla) se marcan igual en el PDF, para que quede claro cuáles
+      // datos todavía no están completos/confirmados.
+      window.imprimirListaProveedores = async function() {
+        if (!proveedoresCatalogoCache.length) return alert('No hay proveedores registrados para imprimir.');
+        try {
+          var { jsPDF } = window.jspdf;
+          var doc = new jsPDF('l', 'pt', 'a4');
+          var pageWidth = doc.internal.pageSize.getWidth();
+          var margin = 30;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.setTextColor(23, 63, 115);
+          doc.text('Listado de Proveedores', margin, 30);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Generado: ' + new Date().toLocaleString(), margin, 44);
+
+          var headers = ['Nombre', 'Sucursal', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Dirección', 'CP', 'Banco MXN', 'Cuenta MXN', 'Condiciones', 'Estado'];
+          var rows = proveedoresCatalogoCache.map(function(p) {
+            return [
+              (p.pendiente_aprobacion ? '🟡 ' : '') + (p.nombre || ''),
+              p.sucursal || '—',
+              p.rfc || '—',
+              p.contacto || '—',
+              p.telefono || '—',
+              p.email || '—',
+              p.direccion || '—',
+              p.cp || '—',
+              p.banco || '—',
+              p.cuenta_bancaria || '—',
+              p.condiciones_comerciales || '—',
+              p.pendiente_aprobacion ? 'Pendiente de aprobación' : 'Aprobado'
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: 56,
+            margin: { left: margin, right: margin },
+            theme: 'striped',
+            styles: { fontSize: 7.5, cellPadding: 4, font: 'helvetica' },
+            headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold' },
+            didParseCell: function(data) {
+              if (data.section === 'body' && rows[data.row.index] && rows[data.row.index][11] === 'Pendiente de aprobación') {
+                data.cell.styles.fillColor = [255, 243, 205];
+              }
+            }
+          });
+
+          var blobUrl = doc.output('bloburl');
+          var printFrame = document.createElement('iframe');
+          printFrame.style.position = 'fixed';
+          printFrame.style.right = '0';
+          printFrame.style.bottom = '0';
+          printFrame.style.width = '0';
+          printFrame.style.height = '0';
+          printFrame.style.border = '0';
+          printFrame.src = blobUrl;
+          printFrame.onload = function() {
+            try {
+              printFrame.contentWindow.focus();
+              printFrame.contentWindow.print();
+            } catch (e) {
+              window.open(blobUrl, '_blank');
+            }
+          };
+          document.body.appendChild(printFrame);
+          setTimeout(function() {
+            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
+          }, 60000);
+        } catch (e) {
+          console.error('❌ Error generando el PDF de proveedores:', e.stack || e);
+          alert('No se pudo generar el PDF de proveedores.\n\nDetalle: ' + (e.message || e));
         }
       };
 
@@ -9121,6 +9215,68 @@
           alert('❌ No se pudo eliminar: ' + e.message);
         }
       };
+
+      // Se llama al autorizar una OC (ver window.aprobarJefe). Si el
+      // proveedor capturado en la OC no existe todavía en el catálogo, se
+      // da de alta automáticamente con los datos ya disponibles (nombre,
+      // RFC, dirección) y se marca "pendiente_aprobacion" (se pinta de
+      // amarillo en 🏢 Proveedores) hasta que el Administrador complete el
+      // resto de sus datos -- al guardar esos datos completos se le quita
+      // la marca (ver window.guardarEdicionProveedor). También se le
+      // avisa al usuario ADMIN por Mensajería interna (Buzón).
+      async function registrarProveedorNuevoSiAplica(oc) {
+        try {
+          if (!oc || !oc.proveedor) return;
+          var nombreProveedor = oc.proveedor.trim().toUpperCase();
+          if (!nombreProveedor) return;
+
+          var { data: existente, error: errorBusqueda } = await supabase
+            .from('proveedores')
+            .select('id')
+            .ilike('nombre', nombreProveedor)
+            .limit(1);
+          if (errorBusqueda) throw errorBusqueda;
+          if (existente && existente.length > 0) return; // ya está en el catálogo
+
+          var nuevoProveedor = {
+            nombre: nombreProveedor,
+            rfc: (oc.rfc || '').trim().toUpperCase(),
+            direccion: oc.direccion || '',
+            activo: true,
+            pendiente_aprobacion: true
+          };
+          var { error: errorInsert } = await supabase.from('proveedores').insert([nuevoProveedor]);
+          if (errorInsert) throw errorInsert;
+
+          // Refresca los cachés de proveedores si ya están cargados en esta sesión.
+          if (typeof window.cargarProveedoresCatalogo === 'function') window.cargarProveedoresCatalogo();
+          if (typeof window.cargarListaProveedoresOC === 'function') window.cargarListaProveedoresOC();
+
+          // Avisa al Administrador por el Buzón interno.
+          var nuevaConv = {
+            asunto: '🟡 Proveedor nuevo por completar — ' + nombreProveedor,
+            creador: 'Sistema',
+            destinatarios: ['ADMIN'],
+            involucrados: ['ADMIN'],
+            oc_id: oc.id,
+            fecha_creacion: new Date().toISOString(),
+            ultima_actividad: new Date().toISOString()
+          };
+          var { data: convCreada, error: errorConv } = await supabase.from('buzon_conversaciones').insert([nuevaConv]).select().single();
+          if (errorConv) throw errorConv;
+          await supabase.from('buzon_mensajes').insert([{
+            conversacion_id: convCreada.id,
+            autor: 'Sistema',
+            contenido: 'La OC ' + (oc.codigo || ('OC-' + oc.id)) + ' se autorizó con el proveedor "' + nombreProveedor + '", que no estaba en el catálogo. Se guardó automáticamente con los datos ya capturados (RFC, dirección) y quedó marcado en amarillo en 🏢 Proveedores hasta que completes el resto de sus datos (banco, contacto, teléfono, email, CP, cuenta y clave) para aprobarlo.',
+            fecha: new Date().toISOString()
+          }]);
+        } catch (e) {
+          // Nunca debe romper la autorización de la OC: si falla el
+          // registro automático del proveedor o el aviso al Admin, solo
+          // se registra en consola.
+          console.error('No se pudo registrar automáticamente el proveedor nuevo:', e);
+        }
+      }
 
       // Abre la ventana modal "Editar Proveedor" con los datos
       // precargados del proveedor seleccionado.
@@ -9186,6 +9342,14 @@
           cie_usd: document.getElementById('edProvCIEUSD').value.trim(),
           condiciones_comerciales: document.getElementById('edProvCondiciones').value
         };
+        // Si el proveedor había quedado marcado en amarillo (dado de alta
+        // automáticamente desde una OC, con datos incompletos), al
+        // guardarlo se revisa si ya tiene sus datos esenciales completos;
+        // si es así, se le quita la marca (se aprueba). Si todavía falta
+        // algo, se queda en amarillo.
+        var CAMPOS_ESENCIALES_PROVEEDOR = ['nombre', 'rfc', 'direccion', 'contacto', 'telefono', 'email', 'cp', 'banco', 'cuenta_bancaria', 'clave'];
+        var datosCompletos = CAMPOS_ESENCIALES_PROVEEDOR.every(function(campo) { return !!datosProveedor[campo]; });
+        datosProveedor.pendiente_aprobacion = !datosCompletos;
         try {
           var { error } = await supabase.from('proveedores').update(datosProveedor).eq('id', proveedorEditandoId);
           if (error) throw error;
@@ -9193,7 +9357,11 @@
           document.getElementById('editarProveedorModal').classList.remove('active');
           window.cargarProveedoresCatalogo();
           var msgProveedores = document.getElementById('msgProveedores');
-          if (msgProveedores) msgProveedores.innerHTML = '<div class="success-msg">✅ Proveedor actualizado.</div>';
+          if (msgProveedores) {
+            msgProveedores.innerHTML = datosCompletos
+              ? '<div class="success-msg">✅ Proveedor actualizado y aprobado.</div>'
+              : '<div class="success-msg">✅ Proveedor actualizado. Sigue pendiente de aprobación: aún faltan datos (' + CAMPOS_ESENCIALES_PROVEEDOR.filter(function(c) { return !datosProveedor[c]; }).join(', ') + ').</div>';
+          }
         } catch (e) {
           console.error('Error actualizando proveedor:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
@@ -16224,6 +16392,13 @@
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+
+        // Si el proveedor de esta OC no existe todavía en el catálogo, se
+        // registra automáticamente en cuanto el Jefe de Departamento la
+        // autoriza (con lo que ya se capturó: nombre, RFC, dirección),
+        // marcado como pendiente de completar/aprobar por el
+        // Administrador -- ver registrarProveedorNuevoSiAplica.
+        await registrarProveedorNuevoSiAplica(oc);
 
         var montoEnMonedaProyecto = oc.montomxn || 0;
         if (proyecto.moneda === 'USD') {
@@ -24817,6 +24992,7 @@
         }
 
         var proveedor = (document.getElementById('proveedor').value || '').trim().toUpperCase();
+        var rfc = (document.getElementById('rfc').value || '').trim().toUpperCase();
         var direccion = (document.getElementById('direccion').value || '').trim().toUpperCase();
         var direccionEntrega = (document.getElementById('direccionEntrega').value || '').trim().toUpperCase();
         var responsable = document.getElementById('solicitanteOC').value;
@@ -24825,6 +25001,7 @@
         var solicitanteEmail = (document.getElementById('solicitanteEmailOC') ? document.getElementById('solicitanteEmailOC').value.trim() : '');
 
         if (!proveedor) { mostrarError('El campo Proveedor es obligatorio.'); return null; }
+        if (!rfc) { mostrarError('El campo RFC es obligatorio.'); return null; }
         if (!direccion) { mostrarError('El campo Dirección es obligatorio.'); return null; }
         if (!direccionEntrega) { mostrarError('El campo Dirección de entrega es obligatorio.'); return null; }
         if (!responsable) { mostrarError('Selecciona un Solicitante/Responsable.'); return null; }
@@ -24942,7 +25119,7 @@
           cliente: proyecto.cliente,
           proveedor: proveedor,
           sucursal: (document.getElementById('sucursal').value || '').trim().toUpperCase(),
-          rfc: (document.getElementById('rfc').value || '').trim().toUpperCase(),
+          rfc: rfc,
           direccion: direccion,
           usocfdi: document.getElementById('usoCFDI').value,
           direccionentrega: direccionEntrega,
