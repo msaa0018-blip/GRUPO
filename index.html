@@ -6209,6 +6209,29 @@
             ℹ️ Solo el Administrador puede cambiar el formato de una OC ya creada, sin importar qué usuario la haya generado.
           </p>
         </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Condiciones comerciales:</label>
+            <select id="editarCondicionesComercialesOC" style="flex:1.5;" onchange="window.actualizarVisibilidadFechaPago2EditarOC()">
+              <option value="">Selecciona una condición</option>
+              <option value="100% CONTADO">100% Contado</option>
+              <option value="50/50 FINIQUITO Y ANTICIPO">50/50 Finiquito y anticipo</option>
+              <option value="100% CONTRA ENTREGA">100% Contra entrega</option>
+              <option value="100% ANTICIPO">100% Anticipo</option>
+              <option value="CREDITO 30 DIAS">Crédito 30 días</option>
+              <option value="CREDITO 15 DIAS">Crédito 15 días</option>
+            </select>
+          </div>
+          <p style="margin:4px 0 0;font-size:12px;color:var(--gray-600);">
+            ℹ️ Solo el Administrador puede cambiar las condiciones comerciales de una OC ya creada, sin importar qué usuario la haya generado.
+          </p>
+        </div>
+        <div class="grupo-formulario hidden" id="grupoEditarFechaPago2OC">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Fecha del 2do. pago (50/50):</label>
+            <input id="editarFechaPago2OC" type="date" style="flex:1.5;">
+          </div>
+        </div>
         <div class="table-wrapper">
           <table class="productos-tabla" id="tablaEditarProductosOC">
             <thead>
@@ -22269,6 +22292,14 @@
         var selectFormatoEditarOC = document.getElementById('editarFormatoMembreteOC');
         if (selectFormatoEditarOC) selectFormatoEditarOC.value = oc.formatomembrete || '1';
 
+        // Condiciones comerciales: igual que el formato, se puede corregir
+        // aquí sin importar quién haya generado la OC originalmente.
+        var selectCondicionesEditarOC = document.getElementById('editarCondicionesComercialesOC');
+        if (selectCondicionesEditarOC) selectCondicionesEditarOC.value = oc.condicionpago || '';
+        var inputFechaPago2EditarOC = document.getElementById('editarFechaPago2OC');
+        if (inputFechaPago2EditarOC) inputFechaPago2EditarOC.value = oc.fechapago2 || '';
+        window.actualizarVisibilidadFechaPago2EditarOC();
+
         var productosOC = parsearProductosOC(oc);
         var cuerpo = document.getElementById('cuerpoEditarProductosOC');
         cuerpo.innerHTML = '';
@@ -22445,8 +22476,29 @@
         var selectFormatoGuardarOC = document.getElementById('editarFormatoMembreteOC');
         var nuevoFormatoOC = (selectFormatoGuardarOC && selectFormatoGuardarOC.value) || oc.formatomembrete || '1';
 
+        // Condiciones comerciales: mismo criterio que el formato de
+        // membrete (el Administrador las puede corregir aquí sin importar
+        // quién haya generado la OC). Si queda en "50/50 FINIQUITO Y
+        // ANTICIPO" se exige la fecha del 2do. pago, igual que al crear
+        // la OC.
+        var selectCondicionesGuardarOC = document.getElementById('editarCondicionesComercialesOC');
+        var nuevaCondicionPagoOC = (selectCondicionesGuardarOC && selectCondicionesGuardarOC.value) || null;
+        var inputFechaPago2GuardarOC = document.getElementById('editarFechaPago2OC');
+        var nuevaFechaPago2OC = (inputFechaPago2GuardarOC && inputFechaPago2GuardarOC.value) || null;
+        if (nuevaCondicionPagoOC === '50/50 FINIQUITO Y ANTICIPO' && !nuevaFechaPago2OC) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Captura la Fecha del 2do. pago (condición 50/50).</div>';
+          return;
+        }
+
         try {
-          var updates = { productos: productosNuevos, montototal: nuevoTotal, montomxn: nuevoMontoMXN, formatomembrete: nuevoFormatoOC };
+          var updates = {
+            productos: productosNuevos,
+            montototal: nuevoTotal,
+            montomxn: nuevoMontoMXN,
+            formatomembrete: nuevoFormatoOC,
+            condicionpago: nuevaCondicionPagoOC,
+            fechapago2: nuevaCondicionPagoOC === '50/50 FINIQUITO Y ANTICIPO' ? nuevaFechaPago2OC : null
+          };
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
 
@@ -22465,6 +22517,8 @@
           oc.montototal = nuevoTotal;
           oc.montomxn = nuevoMontoMXN;
           oc.formatomembrete = nuevoFormatoOC;
+          oc.condicionpago = updates.condicionpago;
+          oc.fechapago2 = updates.fechapago2;
 
           window.cerrarEditarProductosOC();
           render();
@@ -25595,6 +25649,20 @@
         grupo.classList.toggle('hidden', !es5050);
         if (!es5050) {
           var input = document.getElementById('fechaPago2OC');
+          if (input) input.value = '';
+        }
+      };
+
+      // Igual que arriba, pero para el select de condiciones comerciales
+      // del editor "✏️ Editar Productos y Formato" (solo Administrador).
+      window.actualizarVisibilidadFechaPago2EditarOC = function() {
+        var select = document.getElementById('editarCondicionesComercialesOC');
+        var grupo = document.getElementById('grupoEditarFechaPago2OC');
+        if (!select || !grupo) return;
+        var es5050 = select.value === '50/50 FINIQUITO Y ANTICIPO';
+        grupo.classList.toggle('hidden', !es5050);
+        if (!es5050) {
+          var input = document.getElementById('editarFechaPago2OC');
           if (input) input.value = '';
         }
       };
