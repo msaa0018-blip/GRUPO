@@ -26780,50 +26780,19 @@
         }
         function didDrawPageTablaOC(data) { window._tableFinalY = data.cursor.y; }
 
-        // Medición previa: si las partidas ANTERIORES a la última caben
-        // cómodas en una sola hoja pero dejan mucho espacio libre abajo
-        // (porque la última partida + el pie se van completos a la hoja
-        // siguiente), ese hueco se reparte como relleno extra ENTRE cada
-        // partida (renglones un poco más altos), en vez de dejarlo como
-        // un solo espacio en blanco al final de la hoja. Se mide en un
-        // documento aparte, desechable, con exactamente los mismos datos
-        // y anchos de columna, para saber cuánta altura ocupa la tabla
-        // de forma natural antes de dibujarla de verdad.
-        var cellPaddingFilasPreviasOC = 5;
-        if (filasPrevias.length) {
-          try {
-            var docMedicionTablaOC = new jsPDF('p', 'pt', 'a4');
-            docMedicionTablaOC.autoTable({
-              head: [headers],
-              body: filasPrevias,
-              startY: y,
-              margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY },
-              theme: 'plain',
-              styles: estilosComunesTablaOC,
-              headStyles: headStylesComunesTablaOC,
-              bodyStyles: { fillColor: [255, 255, 255] },
-              columnStyles: columnStylesComunesTablaOC
-            });
-            if (docMedicionTablaOC.internal.getNumberOfPages() === 1) {
-              var alturaNaturalFilasPreviasOC = docMedicionTablaOC.lastAutoTable.finalY - y;
-              var espacioDisponibleFilasPreviasOC = limiteContenidoY - y;
-              var huecoFilasPreviasOC = espacioDisponibleFilasPreviasOC - alturaNaturalFilasPreviasOC;
-              // Solo compensa si el hueco es notorio (> ~1cm); huecos
-              // chicos se dejan tal cual para no verse forzado.
-              if (huecoFilasPreviasOC > 30) {
-                var extraPorFilaFilasPreviasOC = Math.min(huecoFilasPreviasOC / filasPrevias.length, 25);
-                cellPaddingFilasPreviasOC = {
-                  top: 5 + extraPorFilaFilasPreviasOC / 2,
-                  right: 5,
-                  bottom: 5 + extraPorFilaFilasPreviasOC / 2,
-                  left: 5
-                };
-              }
-            }
-          } catch (eMedicionTablaOC) {
-            console.warn('No se pudo medir el espacio sobrante de la tabla de partidas:', eMedicionTablaOC);
-          }
-        }
+        // NOTA: antes había aquí una "medición previa" que, cuando las
+        // partidas anteriores a la última dejaban mucho espacio libre en
+        // la hoja, repartía ese hueco como relleno extra (cellPadding)
+        // entre esas partidas — con pocas partidas previas (1-3), ese
+        // relleno se notaba demasiado (renglones muy altos, con mucho
+        // espacio en blanco arriba/abajo del texto) y además quedaba
+        // MUY distinto a como se ve la última partida (que nunca llevaba
+        // ese relleno extra). Al agregar una partida nueva, ese cambio de
+        // alto en las partidas ya existentes se percibía como "un espacio
+        // de más". Se quitó: todas las partidas (incluida la última) usan
+        // ahora el mismo cellPadding fijo (definido en
+        // estilosComunesTablaOC), así que agregar una partida solo agrega
+        // esa partida, sin alterar el alto de las demás.
 
         if (filasPrevias.length) {
           doc.autoTable({
@@ -26837,10 +26806,7 @@
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
-            // cellPadding aquí puede venir ensanchado (arriba/abajo) por
-            // la medición previa, para repartir el espacio sobrante entre
-            // las partidas en vez de dejarlo como un hueco al final.
-            bodyStyles: { fillColor: [255, 255, 255], cellPadding: cellPaddingFilasPreviasOC },
+            bodyStyles: { fillColor: [255, 255, 255] },
             columnStyles: columnStylesComunesTablaOC,
             willDrawPage: willDrawPageTablaOC,
             didDrawPage: didDrawPageTablaOC
