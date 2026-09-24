@@ -5823,7 +5823,6 @@
           <table>
             <thead>
               <tr>
-                <th>Código</th>
                 <th>Proyecto</th>
                 <th>Cliente</th>
                 <th>RFC</th>
@@ -5835,6 +5834,7 @@
                 <th>Colaboradores</th>
                 <th>Fecha Inicio</th>
                 <th>Fecha Término</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="cuerpoREPSE"></tbody>
@@ -21811,6 +21811,7 @@
           cuerpo.innerHTML = '<tr><td colspan="12" class="mensaje-sin-datos">No hay proyectos registrados como Servicios</td></tr>';
         } else {
           var puedeAsignar = usuarioPuedeAsignarColaboradoresREPSE(actual);
+          var puedeEditar = !!(actual && actual.rol === 'Administrador');
           cuerpo.innerHTML = proyectosServicios.map(function(p) {
             var clienteInfo = clientesCache.find(function(c) { return normalizar(c.nombre) === normalizar(p.cliente); });
             var rfc = (clienteInfo && clienteInfo.rfc) || '—';
@@ -21818,10 +21819,12 @@
             var limite = p.colaboradores_requeridos || 0;
             var colaboradoresTexto = asignados.length + ' / ' + (limite || '—');
             var botonAsignar = puedeAsignar
-              ? '<button class="btn-visualizar" style="margin-top:4px; padding:4px 8px; font-size:12px;" onclick="window.abrirRepseAsignarColaboradores(' + p.id + ')">👥 Asignar</button>'
+              ? '<button class="btn-visualizar" style="margin-top:2px; padding:4px 8px; font-size:12px;" onclick="window.abrirRepseAsignarColaboradores(' + p.id + ')">👥 Asignar</button>'
+              : '';
+            var botonEditar = puedeEditar
+              ? '<button class="btn-visualizar" style="margin-top:2px; padding:4px 8px; font-size:12px;" onclick="window.editarProyectoCatalogo(proyectos.findIndex(function(x){ return x.id === ' + p.id + '; }))">✏️ Editar</button>'
               : '';
             return '<tr>' +
-              '<td data-label="Código">' + escapeHTML(p.codigo || '—') + '</td>' +
               '<td data-label="Proyecto"><strong>' + escapeHTML(p.nombre || '') + '</strong></td>' +
               '<td data-label="Cliente">' + escapeHTML(p.cliente || '—') + '</td>' +
               '<td data-label="RFC">' + escapeHTML(rfc) + '</td>' +
@@ -21830,9 +21833,10 @@
               '<td data-label="Centro de trabajo">' + escapeHTML(p.centro_trabajo || '—') + '</td>' +
               '<td data-label="Dirección del servicio">' + escapeHTML(p.direccion || '—') + '</td>' +
               '<td data-label="Monto del contrato">' + formatoMoneda(p.presupuesto || 0, p.moneda) + '</td>' +
-              '<td data-label="Colaboradores">' + escapeHTML(colaboradoresTexto) + (botonAsignar ? '<br>' + botonAsignar : '') + '</td>' +
+              '<td data-label="Colaboradores">' + escapeHTML(colaboradoresTexto) + '</td>' +
               '<td data-label="Fecha Inicio">' + escapeHTML(p.fecha_inicio || '—') + '</td>' +
               '<td data-label="Fecha Término">' + escapeHTML(p.fecha_termino || '—') + '</td>' +
+              '<td data-label="Acciones" style="white-space:nowrap;">' + botonEditar + (botonEditar && botonAsignar ? '<br>' : '') + botonAsignar + '</td>' +
               '</tr>';
           }).join('');
         }
@@ -22061,14 +22065,13 @@
               doc.setTextColor(60, 60, 60);
               doc.text('Departamento: ' + (mostrarDepto(getAbreviaturaDepartamento(grupoDepto.departamento, grupoEmpresa.empresa)) || grupoDepto.departamento), margin + 8, cursorY + 10);
 
-              var headers = ['Código', 'Proyecto', 'Cliente', 'RFC', 'Centro de trabajo', 'Dirección del servicio', 'Monto del contrato', 'Colaboradores', 'Inicio', 'Término'];
+              var headers = ['Proyecto', 'Cliente', 'RFC', 'Centro de trabajo', 'Dirección del servicio', 'Monto del contrato', 'Colaboradores', 'Inicio', 'Término'];
               var rows = grupoDepto.proyectos.map(function(p) {
                 var clienteInfo = clientesCache.find(function(c) { return normalizar(c.nombre) === normalizar(p.cliente); });
                 var rfc = (clienteInfo && clienteInfo.rfc) || '—';
                 var asignados = asignaciones[p.id] || [];
                 var limite = p.colaboradores_requeridos || 0;
                 return [
-                  p.codigo || '—',
                   p.nombre || '',
                   p.cliente || '—',
                   rfc,
