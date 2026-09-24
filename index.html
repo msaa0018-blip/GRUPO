@@ -4250,6 +4250,11 @@
               <input id="edProyectoFechaInicio" type="date">
               <input id="edProyectoFechaTermino" type="date">
             </div>
+            <div class="cxc-form-row" style="align-items:center; gap:16px;">
+              <span style="font-weight:600; font-size:13px; color:var(--gray-700);">Tipo de Proyecto (REPSE) *</span>
+              <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;"><input type="checkbox" id="edProyectoSuministro"> Suministro</label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;"><input type="checkbox" id="edProyectoServicios"> Servicios</label>
+            </div>
             <div id="msgEditarProyecto"></div>
           </div>
         </div>
@@ -5339,6 +5344,11 @@
           <input id="utilidadProyecto" type="number" min="0" max="100" step="0.01" value="40" placeholder="% Utilidad (por defecto 40%)" title="Porcentaje de utilidad del proyecto. Por defecto 40% (límite operativo 60% del presupuesto). Empresas como SUMINISERVICES pueden usar un porcentaje distinto.">
           <input id="fechaInicio" type="date">
           <input id="fechaTermino" type="date">
+          <div style="display:flex; align-items:center; gap:16px; padding:6px 10px; border:1px solid var(--gray-300); border-radius:6px; background:var(--gray-100);" title="REPSE: indica si este proyecto implica suministro, servicios en sitio, o ambos.">
+            <span style="font-weight:600; font-size:13px; color:var(--gray-700);">Tipo de Proyecto *</span>
+            <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;"><input type="checkbox" id="proyectoTipoSuministro" checked> Suministro</label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;"><input type="checkbox" id="proyectoTipoServicios"> Servicios</label>
+          </div>
           <button onclick="window.crearProyecto()" class="success full-width">➕ Crear</button>
         </div>
         <div id="msgProyecto"></div>
@@ -5772,6 +5782,29 @@
               <button class="success" onclick="window.aplicarFiltroEstadosCXC()">✔️ Aplicar</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div id="panelREPSE" class="card hidden">
+        <h2>🦺 REPSE</h2>
+        <p class="text-muted" style="margin-bottom:12px;">Proyectos registrados como servicios en sitio (Suministro y/o Servicios), sujetos a la regulación REPSE.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Proyecto</th>
+                <th>Cliente</th>
+                <th>Empresa</th>
+                <th>Departamento</th>
+                <th>Centro de trabajo</th>
+                <th>Tipo</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Término</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoREPSE"></tbody>
+          </table>
         </div>
       </div>
 
@@ -7466,6 +7499,15 @@
         return false;
       }
 
+      // REPSE (📊 INGRESOS): visible para Jefe Departamento, Director
+      // General, Finanzas y Contabilidad, más Administrador como
+      // supervisor (mismo criterio usado en el resto de módulos de este
+      // menú).
+      function usuarioPuedeVerREPSE(usuario) {
+        if (!usuario) return false;
+        return usuarioTieneAlgunRol(usuario, ['Jefe Departamento', 'Director General', 'Finanzas', 'Contabilidad', 'Administrador']);
+      }
+
       // ALTA DE REGISTROS (Proveedores/Productos): acceso exclusivo del
       // rol Administrador, más el usuario IQA (mismos permisos que Admin
       // en este módulo específico).
@@ -8442,6 +8484,9 @@
           if (actual && rolesExcluidosOF.indexOf(actual.rol) === -1) {
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
           }
+          if (usuarioPuedeVerREPSE(actual)) {
+            modulos.push({ id: 'repse', icono: '🦺', nombre: 'REPSE' });
+          }
         } else if (tipo === 'alta_registros') {
           if (usuarioPuedeAltaRegistros(actual)) {
             modulos.push({ id: 'proveedores', icono: '🏢', nombre: 'Proveedores' });
@@ -8535,7 +8580,7 @@
               moduloOrigenBandejaOC = 'egresos_menu';
             } else if (modulo === 'proyectos') {
               window.mostrarModulo('proyectos');
-            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos' || modulo === 'empresas') {
+            } else if (modulo === 'proveedores' || modulo === 'productos' || modulo === 'clientes' || modulo === 'vehiculos' || modulo === 'empresas' || modulo === 'repse') {
               window.mostrarModulo(modulo);
             } else if (modulo === 'spm') {
               window.mostrarModulo(modulo);
@@ -14383,6 +14428,7 @@
         var panelCXP = document.getElementById('panelCXP');
         var panelCXC = document.getElementById('panelCXC');
         var panelOF = document.getElementById('panelOF');
+        var panelREPSE = document.getElementById('panelREPSE');
         var bandejaOCCard = document.getElementById('bandejaOCCard');
         var panelIndicadores = document.getElementById('panelIndicadores');
         var ocModalToolbar = document.getElementById('ocModalToolbar');
@@ -14417,6 +14463,7 @@
         panelCXP.classList.add('hidden');
         panelCXC.classList.add('hidden');
         panelOF.classList.add('hidden');
+        if (panelREPSE) panelREPSE.classList.add('hidden');
         bandejaOCCard.classList.add('hidden');
         bandejaOCCard.classList.remove('abierta');
         panelIndicadores.classList.remove('visible');
@@ -14545,6 +14592,15 @@
             window.renderOF();
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
+            window.mostrarMenuInterno();
+            return;
+          }
+        } else if (modulo === 'repse') {
+          if (usuarioPuedeVerREPSE(actual) && panelREPSE) {
+            panelREPSE.classList.remove('hidden');
+            window.cargarREPSE();
+          } else {
+            alert('⚠️ No tienes permiso para acceder a REPSE.');
             window.mostrarMenuInterno();
             return;
           }
@@ -21597,6 +21653,44 @@
         }
       };
 
+      // ===== MÓDULO REPSE (📊 INGRESOS) =====
+      // Lista los proyectos registrados como "Servicios" (servicios en
+      // sitio, sujetos a la regulación REPSE), respetando la misma
+      // visibilidad por empresa/departamento que el resto de la app
+      // (filtrarProyectosSegunUsuario: roles "libres" ven todo, Jefe de
+      // Departamento solo ve los de su propia empresa/departamento).
+      window.cargarREPSE = function() {
+        var cuerpo = document.getElementById('cuerpoREPSE');
+        if (!cuerpo) return;
+        if (!usuarioPuedeVerREPSE(actual)) { cuerpo.innerHTML = ''; return; }
+
+        var proyectosServicios = filtrarProyectosSegunUsuario(actual).filter(function(p) {
+          return !!p.es_servicios;
+        });
+
+        if (proyectosServicios.length === 0) {
+          cuerpo.innerHTML = '<tr><td colspan="9" class="mensaje-sin-datos">No hay proyectos registrados como Servicios</td></tr>';
+          return;
+        }
+
+        proyectosServicios.sort(function(a, b) { return (a.nombre || '').localeCompare(b.nombre || ''); });
+
+        cuerpo.innerHTML = proyectosServicios.map(function(p) {
+          var tipo = p.es_suministro ? 'Suministro y Servicios' : 'Servicios';
+          return '<tr>' +
+            '<td data-label="Código">' + escapeHTML(p.codigo || '—') + '</td>' +
+            '<td data-label="Proyecto"><strong>' + escapeHTML(p.nombre || '') + '</strong></td>' +
+            '<td data-label="Cliente">' + escapeHTML(p.cliente || '—') + '</td>' +
+            '<td data-label="Empresa">' + escapeHTML(getAbreviaturaEmpresa(p.empresa) || p.empresa || '—') + '</td>' +
+            '<td data-label="Departamento">' + escapeHTML(mostrarDepto(getAbreviaturaDepartamento(p.departamento, p.empresa) || p.departamento)) + '</td>' +
+            '<td data-label="Centro de trabajo">' + escapeHTML(p.centro_trabajo || '—') + '</td>' +
+            '<td data-label="Tipo">' + tipo + '</td>' +
+            '<td data-label="Fecha Inicio">' + escapeHTML(p.fecha_inicio || '—') + '</td>' +
+            '<td data-label="Fecha Término">' + escapeHTML(p.fecha_termino || '—') + '</td>' +
+            '</tr>';
+        }).join('');
+      };
+
       function render() {
         console.log('🔄 Renderizando... Proyectos:', proyectos.length, 'OC:', ordenes.length);
 
@@ -21987,6 +22081,8 @@
         var utilidadPct = utilidadInputEl && utilidadInputEl.value !== '' ? Number(utilidadInputEl.value) : 40;
         var fechaInicio = document.getElementById('fechaInicio').value;
         var fechaTermino = document.getElementById('fechaTermino').value;
+        var esSuministro = document.getElementById('proyectoTipoSuministro').checked;
+        var esServicios = document.getElementById('proyectoTipoServicios').checked;
         var msgDiv = document.getElementById('msgProyecto');
 
         if (!empresa || !departamento || !nombre || !centroTrabajo || !cliente || presupuesto <= 0 || !fechaInicio || !fechaTermino) {
@@ -21999,6 +22095,10 @@
         }
         if (fechaInicio > fechaTermino) {
           msgDiv.innerHTML = '<div class="alert">⚠️ LA FECHA DE INICIO NO PUEDE SER POSTERIOR A LA FECHA DE TÉRMINO.</div>';
+          return;
+        }
+        if (!esSuministro && !esServicios) {
+          msgDiv.innerHTML = '<div class="alert">⚠️ SELECCIONA EL TIPO DE PROYECTO: SUMINISTRO, SERVICIOS, O AMBOS.</div>';
           return;
         }
 
@@ -22023,7 +22123,9 @@
           utilidad_pct: utilidadPct,
           limite: presupuesto * (1 - utilidadPct / 100),
           fecha_inicio: fechaInicio,
-          fecha_termino: fechaTermino
+          fecha_termino: fechaTermino,
+          es_suministro: esSuministro,
+          es_servicios: esServicios
         };
 
         try {
@@ -22047,6 +22149,8 @@
           document.getElementById('cliente').value = '';
           document.getElementById('presupuesto').value = '';
           document.getElementById('utilidadProyecto').value = '40';
+          document.getElementById('proyectoTipoSuministro').checked = true;
+          document.getElementById('proyectoTipoServicios').checked = false;
           if (data && data.length > 0) proyectos.push(data[0]);
           else await cargarDatos();
           render();
@@ -22142,6 +22246,8 @@
         document.getElementById('edProyectoCliente').value = p.cliente || '';
         document.getElementById('edProyectoFechaInicio').value = p.fecha_inicio || '';
         document.getElementById('edProyectoFechaTermino').value = p.fecha_termino || '';
+        document.getElementById('edProyectoSuministro').checked = (p.es_suministro !== undefined && p.es_suministro !== null) ? !!p.es_suministro : true;
+        document.getElementById('edProyectoServicios').checked = !!p.es_servicios;
         var msg = document.getElementById('msgEditarProyecto');
         if (msg) msg.innerHTML = '';
         document.getElementById('editarProyectoModal').classList.add('active');
@@ -22165,10 +22271,13 @@
         var cliente = document.getElementById('edProyectoCliente').value.trim().toUpperCase();
         var fechaInicio = document.getElementById('edProyectoFechaInicio').value;
         var fechaTermino = document.getElementById('edProyectoFechaTermino').value;
+        var esSuministro = document.getElementById('edProyectoSuministro').checked;
+        var esServicios = document.getElementById('edProyectoServicios').checked;
 
         if (!presupuesto || presupuesto <= 0) { if (msg) msg.innerHTML = '<div class="alert">⚠️ El presupuesto debe ser mayor a 0.</div>'; return; }
         if (isNaN(utilidadPct) || utilidadPct < 0 || utilidadPct > 100) { if (msg) msg.innerHTML = '<div class="alert">⚠️ El % de utilidad debe ser un número entre 0 y 100.</div>'; return; }
         if (fechaInicio && fechaTermino && fechaInicio > fechaTermino) { if (msg) msg.innerHTML = '<div class="alert">⚠️ La fecha de inicio no puede ser posterior a la de término.</div>'; return; }
+        if (!esSuministro && !esServicios) { if (msg) msg.innerHTML = '<div class="alert">⚠️ Selecciona el tipo de proyecto: Suministro, Servicios, o ambos.</div>'; return; }
 
         var updates = {
           presupuesto: presupuesto,
@@ -22177,7 +22286,9 @@
           centro_trabajo: centroTrabajo,
           cliente: cliente,
           fecha_inicio: fechaInicio,
-          fecha_termino: fechaTermino
+          fecha_termino: fechaTermino,
+          es_suministro: esSuministro,
+          es_servicios: esServicios
         };
 
         try {
