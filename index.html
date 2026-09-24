@@ -25504,6 +25504,8 @@
             responsableentrega: oc.responsableentrega || '',
             sucursalentrega: oc.sucursalentrega || '',
             paqueteria: oc.paqueteria || '',
+            provTelefono: oc.proveedor_telefono || '',
+            provEmail: oc.proveedor_email || '',
             codigo: oc.codigo
           };
           var doc = await generarPDFParaPreview(datosOC, oc);
@@ -25738,12 +25740,24 @@
 
         if (msgDiv) msgDiv.innerHTML = '';
 
+        // Teléfono/Email del proveedor: se capturan aquí como "foto" del
+        // catálogo al momento de crear la OC (igual que RFC y datos
+        // bancarios), para que la OC ya guardada no dependa de que el
+        // proveedor siga existiendo/activo en el catálogo más adelante.
+        var provMatchDatos = proveedoresCatalogoCache.find(function(p) {
+          return (p.nombre || '').trim().toUpperCase() === proveedor;
+        });
+        var provTelefono = provMatchDatos ? (provMatchDatos.telefono || '') : '';
+        var provEmail = provMatchDatos ? (provMatchDatos.email || '') : '';
+
         return {
           empresa: proyecto.empresa,
           departamento: proyecto.departamento,
           proyectonombre: proyecto.nombre,
           cliente: proyecto.cliente,
           proveedor: proveedor,
+          provTelefono: provTelefono,
+          provEmail: provEmail,
           sucursal: (document.getElementById('sucursal').value || '').trim().toUpperCase(),
           rfc: rfc,
           direccion: direccion,
@@ -25884,7 +25898,9 @@
           solicitanteemail: datos.solicitanteemail || null,
           responsableentrega: datos.responsableentrega || null,
           sucursalentrega: datos.sucursalentrega || null,
-          paqueteria: datos.paqueteria || null
+          paqueteria: datos.paqueteria || null,
+          proveedor_telefono: datos.provTelefono || null,
+          proveedor_email: datos.provEmail || null
         };
 
         var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -25994,7 +26010,9 @@
           solicitanteemail: datos.solicitanteemail || null,
           responsableentrega: datos.responsableentrega || null,
           sucursalentrega: datos.sucursalentrega || null,
-          paqueteria: datos.paqueteria || null
+          paqueteria: datos.paqueteria || null,
+          proveedor_telefono: datos.provTelefono || null,
+          proveedor_email: datos.provEmail || null
         };
 
         var { data, error } = await supabase.from('ordenes').insert([nuevaOC]).select();
@@ -26138,7 +26156,9 @@
             solicitanteemail: oc.solicitanteemail || '',
             responsableentrega: oc.responsableentrega || '',
             sucursalentrega: oc.sucursalentrega || '',
-            paqueteria: oc.paqueteria || ''
+            paqueteria: oc.paqueteria || '',
+            provTelefono: oc.proveedor_telefono || '',
+            provEmail: oc.proveedor_email || ''
           };
           var doc = await generarPDFParaPreview(datosOC, oc);
           doc.save(oc.codigo + '.pdf');
