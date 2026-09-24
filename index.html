@@ -6168,8 +6168,6 @@
       <div class="modal-header">
         <h3>📄 <span id="visualizarModalTitulo">Visualizar Orden de Compra</span></h3>
         <div class="pdfPreview-btn-group">
-          <button class="btn-modal-x" title="Alejar" onclick="window.zoomVisualizarPDF(-1)">➖</button>
-          <button class="btn-modal-x" title="Acercar" onclick="window.zoomVisualizarPDF(1)">➕</button>
           <button class="btn-modal-x" onclick="window.cerrarVisualizar()">✕</button>
         </div>
       </div>
@@ -25465,29 +25463,9 @@
         }
       }
 
-      // Zoom del modal "Visualizar" (OC/OF): factor aplicado sobre el
-      // ancho de página calculado en renderizarPDFEnContenedor. Se
-      // reinicia a 1 cada vez que el modal se cierra (ver
-      // window.cerrarVisualizar) para que la siguiente OC/OF siempre
-      // abra a tamaño normal.
-      var visualizarModalPDFFuente = null;
-      var visualizarPDFZoom = 1;
-      var ZOOM_PDF_PASOS = [0.6, 0.8, 1, 1.25, 1.5, 2, 2.5, 3];
-
       async function renderizarPDFEnVisualizarFrame(doc) {
-        visualizarModalPDFFuente = doc;
-        await renderizarPDFEnContenedor('visualizarFrame', doc, visualizarPDFZoom);
+        await renderizarPDFEnContenedor('visualizarFrame', doc);
       }
-
-      window.zoomVisualizarPDF = function(direccion) {
-        var idxActual = 0;
-        for (var zi = 0; zi < ZOOM_PDF_PASOS.length; zi++) {
-          if (Math.abs(ZOOM_PDF_PASOS[zi] - visualizarPDFZoom) < Math.abs(ZOOM_PDF_PASOS[idxActual] - visualizarPDFZoom)) idxActual = zi;
-        }
-        var idxNuevo = Math.min(ZOOM_PDF_PASOS.length - 1, Math.max(0, idxActual + direccion));
-        visualizarPDFZoom = ZOOM_PDF_PASOS[idxNuevo];
-        if (visualizarModalPDFFuente) renderizarPDFEnContenedor('visualizarFrame', visualizarModalPDFFuente, visualizarPDFZoom);
-      };
 
       window.visualizarOC = async function(index) {
         // Evita que un doble clic (mientras el PDF todavía se está
@@ -25593,8 +25571,6 @@
         visualizarOCPDF = null;
         visualizarModalTipoActual = null;
         visualizarModalIdActual = null;
-        visualizarModalPDFFuente = null;
-        visualizarPDFZoom = 1;
       };
 
       // Si el usuario tiene abierta la ventana "Visualizar" de una OC, una
