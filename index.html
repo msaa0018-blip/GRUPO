@@ -26788,7 +26788,15 @@
               styles: estilosComunesTablaOC,
               headStyles: headStylesComunesTablaOC,
               bodyStyles: { fillColor: [255, 255, 255] },
-              columnStyles: columnStylesComunesTablaOC
+              columnStyles: columnStylesComunesTablaOC,
+              // 'avoid': si una partida no cabe completa en lo que resta de
+              // la hoja, se pasa ENTERA a la siguiente — nunca se dibuja
+              // parte de sus celdas en una hoja y el resto en otra (por
+              // defecto autoTable permite ese corte a la mitad, que se veía
+              // como un fragmento suelto — p.ej. solo la última línea de un
+              // número de parte envuelto en dos líneas, como "00" — flotando
+              // arriba de la siguiente partida).
+              rowPageBreak: 'avoid'
             });
             // Solo tiene sentido repartir espacio en la hoja 1 si las
             // partidas anteriores, con padding normal, ya caben TODAS ahí.
@@ -26804,7 +26812,8 @@
                 styles: estilosComunesTablaOC,
                 headStyles: headStylesComunesTablaOC,
                 bodyStyles: { fillColor: [255, 255, 255] },
-                columnStyles: columnStylesComunesTablaOC
+                columnStyles: columnStylesComunesTablaOC,
+                rowPageBreak: 'avoid'
               });
               // Si con el pie completo reservado la última partida SÍ se
               // fue a una hoja física nueva, la hoja 1 se queda solo con
@@ -26851,6 +26860,9 @@
             // blanco al final.
             bodyStyles: { fillColor: [255, 255, 255], cellPadding: cellPaddingFilasPreviasOC },
             columnStyles: columnStylesComunesTablaOC,
+            // Ver nota de "rowPageBreak" en la medición previa: ninguna
+            // partida se dibuja partida a la mitad entre dos hojas.
+            rowPageBreak: 'avoid',
             willDrawPage: willDrawPageTablaOC,
             didDrawPage: didDrawPageTablaOC
           });
@@ -26879,6 +26891,7 @@
             headStyles: headStylesComunesTablaOC,
             bodyStyles: { fillColor: [255, 255, 255] },
             columnStyles: columnStylesComunesTablaOC,
+            rowPageBreak: 'avoid',
             willDrawPage: willDrawPageTablaOC,
             didDrawPage: didDrawPageTablaOC
           });
@@ -26904,9 +26917,28 @@
         // poder reservarles espacio en el margin.bottom del autoTable.
         y += 7;
 
-        // Salvaguarda: normalmente ya no hace falta, porque el margin.bottom
-        // de la tabla reservó este espacio junto con al menos una partida.
-        asegurarEspacioOC(bottomH);
+        // TODO el pie (CONDICIONES COMERCIALES/RESUMEN FINANCIERO + DATOS
+        // BANCARIOS/INSTRUCCIONES DE ENTREGA + AUTORIZACIONES) se trata
+        // como UN SOLO bloque indivisible: o cabe completo en lo que
+        // resta de la hoja actual, o se pasa COMPLETO a la hoja
+        // siguiente — nunca una parte en una hoja y el resto en otra.
+        //
+        // Antes había DOS salvaguardas independientes (una antes de
+        // CONDICIONES/RESUMEN, otra más abajo antes de DATOS BANCARIOS/
+        // INSTRUCCIONES+AUTORIZACIONES). El problema: la primera solo
+        // verificaba que cupiera "bottomH" (la primera tarjeta), no el
+        // pie completo — así que si el margin.bottom reservado en la
+        // tabla se quedaba corto por algún cálculo (p.ej. este mismo
+        // "y += 7" no estaba incluido en esa reserva), la primera
+        // tarjeta SÍ alcanzaba a dibujarse en la hoja actual, y solo
+        // hasta la SEGUNDA salvaguarda (ya con esa tarjeta dibujada) se
+        // detectaba que no cabía el resto, partiendo el pie entre dos
+        // hojas. Con una única verificación ANTES de dibujar cualquier
+        // parte del pie, usando la altura total real (la misma suma que
+        // "alturaColaCompletaOC"), esto queda imposible: o se salta de
+        // hoja antes de dibujar nada, o ya no se vuelve a evaluar un
+        // salto a medio pie.
+        asegurarEspacioOC(alturaColaCompletaOC);
 
         // Tarjeta izquierda: CONDICIONES COMERCIALES + NOTAS
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
@@ -26995,14 +27027,14 @@
           });
         }
 
-        // DATOS BANCARIOS/INSTRUCCIONES DE ENTREGA y AUTORIZACIONES (firmas)
-        // se tratan como un solo bloque indivisible: si no caben juntos en lo
-        // que resta de la hoja, se pasan los DOS a una hoja nueva — así la
-        // hoja de las firmas nunca queda sola, siempre las acompaña esta fila.
-        // (bottomH2/alturaAutorizacionesOC ya se calcularon antes de la
-        // tabla; esta llamada es una salvaguarda adicional.)
-        asegurarEspacioOC(bottomH2 + 9 + 11 + alturaAutorizacionesOC);
-
+        // NOTA: ya NO hay una segunda verificación de espacio aquí — el pie
+        // completo (incluyendo esta fila y AUTORIZACIONES) se verificó como
+        // un solo bloque ANTES de dibujar CONDICIONES COMERCIALES/RESUMEN
+        // FINANCIERO (ver comentario junto a "asegurarEspacioOC" más
+        // arriba). Volver a verificar aquí, a medio pie, era precisamente
+        // lo que permitía que esas dos tarjetas ya dibujadas se quedaran en
+        // una hoja y esta fila + AUTORIZACIONES saltaran solas a la
+        // siguiente.
         dibujarCajaSimple(bottomX1, y, bottomW, bottomH2, 'DATOS BANCARIOS PROVEEDOR', camposBancarios);
         dibujarCajaSimple(bottomX2, y, bottomW, bottomH2, 'INSTRUCCIONES DE ENTREGA', camposEntregaCondiciones);
 
