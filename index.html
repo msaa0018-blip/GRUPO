@@ -26990,6 +26990,34 @@
           y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
         }
 
+        // DEBUG TEMPORAL — mismo diagnóstico que el console.log de arriba,
+        // pero impreso directamente EN el PDF (en rojo, chiquito) para no
+        // depender de que alguien abra la consola del navegador: basta con
+        // ver/mandar el PDF generado. Quitar junto con el console.log de
+        // arriba una vez diagnosticado el caso de la OC STEREN.
+        if (filasPrevias.length && filaUltima.length) {
+          try {
+            doc.setFontSize(6);
+            doc.setTextColor(200, 0, 0);
+            doc.text(
+              'DEBUG fp=' + filasPrevias.length +
+              ' pFP=' + paginasFilasPreviasMedicionOC +
+              ' fY=' + Math.round(finalYFilasPreviasMedicionOC) +
+              ' pTU=' + (typeof docMedicionTablaOC !== 'undefined' ? docMedicionTablaOC.internal.getNumberOfPages() : -1) +
+              ' cambia=' + filaUltimaCambiaDeHojaOC +
+              ' altCola=' + Math.round(alturaColaCompletaOC) +
+              ' lim=' + Math.round(limiteContenidoY) +
+              ' pH=' + Math.round(pageHeight) +
+              ' yReal=' + Math.round(y),
+              margin, y + 10
+            );
+            doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
+            doc.setFontSize(8);
+          } catch (eDebugPintadoOC) {
+            console.warn('No se pudo pintar debug en PDF:', eDebugPintadoOC);
+          }
+        }
+
         var subtotal = 0,
           iva = 0,
           impuestoPorcentaje = 0;
