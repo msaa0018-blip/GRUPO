@@ -26815,51 +26815,85 @@
               // arriba de la siguiente partida).
               rowPageBreak: 'avoid'
             });
-            // Solo tiene sentido repartir espacio en la hoja 1 si las
-            // partidas anteriores, con padding normal, ya caben TODAS ahí.
-            if (docMedicionTablaOC.internal.getNumberOfPages() === 1) {
-              var finalYFilasPreviasMedicionOC = docMedicionTablaOC.lastAutoTable.finalY;
-              docMedicionTablaOC.autoTable({
-                head: undefined,
-                showHead: 'never',
-                body: filaUltima,
-                startY: finalYFilasPreviasMedicionOC,
-                // "+ 7" porque, al dibujar de verdad, entre el final de esta
-                // partida y el inicio del pie hay un espacio fijo (ver
-                // "y += 7" antes de "asegurarEspacioOC(alturaColaCompletaOC)"
-                // más abajo). Si esa separación no se reserva también aquí,
-                // la partida puede quedar dibujada justo al límite y ese
-                // "+7" hace que el pie ya no quepa, saltando SOLO el pie
-                // (sin esta partida) a una hoja nueva — exactamente lo que
-                // no debe pasar.
-                margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
-                theme: 'plain',
-                styles: estilosComunesTablaOC,
-                headStyles: headStylesComunesTablaOC,
-                bodyStyles: { fillColor: [255, 255, 255] },
-                columnStyles: columnStylesComunesTablaOC,
-                rowPageBreak: 'avoid'
-              });
-              // Si con el pie completo reservado la última partida SÍ se
-              // fue a una hoja física nueva, la hoja 1 se queda solo con
-              // las partidas anteriores: reparte el espacio libre que
-              // dejaron entre ellas.
-              if (docMedicionTablaOC.internal.getNumberOfPages() > 1) {
-                filaUltimaCambiaDeHojaOC = true;
-                var espacioDisponibleFilasPreviasOC = limiteContenidoY - y;
-                var alturaNaturalFilasPreviasOC = finalYFilasPreviasMedicionOC - y;
-                var huecoFilasPreviasOC = espacioDisponibleFilasPreviasOC - alturaNaturalFilasPreviasOC;
-                // Solo compensa si el hueco es notorio (> ~1cm); huecos
-                // chicos se dejan tal cual para no verse forzado.
-                if (huecoFilasPreviasOC > 30) {
-                  var extraPorFilaFilasPreviasOC = Math.min(huecoFilasPreviasOC / filasPrevias.length, 25);
-                  cellPaddingFilasPreviasOC = {
-                    top: 5 + extraPorFilaFilasPreviasOC / 2,
-                    right: 5,
-                    bottom: 5 + extraPorFilaFilasPreviasOC / 2,
-                    left: 5
-                  };
-                }
+            // Cuántas hojas físicas necesitó SOLO "filasPrevias" en esta
+            // medición (1 si cupieron todas en la hoja actual, más de 1
+            // si por sí solas ya necesitan varias hojas — caso normal en
+            // OC con muchas partidas). Se guarda ANTES de medir la última
+            // partida para poder comparar: si al agregar la última
+            // partida (con el pie completo reservado) el número de hojas
+            // SUBE, es que se movió a una hoja nueva — sin importar en
+            // cuál de las hojas de "filasPrevias" haya terminado.
+            var paginasFilasPreviasMedicionOC = docMedicionTablaOC.internal.getNumberOfPages();
+            var finalYFilasPreviasMedicionOC = docMedicionTablaOC.lastAutoTable.finalY;
+            docMedicionTablaOC.autoTable({
+              head: undefined,
+              showHead: 'never',
+              body: filaUltima,
+              startY: finalYFilasPreviasMedicionOC,
+              // "+ 7" porque, al dibujar de verdad, entre el final de esta
+              // partida y el inicio del pie hay un espacio fijo (ver
+              // "y += 7" antes de "asegurarEspacioOC(alturaColaCompletaOC)"
+              // más abajo). Si esa separación no se reserva también aquí,
+              // la partida puede quedar dibujada justo al límite y ese
+              // "+7" hace que el pie ya no quepa, saltando SOLO el pie
+              // (sin esta partida) a una hoja nueva — exactamente lo que
+              // no debe pasar.
+              margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
+              theme: 'plain',
+              styles: estilosComunesTablaOC,
+              headStyles: headStylesComunesTablaOC,
+              bodyStyles: { fillColor: [255, 255, 255] },
+              columnStyles: columnStylesComunesTablaOC,
+              rowPageBreak: 'avoid'
+            });
+            // Si al agregar la última partida (con el pie completo
+            // reservado) el número de hojas de la medición SUBIÓ respecto
+            // a "solo filasPrevias", es que se movió a una hoja nueva —
+            // esto se evalúa SIEMPRE, sin importar si "filasPrevias" por
+            // sí sola necesitó 1 hoja o varias (antes solo se evaluaba
+            // cuando "filasPrevias" cabía en 1 sola hoja, dejando sin
+            // ninguna verificación de respaldo el caso — justo el más
+            // común en OC largas — de una tabla previa que YA se
+            // extiende a varias hojas).
+            if (docMedicionTablaOC.internal.getNumberOfPages() > paginasFilasPreviasMedicionOC) {
+              filaUltimaCambiaDeHojaOC = true;
+            }
+            // DEBUG TEMPORAL — quitar después de diagnosticar el caso de
+            // la OC STEREN (10 partidas) que sigue saltando a una hoja
+            // extra pese a que, por medición real del PDF, sobra espacio.
+            console.log('[DEBUG PDF OC]', {
+              filasPreviasLength: filasPrevias.length,
+              filaUltimaLength: filaUltima.length,
+              yInicioTabla: y,
+              alturaColaCompletaOC: alturaColaCompletaOC,
+              paginasFilasPreviasMedicionOC: paginasFilasPreviasMedicionOC,
+              finalYFilasPreviasMedicionOC: finalYFilasPreviasMedicionOC,
+              paginasTrasFilaUltimaMedicion: docMedicionTablaOC.internal.getNumberOfPages(),
+              filaUltimaCambiaDeHojaOC: filaUltimaCambiaDeHojaOC,
+              limiteContenidoY: limiteContenidoY,
+              pageHeight: pageHeight
+            });
+            // Repartir espacio (cellPadding extra) entre las partidas
+            // anteriores solo tiene sentido visualmente cuando TODAS
+            // ellas quedan juntas en una sola hoja (la hoja 1) y es esa
+            // MISMA hoja la que se queda con un hueco al final porque la
+            // última partida se fue a la siguiente — si "filasPrevias" ya
+            // ocupaba varias hojas por sí sola, no hay una única hoja con
+            // "espacio sobrante" que reforzar de esta manera.
+            if (paginasFilasPreviasMedicionOC === 1 && filaUltimaCambiaDeHojaOC) {
+              var espacioDisponibleFilasPreviasOC = limiteContenidoY - y;
+              var alturaNaturalFilasPreviasOC = finalYFilasPreviasMedicionOC - y;
+              var huecoFilasPreviasOC = espacioDisponibleFilasPreviasOC - alturaNaturalFilasPreviasOC;
+              // Solo compensa si el hueco es notorio (> ~1cm); huecos
+              // chicos se dejan tal cual para no verse forzado.
+              if (huecoFilasPreviasOC > 30) {
+                var extraPorFilaFilasPreviasOC = Math.min(huecoFilasPreviasOC / filasPrevias.length, 25);
+                cellPaddingFilasPreviasOC = {
+                  top: 5 + extraPorFilaFilasPreviasOC / 2,
+                  right: 5,
+                  bottom: 5 + extraPorFilaFilasPreviasOC / 2,
+                  left: 5
+                };
               }
             }
           } catch (eMedicionTablaOC) {
