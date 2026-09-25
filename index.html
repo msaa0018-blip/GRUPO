@@ -26706,7 +26706,14 @@
         // pie, generando más hojas de las necesarias. Con esto: solo la
         // última partida queda junto con todo el pie (como pide la imagen
         // de referencia), y las hojas previas no pierden espacio.
-        var hayMasDeUnaPartida = rows.length > 1;
+        // Si hay 3 partidas o menos, NINGUNA se separa de las demás: todas
+        // se tratan como un solo bloque atómico junto con el pie completo
+        // (igual que el caso de una sola partida), en vez de dividir la
+        // tabla en "filasPrevias"/"filaUltima". Así se garantiza que con
+        // pocas partidas el pie SIEMPRE aparezca en la primera hoja junto
+        // con todas ellas — nunca solo, nunca en una hoja aparte.
+        var footerSiempreConTodasLasPartidasOC = rows.length > 0 && rows.length <= 3;
+        var hayMasDeUnaPartida = rows.length > 1 && !footerSiempreConTodasLasPartidasOC;
         var filasPrevias = hayMasDeUnaPartida ? rows.slice(0, -1) : [];
         var filaUltima = hayMasDeUnaPartida ? rows.slice(-1) : rows;
 
@@ -26776,6 +26783,16 @@
         // dibujar de verdad, se mide en un documento aparte, desechable,
         // con exactamente los mismos datos/anchos/márgenes.
         var cellPaddingFilasPreviasOC = 5;
+        // true si la medición determina que la última partida (con el pie
+        // completo reservado) NO cabe en la hoja actual junto con las
+        // partidas anteriores, y por lo tanto debe saltar a una hoja
+        // nueva JUNTO con el pie. Se usa más abajo para forzar ese salto
+        // de forma explícita ANTES de dibujar la última partida de
+        // verdad — en vez de confiar únicamente en que el margin.bottom
+        // reservado en su autoTable real coincida en centésima de punto
+        // con esta misma medición (que es justo lo que falló antes con
+        // el "+7" no reservado).
+        var filaUltimaCambiaDeHojaOC = false;
         if (filasPrevias.length && filaUltima.length) {
           try {
             var docMedicionTablaOC = new jsPDF('p', 'pt', 'a4');
@@ -26828,6 +26845,7 @@
               // las partidas anteriores: reparte el espacio libre que
               // dejaron entre ellas.
               if (docMedicionTablaOC.internal.getNumberOfPages() > 1) {
+                filaUltimaCambiaDeHojaOC = true;
                 var espacioDisponibleFilasPreviasOC = limiteContenidoY - y;
                 var alturaNaturalFilasPreviasOC = finalYFilasPreviasMedicionOC - y;
                 var huecoFilasPreviasOC = espacioDisponibleFilasPreviasOC - alturaNaturalFilasPreviasOC;
@@ -26878,6 +26896,18 @@
         }
 
         if (filaUltima.length) {
+          // Salto de hoja EXPLÍCITO: si la medición de arriba determinó
+          // que la última partida (junto con el pie completo) no cabe en
+          // lo que queda de la hoja actual, se fuerza el salto AQUÍ,
+          // antes de dibujarla — así la decisión no depende de que el
+          // margin.bottom reservado en el autoTable real (más abajo)
+          // coincida al punto exacto con esta misma medición. Esto es lo
+          // que garantiza, de forma robusta, que la última partida y el
+          // pie completo SIEMPRE aparezcan juntos en la misma hoja,
+          // nunca uno sin el otro.
+          if (filaUltimaCambiaDeHojaOC) {
+            nuevaPaginaOC();
+          }
           doc.autoTable({
             // Si ya hubo partidas previas en su propia tabla, esta última
             // partida continúa sin repetir el encabezado de columnas (se
