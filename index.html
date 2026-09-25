@@ -21273,7 +21273,7 @@
         var idx = tbody.children.length + 1;
         var udmOptions = UDM_LIST.map(function(u) { return '<option value="' + u + '" ' + (u === udm ? 'selected' : '') + '>' + u + '</option>'; }).join('');
         var proyectoPartidaVisible = document.getElementById('ocEsMultiproyecto') && document.getElementById('ocEsMultiproyecto').checked;
-        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se asigna automáticamente: si el número de parte ya existe en el catálogo se usa ese mismo código (sumará existencia al pagar la OC); si es nuevo, se asigna el siguiente consecutivo."></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte" oninput="window.actualizarCodigoDesdeParte(this)" onchange="window.actualizarCodigoDesdeParte(this)"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)" onchange="window.verificarConflictoParteDescripcion(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:110px;width:120px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td class="' + (proyectoPartidaVisible ? '' : 'hidden ') + 'col-proyecto-partida"><select class="prod-proyecto" onchange="window.recalcularFila(this)">' + opcionesProyectoPartidaHTML(null) + '</select></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
+        fila.innerHTML = '<td class="indice">' + idx + '</td><td><input class="codigo" type="text" value="' + codigo.toUpperCase() + '" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se asigna automáticamente: si el número de parte ya existe en el catálogo se usa ese mismo código (sumará existencia al pagar la OC); si es nuevo, se asigna el siguiente consecutivo."></td><td><input class="part" type="text" value="' + parte.toUpperCase() + '" placeholder="Núm. Parte" oninput="window.actualizarCodigoDesdeParte(this)" onchange="window.actualizarCodigoDesdeParte(this)"></td><td><textarea class="desc" placeholder="Descripción" oninput="window.autoAjustar(this); window.recalcularFila(this)" onchange="window.verificarConflictoParteDescripcion(this)">' + descripcion.toUpperCase() + '</textarea></td><td><input class="cantidad" type="text" value="' + cantidad + '" placeholder="1" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:130px;"></td><td><select class="udm" onchange="window.recalcularFila(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td><td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)" style="min-width:110px;width:120px;"></td><td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="1" placeholder="0" onchange="window.recalcularFila(this)" oninput="window.recalcularFila(this)"></td><td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:200px;width:210px;"></td><td class="' + (proyectoPartidaVisible ? '' : 'hidden ') + 'col-proyecto-partida"><select class="prod-proyecto" onchange="window.recalcularFila(this)">' + opcionesProyectoPartidaHTML(null) + '</select></td><td><button class="danger" onclick="window.eliminarFilaProducto(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.recalcularFila(fila);
         window.recalcularTotal();
@@ -22335,7 +22335,7 @@
           '<td><select class="udm" onchange="window.recalcularFilaEditarOC(this)">' + udmOptions + '</select></td>' +
           '<td><input class="precio" type="text" value="' + precio + '" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
           '<td><input class="descuento" type="number" value="' + descuento + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
-          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
+          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="1" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaEditarProductosOC(this)">🗑️</button></td>';
         tbody.appendChild(fila);
@@ -23516,7 +23516,7 @@
           '<td><input class="cantidad" type="text" value="' + cantidad + '" min="0.01" step="0.01" placeholder="1" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)"></td>' +
           '<td><select class="udm" onchange="window.recalcularFilaOF(this)" style="min-width:100px;width:100px;">' + udmOptions + '</select></td>' +
           '<td><input class="pu" type="text" value="' + pu + '" min="0" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
-          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="0.01" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
+          '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="1" placeholder="0" onchange="window.recalcularFilaOF(this)" oninput="window.recalcularFilaOF(this)" style="min-width:90px;width:100px;"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly style="min-width:170px;width:180px;"></td>' +
           '<td><input class="codigo-interno" type="text" list="listaProductosInventarioOF" value="' + escapeHTML(codigoInterno.toUpperCase()) + '" placeholder="Opcional" style="min-width:110px;width:130px;text-transform:uppercase;"></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaPartidaOF(this)">🗑️</button></td>';
@@ -26759,16 +26759,78 @@
         // NOTA: antes había aquí una "medición previa" que, cuando las
         // partidas anteriores a la última dejaban mucho espacio libre en
         // la hoja, repartía ese hueco como relleno extra (cellPadding)
-        // entre esas partidas — con pocas partidas previas (1-3), ese
-        // relleno se notaba demasiado (renglones muy altos, con mucho
-        // espacio en blanco arriba/abajo del texto) y además quedaba
-        // MUY distinto a como se ve la última partida (que nunca llevaba
-        // ese relleno extra). Al agregar una partida nueva, ese cambio de
-        // alto en las partidas ya existentes se percibía como "un espacio
-        // de más". Se quitó: todas las partidas (incluida la última) usan
-        // ahora el mismo cellPadding fijo (definido en
-        // estilosComunesTablaOC), así que agregar una partida solo agrega
-        // esa partida, sin alterar el alto de las demás.
+        // entre esas partidas — pero antes se aplicaba SIEMPRE que
+        // sobraba espacio, incluso cuando la última partida se quedaba en
+        // la MISMA hoja que las anteriores; ahí se notaba muchísimo el
+        // contraste (partidas anteriores muy altas vs. la última con su
+        // padding normal) y, al agregar una partida nueva, ese cambio de
+        // alto se percibía como "un espacio de más".
+        //
+        // Ahora este relleno SOLO se aplica cuando la última partida
+        // realmente cambia de hoja (se va sola, junto con el pie, a la
+        // hoja siguiente) — ahí no hay ningún renglón "normal" en la
+        // misma hoja con el que contraste, así que repartir el espacio
+        // sobrante entre las partidas anteriores las deja luciendo
+        // distribuidas de forma uniforme en vez de amontonadas arriba con
+        // un hueco en blanco abajo. Para saberlo CON CERTEZA antes de
+        // dibujar de verdad, se mide en un documento aparte, desechable,
+        // con exactamente los mismos datos/anchos/márgenes.
+        var cellPaddingFilasPreviasOC = 5;
+        if (filasPrevias.length && filaUltima.length) {
+          try {
+            var docMedicionTablaOC = new jsPDF('p', 'pt', 'a4');
+            docMedicionTablaOC.autoTable({
+              head: [headers],
+              body: filasPrevias,
+              startY: y,
+              margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY },
+              theme: 'plain',
+              styles: estilosComunesTablaOC,
+              headStyles: headStylesComunesTablaOC,
+              bodyStyles: { fillColor: [255, 255, 255] },
+              columnStyles: columnStylesComunesTablaOC
+            });
+            // Solo tiene sentido repartir espacio en la hoja 1 si las
+            // partidas anteriores, con padding normal, ya caben TODAS ahí.
+            if (docMedicionTablaOC.internal.getNumberOfPages() === 1) {
+              var finalYFilasPreviasMedicionOC = docMedicionTablaOC.lastAutoTable.finalY;
+              docMedicionTablaOC.autoTable({
+                head: undefined,
+                showHead: 'never',
+                body: filaUltima,
+                startY: finalYFilasPreviasMedicionOC,
+                margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + alturaColaCompletaOC },
+                theme: 'plain',
+                styles: estilosComunesTablaOC,
+                headStyles: headStylesComunesTablaOC,
+                bodyStyles: { fillColor: [255, 255, 255] },
+                columnStyles: columnStylesComunesTablaOC
+              });
+              // Si con el pie completo reservado la última partida SÍ se
+              // fue a una hoja física nueva, la hoja 1 se queda solo con
+              // las partidas anteriores: reparte el espacio libre que
+              // dejaron entre ellas.
+              if (docMedicionTablaOC.internal.getNumberOfPages() > 1) {
+                var espacioDisponibleFilasPreviasOC = limiteContenidoY - y;
+                var alturaNaturalFilasPreviasOC = finalYFilasPreviasMedicionOC - y;
+                var huecoFilasPreviasOC = espacioDisponibleFilasPreviasOC - alturaNaturalFilasPreviasOC;
+                // Solo compensa si el hueco es notorio (> ~1cm); huecos
+                // chicos se dejan tal cual para no verse forzado.
+                if (huecoFilasPreviasOC > 30) {
+                  var extraPorFilaFilasPreviasOC = Math.min(huecoFilasPreviasOC / filasPrevias.length, 25);
+                  cellPaddingFilasPreviasOC = {
+                    top: 5 + extraPorFilaFilasPreviasOC / 2,
+                    right: 5,
+                    bottom: 5 + extraPorFilaFilasPreviasOC / 2,
+                    left: 5
+                  };
+                }
+              }
+            }
+          } catch (eMedicionTablaOC) {
+            console.warn('No se pudo medir si la última partida cambia de hoja:', eMedicionTablaOC);
+          }
+        }
 
         if (filasPrevias.length) {
           doc.autoTable({
@@ -26782,7 +26844,12 @@
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
-            bodyStyles: { fillColor: [255, 255, 255] },
+            // cellPadding aquí puede venir ensanchado (arriba/abajo) por
+            // la medición previa, SOLO cuando la última partida cambia de
+            // hoja — repartiendo entre las partidas anteriores el espacio
+            // que sobra en la hoja 1, en vez de dejarlo como un hueco en
+            // blanco al final.
+            bodyStyles: { fillColor: [255, 255, 255], cellPadding: cellPaddingFilasPreviasOC },
             columnStyles: columnStylesComunesTablaOC,
             willDrawPage: willDrawPageTablaOC,
             didDrawPage: didDrawPageTablaOC
