@@ -26929,7 +26929,21 @@
             // "+7" aquí, la partida podía quedar dibujada justo al límite y
             // ese hueco adicional hacía que el pie ya no cupiera, saltando
             // SOLO el pie (sin esta partida) a una hoja nueva.
-            margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
+            //
+            // EXCEPCIÓN: con 3 partidas o menos (footerSiempreConTodasLas-
+            // PartidasOC) esta reserva NO se aplica — se usa el margin
+            // normal. Con tan pocas partidas, reservar el pie completo
+            // aquí podía hacer que autoTable decidiera que ni siquiera
+            // esas 1-3 filas cabían en la hoja actual (por lo angosto que
+            // quedaba el espacio "disponible" con la reserva puesta) y
+            // las mandara, junto con el pie, enteras a la hoja 2 — dejando
+            // la hoja 1 con un hueco enorme. Como estas partidas son pocas
+            // y cortas, con margin normal SIEMPRE caben en la hoja actual,
+            // y el pie se fuerza a quedarse ahí mismo más abajo (ver la
+            // condición sobre "asegurarEspacioOC" junto a "y += 7").
+            margin: footerSiempreConTodasLasPartidasOC
+              ? { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY }
+              : { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
@@ -26982,7 +26996,14 @@
         // "alturaColaCompletaOC"), esto queda imposible: o se salta de
         // hoja antes de dibujar nada, o ya no se vuelve a evaluar un
         // salto a medio pie.
-        asegurarEspacioOC(alturaColaCompletaOC);
+        //
+        // EXCEPCIÓN: con 3 partidas o menos, el pie NUNCA salta de hoja —
+        // se fuerza a quedarse siempre junto con esas partidas en la hoja
+        // actual (petición explícita del usuario), así que aquí se omite
+        // la verificación de espacio para ese caso.
+        if (!footerSiempreConTodasLasPartidasOC) {
+          asegurarEspacioOC(alturaColaCompletaOC);
+        }
 
         // Tarjeta izquierda: CONDICIONES COMERCIALES + NOTAS
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
