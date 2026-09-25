@@ -26782,7 +26782,23 @@
         // un hueco en blanco abajo. Para saberlo CON CERTEZA antes de
         // dibujar de verdad, se mide en un documento aparte, desechable,
         // con exactamente los mismos datos/anchos/márgenes.
-        var cellPaddingFilasPreviasOC = 5;
+        //
+        // "mapaPaddingExtraFilasPreviasOC": cuánto padding extra (arriba+
+        // abajo) le toca a cada partida de "filasPrevias" por su índice —
+        // solo las que caen en una hoja con espacio de sobra lo tienen.
+        // "cellPaddingFilaUltimaOC": lo mismo pero para la última partida
+        // (que se dibuja en su propio autoTable aparte).
+        var mapaPaddingExtraFilasPreviasOC = {};
+        var cellPaddingFilaUltimaOC = 5;
+        function construirDidParseCellFilasPreviasOC(mapa) {
+          return function(data) {
+            if (data.section !== 'body') return;
+            var extra = mapa[data.row.index];
+            if (extra) {
+              data.cell.styles.cellPadding = { top: 5 + extra / 2, right: 5, bottom: 5 + extra / 2, left: 5 };
+            }
+          };
+        }
         // true si la medición determina que la última partida (con el pie
         // completo reservado) NO cabe en la hoja actual junto con las
         // partidas anteriores, y por lo tanto debe saltar a una hoja
@@ -26793,10 +26809,15 @@
         // con esta misma medición (que es justo lo que falló antes con
         // el "+7" no reservado).
         var filaUltimaCambiaDeHojaOC = false;
-        var yInicioTablaDebugOC = y;
         if (filasPrevias.length && filaUltima.length) {
           try {
             var docMedicionTablaOC = new jsPDF('p', 'pt', 'a4');
+            // Se registra en qué hoja (relativa a esta tabla) cae cada
+            // partida — necesario para, más abajo, poder repartir espacio
+            // extra SOLO entre las partidas de la ÚLTIMA hoja de
+            // "filasPrevias" (y no entre TODAS, cuando "filasPrevias" ya
+            // ocupa varias hojas por sí sola).
+            var filaAPaginaMedicionFPOC = {};
             docMedicionTablaOC.autoTable({
               head: [headers],
               body: filasPrevias,
@@ -26814,7 +26835,12 @@
               // como un fragmento suelto — p.ej. solo la última línea de un
               // número de parte envuelto en dos líneas, como "00" — flotando
               // arriba de la siguiente partida).
-              rowPageBreak: 'avoid'
+              rowPageBreak: 'avoid',
+              didDrawCell: function(data) {
+                if (data.section === 'body' && data.column.index === 0) {
+                  filaAPaginaMedicionFPOC[data.row.index] = data.pageNumber;
+                }
+              }
             });
             // Cuántas hojas físicas necesitó SOLO "filasPrevias" en esta
             // medición (1 si cupieron todas en la hoja actual, más de 1
@@ -26826,6 +26852,16 @@
             // cuál de las hojas de "filasPrevias" haya terminado.
             var paginasFilasPreviasMedicionOC = docMedicionTablaOC.internal.getNumberOfPages();
             var finalYFilasPreviasMedicionOC = docMedicionTablaOC.lastAutoTable.finalY;
+            // Índices (dentro de "filasPrevias") de las partidas que caen
+            // en su ÚLTIMA hoja — las candidatas a recibir espacio extra
+            // si esa hoja (con o sin la última partida y el pie) queda
+            // con un hueco notorio.
+            var filasEnUltimaPaginaFPOC = [];
+            for (var idxFilaFPOC = 0; idxFilaFPOC < filasPrevias.length; idxFilaFPOC++) {
+              if (filaAPaginaMedicionFPOC[idxFilaFPOC] === paginasFilasPreviasMedicionOC) {
+                filasEnUltimaPaginaFPOC.push(idxFilaFPOC);
+              }
+            }
             docMedicionTablaOC.autoTable({
               head: undefined,
               showHead: 'never',
@@ -26847,6 +26883,8 @@
               columnStyles: columnStylesComunesTablaOC,
               rowPageBreak: 'avoid'
             });
+            var finalYFilaUltimaMedicionOC = docMedicionTablaOC.lastAutoTable.finalY;
+            var paginasTotalesMedicionOC = docMedicionTablaOC.internal.getNumberOfPages();
             // Si al agregar la última partida (con el pie completo
             // reservado) el número de hojas de la medición SUBIÓ respecto
             // a "solo filasPrevias", es que se movió a una hoja nueva —
@@ -26856,49 +26894,134 @@
             // ninguna verificación de respaldo el caso — justo el más
             // común en OC largas — de una tabla previa que YA se
             // extiende a varias hojas).
-            if (docMedicionTablaOC.internal.getNumberOfPages() > paginasFilasPreviasMedicionOC) {
+            if (paginasTotalesMedicionOC > paginasFilasPreviasMedicionOC) {
               filaUltimaCambiaDeHojaOC = true;
             }
-            // DEBUG TEMPORAL — quitar después de diagnosticar el caso de
-            // la OC STEREN (10 partidas) que sigue saltando a una hoja
-            // extra pese a que, por medición real del PDF, sobra espacio.
-            console.log('[DEBUG PDF OC]', {
-              filasPreviasLength: filasPrevias.length,
-              filaUltimaLength: filaUltima.length,
-              yInicioTabla: y,
-              alturaColaCompletaOC: alturaColaCompletaOC,
-              paginasFilasPreviasMedicionOC: paginasFilasPreviasMedicionOC,
-              finalYFilasPreviasMedicionOC: finalYFilasPreviasMedicionOC,
-              paginasTrasFilaUltimaMedicion: docMedicionTablaOC.internal.getNumberOfPages(),
-              filaUltimaCambiaDeHojaOC: filaUltimaCambiaDeHojaOC,
-              limiteContenidoY: limiteContenidoY,
-              pageHeight: pageHeight
-            });
-            // Repartir espacio (cellPadding extra) entre las partidas
-            // anteriores solo tiene sentido visualmente cuando TODAS
-            // ellas quedan juntas en una sola hoja (la hoja 1) y es esa
-            // MISMA hoja la que se queda con un hueco al final porque la
-            // última partida se fue a la siguiente — si "filasPrevias" ya
-            // ocupaba varias hojas por sí sola, no hay una única hoja con
-            // "espacio sobrante" que reforzar de esta manera.
-            if (paginasFilasPreviasMedicionOC === 1 && filaUltimaCambiaDeHojaOC) {
-              var espacioDisponibleFilasPreviasOC = limiteContenidoY - y;
-              var alturaNaturalFilasPreviasOC = finalYFilasPreviasMedicionOC - y;
-              var huecoFilasPreviasOC = espacioDisponibleFilasPreviasOC - alturaNaturalFilasPreviasOC;
-              // Solo compensa si el hueco es notorio (> ~1cm); huecos
-              // chicos se dejan tal cual para no verse forzado.
-              // NO repartir el espacio sobrante entre las partidas.
-              // Las partidas deben conservar una separación uniforme y
-              // quedar consecutivas. El espacio libre de la hoja se deja
-              // como espacio libre; nunca se convierte en padding adicional.
-              cellPaddingFilasPreviasOC = 5;
+
+            // A partir de aquí: "en caso de hacer un salto de hoja, cubrir
+            // los espacios antes del pie con las partidas de esa hoja".
+            // Dos huecos posibles, según el caso:
+            //   Bloque A: si la última partida se va SOLA a una hoja
+            //     nueva (junto con el pie), la ÚLTIMA hoja de
+            //     "filasPrevias" (la que se queda SIN el pie) puede tener
+            //     espacio de sobra — se reparte solo entre las partidas
+            //     de esa hoja.
+            //   Bloque B: la hoja que sí lleva la última partida + el pie
+            //     completo — puede ser la propia hoja nueva de la última
+            //     partida (si cambió de hoja), o la última hoja de
+            //     "filasPrevias" compartida con la última partida (si NO
+            //     cambió de hoja, pero "filasPrevias" ya ocupaba varias
+            //     hojas). Se reparte entre las partidas de esa hoja
+            //     (incluida la última) hasta donde empieza el pie.
+            var candidatoMapaBloqueAOC = null;
+            if (filaUltimaCambiaDeHojaOC && filasEnUltimaPaginaFPOC.length > 0) {
+              var inicioUltimaPaginaFPOC = (paginasFilasPreviasMedicionOC === 1) ? y : (franjas.yInicio + 6.25);
+              var naturalUltimaPaginaFPOC = finalYFilasPreviasMedicionOC - inicioUltimaPaginaFPOC;
+              var huecoUltimaPaginaFPOC = limiteContenidoY - inicioUltimaPaginaFPOC - naturalUltimaPaginaFPOC;
+              if (huecoUltimaPaginaFPOC > 30) {
+                var extraBloqueAOC = Math.min(huecoUltimaPaginaFPOC / filasEnUltimaPaginaFPOC.length, 25);
+                candidatoMapaBloqueAOC = {};
+                filasEnUltimaPaginaFPOC.forEach(function(idx) { candidatoMapaBloqueAOC[idx] = extraBloqueAOC; });
+              }
+            }
+            var candidatoMapaBloqueBFilasPreviasOC = null;
+            var candidatoExtraBloqueBFilaUltimaOC = 0;
+            if (filaUltimaCambiaDeHojaOC) {
+              var inicioPagFUOC = franjas.yInicio + 6.25;
+              var naturalFUOC = finalYFilaUltimaMedicionOC - inicioPagFUOC;
+              var contentBottomFUOC = limiteContenidoY - 7 - alturaColaCompletaOC;
+              var huecoFUOC = contentBottomFUOC - naturalFUOC;
+              if (huecoFUOC > 30) {
+                candidatoExtraBloqueBFilaUltimaOC = Math.min(huecoFUOC / filaUltima.length, 25);
+              }
+            } else if (paginasFilasPreviasMedicionOC > 1) {
+              var inicioPagCompOC = franjas.yInicio + 6.25;
+              var naturalCompOC = finalYFilaUltimaMedicionOC - inicioPagCompOC;
+              var contentBottomCompOC = limiteContenidoY - 7 - alturaColaCompletaOC;
+              var huecoCompOC = contentBottomCompOC - naturalCompOC;
+              var filasCompartidasCountOC = filasEnUltimaPaginaFPOC.length + filaUltima.length;
+              if (huecoCompOC > 30 && filasCompartidasCountOC > 0) {
+                var extraCompOC = Math.min(huecoCompOC / filasCompartidasCountOC, 25);
+                candidatoMapaBloqueBFilasPreviasOC = {};
+                filasEnUltimaPaginaFPOC.forEach(function(idx) { candidatoMapaBloqueBFilasPreviasOC[idx] = extraCompOC; });
+                candidatoExtraBloqueBFilaUltimaOC = extraCompOC;
+              }
+            }
+
+            // OJO: igual que con el fix anterior, lo de arriba son
+            // ESTIMACIONES — el alto real de cada fila ya con el padding
+            // puesto se redondea hacia arriba, así que la suma real casi
+            // siempre queda unos puntos MÁS grande que el hueco
+            // calculado. Por eso, antes de usar cualquiera de los dos
+            // bloques de verdad, se vuelve a armar la tabla completa
+            // (filasPrevias + última partida, tal cual se dibujarán) en
+            // un documento desechable, reduciendo el padding candidato en
+            // pasos si hace falta, y solo se acepta si el total de hojas
+            // NO sube respecto a la medición original (sin ningún
+            // relleno) — si ni reduciéndolo se sostiene, se deja todo con
+            // el padding normal (mejor un hueco en blanco, cosmético, que
+            // partidas separadas por error).
+            if (candidatoMapaBloqueAOC || candidatoMapaBloqueBFilasPreviasOC || candidatoExtraBloqueBFilaUltimaOC > 0) {
+              for (var intentoOC = 0; intentoOC < 4; intentoOC++) {
+                var factorOC = 1 - intentoOC * 0.3;
+                if (factorOC <= 0) break;
+                var mapaProbarOC = {};
+                if (candidatoMapaBloqueAOC) {
+                  Object.keys(candidatoMapaBloqueAOC).forEach(function(k) { mapaProbarOC[k] = candidatoMapaBloqueAOC[k] * factorOC; });
+                }
+                if (candidatoMapaBloqueBFilasPreviasOC) {
+                  Object.keys(candidatoMapaBloqueBFilasPreviasOC).forEach(function(k) { mapaProbarOC[k] = candidatoMapaBloqueBFilasPreviasOC[k] * factorOC; });
+                }
+                var extraFilaUltimaProbarOC = candidatoExtraBloqueBFilaUltimaOC * factorOC;
+                var cellPaddingFilaUltimaProbarOC = { top: 5 + extraFilaUltimaProbarOC / 2, right: 5, bottom: 5 + extraFilaUltimaProbarOC / 2, left: 5 };
+                try {
+                  var docVerifOC = new jsPDF('p', 'pt', 'a4');
+                  docVerifOC.autoTable({
+                    head: [headers],
+                    body: filasPrevias,
+                    startY: y,
+                    margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY },
+                    theme: 'plain',
+                    styles: estilosComunesTablaOC,
+                    headStyles: headStylesComunesTablaOC,
+                    bodyStyles: { fillColor: [255, 255, 255] },
+                    columnStyles: columnStylesComunesTablaOC,
+                    rowPageBreak: 'avoid',
+                    didParseCell: construirDidParseCellFilasPreviasOC(mapaProbarOC)
+                  });
+                  var yTrasFPVerifOC = docVerifOC.lastAutoTable.finalY;
+                  if (filaUltimaCambiaDeHojaOC) {
+                    docVerifOC.addPage();
+                    yTrasFPVerifOC = franjas.yInicio + 6.25;
+                  }
+                  docVerifOC.autoTable({
+                    head: undefined,
+                    showHead: 'never',
+                    body: filaUltima,
+                    startY: yTrasFPVerifOC,
+                    margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
+                    theme: 'plain',
+                    styles: estilosComunesTablaOC,
+                    headStyles: headStylesComunesTablaOC,
+                    bodyStyles: { fillColor: [255, 255, 255], cellPadding: cellPaddingFilaUltimaProbarOC },
+                    columnStyles: columnStylesComunesTablaOC,
+                    rowPageBreak: 'avoid'
+                  });
+                  if (docVerifOC.internal.getNumberOfPages() <= paginasTotalesMedicionOC) {
+                    mapaPaddingExtraFilasPreviasOC = mapaProbarOC;
+                    cellPaddingFilaUltimaOC = cellPaddingFilaUltimaProbarOC;
+                    break;
+                  }
+                } catch (eVerifOC) {
+                  break;
+                }
+              }
             }
           } catch (eMedicionTablaOC) {
             console.warn('No se pudo medir si la última partida cambia de hoja:', eMedicionTablaOC);
           }
         }
 
-        var paginaFisicaAntesFilasPreviasDebugOC = doc.internal.getNumberOfPages();
         if (filasPrevias.length) {
           doc.autoTable({
             head: [headers],
@@ -26911,23 +27034,22 @@
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
-            // cellPadding aquí puede venir ensanchado (arriba/abajo) por
-            // la medición previa, SOLO cuando la última partida cambia de
-            // hoja — repartiendo entre las partidas anteriores el espacio
-            // que sobra en la hoja 1, en vez de dejarlo como un hueco en
-            // blanco al final.
-            bodyStyles: { fillColor: [255, 255, 255], cellPadding: cellPaddingFilasPreviasOC },
+            bodyStyles: { fillColor: [255, 255, 255] },
             columnStyles: columnStylesComunesTablaOC,
             // Ver nota de "rowPageBreak" en la medición previa: ninguna
             // partida se dibuja partida a la mitad entre dos hojas.
             rowPageBreak: 'avoid',
+            // Las partidas que caen en la hoja donde hay un salto (la
+            // última hoja de esta tabla, con o sin la última partida y el
+            // pie) pueden venir con padding extra (arriba/abajo) — ver
+            // "mapaPaddingExtraFilasPreviasOC" arriba — para llenar el
+            // espacio antes del pie en vez de dejarlo como hueco en blanco.
+            didParseCell: construirDidParseCellFilasPreviasOC(mapaPaddingExtraFilasPreviasOC),
             willDrawPage: willDrawPageTablaOC,
             didDrawPage: didDrawPageTablaOC
           });
           y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
         }
-        var paginaFisicaDespuesFilasPreviasDebugOC = doc.internal.getNumberOfPages();
-        var finalYFilasPreviasRealDebugOC = y;
 
         if (filaUltima.length) {
           // Salto de hoja EXPLÍCITO: si la medición de arriba determinó
@@ -26981,49 +27103,20 @@
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
-            bodyStyles: { fillColor: [255, 255, 255] },
+            // "cellPaddingFilaUltimaOC" viene ensanchado (arriba/abajo)
+            // cuando esta partida comparte hoja con el pie y esa hoja
+            // tiene espacio de sobra antes de que empiece el pie — ver
+            // "mapaPaddingExtraFilasPreviasOC"/"cellPaddingFilaUltimaOC"
+            // más arriba. Con 3 partidas o menos (footerSiempreConTodasLas-
+            // PartidasOC) esa medición ni se ejecuta, así que aquí siempre
+            // queda en su valor normal (5).
+            bodyStyles: { fillColor: [255, 255, 255], cellPadding: cellPaddingFilaUltimaOC },
             columnStyles: columnStylesComunesTablaOC,
             rowPageBreak: 'avoid',
             willDrawPage: willDrawPageTablaOC,
             didDrawPage: didDrawPageTablaOC
           });
           y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
-        }
-
-        // DEBUG TEMPORAL — mismo diagnóstico que el console.log de arriba,
-        // pero impreso directamente EN el PDF (en rojo, chiquito) para no
-        // depender de que alguien abra la consola del navegador: basta con
-        // ver/mandar el PDF generado. Quitar junto con el console.log de
-        // arriba una vez diagnosticado el caso de la OC STEREN.
-        if (filasPrevias.length && filaUltima.length) {
-          try {
-            doc.setFontSize(6);
-            doc.setTextColor(200, 0, 0);
-            doc.text(
-              'DEBUG1 fp=' + filasPrevias.length +
-              ' pFP=' + paginasFilasPreviasMedicionOC +
-              ' fY=' + Math.round(finalYFilasPreviasMedicionOC) +
-              ' pTU=' + (typeof docMedicionTablaOC !== 'undefined' ? docMedicionTablaOC.internal.getNumberOfPages() : -1) +
-              ' cambia=' + filaUltimaCambiaDeHojaOC +
-              ' altCola=' + Math.round(alturaColaCompletaOC) +
-              ' lim=' + Math.round(limiteContenidoY) +
-              ' pH=' + Math.round(pageHeight) +
-              ' yReal=' + Math.round(y),
-              margin, y + 10
-            );
-            doc.text(
-              'DEBUG2 yInicio=' + Math.round(yInicioTablaDebugOC) +
-              ' pagAntesFP=' + paginaFisicaAntesFilasPreviasDebugOC +
-              ' pagDespuesFP=' + paginaFisicaDespuesFilasPreviasDebugOC +
-              ' finalYFPreal=' + Math.round(finalYFilasPreviasRealDebugOC) +
-              ' franjaYInicio=' + Math.round(franjas.yInicio),
-              margin, y + 20
-            );
-            doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-            doc.setFontSize(8);
-          } catch (eDebugPintadoOC) {
-            console.warn('No se pudo pintar debug en PDF:', eDebugPintadoOC);
-          }
         }
 
         var subtotal = 0,
