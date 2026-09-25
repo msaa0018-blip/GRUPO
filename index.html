@@ -26826,6 +26826,8 @@
             // cuál de las hojas de "filasPrevias" haya terminado.
             var paginasFilasPreviasMedicionOC = docMedicionTablaOC.internal.getNumberOfPages();
             var finalYFilasPreviasMedicionOC = docMedicionTablaOC.lastAutoTable.finalY;
+            var anchoColAutoMedicionDebugOC = (docMedicionTablaOC.lastAutoTable.columns || []).map(function(c) { return Math.round(c.width); });
+            var altoFilaMedicionDebugOC = (docMedicionTablaOC.lastAutoTable.body || []).map(function(r) { return Math.round(r.height); });
             docMedicionTablaOC.autoTable({
               head: undefined,
               showHead: 'never',
@@ -26932,6 +26934,8 @@
         }
         var paginaFisicaDespuesFilasPreviasDebugOC = doc.internal.getNumberOfPages();
         var finalYFilasPreviasRealDebugOC = y;
+        var anchoColAutoRealDebugOC = (doc.lastAutoTable && doc.lastAutoTable.columns || []).map(function(c) { return Math.round(c.width); });
+        var altoFilaRealDebugOC = (doc.lastAutoTable && doc.lastAutoTable.body || []).map(function(r) { return Math.round(r.height); });
 
         if (filaUltima.length) {
           // Salto de hoja EXPLÍCITO: si la medición de arriba determinó
@@ -27022,6 +27026,19 @@
               ' finalYFPreal=' + Math.round(finalYFilasPreviasRealDebugOC) +
               ' franjaYInicio=' + Math.round(franjas.yInicio),
               margin, y + 20
+            );
+            doc.text(
+              'DEBUG3 anchoAutoMed=' + JSON.stringify(anchoColAutoMedicionDebugOC) +
+              ' anchoAutoReal=' + JSON.stringify(anchoColAutoRealDebugOC),
+              margin, y + 30
+            );
+            doc.text(
+              'DEBUG4 altoFilaMed=' + JSON.stringify(altoFilaMedicionDebugOC),
+              margin, y + 40
+            );
+            doc.text(
+              'DEBUG5 altoFilaReal=' + JSON.stringify(altoFilaRealDebugOC),
+              margin, y + 50
             );
             doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
             doc.setFontSize(8);
