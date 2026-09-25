@@ -26807,7 +26807,15 @@
                 showHead: 'never',
                 body: filaUltima,
                 startY: finalYFilasPreviasMedicionOC,
-                margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + alturaColaCompletaOC },
+                // "+ 7" porque, al dibujar de verdad, entre el final de esta
+                // partida y el inicio del pie hay un espacio fijo (ver
+                // "y += 7" antes de "asegurarEspacioOC(alturaColaCompletaOC)"
+                // más abajo). Si esa separación no se reserva también aquí,
+                // la partida puede quedar dibujada justo al límite y ese
+                // "+7" hace que el pie ya no quepa, saltando SOLO el pie
+                // (sin esta partida) a una hoja nueva — exactamente lo que
+                // no debe pasar.
+                margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
                 theme: 'plain',
                 styles: estilosComunesTablaOC,
                 headStyles: headStylesComunesTablaOC,
@@ -26885,7 +26893,13 @@
             // hoja actual, autoTable manda la partida completa a una hoja
             // nueva — nunca queda sola sin su pie, ni el pie queda solo
             // sin al menos esta última partida (igual que antes).
-            margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + alturaColaCompletaOC },
+            // El "+ 7" reserva también el espacio fijo que se deja entre el
+            // final de la tabla y el inicio del pie (ver "y += 7" más abajo,
+            // antes de "asegurarEspacioOC(alturaColaCompletaOC)") — sin este
+            // "+7" aquí, la partida podía quedar dibujada justo al límite y
+            // ese hueco adicional hacía que el pie ya no cupiera, saltando
+            // SOLO el pie (sin esta partida) a una hoja nueva.
+            margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
