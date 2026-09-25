@@ -26793,6 +26793,7 @@
         // con esta misma medición (que es justo lo que falló antes con
         // el "+7" no reservado).
         var filaUltimaCambiaDeHojaOC = false;
+        var yInicioTablaDebugOC = y;
         if (filasPrevias.length && filaUltima.length) {
           try {
             var docMedicionTablaOC = new jsPDF('p', 'pt', 'a4');
@@ -26901,6 +26902,7 @@
           }
         }
 
+        var paginaFisicaAntesFilasPreviasDebugOC = doc.internal.getNumberOfPages();
         if (filasPrevias.length) {
           doc.autoTable({
             head: [headers],
@@ -26928,6 +26930,8 @@
           });
           y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
         }
+        var paginaFisicaDespuesFilasPreviasDebugOC = doc.internal.getNumberOfPages();
+        var finalYFilasPreviasRealDebugOC = y;
 
         if (filaUltima.length) {
           // Salto de hoja EXPLÍCITO: si la medición de arriba determinó
@@ -27000,7 +27004,7 @@
             doc.setFontSize(6);
             doc.setTextColor(200, 0, 0);
             doc.text(
-              'DEBUG fp=' + filasPrevias.length +
+              'DEBUG1 fp=' + filasPrevias.length +
               ' pFP=' + paginasFilasPreviasMedicionOC +
               ' fY=' + Math.round(finalYFilasPreviasMedicionOC) +
               ' pTU=' + (typeof docMedicionTablaOC !== 'undefined' ? docMedicionTablaOC.internal.getNumberOfPages() : -1) +
@@ -27010,6 +27014,14 @@
               ' pH=' + Math.round(pageHeight) +
               ' yReal=' + Math.round(y),
               margin, y + 10
+            );
+            doc.text(
+              'DEBUG2 yInicio=' + Math.round(yInicioTablaDebugOC) +
+              ' pagAntesFP=' + paginaFisicaAntesFilasPreviasDebugOC +
+              ' pagDespuesFP=' + paginaFisicaDespuesFilasPreviasDebugOC +
+              ' finalYFPreal=' + Math.round(finalYFilasPreviasRealDebugOC) +
+              ' franjaYInicio=' + Math.round(franjas.yInicio),
+              margin, y + 20
             );
             doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
             doc.setFontSize(8);
