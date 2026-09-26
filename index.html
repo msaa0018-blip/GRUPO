@@ -6270,6 +6270,9 @@
     <div class="modal-content">
       <div class="modal-header"><h3>📄 Previsualización del Reporte</h3><button class="btn-modal-x" onclick="window.cerrarPreviewCXP()">✕</button></div>
       <div class="modal-body"><div id="cxpPreviewFrame" class="visualizar-pdf-viewer"></div></div>
+      <div class="modal-footer">
+        <button class="btn-imprimir" onclick="window.imprimirReportePreview()">🖨️ Imprimir</button>
+      </div>
     </div>
   </div>
 
@@ -27383,23 +27386,23 @@
       }
 
       async function agregarLogoUsuarioReporte(doc, pageWidth, margin) {
-        // Igual que actualizarHeaderEmpresa(): el logo/nombre por defecto
-        // se toma del propio catálogo (empresa GIE), no de una URL externa
-        // aparte que podía no cargar.
+        // Logo del DEPARTAMENTO del usuario que genera el reporte, a la
+        // izquierda del encabezado. Usa la misma regla ya establecida en
+        // getLogoPorDepartamento() (encabezado de pantalla y OC): TI/ISCI
+        // muestran su propio logo; el resto, el logo de su empresa del
+        // catálogo. Si el rol tiene acceso libre (sin depto fijo — ej.
+        // Director General/Administrador/Finanzas/Contabilidad) o no hay
+        // coincidencia, se usa el logo por defecto de GIE.
         var empresaGIEReporte = getEmpresaCatalogoPorNombre('GRUPO INDUSTRIAL EXTINGUE');
         var DEFAULT_LOGO = (empresaGIEReporte && empresaGIEReporte.logo) || 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
         var DEFAULT_NOMBRE = (empresaGIEReporte && empresaGIEReporte.nombre) || 'GRUPO INDUSTRIAL EXTINGUE';
-        var empresaUsuario = '';
         var nombreEmpresa = DEFAULT_NOMBRE;
 
         var defaultData = actual ? obtenerEmpresaDeptoDefault(actual) : null;
-        if (defaultData && !defaultData.libre && defaultData.empresa) {
-          empresaUsuario = defaultData.empresa;
-        }
-
-        var empresaCatalogo = getEmpresaCatalogoPorNombre(empresaUsuario);
-        var logoUrl = empresaCatalogo && empresaCatalogo.logo ? empresaCatalogo.logo : DEFAULT_LOGO;
-        if (empresaCatalogo && empresaCatalogo.nombre) nombreEmpresa = empresaCatalogo.nombre;
+        var logoInfo = (defaultData && !defaultData.libre) ? getLogoPorDepartamento(defaultData.empresa, defaultData.departamento) : null;
+        var logoUrl = logoInfo ? logoInfo.url : DEFAULT_LOGO;
+        var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
+        if (logoInfo && logoInfo.nombre) nombreEmpresa = logoInfo.nombre;
 
         try {
           var imgData = await obtenerImagenComoDataURL(logoUrl);
@@ -27417,12 +27420,12 @@
             imgWidth = imgWidth * (maxHeight / imgHeight);
             imgHeight = maxHeight;
           }
-          doc.addImage(imgData, 'JPEG', pageWidth - margin - imgWidth, 22, imgWidth, imgHeight);
+          doc.addImage(imgData, logoTipo, margin, 22, imgWidth, imgHeight);
         } catch (e) {
           doc.setFontSize(10);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombreEmpresa, pageWidth - margin, 40, { align: 'right' });
+          doc.text(nombreEmpresa, margin, 40, { align: 'left' });
         }
       }
 
@@ -27489,6 +27492,43 @@
       window.descargarReportePreview = function() {
         if (!reportePreviewPDF) return;
         reportePreviewPDF.save(reportePreviewNombre);
+      };
+
+      // Imprime el PDF ya generado que está abierto en el modal de
+      // previsualización (#cxpPreviewModal), sin volver a generarlo.
+      // Este modal es compartido por CXP, CXC y CXF — las tres funciones
+      // previsualizarReporteCXP/CXC/CXF ya guardan el doc en
+      // reportePreviewPDF antes de abrir el modal, así que un solo botón
+      // de "Imprimir" en el footer sirve para los tres reportes.
+      window.imprimirReportePreview = function() {
+        if (!reportePreviewPDF) { alert('No hay un reporte para imprimir.'); return; }
+        try {
+          var blobUrl = reportePreviewPDF.output('bloburl');
+          var printFrame = document.createElement('iframe');
+          printFrame.style.position = 'fixed';
+          printFrame.style.right = '0';
+          printFrame.style.bottom = '0';
+          printFrame.style.width = '0';
+          printFrame.style.height = '0';
+          printFrame.style.border = '0';
+          printFrame.src = blobUrl;
+          printFrame.onload = function() {
+            try {
+              printFrame.contentWindow.focus();
+              printFrame.contentWindow.print();
+            } catch (e) {
+              window.open(blobUrl, '_blank');
+            }
+          };
+          document.body.appendChild(printFrame);
+          setTimeout(function() {
+            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        } catch (error) {
+          console.error('❌ Error al imprimir el reporte:', error);
+          alert('Error al imprimir el reporte: ' + error.message);
+        }
       };
 
       window.imprimirReporteCXP = async function() {
