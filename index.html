@@ -1981,11 +1981,19 @@
     padding-bottom: 12px;
   }
   #cxpPreviewModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #cxpPreviewModal .modal-body { flex: 1; overflow: auto; min-height: 300px; }
+  /* Corrección de redimensionado: antes el cuerpo tenía min-height fijo
+     (300px / 80vh en escritorio) y el visor 400px; al reducir la altura de
+     la ventana, header + cuerpo + footer superaban el alto del modal y el
+     botón "Imprimir" quedaba fuera del recuadro. Ahora el modal ocupa el
+     alto disponible del overlay y el cuerpo (flex:1, min-height:0) se
+     encoge con su propio scroll; header y footer nunca se comprimen. */
+  #cxpPreviewModal .modal-content { height: 100%; max-height: 100%; }
+  #cxpPreviewModal .modal-header, #cxpPreviewModal .modal-footer { flex-shrink: 0; }
+  #cxpPreviewModal .modal-body { flex: 1 1 auto; overflow: auto; min-height: 0; }
   #cxpPreviewModal .modal-body .visualizar-pdf-viewer {
     width: 100%;
     height: 100%;
-    min-height: 400px;
+    min-height: 0;
   }
   #cxpPreviewModal .modal-footer {
     padding-top: 12px;
@@ -2040,11 +2048,17 @@
     padding-bottom: 12px;
   }
   #ofDocModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #ofDocModal .modal-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: flex-start; justify-content: center; }
+  /* Misma corrección de redimensionado que #cxpPreviewModal: el modal
+     ocupa el alto disponible del overlay, el cuerpo se encoge con scroll
+     propio (min-height:0) y header/footer nunca se comprimen, para que el
+     pie no se salga del recuadro en pantallas bajas. */
+  #ofDocModal .modal-content { height: 100%; max-height: 100%; }
+  #ofDocModal .modal-header, #ofDocModal .modal-footer { flex-shrink: 0; }
+  #ofDocModal .modal-body { flex: 1 1 auto; overflow: auto; min-height: 0; display: flex; align-items: flex-start; justify-content: center; }
   #ofDocModal .modal-body .visualizar-pdf-viewer {
     width: 100%;
     height: 100%;
-    min-height: 400px;
+    min-height: 0;
   }
   #ofDocModal .modal-footer {
     padding-top: 12px;
@@ -2063,13 +2077,14 @@
      regla de arriba) llenen por completo la ventana, en vez de quedar con
      un recuadro pequeño y espacio vacío color crema debajo. */
   @media (min-width: 900px) {
-    #visualizarModal .modal-content, #cxpPreviewModal .modal-content, #ofDocModal .modal-content { max-width: 1100px; max-height: 96vh; height: 96vh; }
+    #visualizarModal .modal-content { max-width: 1100px; max-height: 96vh; height: 96vh; }
+    #cxpPreviewModal .modal-content, #ofDocModal .modal-content { max-width: 1100px; height: 100%; max-height: 100%; }
     /* #visualizarModal queda fuera de este min-height: ya tiene el
        stepper de la OC arriba del PDF, y forzar un mínimo fijo (80vh)
        sin importar cuánto ocupe el encabezado + stepper era justo lo
        que hacía que el visor de PDF se saliera del recuadro crema
        (flex:1 ya se encarga de llenar el espacio restante). */
-    #cxpPreviewModal .modal-body, #ofDocModal .modal-body { min-height: 80vh; }
+    #cxpPreviewModal .modal-body, #ofDocModal .modal-body { min-height: 0; }
   }
 
   .progress-bar { height: 10px; background: var(--gray-200); border-radius: 6px; overflow: hidden; margin-top: 4px }
@@ -25426,6 +25441,12 @@
       async function renderizarPDFEnContenedor(contenedorId, fuente, zoomFactor) {
         var contenedor = document.getElementById(contenedorId);
         if (!contenedor) return;
+        // Token de render: si llega otro render (nuevo PDF o redimensionado)
+        // mientras este sigue dibujando, este se descarta.
+        var token = (contenedor._pdfRenderToken || 0) + 1;
+        contenedor._pdfRenderToken = token;
+        contenedor._pdfDoc = null;
+        contenedor._pdfZoom = zoomFactor || 1;
         contenedor.innerHTML = '<div class="visualizar-pdf-cargando">Generando vista previa…</div>';
         try {
           if (!window.pdfjsLib) throw new Error('pdf.js no está disponible');
@@ -25442,29 +25463,80 @@
             origenPDF = { url: fuente };
           }
           var pdf = await window.pdfjsLib.getDocument(origenPDF).promise;
-          contenedor.innerHTML = '';
-          var anchoDisponible = Math.max(contenedor.clientWidth - 4, 280) * (zoomFactor || 1);
-          var dpr = window.devicePixelRatio || 1;
-          for (var numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
-            var pagina = await pdf.getPage(numPagina);
-            var viewportBase = pagina.getViewport({ scale: 1 });
-            var escala = anchoDisponible / viewportBase.width;
-            var viewport = pagina.getViewport({ scale: escala * dpr });
-            var canvas = document.createElement('canvas');
-            canvas.className = 'visualizar-pdf-pagina';
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            canvas.style.width = (viewport.width / dpr) + 'px';
-            canvas.style.height = (viewport.height / dpr) + 'px';
-            var ctx = canvas.getContext('2d');
-            await pagina.render({ canvasContext: ctx, viewport: viewport }).promise;
-            contenedor.appendChild(canvas);
-          }
+          if (contenedor._pdfRenderToken !== token) return;
+          contenedor._pdfDoc = pdf;
+          await dibujarPaginasPDF(contenedor, pdf, token);
         } catch (errorRenderPDF) {
+          if (contenedor._pdfRenderToken !== token) return;
           console.error('❌ Error al renderizar el PDF en "' + contenedorId + '":', errorRenderPDF);
           contenedor.innerHTML = '<div class="visualizar-pdf-error">⚠️ No se pudo mostrar la vista previa del PDF.<br>Usa el botón de descarga.</div>';
         }
       }
+
+      // Dibuja todas las páginas del PDF ya cargado (pdf.js) al ancho actual
+      // del contenedor. Las páginas se preparan fuera de pantalla y se
+      // reemplazan de una sola vez: al redimensionar no hay parpadeo ni
+      // aviso de "Generando…", y se conserva la posición del scroll.
+      async function dibujarPaginasPDF(contenedor, pdf, token) {
+        var anchoContenedor = contenedor.clientWidth;
+        var anchoDisponible = Math.max(anchoContenedor - 4, 280) * (contenedor._pdfZoom || 1);
+        var dpr = window.devicePixelRatio || 1;
+        var fragmento = document.createDocumentFragment();
+        for (var numPagina = 1; numPagina <= pdf.numPages; numPagina++) {
+          var pagina = await pdf.getPage(numPagina);
+          if (contenedor._pdfRenderToken !== token) return;
+          var viewportBase = pagina.getViewport({ scale: 1 });
+          var escala = anchoDisponible / viewportBase.width;
+          var viewport = pagina.getViewport({ scale: escala * dpr });
+          var canvas = document.createElement('canvas');
+          canvas.className = 'visualizar-pdf-pagina';
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.width = (viewport.width / dpr) + 'px';
+          // Alto automático (proporción intrínseca del canvas): si el
+          // contenedor se encoge antes del re-dibujado, max-width:100%
+          // reduce el ancho sin deformar la página.
+          canvas.style.height = 'auto';
+          var ctx = canvas.getContext('2d');
+          await pagina.render({ canvasContext: ctx, viewport: viewport }).promise;
+          if (contenedor._pdfRenderToken !== token) return;
+          fragmento.appendChild(canvas);
+        }
+        var altoScroll = contenedor.scrollHeight;
+        var proporcionScroll = altoScroll > 0 ? contenedor.scrollTop / altoScroll : 0;
+        contenedor.innerHTML = '';
+        contenedor.appendChild(fragmento);
+        contenedor.scrollTop = proporcionScroll * contenedor.scrollHeight;
+        contenedor._pdfAncho = anchoContenedor;
+        contenedor._pdfDpr = dpr;
+      }
+
+      // Al cambiar el tamaño de la ventana (o girar el celular), los visores
+      // visibles se vuelven a dibujar al nuevo ancho, para que el documento
+      // no quede cortado ni pequeño con espacio vacío. Aplica a TODOS los
+      // modales que usan .visualizar-pdf-viewer.
+      (function () {
+        var temporizadorResizePDF = null;
+        function redibujarVisoresPDF() {
+          var visores = document.querySelectorAll('.visualizar-pdf-viewer');
+          for (var iv = 0; iv < visores.length; iv++) {
+            var visor = visores[iv];
+            if (!visor._pdfDoc || !visor.isConnected || visor.offsetParent === null) continue;
+            if (!visor.querySelector('canvas.visualizar-pdf-pagina')) continue;
+            var dprActual = window.devicePixelRatio || 1;
+            if (Math.abs(visor.clientWidth - (visor._pdfAncho || 0)) < 8 && dprActual === visor._pdfDpr) continue;
+            var nuevoToken = (visor._pdfRenderToken || 0) + 1;
+            visor._pdfRenderToken = nuevoToken;
+            dibujarPaginasPDF(visor, visor._pdfDoc, nuevoToken).catch(function (e) {
+              console.error('❌ Error al re-dibujar el PDF tras redimensionar:', e);
+            });
+          }
+        }
+        window.addEventListener('resize', function () {
+          clearTimeout(temporizadorResizePDF);
+          temporizadorResizePDF = setTimeout(redibujarVisoresPDF, 200);
+        });
+      })();
 
       async function renderizarPDFEnVisualizarFrame(doc) {
         await renderizarPDFEnContenedor('visualizarFrame', doc);
@@ -27385,7 +27457,7 @@
         return doc;
       }
 
-      async function agregarLogoUsuarioReporte(doc, pageWidth, margin) {
+      async function agregarLogoUsuarioReporte(doc, pageWidth, margin, opciones) {
         // Logo del DEPARTAMENTO del usuario que genera el reporte, a la
         // izquierda del encabezado. Usa la misma regla ya establecida en
         // getLogoPorDepartamento() (encabezado de pantalla y OC): TI/ISCI
@@ -27426,6 +27498,44 @@
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
           doc.text(nombreEmpresa, margin, 40, { align: 'left' });
+        }
+
+        // Logo de la EMPRESA del usuario a la DERECHA del encabezado (solo
+        // en los reportes que lo piden: CXP y CXC). Empresa = la del primer
+        // permiso del usuario (catálogo organizacional); si el rol tiene
+        // acceso libre o no hay coincidencia, se usa GIE. Si resulta ser el
+        // mismo logo que ya se dibujó a la izquierda, no se repite.
+        if (opciones && opciones.logoEmpresaDerecha) {
+          var empresaDerecha = (defaultData && !defaultData.libre && defaultData.empresa) ? getEmpresaCatalogoPorNombre(defaultData.empresa) : null;
+          if (!empresaDerecha || !empresaDerecha.logo) empresaDerecha = empresaGIEReporte;
+          var logoDerechaUrl = (empresaDerecha && empresaDerecha.logo) || DEFAULT_LOGO;
+          var nombreDerecha = (empresaDerecha && empresaDerecha.nombre) || DEFAULT_NOMBRE;
+          if (logoDerechaUrl !== logoUrl) {
+            var tipoDerecha = /\.jpe?g(\?|$)/i.test(logoDerechaUrl) ? 'JPEG' : 'PNG';
+            try {
+              var imgDataDer = await obtenerImagenComoDataURL(logoDerechaUrl);
+              if (!imgDataDer) throw new Error('No se pudo cargar el logo de la empresa');
+              var imgDer = new Image();
+              imgDer.src = imgDataDer;
+              await new Promise(function(resolve, reject) {
+                imgDer.onload = resolve;
+                imgDer.onerror = reject;
+              });
+              var anchoDer = 110;
+              var altoDer = (imgDer.height / imgDer.width) * anchoDer;
+              if (altoDer > 42) {
+                anchoDer = anchoDer * (42 / altoDer);
+                altoDer = 42;
+              }
+              doc.addImage(imgDataDer, tipoDerecha, pageWidth - margin - anchoDer, 22, anchoDer, altoDer);
+            } catch (eDer) {
+              doc.setFontSize(10);
+              doc.setTextColor(11, 26, 51);
+              doc.setFont('helvetica', 'bold');
+              doc.text(nombreDerecha, pageWidth - margin, 40, { align: 'right' });
+            }
+            doc.setTextColor(0, 0, 0);
+          }
         }
       }
 
@@ -27579,7 +27689,7 @@
         var margin = 30;
         var y = 46;
 
-        await agregarLogoUsuarioReporte(doc, pageWidth, margin);
+        await agregarLogoUsuarioReporte(doc, pageWidth, margin, { logoEmpresaDerecha: true });
 
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -27703,7 +27813,7 @@
         var margin = 30;
         var y = 46;
 
-        await agregarLogoUsuarioReporte(doc, pageWidth, margin);
+        await agregarLogoUsuarioReporte(doc, pageWidth, margin, { logoEmpresaDerecha: true });
 
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
