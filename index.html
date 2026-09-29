@@ -4969,6 +4969,14 @@
               <button class="success full-width" id="btnAccionFactura" onclick="window.agregarFacturaOC()" style="margin-top:8px;">✔️ Comprobar Factura</button>
             </div>
 
+            <!-- Factura(s) ya cubren el monto de la OC: no se permite subir
+                 otra; se muestra la leyenda COMPROBADA y el botón Imprimir. -->
+            <div id="facturaComprobadaContainer" class="hidden" style="margin-top:8px;text-align:center;">
+              <div style="display:inline-block;padding:8px 22px;border:2px solid var(--color-verde);border-radius:10px;color:var(--color-verde);font-weight:800;letter-spacing:2px;font-size:18px;">✅ COMPROBADA</div>
+              <p id="facturaComprobadaTexto" style="margin:12px 0;white-space:pre-line;"></p>
+              <button class="success full-width" onclick="window.imprimirFacturasOC()">🖨️ Imprimir</button>
+            </div>
+
             <div id="facturaSiguientePasoContainer" class="hidden" style="margin-top:16px;text-align:center;">
               <p id="facturaSiguientePasoTexto" style="margin-bottom:10px;">✅ Factura registrada. ¿Deseas agregar otra factura a esta OC?</p>
               <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
@@ -17729,7 +17737,13 @@
             var usuarioDest = USUARIOS_COMPLEMENTO_PAGO[i];
             var chatId = await obtenerTelegramChatIdUsuario(usuarioDest);
             if (!chatId) { sinChat.push(usuarioDest); continue; }
-            if (await enviarTelegramAChat(chatId, texto)) resultado.enviados.push(usuarioDest);
+            // Se adjunta el comprobante de pago de la OC (📎), igual que en
+            // el aviso de "Pago realizado"; si no hay, va solo el texto.
+            var urlComprobanteOC = oc.pago2_comprobante_url || oc.comprobante_pago_url || oc.pago1_comprobante_url || null;
+            var enviadoComp = urlComprobanteOC
+              ? await enviarTelegramDocumento(chatId, texto, null, urlComprobanteOC, (oc.codigo || ('OC-' + oc.id)) + '-COMPROBANTE-PAGO.pdf')
+              : await enviarTelegramAChat(chatId, texto);
+            if (enviadoComp) resultado.enviados.push(usuarioDest);
           }
           if (!resultado.enviados.length) {
             resultado.motivo = sinChat.length ? sinChat.join(', ') + ' no tiene Chat ID de Telegram registrado.' : 'Telegram rechazó el envío.';
@@ -17766,6 +17780,62 @@
       var ocConclusionPendiente = null; // { oc, facturas: [...] }
       var facturaArchivoPendiente = null;
 
+      // true si las facturas registradas de la OC ya cubren su monto.
+      function facturasOCCompletas(oc) {
+        if (!ocConclusionPendiente || !ocConclusionPendiente.facturas.length) return false;
+        var esperado = montoEsperadoFacturaOC(oc);
+        return (sumaFacturasOC() - esperado.monto) >= -TOLERANCIA_MONTO_FACTURA;
+      }
+
+      // Vista "COMPROBADA": oculta el formulario (ya no se puede subir otra
+      // factura) y muestra la leyenda + botón Imprimir.
+      function mostrarFacturaComprobada(textoExtra) {
+        var oc = ocConclusionPendiente ? ocConclusionPendiente.oc : null;
+        document.getElementById('facturaFormularioContainer').classList.add('hidden');
+        document.getElementById('facturaSiguientePasoContainer').classList.add('hidden');
+        document.getElementById('facturaComprobadaContainer').classList.remove('hidden');
+        var texto = document.getElementById('facturaComprobadaTexto');
+        if (texto && oc) {
+          var esperado = montoEsperadoFacturaOC(oc);
+          var n = ocConclusionPendiente.facturas.length;
+          texto.textContent = 'La' + (n > 1 ? 's ' + n + ' facturas' : ' factura') + ' de esta OC ya cubre' + (n > 1 ? 'n' : '') +
+            ' el total (' + formatoMoneda(sumaFacturasOC(), esperado.moneda) + ' de ' + formatoMoneda(esperado.monto, esperado.moneda) + '). No es posible subir otra factura.' +
+            (textoExtra ? '\n\n' + textoExtra : '');
+        }
+      }
+
+      // Imprime la(s) factura(s) PDF de la OC (se descargan como blob para
+      // poder imprimirlas desde un iframe del mismo origen).
+      window.imprimirFacturasOC = async function() {
+        if (!ocConclusionPendiente) return;
+        var urls = ocConclusionPendiente.facturas.map(function(f) { return f.factura_url; }).filter(Boolean);
+        if (!urls.length && ocConclusionPendiente.oc.factura_url) urls = [ocConclusionPendiente.oc.factura_url];
+        if (!urls.length) return alert('⚠️ No hay PDF de factura para imprimir.');
+        for (var i = 0; i < urls.length; i++) {
+          try {
+            var resp = await fetch(urls[i]);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            var blob = await resp.blob();
+            var blobUrl = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+            await new Promise(function(resolve) {
+              var frame = document.createElement('iframe');
+              frame.style.position = 'fixed'; frame.style.right = '0'; frame.style.bottom = '0';
+              frame.style.width = '0'; frame.style.height = '0'; frame.style.border = '0';
+              frame.src = blobUrl;
+              frame.onload = function() {
+                try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.open(blobUrl, '_blank'); }
+                resolve();
+              };
+              document.body.appendChild(frame);
+              setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); URL.revokeObjectURL(blobUrl); }, 60000);
+            });
+          } catch (e) {
+            console.warn('No se pudo imprimir la factura desde la app, se abre en otra pestaña:', e);
+            window.open(urls[i], '_blank');
+          }
+        }
+      };
+
       window.abrirAdjuntarFactura = async function(oc) {
         ocConclusionPendiente = { oc: oc, facturas: [] };
         facturaArchivoPendiente = null;
@@ -17796,8 +17866,13 @@
         // Esta ventana es solo para SUBIR factura(s). El complemento de
         // pago lo sube Finanzas aparte, y confirmar/concluir la OC se
         // hace desde el botón "🏁 Concluir" (Contabilidad).
-        document.getElementById('facturaFormularioContainer').classList.remove('hidden');
-        document.getElementById('facturaSiguientePasoContainer').classList.add('hidden');
+        document.getElementById('facturaComprobadaContainer').classList.add('hidden');
+        if (facturasOCCompletas(oc)) {
+          mostrarFacturaComprobada();
+        } else {
+          document.getElementById('facturaFormularioContainer').classList.remove('hidden');
+          document.getElementById('facturaSiguientePasoContainer').classList.add('hidden');
+        }
 
         document.getElementById('adjuntarFacturaModal').classList.add('active');
       };
@@ -17937,6 +18012,10 @@
         if (msg) msg.innerHTML = '';
         if (!ocConclusionPendiente) return;
         var oc = ocConclusionPendiente.oc;
+        if (facturasOCCompletas(oc)) {
+          mostrarFacturaComprobada();
+          return;
+        }
 
         var uuid = (document.getElementById('facturaUUIDInput').value || '').trim().toUpperCase();
         var monto = parseFloat(document.getElementById('facturaMontoInput').value);
@@ -18036,7 +18115,10 @@
 
           if (promesaSolicitudComplemento) {
             promesaSolicitudComplemento.then(function(r) {
-              var nota = document.getElementById('facturaSiguientePasoTexto');
+              var contComprobada = document.getElementById('facturaComprobadaContainer');
+              var nota = (contComprobada && !contComprobada.classList.contains('hidden'))
+                ? document.getElementById('facturaComprobadaTexto')
+                : document.getElementById('facturaSiguientePasoTexto');
               if (!nota) return;
               var extra = r.enviados.length
                 ? '📨 Se solicitó el complemento de pago por Telegram a: ' + r.enviados.join(', ') + '.'
@@ -18047,8 +18129,7 @@
           }
 
           if (montoCompleto) {
-            if (textoPaso) textoPaso.textContent = '✅ El monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') cubre el total de la OC. Finanzas debe subir el complemento de pago ("💰 Complemento Pago") para que Contabilidad pueda concluirla.';
-            if (btnContinuar) { btnContinuar.disabled = alcanzoLimite; btnContinuar.classList.remove('hidden'); }
+            mostrarFacturaComprobada('Finanzas debe subir el complemento de pago ("💰 Complemento Pago") para que Contabilidad pueda concluirla.');
           } else if (alcanzoLimite) {
             if (textoPaso) textoPaso.textContent = '⚠️ Se alcanzó el máximo de ' + MAX_FACTURAS_POR_OC + ' facturas y el monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') no cubre el total de la OC (' + formatoMoneda(esperado.monto, esperado.moneda) + '). No es posible concluir el proceso; contacta a Finanzas/Administración.';
             if (btnContinuar) btnContinuar.classList.add('hidden');
