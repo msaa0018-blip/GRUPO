@@ -4169,6 +4169,9 @@
               <input id="colabEmail" type="email" placeholder="Email">
             </div>
             <div class="cxc-form-row">
+              <input id="colabTelegram" inputmode="numeric" placeholder="Chat ID de Telegram (avisos de pago)">
+            </div>
+            <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Salario semanal<input id="colabSalario" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">TDD BBVA<input id="colabTdd" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
             </div>
@@ -7651,9 +7654,27 @@
       // cambia: la OC debe seguir habiendo sido aprobada por su Jefe de
       // Departamento y estar en el punto correcto (AUTORIZADA) antes de
       // poder pagarse (ver window.abrirComprobantePago).
+      function esUsuarioPagosCCHF(usuario) {
+        return !!usuario && String(usuario.usuario || usuario.u || '').trim().toUpperCase() === 'CCHF';
+      }
+
+      // OC listas para pago (AUTORIZADA) o ya pagadas/cerradas (CONCLUIDA)
+      // de CUALQUIER empresa/departamento, que CCHF debe ver además de las
+      // de sus propios permisos. Las OC en trámite de aprobación de otros
+      // departamentos siguen ocultas.
+      function agregarOCsParaPagoCCHF(usuario, lista) {
+        if (!esUsuarioPagosCCHF(usuario)) return lista;
+        var idsYaIncluidos = {};
+        lista.forEach(function(o) { idsYaIncluidos[o.id] = true; });
+        var extra = ordenes.filter(function(o) {
+          return !idsYaIncluidos[o.id] && (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA');
+        });
+        return lista.concat(extra);
+      }
+
       function usuarioPuedeMarcarOCPagada(usuario) {
         if (!usuario) return false;
-        return usuario.usuario === 'CCHF' || usuario.rol === 'Administrador';
+        return esUsuarioPagosCCHF(usuario) || usuario.rol === 'Administrador';
       }
 
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
@@ -7735,13 +7756,6 @@
           // todavía están en trámite de aprobación en otros departamentos
           // (esas se quedan ocultas, igual que para cualquier otro Jefe de
           // Departamento normal).
-          if (usuario.usuario === 'CCHF') {
-            var idsYaIncluidos = ocFiltradas.map(function(o) { return o.id; });
-            var ocsListasParaPago = ordenes.filter(function(o) {
-              return idsYaIncluidos.indexOf(o.id) === -1 && (o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA');
-            });
-            ocFiltradas = ocFiltradas.concat(ocsListasParaPago);
-          }
         }
         // Antes, este filtro exigía por separado "o.solicitante ===
         // usuario.usuario" (solo si el ROL de la cuenta incluía
@@ -7761,6 +7775,11 @@
           ocFiltradas = ocFiltradas.filter(function(o) {
             return o.elaborador === usuario.usuario || o.responsable === usuario.usuario;
           });
+        }
+        // CCHF (pagos): se agregan al final para que el filtro de
+        // Elaborador/Solicitante de arriba no las quite.
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) === -1) {
+          ocFiltradas = agregarOCsParaPagoCCHF(usuario, ocFiltradas);
         }
         return ocFiltradas;
       }
@@ -12614,6 +12633,8 @@
         window.actualizarDeptosColaborador();
         document.getElementById('colabTelefono').value = '';
         document.getElementById('colabEmail').value = '';
+        var inputTelegramNuevo = document.getElementById('colabTelegram');
+        if (inputTelegramNuevo) inputTelegramNuevo.value = '';
         document.getElementById('colabSalario').value = '';
         document.getElementById('colabTdd').value = 2205.30;
         document.getElementById('colaboradorModal').classList.add('active');
@@ -12680,6 +12701,25 @@
             });
             if (errorNuevo) throw errorNuevo;
           }
+          // Chat ID de Telegram (avisos de pago): RPC aparte, para no tocar
+          // actualizar_colaborador / crear_colaborador. Si falla (p.ej. la
+          // migración aún no se aplica), el colaborador ya quedó guardado.
+          var inputTelegramGuardar = document.getElementById('colabTelegram');
+          if (inputTelegramGuardar) {
+            var chatIdTelegram = (inputTelegramGuardar.value || '').trim();
+            if (chatIdTelegram && !/^-?\d{5,20}$/.test(chatIdTelegram)) {
+              alert('⚠️ El colaborador se guardó, pero el Chat ID de Telegram no es válido (solo números). No se actualizó.');
+            } else {
+              var { error: errorTelegram } = await supabase.rpc('actualizar_telegram_colaborador', {
+                p_usuario: colaboradorEditando !== null ? colaboradorEditando : usuario,
+                p_telegram_chat_id: chatIdTelegram || null
+              });
+              if (errorTelegram) {
+                console.error('No se pudo guardar el Chat ID de Telegram:', errorTelegram);
+                alert('⚠️ El colaborador se guardó, pero no se pudo guardar el Chat ID de Telegram: ' + errorTelegram.message);
+              }
+            }
+          }
           window.cerrarColaboradorModal();
           await cargarUsuarios();
           window.cargarColaboradores();
@@ -12714,6 +12754,13 @@
         document.getElementById('colabEmail').value = u.email || '';
         document.getElementById('colabSalario').value = u.salario_semanal || 0;
         document.getElementById('colabTdd').value = (u.tdd_bbva != null ? u.tdd_bbva : 2205.30);
+        var inputTelegramEd = document.getElementById('colabTelegram');
+        if (inputTelegramEd) {
+          inputTelegramEd.value = '';
+          obtenerTelegramChatIdUsuario(usuario).then(function(chatId) {
+            if (colaboradorEditando === usuario) inputTelegramEd.value = chatId || '';
+          });
+        }
         document.getElementById('colaboradorModal').classList.add('active');
       };
 
@@ -17417,6 +17464,13 @@
           if (error) throw error;
           Object.assign(oc, updates);
 
+          // Aviso de "Pago realizado" por Telegram a los Jefes de Departamento de la OC
+          // (no bloquea: si falla, el pago ya quedó registrado).
+          notificarPagoOCTelegram(oc, {
+            numeroPago: comprobantePagoNumeroPendiente,
+            es5050: es5050
+          });
+
           indexComprobantePagoPendiente = null;
           comprobantePagoArchivoPendiente = null;
           document.getElementById('comprobantePagoModal').classList.remove('active');
@@ -17429,6 +17483,116 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo confirmar el pago: ' + escapeHTML(e.message) + '</div>';
         }
       };
+
+      // ===== AVISO DE PAGO DE OC POR TELEGRAM =====
+      // Cada vez que CCHF registra un pago (total, o cada pago de un
+      // 50/50), SOLO los Jefes de Departamento del departamento de la OC
+      // (empresa + departamento del proyecto de la OC) reciben por Telegram
+      // el mensaje "Pago realizado" con fecha, proveedor, monto y concepto.
+      // Se envía al chat personal de cada jefe: el Chat ID se captura en
+      // 👥 Colaboradores (columna usuarios.telegram_chat_id, leída con la
+      // RPC obtener_telegram_chat_id — ver migracion_telegram_avisos_pago.sql).
+      // Cada jefe debe haberle escrito antes al bot (/start); el que no
+      // tenga Chat ID registrado no recibe nada (solo se avisa en consola)
+      // y el pago queda registrado igual. A quien registró el pago no se
+      // le envía aviso.
+      async function obtenerTelegramChatIdUsuario(usuario) {
+        if (!usuario) return null;
+        try {
+          var { data, error } = await supabase.rpc('obtener_telegram_chat_id', { p_usuario: usuario });
+          if (error) throw error;
+          var chatId = (data === null || data === undefined) ? '' : String(data).trim();
+          return chatId || null;
+        } catch (e) {
+          console.error('No se pudo obtener el Chat ID de Telegram de ' + usuario + ':', e);
+          return null;
+        }
+      }
+
+      function escaparHTMLTelegram(txt) {
+        return String(txt == null ? '' : txt).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      async function enviarTelegramAChat(chatId, textoHTML) {
+        try {
+          var response = await fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: textoHTML, parse_mode: 'HTML', disable_web_page_preview: true })
+          });
+          var data = await response.json();
+          if (!data.ok) {
+            console.error('❌ Telegram rechazó el aviso:', data);
+            return false;
+          }
+          return true;
+        } catch (e) {
+          console.error('❌ Error enviando aviso por Telegram:', e);
+          return false;
+        }
+      }
+
+      // Jefes de Departamento con permiso sobre la empresa/departamento del
+      // proyecto de la OC (usuariosDB ya trae usuario, rol y permisos).
+      function obtenerJefesDepartamentoOC(oc) {
+        var proyectoOC = (proyectos || []).find(function(pr) { return normalizar(pr.nombre) === normalizar(oc.proyecto); });
+        if (!proyectoOC) return [];
+        return (usuariosDB || []).filter(function(u) {
+          if (!usuarioTieneAlgunRol(u, ['Jefe Departamento'])) return false;
+          if (!u.permisos || !u.permisos.length) return false;
+          var empNorm = normalizar(proyectoOC.empresa);
+          var deptoNorm = deptoParaComparar(proyectoOC.empresa, proyectoOC.departamento);
+          return u.permisos.some(function(pm) {
+            return normalizar(pm.empresa) === empNorm && deptoParaComparar(pm.empresa, pm.depto) === deptoNorm;
+          });
+        }).map(function(u) { return u.usuario; });
+      }
+
+      async function notificarPagoOCTelegram(oc, info) {
+        try {
+          var quienPago = actual ? actual.usuario : null;
+          var jefes = obtenerJefesDepartamentoOC(oc).filter(function(j, idx, arr) {
+            return j && j !== quienPago && arr.indexOf(j) === idx;
+          });
+          if (jefes.length === 0) {
+            console.warn('La OC ' + (oc.codigo || oc.id) + ' no tiene Jefe de Departamento a quien avisar del pago.');
+            return 0;
+          }
+
+          var moneda = oc.moneda || 'MXN';
+          var total = Number(oc.montototal) || 0;
+          var esParcial = !!info.es5050;
+          var montoPagado = esParcial ? total / 2 : total;
+          var montoTxt = formatoMoneda(montoPagado, moneda) + (moneda === 'USD' ? '' : ' MXN') +
+            (esParcial ? ' (pago ' + info.numeroPago + ' de 2 — 50% de ' + formatoMoneda(total, moneda) + ')' : '');
+          var fechaTxt = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+          var texto =
+            '✅ <b>Pago realizado</b>\n\n' +
+            '📅 <b>Fecha:</b> ' + escaparHTMLTelegram(fechaTxt) + '\n' +
+            '🏢 <b>Proveedor:</b> ' + escaparHTMLTelegram(oc.proveedor || '—') + '\n' +
+            '💲 <b>Monto:</b> ' + escaparHTMLTelegram(montoTxt) + '\n' +
+            '📝 <b>Concepto:</b> ' + escaparHTMLTelegram(oc.concepto || '—') + '\n\n' +
+            '🧾 OC: ' + escaparHTMLTelegram(oc.codigo || ('OC-' + oc.id));
+
+          var enviados = 0;
+          for (var i = 0; i < jefes.length; i++) {
+            var chatId = await obtenerTelegramChatIdUsuario(jefes[i]);
+            if (!chatId) {
+              console.warn('El Jefe de Departamento ' + jefes[i] + ' no tiene Chat ID de Telegram registrado: no se le envió aviso de pago.');
+              continue;
+            }
+            if (await enviarTelegramAChat(chatId, texto)) {
+              enviados++;
+              console.log('✅ Aviso de pago enviado por Telegram a ' + jefes[i]);
+            }
+          }
+          return enviados;
+        } catch (e) {
+          console.error('No se pudo enviar el aviso de pago por Telegram:', e);
+          return 0;
+        }
+      }
 
       window.registrarFactura = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
@@ -21395,6 +21559,11 @@
         } else {
           ocVisibles = filtrarOCParaCXP(actual);
         }
+        // CCHF (pagos): además de las OC de su departamento, SIEMPRE ve
+        // todas las OC autorizadas/concluidas de cualquier empresa/
+        // departamento (aunque tenga activo "Solo mis OC"), para poder
+        // indicar el pago y subir el comprobante.
+        ocVisibles = agregarOCsParaPagoCCHF(actual, ocVisibles);
 
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
@@ -27544,7 +27713,7 @@
           var datos = obtenerDatosCXP();
           var doc = await generarPDFReporteCXP(datos);
           reportePreviewPDF = doc;
-          reportePreviewNombre = 'Reporte_CXP_' + new Date().toISOString().split('T')[0] + '.pdf';
+          reportePreviewNombre = (doc._nombreArchivoReporte || nombreArchivoReporte('CXP')) + '.pdf';
           document.getElementById('cxpPreviewModal').classList.add('active');
           await renderizarPDFEnContenedor('cxpPreviewFrame', doc);
         } catch (error) {
@@ -27562,7 +27731,7 @@
           var cuentas = obtenerDatosCXC();
           var doc = await generarPDFReporteCXC(cuentas);
           reportePreviewPDF = doc;
-          reportePreviewNombre = 'Reporte_CXC_' + new Date().toISOString().split('T')[0] + '.pdf';
+          reportePreviewNombre = (doc._nombreArchivoReporte || nombreArchivoReporte('CXC')) + '.pdf';
           document.getElementById('cxpPreviewModal').classList.add('active');
           await renderizarPDFEnContenedor('cxpPreviewFrame', doc);
         } catch (error) {
@@ -27681,6 +27850,89 @@
         reportePreviewPDF = null;
       };
 
+      // ---------- NOMBRE DE ARCHIVO DE LOS REPORTES CXP / CXC ----------
+      // Formato: EMPRESA-DEPARTAMENTO-(CXP|CXC)-AAMMDD (ej.
+      // GIE-TI-CXP-260929), con las mismas abreviaturas del catálogo y el
+      // mismo formato de fecha que el código de las OC. Empresa y
+      // departamento salen de los filtros del módulo; si un filtro está
+      // en "Todas/Todos", se usa la empresa/departamento del usuario cuando
+      // solo tiene uno, y si no, "TODAS"/"TODOS".
+      function nombreArchivoReporte(tipo) {
+        var prefijo = tipo === 'CXC' ? 'cxc' : 'cxp';
+        var selEmpresa = document.getElementById(prefijo + 'FiltroEmpresa');
+        var selDepto = document.getElementById(prefijo + 'FiltroDepto');
+        var empresa = selEmpresa ? selEmpresa.value : '';
+        var depto = selDepto ? selDepto.value : '';
+
+        var defaultData = actual ? obtenerEmpresaDeptoDefault(actual) : null;
+        var permisos = (defaultData && !defaultData.libre && actual && actual.permisos) ? actual.permisos : [];
+        if (!empresa && permisos.length > 0) {
+          var empresasUnicas = {};
+          permisos.forEach(function(pm) { if (pm.empresa) empresasUnicas[normalizar(pm.empresa)] = pm.empresa; });
+          var listaEmpresas = Object.keys(empresasUnicas);
+          if (listaEmpresas.length === 1) empresa = empresasUnicas[listaEmpresas[0]];
+        }
+        if (!depto && empresa && permisos.length > 0) {
+          var deptosEmpresa = permisos.filter(function(pm) { return normalizar(pm.empresa) === normalizar(empresa) && pm.depto; });
+          if (deptosEmpresa.length === 1) depto = deptosEmpresa[0].depto;
+        }
+
+        function limpiar(txt) { return String(txt || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10); }
+        var empresaAbrev = empresa ? limpiar(getAbreviaturaEmpresa(empresa) || empresa) : 'TODAS';
+        var deptoAbrev;
+        if (depto) {
+          deptoAbrev = limpiar(getAbreviaturaDepartamento(depto, empresa) || depto);
+        } else if (empresa && getDepartamentosPorEmpresa(empresa).length === 0) {
+          deptoAbrev = empresaAbrev;
+        } else {
+          deptoAbrev = 'TODOS';
+        }
+
+        var hoy = new Date();
+        var fechaStr = String(hoy.getFullYear()).slice(2) + String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0');
+        return (empresaAbrev || 'TODAS') + '-' + (deptoAbrev || 'TODOS') + '-' + tipo + '-' + fechaStr;
+      }
+
+      // Pie de página de los reportes, igual que en la OC: en TODAS las
+      // hojas, a 1.5cm del borde inferior. Izquierda: fecha DD/MM/AA + hora
+      // HH:MM a.m./p.m.; centro: nombre del archivo; derecha: "Pág. N de N".
+      var CM_A_PT_REPORTE = 28.3464567;
+      var ALTURA_PIE_REPORTE = 1.5 * CM_A_PT_REPORTE;
+      // Margen inferior para autoTable: la tabla salta de hoja antes de
+      // invadir la franja del pie.
+      var MARGEN_INFERIOR_REPORTE = ALTURA_PIE_REPORTE + 16;
+
+      function agregarPiePaginaReporte(doc, nombreArchivo) {
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var pageHeight = doc.internal.pageSize.getHeight();
+        var margin = 30;
+        var pieY = pageHeight - ALTURA_PIE_REPORTE;
+        var ahora = new Date();
+        var fechaCorta = String(ahora.getDate()).padStart(2, '0') + '/' + String(ahora.getMonth() + 1).padStart(2, '0') + '/' + String(ahora.getFullYear()).slice(-2);
+        var horas24 = ahora.getHours();
+        var ampm = horas24 >= 12 ? 'p.m.' : 'a.m.';
+        var horas12 = horas24 % 12;
+        if (horas12 === 0) horas12 = 12;
+        var horaCorta = String(horas12).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0') + ' ' + ampm;
+        var nombreConExt = nombreArchivo + '.pdf';
+        var totalPaginas = doc.internal.getNumberOfPages();
+        for (var nPag = 1; nPag <= totalPaginas; nPag++) {
+          doc.setPage(nPag);
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 100);
+          doc.setFont('helvetica', 'normal');
+          doc.text(fechaCorta + '  ' + horaCorta, margin, pieY, { align: 'left' });
+          doc.text(nombreConExt, pageWidth / 2, pieY, { align: 'center' });
+          doc.text('Pág. ' + nPag + ' de ' + totalPaginas, pageWidth - margin, pieY, { align: 'right' });
+        }
+        doc.setPage(totalPaginas);
+        doc.setTextColor(0, 0, 0);
+        // Título del PDF = nombre del archivo (lo usa el navegador al
+        // "Guardar como PDF" desde el diálogo de impresión).
+        if (typeof doc.setProperties === 'function') doc.setProperties({ title: nombreArchivo });
+        doc._nombreArchivoReporte = nombreArchivo;
+      }
+
       async function generarPDFReporteCXP(datos) {
         var ocFiltradas = datos.oc;
         var { jsPDF } = window.jspdf;
@@ -27798,10 +28050,12 @@
           head: [headersOC],
           body: rowsOC,
           startY: y,
-          margin: { left: margin, right: margin },
+          margin: { left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [11, 26, 51] }
         });
+
+        agregarPiePaginaReporte(doc, nombreArchivoReporte('CXP'));
 
         return doc;
       }
@@ -27869,10 +28123,12 @@
           head: [headers],
           body: rows,
           startY: y,
-          margin: { left: margin, right: margin },
+          margin: { left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [11, 26, 51] }
         });
+
+        agregarPiePaginaReporte(doc, nombreArchivoReporte('CXC'));
 
         return doc;
       }
