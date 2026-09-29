@@ -17469,12 +17469,14 @@
 
           // Aviso de "Pago realizado" por Telegram a los Jefes de Departamento de la OC
           // (no bloquea: si falla, el pago ya quedó registrado).
-          notificarPagoOCTelegram(oc, {
+          if (msg) msg.innerHTML = '<div class="success-msg">⏳ Pago registrado. Enviando aviso por Telegram…</div>';
+          var resultadoAviso = await notificarPagoOCTelegram(oc, {
             numeroPago: comprobantePagoNumeroPendiente,
             es5050: es5050,
             comprobanteArchivo: comprobantePagoArchivoPendiente,
             comprobanteUrl: url
           });
+          mensajeFinal += '\n\n' + textoResultadoAvisoTelegram(resultadoAviso);
 
           indexComprobantePagoPendiente = null;
           comprobantePagoArchivoPendiente = null;
@@ -17589,15 +17591,27 @@
         return await enviarTelegramAChat(chatId, respaldo);
       }
 
+      // Devuelve un diagnóstico { enviados, sinChatId, fallidos, motivo }
+      // que se muestra a quien registró el pago, para saber a quién le
+      // llegó el aviso o por qué no se envió.
       async function notificarPagoOCTelegram(oc, info) {
+        var resultado = { enviados: [], sinChatId: [], fallidos: [], motivo: '' };
         try {
           var quienPago = actual ? actual.usuario : null;
+          var proyectoOC = (proyectos || []).find(function(pr) { return normalizar(pr.nombre) === normalizar(oc.proyecto); });
+          if (!proyectoOC) {
+            resultado.motivo = 'No se encontró el proyecto "' + (oc.proyecto || '') + '" de la OC, así que no se sabe a qué departamento avisar.';
+            console.warn(resultado.motivo);
+            return resultado;
+          }
           var jefes = obtenerJefesDepartamentoOC(oc).filter(function(j, idx, arr) {
             return j && j !== quienPago && arr.indexOf(j) === idx;
           });
           if (jefes.length === 0) {
-            console.warn('La OC ' + (oc.codigo || oc.id) + ' no tiene Jefe de Departamento a quien avisar del pago.');
-            return 0;
+            resultado.motivo = 'No hay ningún usuario con rol Jefe Departamento y permiso en ' +
+              (getAbreviaturaEmpresa(proyectoOC.empresa) || proyectoOC.empresa || '—') + ' / ' + (proyectoOC.departamento || '—') + '.';
+            console.warn(resultado.motivo);
+            return resultado;
           }
 
           var moneda = oc.moneda || 'MXN';
@@ -17615,25 +17629,37 @@
             '💲 <b>Monto:</b> ' + escaparHTMLTelegram(montoTxt) + '\n' +
             '📝 <b>Concepto:</b> ' + escaparHTMLTelegram(oc.concepto || '—') + '\n\n' +
             '🧾 OC: ' + escaparHTMLTelegram(oc.codigo || ('OC-' + oc.id));
+          var nombreComprobante = (oc.codigo || ('OC-' + oc.id)) + '-PAGO' + (info.numeroPago || 1) + '.pdf';
 
-          var enviados = 0;
           for (var i = 0; i < jefes.length; i++) {
             var chatId = await obtenerTelegramChatIdUsuario(jefes[i]);
             if (!chatId) {
-              console.warn('El Jefe de Departamento ' + jefes[i] + ' no tiene Chat ID de Telegram registrado: no se le envió aviso de pago.');
+              resultado.sinChatId.push(jefes[i]);
+              console.warn('El Jefe de Departamento ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.');
               continue;
             }
-            var nombreComprobante = (oc.codigo || ('OC-' + oc.id)) + '-PAGO' + (info.numeroPago || 1) + '.pdf';
             if (await enviarTelegramDocumento(chatId, texto, info.comprobanteArchivo || null, info.comprobanteUrl || null, nombreComprobante)) {
-              enviados++;
+              resultado.enviados.push(jefes[i]);
               console.log('✅ Aviso de pago enviado por Telegram a ' + jefes[i]);
+            } else {
+              resultado.fallidos.push(jefes[i]);
             }
           }
-          return enviados;
         } catch (e) {
           console.error('No se pudo enviar el aviso de pago por Telegram:', e);
-          return 0;
+          resultado.motivo = 'Error al enviar: ' + (e && e.message ? e.message : e);
         }
+        return resultado;
+      }
+
+      function textoResultadoAvisoTelegram(r) {
+        if (!r) return '⚠️ Aviso por Telegram: no se pudo enviar.';
+        var partes = [];
+        if (r.enviados.length) partes.push('📨 Aviso por Telegram enviado a: ' + r.enviados.join(', ') + '.');
+        if (r.sinChatId.length) partes.push('⚠️ Sin Chat ID de Telegram (no se les avisó): ' + r.sinChatId.join(', ') + '.');
+        if (r.fallidos.length) partes.push('⚠️ Telegram rechazó el envío a: ' + r.fallidos.join(', ') + ' (¿inició el bot?).');
+        if (r.motivo) partes.push('⚠️ Aviso por Telegram no enviado: ' + r.motivo);
+        return partes.length ? partes.join('\n') : '⚠️ Aviso por Telegram: no se envió a nadie.';
       }
 
       window.registrarFactura = async function(index) {
