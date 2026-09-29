@@ -7683,6 +7683,12 @@
         return lista.concat(extra);
       }
 
+      // Botón "💰 Pendientes por Pagar" / "Mostrar Todas" de la Bandeja de
+      // OC: Finanzas y el usuario de pagos (CCHF).
+      function usuarioVeFiltroPendientesPagar(usuario) {
+        return !!usuario && (usuario.rol === 'Finanzas' || esUsuarioPagosCCHF(usuario));
+      }
+
       function usuarioPuedeMarcarOCPagada(usuario) {
         if (!usuario) return false;
         return esUsuarioPagosCCHF(usuario) || usuario.rol === 'Administrador';
@@ -21952,7 +21958,7 @@
           });
         }
 
-        if (filtroPendientesActivo && actual && actual.rol === 'Finanzas') {
+        if (filtroPendientesActivo && usuarioVeFiltroPendientesPagar(actual)) {
           ocVisibles = ocVisibles.filter(function(o) { return o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada; });
         }
 
@@ -21968,7 +21974,21 @@
       // a partir de ocPaginacion.datosFiltrados (ya calculado por
       // obtenerOCFiltradas() dentro de render()). Conserva exactamente
       // la misma lógica de estado/acciones por rol que ya existía.
+      // Mantiene al día el contador del botón "💰 Pendientes por Pagar"
+      // (p.ej. después de que CCHF registra un pago).
+      function refrescarBotonPendientesPagar() {
+        var btn = document.getElementById('btnPendientesPagar');
+        if (!btn || btn.classList.contains('hidden') || !usuarioVeFiltroPendientesPagar(actual)) return;
+        var pendientes = contarPendientesPagar();
+        if (filtroPendientesActivo) {
+          btn.textContent = pendientes > 0 ? '💰 Mostrar Todas (' + pendientes + ' pendientes)' : '💰 Mostrar Todas';
+        } else {
+          btn.textContent = '💰 Pendientes por Pagar (' + pendientes + ')';
+        }
+      }
+
       function renderTablaOCPaginada() {
+        refrescarBotonPendientesPagar();
         var tablaOC = document.getElementById('tablaOC');
         if (!tablaOC) return;
 
@@ -23800,7 +23820,7 @@
           filtroProyectoContainer.classList.toggle('hidden', !puedeFiltrar);
           filtroEstadoContainer.classList.toggle('hidden', !puedeFiltrar);
 
-          if (esFinanzas) {
+          if (usuarioVeFiltroPendientesPagar(actual)) {
             btnPendientes.classList.remove('hidden');
             btnLimpiar.classList.remove('hidden');
             var pendientes = contarPendientesPagar();
@@ -23824,7 +23844,7 @@
           });
           filtroDepto.onchange = function() {
             actualizarFiltroProyectos();
-            if (actual.rol === 'Finanzas') {
+            if (usuarioVeFiltroPendientesPagar(actual)) {
               var pendientes = contarPendientesPagar();
               var btn = document.getElementById('btnPendientesPagar');
               btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
@@ -23843,7 +23863,7 @@
             filtroProyecto.appendChild(opt);
           });
           filtroProyecto.onchange = function() {
-            if (actual.rol === 'Finanzas') {
+            if (usuarioVeFiltroPendientesPagar(actual)) {
               var pendientes = contarPendientesPagar();
               var btn = document.getElementById('btnPendientesPagar');
               btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
@@ -23855,7 +23875,7 @@
 
           var filtroEstado = document.getElementById('filtroEstado');
           filtroEstado.onchange = function() {
-            if (actual.rol === 'Finanzas') {
+            if (usuarioVeFiltroPendientesPagar(actual)) {
               var pendientes = contarPendientesPagar();
               var btn = document.getElementById('btnPendientesPagar');
               btn.textContent = pendientes > 0 ? '💰 Pendientes por Pagar (' + pendientes + ')' : '💰 Pendientes por Pagar (0)';
