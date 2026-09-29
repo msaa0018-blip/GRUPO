@@ -8133,6 +8133,19 @@
       // ============================================================
       // FUNCIÓN PARA DETECTAR ENLACE DE TELEGRAM
       // ============================================================
+      // Link de Telegram para subir el complemento de pago de una factura
+      // (?complemento=<id OC>&factura=<id factura>). Exclusivo de los
+      // usuarios de USUARIOS_COMPLEMENTO_PAGO (ver candado en el login).
+      function detectarEnlaceComplemento() {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var ocParam = parseInt(params.get('complemento'), 10);
+          if (!ocParam) return null;
+          var facturaParam = parseInt(params.get('factura'), 10);
+          return { ocId: ocParam, facturaId: facturaParam || null };
+        } catch (e) { return null; }
+      }
+
       function detectarEnlaceTelegram() {
         var urlParams = new URLSearchParams(window.location.search);
         var ocParam = urlParams.get('oc');
@@ -17662,6 +17675,74 @@
         return partes.length ? partes.join('\n') : '⚠️ Aviso por Telegram: no se envió a nadie.';
       }
 
+      // ===== SOLICITUD DE COMPLEMENTO DE PAGO POR TELEGRAM =====
+      // Cuando el solicitante sube la PRIMERA factura de una OC pagada, se
+      // envía por Telegram a los usuarios de USUARIOS_COMPLEMENTO_PAGO
+      // (Chat ID en usuarios.telegram_chat_id) el mensaje "Complemento de
+      // pago solicitado" con fecha de pago, proveedor, monto, concepto y
+      // código de la OC.
+      var USUARIOS_COMPLEMENTO_PAGO = ['DMHS'];
+
+      // Fecha de pago real: confirmación del pago (50/50) o, si no hay,
+      // la fecha de pago de la OC. Las fechas "AAAA-MM-DD" se leen como
+      // fecha local para que no se recorran un día por la zona horaria.
+      function fechaPagoOCTexto(oc) {
+        var valor = oc.pago2_fecha_confirmacion || oc.pago1_fecha_confirmacion || oc.fechapago;
+        if (!valor) return '—';
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor));
+        var fecha = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(valor);
+        if (isNaN(fecha.getTime())) return String(valor);
+        return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      // Link directo para subir el complemento (misma lógica que el link
+      // de autorización del Director: exclusivo de los usuarios de
+      // USUARIOS_COMPLEMENTO_PAGO, abre directo la carga del complemento
+      // de ESA factura y, al terminar, cierra la sesión).
+      var URL_APP_TELEGRAM = 'https://msaa0018-blip.github.io/GRUPO/';
+      function linkComplementoFactura(oc, factura) {
+        return URL_APP_TELEGRAM + '?complemento=' + oc.id + (factura && factura.id ? '&factura=' + factura.id : '');
+      }
+
+      async function solicitarComplementoPagoTelegram(oc, factura) {
+        var resultado = { enviados: [], motivo: '' };
+        try {
+          var moneda = oc.moneda || 'MXN';
+          var montoTxt = formatoMoneda(Number(oc.montototal) || 0, moneda) + (moneda === 'USD' ? '' : ' MXN');
+          var lineaFactura = '';
+          if (factura && factura.uuid) {
+            lineaFactura = '🧾 <b>Factura:</b> ' + escaparHTMLTelegram(factura.uuid) +
+              (factura.monto ? ' — ' + escaparHTMLTelegram(formatoMoneda(Number(factura.monto) || 0, moneda)) : '') +
+              (factura.tipo ? ' (' + escaparHTMLTelegram(factura.tipo) + ')' : '') + '\n';
+          }
+          var texto =
+            '📄 <b>Complemento de pago solicitado:</b>\n' +
+            '📅 <b>Fecha:</b> ' + escaparHTMLTelegram(fechaPagoOCTexto(oc)) + '\n' +
+            '🏢 <b>Proveedor:</b> ' + escaparHTMLTelegram(oc.proveedor || '—') + '\n' +
+            '💲 <b>Monto:</b> ' + escaparHTMLTelegram(montoTxt) + '\n' +
+            '📝 <b>Concepto:</b> ' + escaparHTMLTelegram(oc.concepto || '—') + '\n\n' +
+            lineaFactura +
+            '🧾 <b>OC:</b> ' + escaparHTMLTelegram(oc.codigo || ('OC-' + oc.id)) + '\n\n' +
+            '👉 Subir complemento:\n' + escaparHTMLTelegram(linkComplementoFactura(oc, factura));
+          var sinChat = [];
+          for (var i = 0; i < USUARIOS_COMPLEMENTO_PAGO.length; i++) {
+            var usuarioDest = USUARIOS_COMPLEMENTO_PAGO[i];
+            var chatId = await obtenerTelegramChatIdUsuario(usuarioDest);
+            if (!chatId) { sinChat.push(usuarioDest); continue; }
+            if (await enviarTelegramAChat(chatId, texto)) resultado.enviados.push(usuarioDest);
+          }
+          if (!resultado.enviados.length) {
+            resultado.motivo = sinChat.length ? sinChat.join(', ') + ' no tiene Chat ID de Telegram registrado.' : 'Telegram rechazó el envío.';
+          }
+          if (resultado.enviados.length) console.log('✅ Complemento de pago solicitado por Telegram a ' + resultado.enviados.join(', '));
+          else console.warn('No se pudo solicitar el complemento de pago:', resultado.motivo);
+        } catch (e) {
+          console.error('Error solicitando el complemento de pago por Telegram:', e);
+          resultado.motivo = e && e.message ? e.message : String(e);
+        }
+        return resultado;
+      }
+
       window.registrarFactura = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
         var oc = ordenes[index];
@@ -17919,14 +18000,24 @@
           var { data, error } = await supabase.from('facturas_oc').insert([nuevaFactura]).select();
           if (error) throw error;
 
-          ocConclusionPendiente.facturas.push((data && data[0]) || nuevaFactura);
+          var facturaGuardada = (data && data[0]) || nuevaFactura;
+          ocConclusionPendiente.facturas.push(facturaGuardada);
 
           // Compatibilidad: la última factura comprobada también se
           // refleja en la propia OC (uuidfactura/montofactura/factura_url).
           var updatesOC = { uuidfactura: uuid, montofactura: monto };
           if (urlFactura) updatesOC.factura_url = urlFactura;
+          // Cada factura necesita su propio complemento de pago: si la OC
+          // ya tenía todos sus complementos (complemento_pago_url), al
+          // agregar una factura nueva vuelve a quedar pendiente, para que
+          // Contabilidad no pueda concluirla hasta que llegue el nuevo.
+          if (oc.complemento_pago_url) updatesOC.complemento_pago_url = null;
           await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
           Object.assign(oc, updatesOC);
+
+          // POR CADA factura subida se solicita por Telegram su complemento
+          // de pago (a DMHS), con el link directo para subirlo.
+          var promesaSolicitudComplemento = solicitarComplementoPagoTelegram(oc, facturaGuardada);
 
           window.renderFacturasAgregadasOC();
 
@@ -17942,6 +18033,18 @@
           document.getElementById('facturaSiguientePasoContainer').classList.remove('hidden');
           var textoPaso = document.getElementById('facturaSiguientePasoTexto');
           var btnContinuar = document.getElementById('btnContinuarFactura');
+
+          if (promesaSolicitudComplemento) {
+            promesaSolicitudComplemento.then(function(r) {
+              var nota = document.getElementById('facturaSiguientePasoTexto');
+              if (!nota) return;
+              var extra = r.enviados.length
+                ? '📨 Se solicitó el complemento de pago por Telegram a: ' + r.enviados.join(', ') + '.'
+                : '⚠️ No se pudo solicitar el complemento por Telegram' + (r.motivo ? ': ' + r.motivo : '.');
+              nota.textContent = (nota.textContent ? nota.textContent + '\n\n' : '') + extra;
+              nota.style.whiteSpace = 'pre-line';
+            });
+          }
 
           if (montoCompleto) {
             if (textoPaso) textoPaso.textContent = '✅ El monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') cubre el total de la OC. Finanzas debe subir el complemento de pago ("💰 Complemento Pago") para que Contabilidad pueda concluirla.';
@@ -17980,19 +18083,53 @@
       var indexComplementoPagoOCPendiente = null;
       var archivoComplementoPagoOCPendiente = null;
 
-      window.abrirComplementoPagoOC = function(index) {
+      // Complemento de pago POR FACTURA: cada factura de la OC
+      // (tabla facturas_oc) lleva su propio complemento. "facturaId"
+      // (opcional) indica cuál; sin él se toma la primera factura que aún
+      // no tenga complemento. OC antiguas sin filas en facturas_oc siguen
+      // funcionando con un solo complemento a nivel OC.
+      var complementoFacturaPendiente = null;
+      var complementoViaLink = false;
+
+      async function facturasDeOC(ocId) {
+        var { data, error } = await supabase.from('facturas_oc').select('*').eq('oc_id', ocId).order('fecha', { ascending: true });
+        if (error) throw error;
+        return data || [];
+      }
+
+      window.abrirComplementoPagoOC = async function(index, facturaId) {
         if (!actual || (actual.rol !== 'Finanzas' && actual.rol !== 'Administrador')) return alert('❌ Solo Finanzas puede subir el complemento de pago de la OC.');
         var oc = ordenes[index];
         if (!oc) return;
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (!oc.uuidfactura) return alert('Aún no se ha registrado la factura de esta OC.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
-        if (oc.complemento_pago_url) return alert('Esta OC ya tiene un complemento de pago subido, pendiente de confirmación de Contabilidad.');
 
+        var facturas = [];
+        try { facturas = await facturasDeOC(oc.id); } catch (e) { console.error('Error cargando facturas de la OC:', e); }
+        var factura = null;
+        if (facturas.length) {
+          if (facturaId) {
+            factura = facturas.find(function(f) { return f.id === facturaId; }) || null;
+            if (!factura) return alert('⚠️ No se encontró la factura indicada en esta OC.');
+            if (factura.complemento_pago_url) return alert('✅ Esta factura ya tiene su complemento de pago.');
+          } else {
+            factura = facturas.find(function(f) { return !f.complemento_pago_url; }) || null;
+            if (!factura) return alert('✅ Todas las facturas de esta OC ya tienen su complemento de pago, pendiente de confirmación de Contabilidad.');
+          }
+        } else if (oc.complemento_pago_url) {
+          return alert('Esta OC ya tiene un complemento de pago subido, pendiente de confirmación de Contabilidad.');
+        }
+
+        complementoFacturaPendiente = factura;
         indexComplementoPagoOCPendiente = index;
         archivoComplementoPagoOCPendiente = null;
         var codigoEl = document.getElementById('complementoPagoOCCodigo');
-        if (codigoEl) codigoEl.textContent = '— ' + (oc.codigo || ('OC-' + oc.id));
+        if (codigoEl) {
+          var pendientes = facturas.filter(function(f) { return !f.complemento_pago_url; }).length;
+          codigoEl.textContent = '— ' + (oc.codigo || ('OC-' + oc.id)) +
+            (factura ? ' · Factura ' + (facturas.indexOf(factura) + 1) + ' de ' + facturas.length + ' (' + factura.uuid + ', ' + formatoMoneda(Number(factura.monto) || 0, oc.moneda || 'MXN') + ')' + (pendientes > 1 ? ' · ' + pendientes + ' pendientes' : '') : '');
+        }
         var texto = document.getElementById('complementoPagoOCDropzoneTexto');
         if (texto) texto.textContent = '📄 Arrastra el PDF aquí, o toca para elegirlo desde el escritorio';
         var input = document.getElementById('complementoPagoOCInput');
@@ -18002,7 +18139,40 @@
         document.getElementById('complementoPagoOCModal').classList.add('active');
       };
 
+      function cerrarSesionPorLinkComplemento(mensaje) {
+        try { window.history.replaceState({}, '', window.location.origin + window.location.pathname); } catch (e) {}
+        if (mensaje) alert(mensaje);
+        actual = null;
+        try { location.reload(); } catch (e2) { console.warn('No se pudo recargar automáticamente:', e2); }
+      }
+
+      // Se ejecuta al entrar con el link de Telegram del complemento.
+      async function abrirComplementoDesdeLink(enlace) {
+        try {
+          var index = ordenes.findIndex(function(o) { return o.id === enlace.ocId; });
+          if (index === -1) return cerrarSesionPorLinkComplemento('⚠️ No se encontró la OC del link. Puede que ya no exista.');
+          var oc = ordenes[index];
+          if (oc.estado === 'CONCLUIDA') return cerrarSesionPorLinkComplemento('✅ Esta OC ya fue concluida. El link ya ha sido atendido.');
+          if (enlace.facturaId) {
+            var facturas = await facturasDeOC(oc.id);
+            var factura = facturas.find(function(f) { return f.id === enlace.facturaId; });
+            if (!factura) return cerrarSesionPorLinkComplemento('⚠️ No se encontró la factura del link en la OC ' + (oc.codigo || oc.id) + '.');
+            if (factura.complemento_pago_url) {
+              var fechaSubida = factura.complemento_fecha_subida ? new Date(factura.complemento_fecha_subida).toLocaleDateString('es-MX') : '';
+              return cerrarSesionPorLinkComplemento('✅ Complemento de pago subido previamente' + (fechaSubida ? ' (' + fechaSubida + ')' : '') + '. El link ya ha sido atendido.');
+            }
+          }
+          complementoViaLink = true;
+          await window.abrirComplementoPagoOC(index, enlace.facturaId);
+        } catch (e) {
+          console.error('Error abriendo el complemento desde el link:', e);
+          alert('❌ No se pudo abrir el complemento desde el link: ' + e.message);
+        }
+      }
+
       window.cancelarComplementoPagoOC = function() {
+        complementoFacturaPendiente = null;
+        complementoViaLink = false;
         indexComplementoPagoOCPendiente = null;
         archivoComplementoPagoOCPendiente = null;
         document.getElementById('complementoPagoOCModal').classList.remove('active');
@@ -18064,20 +18234,48 @@
             if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el complemento. Intenta de nuevo.</div>';
             return;
           }
-          var updates = {
-            complemento_pago_url: url,
-            complemento_pago_subido_por: actual.u,
-            complemento_pago_fecha_subida: new Date().toISOString()
-          };
-          var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-          if (error) throw error;
-          Object.assign(oc, updates);
+          var ahoraComplemento = new Date().toISOString();
+          var pendientesComplemento = 0;
+          if (complementoFacturaPendiente) {
+            // Complemento de UNA factura (RPC: no depende de políticas de
+            // UPDATE sobre facturas_oc). Devuelve cuántas facturas de la
+            // OC siguen sin complemento.
+            var { data: pendientesRPC, error: errorRPC } = await supabase.rpc('registrar_complemento_factura', {
+              p_factura_id: complementoFacturaPendiente.id,
+              p_url: url,
+              p_usuario: actual.u
+            });
+            if (errorRPC) throw errorRPC;
+            pendientesComplemento = Number(pendientesRPC) || 0;
+          }
+          // La OC queda con complemento (y Contabilidad puede concluirla)
+          // solo cuando TODAS sus facturas ya lo tienen.
+          if (pendientesComplemento === 0) {
+            var updates = {
+              complemento_pago_url: url,
+              complemento_pago_subido_por: actual.u,
+              complemento_pago_fecha_subida: ahoraComplemento
+            };
+            var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+            if (error) throw error;
+            Object.assign(oc, updates);
+          }
 
+          var eraViaLink = complementoViaLink;
+          complementoFacturaPendiente = null;
+          complementoViaLink = false;
           indexComplementoPagoOCPendiente = null;
           archivoComplementoPagoOCPendiente = null;
           document.getElementById('complementoPagoOCModal').classList.remove('active');
           render();
-          alert('✅ Complemento de pago subido. Queda pendiente de que Contabilidad confirme y concluya la OC.');
+          var mensajeComplemento = pendientesComplemento === 0
+            ? '✅ Complemento de pago subido. Queda pendiente de que Contabilidad confirme y concluya la OC.'
+            : '✅ Complemento de pago subido. Faltan ' + pendientesComplemento + ' factura(s) de esta OC por recibir su complemento.';
+          if (eraViaLink) {
+            cerrarSesionPorLinkComplemento('¡Complemento subido, gracias!\n\n' + mensajeComplemento);
+            return;
+          }
+          alert(mensajeComplemento);
         } catch (e) {
           console.error('Error confirmando el complemento de pago de la OC:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(e.message) + '</div>';
@@ -23224,6 +23422,18 @@
           // Director General. Si alguien más entra con sus propias
           // credenciales usando ese link, se le niega el acceso aquí mismo,
           // antes de mostrar la app, con una ventana de error de usuario.
+          // Mismo candado para el link de complemento de pago: exclusivo
+          // de los usuarios de USUARIOS_COMPLEMENTO_PAGO (DMHS).
+          var enlaceComplementoCheck = detectarEnlaceComplemento();
+          if (enlaceComplementoCheck && USUARIOS_COMPLEMENTO_PAGO.indexOf(String(actual.usuario || '').trim().toUpperCase()) === -1) {
+            actual = null;
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Ingresar';
+            errorDiv.classList.remove('hidden');
+            errorDiv.innerHTML = '❌ Este enlace es exclusivo de ' + USUARIOS_COMPLEMENTO_PAGO.join(', ') + '. Tu usuario no tiene permiso para acceder por esta vía.';
+            return;
+          }
+
           var ocIdTelegramCheck = detectarEnlaceTelegram();
           if (ocIdTelegramCheck && actual.rol !== 'Director General') {
             actual = null;
@@ -23663,6 +23873,11 @@
                 console.error('Error abriendo el vale desde el enlace QR:', e);
               }
             }, 600);
+          }
+
+          var enlaceComplementoAbrir = detectarEnlaceComplemento();
+          if (enlaceComplementoAbrir) {
+            setTimeout(function() { abrirComplementoDesdeLink(enlaceComplementoAbrir); }, 700);
           }
 
         } catch (e) {
