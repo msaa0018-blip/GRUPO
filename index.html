@@ -3515,7 +3515,6 @@
           <table id="tablaProductosCatalogo">
             <thead>
               <tr>
-                <th>Foto</th>
                 <th>Código</th>
                 <th>Número de Parte</th>
                 <th>Marca</th>
@@ -3535,13 +3534,6 @@
             <tbody id="cuerpoProductosCatalogo"></tbody>
             <tfoot>
               <tr>
-                <td>
-                  <div id="nvoProdFotoDropzone" class="foto-dropzone" onclick="document.getElementById('nvoProdFotoInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFoto(event, this)">
-                    <span id="nvoProdFotoDropzoneTexto">📷 Arrastra o toca</span>
-                    <img id="nvoProdFotoPreview" class="hidden" alt="Previsualización">
-                  </div>
-                  <input type="file" id="nvoProdFotoInput" accept="image/*" class="hidden" onchange="window.manejarSeleccionFoto(this)">
-                </td>
                 <td><input id="nvoProdCodigo" placeholder="Automático" readonly disabled style="background:var(--gray-100);" title="El código se genera automáticamente y es consecutivo. No se puede editar."></td>
                 <td><input id="nvoProdNumeroParte" placeholder="Número de parte"></td>
                 <td><input id="nvoProdMarca" placeholder="Marca"></td>
@@ -5059,16 +5051,6 @@
             </div>
           </div>
           <div class="modal-body">
-            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px;">
-              <div id="edProdFotoDropzone" class="foto-dropzone" style="width:96px;height:96px;" onclick="document.getElementById('edProdFotoInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFotoEditar(event, this)">
-                <span id="edProdFotoDropzoneTexto">📷 Arrastra o toca</span>
-                <img id="edProdFotoPreview" class="hidden" alt="Previsualización">
-              </div>
-              <input type="file" id="edProdFotoInput" accept="image/*" class="hidden" onchange="window.manejarSeleccionFotoEditar(this)">
-              <div style="flex:1;min-width:200px;font-size:12px;color:var(--gray-600);align-self:center;">
-                Toca o arrastra una imagen para cambiar la foto del producto. Si no seleccionas ninguna, se conserva la foto actual.
-              </div>
-            </div>
             <div class="cxc-form-row">
               <input id="edProdNumeroParte" placeholder="Número de parte">
               <input id="edProdMarca" placeholder="Marca">
@@ -9838,10 +9820,9 @@
           var { data, error } = await supabase.from('productos').select('*').eq('almacen_id', almacenId).order('descripcion');
           if (error) throw error;
           var filasHtml = (!data || data.length === 0)
-            ? '<tr><td colspan="9">Este almacén no tiene productos registrados.</td></tr>'
+            ? '<tr><td colspan="8">Este almacén no tiene productos registrados.</td></tr>'
             : data.map(function(p) {
                 return '<tr>' +
-                  '<td>' + (p.foto_url ? '<img src="' + escapeHTML(p.foto_url) + '" class="foto-thumb" onclick="window.verFotoProducto(\'' + escapeHTML(p.foto_url) + '\')" alt="Foto">' : '<div class="foto-thumb-vacio">📦</div>') + '</td>' +
                   '<td>' + escapeHTML(p.codigo) + '</td>' +
                   '<td>' + escapeHTML(p.numero_parte) + '</td>' +
                   '<td>' + escapeHTML(p.marca) + '</td>' +
@@ -9855,7 +9836,7 @@
           contenedor.innerHTML =
             '<h4 style="margin:0 0 8px;">📦 Productos — ' + escapeHTML(almacen ? almacen.nombre : '') + '</h4>' +
             '<div class="table-wrapper"><table><thead><tr>' +
-            '<th>Foto</th><th>Código</th><th>Núm. Parte</th><th>Marca</th><th>Modelo</th><th>Descripción</th><th>Cantidad</th><th>Condición</th><th>Ubicación</th>' +
+            '<th>Código</th><th>Núm. Parte</th><th>Marca</th><th>Modelo</th><th>Descripción</th><th>Cantidad</th><th>Condición</th><th>Ubicación</th>' +
             '</tr></thead><tbody>' + filasHtml + '</tbody></table></div>';
         } catch (e) {
           console.error('Error cargando productos del almacén:', e);
@@ -13987,7 +13968,6 @@
             var almacen = almacenesCache.find(function(a) { return a.id === p.almacen_id; });
             var fila = document.createElement('tr');
             fila.innerHTML =
-              '<td>' + (p.foto_url ? '<img src="' + escapeHTML(p.foto_url) + '" class="foto-thumb" onclick="window.verFotoProducto(\'' + escapeHTML(p.foto_url) + '\')" alt="Foto">' : '<div class="foto-thumb-vacio">📦</div>') + '</td>' +
               '<td>' + escapeHTML(p.codigo) + '</td>' +
               '<td>' + escapeHTML(p.numero_parte) + '</td>' +
               '<td>' + escapeHTML(p.marca) + '</td>' +
@@ -14332,14 +14312,12 @@
         var texto = document.getElementById('edProdFotoDropzoneTexto');
         var input = document.getElementById('edProdFotoInput');
         if (input) input.value = '';
-        if (p.foto_url) {
-          preview.src = p.foto_url;
-          preview.classList.remove('hidden');
-          if (texto) texto.classList.add('hidden');
-        } else {
-          preview.src = '';
-          preview.classList.add('hidden');
-          if (texto) texto.classList.remove('hidden');
+        // La opción de foto del producto se quitó del sistema: si el
+        // elemento ya no existe, no se hace nada.
+        if (preview) {
+          preview.src = p.foto_url || '';
+          preview.classList.toggle('hidden', !p.foto_url);
+          if (texto) texto.classList.toggle('hidden', !!p.foto_url);
         }
 
         var msg = document.getElementById('msgEditarProducto');
