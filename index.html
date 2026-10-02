@@ -9281,7 +9281,7 @@
           doc.setTextColor(100, 100, 100);
           doc.text('Generado: ' + new Date().toLocaleString(), margin, 44);
 
-          var headers = ['Nombre', 'Sucursal', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Dirección', 'CP', 'Banco MXN', 'Cuenta MXN', 'Condiciones'];
+          var headers = ['Nombre', 'Sucursal', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Dirección', 'CP', 'Banco MXN', 'Cuenta MXN', 'Clave MXN', 'Condiciones'];
           var rows = proveedoresCatalogoCache.map(function(p) {
             return [
               (p.pendiente_aprobacion ? '🟡 ' : '') + (p.nombre || ''),
@@ -9294,6 +9294,7 @@
               p.cp || '—',
               p.banco || '—',
               p.cuenta_bancaria || '—',
+              p.clave || '—',
               p.condiciones_comerciales || '—'
             ];
           });
@@ -9304,12 +9305,23 @@
             startY: 56,
             margin: { left: margin, right: margin },
             theme: 'striped',
-            styles: { fontSize: 7.5, cellPadding: 4, font: 'helvetica' },
-            headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold' },
+            // Anchos fijos por columna (A4 horizontal, 782pt útiles) para
+            // que ninguna palabra se corte a la mitad; Nombre toma el resto.
+            styles: { fontSize: 6.8, cellPadding: 3, font: 'helvetica' },
+            headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 6.8, fontStyle: 'bold' },
             columnStyles: {
-              2: { cellWidth: 68, overflow: 'visible' },
-              4: { cellWidth: 62, overflow: 'visible' },
-              7: { cellWidth: 42, overflow: 'visible' }
+              1: { cellWidth: 44 },
+              2: { cellWidth: 60, overflow: 'visible' },
+              3: { cellWidth: 58 },
+              4: { cellWidth: 56, overflow: 'visible' },
+              5: { cellWidth: 92 },
+              6: { cellWidth: 112 },
+              7: { cellWidth: 28, overflow: 'visible' },
+              8: { cellWidth: 52 },
+              9: { cellWidth: 54, overflow: 'visible' },
+              // Clave interbancaria (18 dígitos): en una sola línea.
+              10: { cellWidth: 76, overflow: 'visible' },
+              11: { cellWidth: 46 }
             },
             didParseCell: function(data) {
               if (data.section === 'body' && proveedoresCatalogoCache[data.row.index] && proveedoresCatalogoCache[data.row.index].pendiente_aprobacion) {
