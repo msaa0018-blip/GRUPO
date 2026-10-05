@@ -1988,6 +1988,21 @@
      alto disponible del overlay y el cuerpo (flex:1, min-height:0) se
      encoge con su propio scroll; header y footer nunca se comprimen. */
   #cxpPreviewModal .modal-content { height: 100%; max-height: 100%; }
+  /* Lista de Colaboradores: igual que la ventana de reportes, con el
+     botón Imprimir en el pie siempre visible al redimensionar. */
+  #colaboradoresPreviewModal .modal-content { height: 100%; max-height: 100%; }
+  #colaboradoresPreviewModal .modal-header, #colaboradoresPreviewModal .modal-footer { flex-shrink: 0; }
+  #colaboradoresPreviewModal .modal-body { flex: 1 1 auto; min-height: 0 !important; }
+  #colaboradoresPreviewModal .modal-body .visualizar-pdf-viewer { min-height: 0; }
+  #colaboradoresPreviewModal .modal-footer {
+    padding-top: 12px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--modal-footer-border);
+    margin-top: 4px;
+  }
   #cxpPreviewModal .modal-header, #cxpPreviewModal .modal-footer { flex-shrink: 0; }
   #cxpPreviewModal .modal-body { flex: 1 1 auto; overflow: auto; min-height: 0; }
   #cxpPreviewModal .modal-body .visualizar-pdf-viewer {
@@ -6168,6 +6183,9 @@
         </div>
       </div>
       <div class="modal-body"><div id="colaboradoresPreviewFrame" class="visualizar-pdf-viewer"></div></div>
+      <div class="modal-footer">
+        <button class="btn-imprimir" onclick="window.imprimirListaColaboradores()">🖨️ Imprimir</button>
+      </div>
     </div>
   </div>
 
@@ -12618,6 +12636,7 @@
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
           });
 
+          colaboradoresPreviewPDF = doc;
           document.getElementById('colaboradoresPreviewModal').classList.add('active');
           await renderizarPDFEnContenedor('colaboradoresPreviewFrame', doc);
         } catch (e) {
@@ -12626,7 +12645,42 @@
         }
       };
 
+      // Imprime el PDF de la lista ya generado (mismo mecanismo que los
+      // reportes CXP/CXC: PDF en un iframe invisible + print()).
+      var colaboradoresPreviewPDF = null;
+      window.imprimirListaColaboradores = function() {
+        if (!colaboradoresPreviewPDF) { alert('No hay una lista para imprimir.'); return; }
+        try {
+          var blobUrl = colaboradoresPreviewPDF.output('bloburl');
+          var printFrame = document.createElement('iframe');
+          printFrame.style.position = 'fixed';
+          printFrame.style.right = '0';
+          printFrame.style.bottom = '0';
+          printFrame.style.width = '0';
+          printFrame.style.height = '0';
+          printFrame.style.border = '0';
+          printFrame.src = blobUrl;
+          printFrame.onload = function() {
+            try {
+              printFrame.contentWindow.focus();
+              printFrame.contentWindow.print();
+            } catch (e) {
+              window.open(blobUrl, '_blank');
+            }
+          };
+          document.body.appendChild(printFrame);
+          setTimeout(function() {
+            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        } catch (error) {
+          console.error('❌ Error al imprimir la lista de colaboradores:', error);
+          alert('Error al imprimir la lista: ' + error.message);
+        }
+      };
+
       window.cerrarPreviewColaboradores = function() {
+        colaboradoresPreviewPDF = null;
         document.getElementById('colaboradoresPreviewModal').classList.remove('active');
         var contenedorColab = document.getElementById('colaboradoresPreviewFrame');
         if (contenedorColab) contenedorColab.innerHTML = '';
