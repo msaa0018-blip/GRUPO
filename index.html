@@ -9328,10 +9328,11 @@
             body: rows,
             startY: margin + 40,
             margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
-            theme: 'striped',
+            theme: 'grid',
             // Anchos fijos por columna (A4 horizontal, 782pt útiles) para
             // que ninguna palabra se corte a la mitad; Nombre toma el resto.
-            styles: { fontSize: 6.8, cellPadding: 3, font: 'helvetica' },
+            styles: { fontSize: 6.8, cellPadding: 3, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
+            alternateRowStyles: { fillColor: [235, 238, 242] },
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 6.8, fontStyle: 'bold' },
             columnStyles: {
               1: { cellWidth: 44 },
@@ -9356,27 +9357,7 @@
 
           agregarPiePaginaReporte(doc, 'LISTA-PROVEEDORES-' + fechaAAMMDD());
 
-          var blobUrl = doc.output('bloburl');
-          var printFrame = document.createElement('iframe');
-          printFrame.style.position = 'fixed';
-          printFrame.style.right = '0';
-          printFrame.style.bottom = '0';
-          printFrame.style.width = '0';
-          printFrame.style.height = '0';
-          printFrame.style.border = '0';
-          printFrame.src = blobUrl;
-          printFrame.onload = function() {
-            try {
-              printFrame.contentWindow.focus();
-              printFrame.contentWindow.print();
-            } catch (e) {
-              window.open(blobUrl, '_blank');
-            }
-          };
-          document.body.appendChild(printFrame);
-          setTimeout(function() {
-            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
-          }, 60000);
+          imprimirPDFSeguro(doc, doc._nombreArchivoReporte);
         } catch (e) {
           console.error('❌ Error generando el PDF de proveedores:', e.stack || e);
           alert('No se pudo generar el PDF de proveedores.\n\nDetalle: ' + (e.message || e));
@@ -11435,7 +11416,7 @@
 
           dibujarValeCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
 
-          doc.save((v.codigo || 'vale') + '.pdf');
+          await imprimirPDFSeguro(doc, v.codigo || 'vale', function() { doc.save((v.codigo || 'vale') + '.pdf'); });
 
           if (!v.fecha_impresion) {
             var { error } = await supabase.from('vales_gasolina').update({ fecha_impresion: new Date().toISOString() }).eq('id', id);
@@ -11763,7 +11744,7 @@
 
           dibujarDocumentoCXPCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
 
-          doc.save((d.codigo || d.tipo) + '.pdf');
+          await imprimirPDFSeguro(doc, d.codigo || d.tipo, function() { doc.save((d.codigo || d.tipo) + '.pdf'); });
         } catch (e) {
           console.error('Error generando el PDF del documento CXP:', e);
           alert('❌ No se pudo generar el PDF: ' + e.message);
@@ -12640,8 +12621,9 @@
             body: rows,
             startY: margin + 40,
             margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
-            theme: 'striped',
-            styles: { fontSize: 8, cellPadding: 5, font: 'helvetica' },
+            theme: 'grid',
+            styles: { fontSize: 8.5, cellPadding: 5, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
+            alternateRowStyles: { fillColor: [235, 238, 242] },
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
           });
 
@@ -12662,28 +12644,7 @@
       window.imprimirPreviewColaboradores = function() {
         if (!colaboradoresPreviewPDF) { alert('No hay una lista para imprimir.'); return; }
         try {
-          var blobUrl = colaboradoresPreviewPDF.output('bloburl');
-          var printFrame = document.createElement('iframe');
-          printFrame.style.position = 'fixed';
-          printFrame.style.right = '0';
-          printFrame.style.bottom = '0';
-          printFrame.style.width = '0';
-          printFrame.style.height = '0';
-          printFrame.style.border = '0';
-          printFrame.src = blobUrl;
-          printFrame.onload = function() {
-            try {
-              printFrame.contentWindow.focus();
-              printFrame.contentWindow.print();
-            } catch (e) {
-              window.open(blobUrl, '_blank');
-            }
-          };
-          document.body.appendChild(printFrame);
-          setTimeout(function() {
-            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
-            URL.revokeObjectURL(blobUrl);
-          }, 60000);
+          imprimirPDFSeguro(colaboradoresPreviewPDF, colaboradoresPreviewPDF._nombreArchivoReporte);
         } catch (error) {
           console.error('❌ Error al imprimir la lista de colaboradores:', error);
           alert('Error al imprimir la lista: ' + error.message);
@@ -22740,8 +22701,9 @@
                 body: rows,
                 startY: cursorY + 16,
                 margin: { top: margin, left: margin + 8, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
-                theme: 'striped',
-                styles: { fontSize: 7, cellPadding: 3, font: 'helvetica' },
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 3, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
+                alternateRowStyles: { fillColor: [235, 238, 242] },
                 headStyles: { fillColor: [90, 100, 110], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' }
               });
               cursorY = doc.lastAutoTable.finalY + 18;
@@ -22750,27 +22712,7 @@
 
           agregarPiePaginaReporte(doc, 'REPORTE-REPSE-' + fechaAAMMDD());
 
-          var blobUrl = doc.output('bloburl');
-          var printFrame = document.createElement('iframe');
-          printFrame.style.position = 'fixed';
-          printFrame.style.right = '0';
-          printFrame.style.bottom = '0';
-          printFrame.style.width = '0';
-          printFrame.style.height = '0';
-          printFrame.style.border = '0';
-          printFrame.src = blobUrl;
-          printFrame.onload = function() {
-            try {
-              printFrame.contentWindow.focus();
-              printFrame.contentWindow.print();
-            } catch (e) {
-              window.open(blobUrl, '_blank');
-            }
-          };
-          document.body.appendChild(printFrame);
-          setTimeout(function() {
-            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
-          }, 60000);
+          imprimirPDFSeguro(doc, doc._nombreArchivoReporte);
         } catch (e) {
           console.error('❌ Error generando el reporte REPSE:', e.stack || e);
           alert('No se pudo generar el reporte REPSE.\n\nDetalle: ' + (e.message || e));
@@ -24677,7 +24619,7 @@
             suma: of.suma || of.monto || 0
           };
           var doc = await generarPDFOF(datos);
-          doc.save(of.folio + '.pdf');
+          await imprimirPDFSeguro(doc, of.folio, function() { doc.save(of.folio + '.pdf'); });
         } catch (error) {
           console.error('❌ Error al imprimir la OF:', error);
           alert('Error al imprimir la OF: ' + error.message);
@@ -26108,6 +26050,99 @@
         }
       }
 
+      // ===== IMPRESIÓN SEGURA DE PDF (sin cortes) =====
+      // Antes se mandaba a imprimir el PDF tal cual (iframe con el blob o
+      // descargándolo): el visor de PDF del navegador usaba el papel
+      // configurado en la impresora (normalmente Carta) SIN escalar, y
+      // como Carta es 1.76 cm más corta que A4 se perdía una franja del
+      // documento (el pie de página de la OC, o el lado izquierdo de las
+      // listas en horizontal). Ahora cada hoja del PDF se convierte en una
+      // imagen de alta resolución (≈216 dpi) dentro de una página HTML con
+      // "@page { size: A4 }": el navegador fija el papel A4 y, si la
+      // impresora usa otro tamaño, ESCALA la hoja completa para que quepa
+      // en vez de recortarla. Los márgenes de 1.5 cm ya van dentro de la
+      // imagen. En celular (donde imprimir desde un iframe no es fiable)
+      // se conserva el comportamiento anterior ("alternativa").
+      function esDispositivoMovilImpresion() {
+        return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+      }
+
+      function imprimirPDFBlobDirecto(doc) {
+        var blobUrl = doc.output('bloburl');
+        var frame = document.createElement('iframe');
+        frame.style.position = 'fixed'; frame.style.right = '0'; frame.style.bottom = '0';
+        frame.style.width = '0'; frame.style.height = '0'; frame.style.border = '0';
+        frame.src = blobUrl;
+        frame.onload = function() {
+          try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.open(blobUrl, '_blank'); }
+        };
+        document.body.appendChild(frame);
+        setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); URL.revokeObjectURL(blobUrl); }, 60000);
+      }
+
+      async function imprimirPDFSeguro(doc, nombreArchivo, alternativa) {
+        var usarAlternativa = function() {
+          if (typeof alternativa === 'function') return alternativa();
+          return imprimirPDFBlobDirecto(doc);
+        };
+        if (esDispositivoMovilImpresion() || !window.pdfjsLib) return usarAlternativa();
+        try {
+          var pdf = await window.pdfjsLib.getDocument({ data: doc.output('arraybuffer') }).promise;
+          var imagenes = [];
+          var horizontal = false;
+          for (var n = 1; n <= pdf.numPages; n++) {
+            var pagina = await pdf.getPage(n);
+            var base = pagina.getViewport({ scale: 1 });
+            if (n === 1) horizontal = base.width > base.height;
+            var vp = pagina.getViewport({ scale: 3 });
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.round(vp.width);
+            canvas.height = Math.round(vp.height);
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
+            imagenes.push(canvas.toDataURL('image/png'));
+          }
+          var titulo = String(nombreArchivo || doc._nombreArchivoReporte || 'documento').replace(/\.pdf$/i, '');
+          // Hoja apenas 0.5 mm más chica que A4 para que el navegador
+          // nunca genere una hoja en blanco extra por redondeo.
+          var anchoHoja = horizontal ? '297mm' : '210mm';
+          var altoHoja = horizontal ? '209.5mm' : '296.5mm';
+          var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + escapeHTML(titulo) + '</title>' +
+            '<style>' +
+            '@page { size: A4 ' + (horizontal ? 'landscape' : 'portrait') + '; margin: 0; }' +
+            'html, body { margin: 0; padding: 0; background: #fff; }' +
+            '.hoja { width: ' + anchoHoja + '; height: ' + altoHoja + '; overflow: hidden; page-break-after: always; break-after: page; }' +
+            '.hoja:last-child { page-break-after: auto; break-after: auto; }' +
+            '.hoja img { display: block; width: 100%; height: 100%; object-fit: contain; }' +
+            '</style></head><body>' +
+            imagenes.map(function(src) { return '<div class="hoja"><img src="' + src + '"></div>'; }).join('') +
+            '</body></html>';
+
+          var frame = document.createElement('iframe');
+          frame.style.position = 'fixed'; frame.style.right = '0'; frame.style.bottom = '0';
+          frame.style.width = '0'; frame.style.height = '0'; frame.style.border = '0';
+          frame.setAttribute('aria-hidden', 'true');
+          frame.onload = function() {
+            var w = frame.contentWindow;
+            var imgs = Array.prototype.slice.call(w.document.images);
+            Promise.all(imgs.map(function(im) {
+              return im.decode ? im.decode().catch(function() {}) : Promise.resolve();
+            })).then(function() {
+              try { w.focus(); w.print(); } catch (e) { usarAlternativa(); }
+            });
+          };
+          frame.srcdoc = html;
+          document.body.appendChild(frame);
+          setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); }, 120000);
+        } catch (errorImpresion) {
+          console.error('❌ Impresión segura falló, se usa el método anterior:', errorImpresion);
+          usarAlternativa();
+        }
+      }
+      window.imprimirPDFSeguro = imprimirPDFSeguro;
+
       // Dibuja todas las páginas del PDF ya cargado (pdf.js) al ancho actual
       // del contenedor. Las páginas se preparan fuera de pantalla y se
       // reemplazan de una sola vez: al redimensionar no hay parpadeo ni
@@ -26915,7 +26950,7 @@
             provEmail: oc.proveedor_email || ''
           };
           var doc = await generarPDFParaPreview(datosOC, oc);
-          doc.save(oc.codigo + '.pdf');
+          await imprimirPDFSeguro(doc, oc.codigo, function() { doc.save(oc.codigo + '.pdf'); });
         } catch (error) {
           console.error('❌ Error al imprimir OC:', error);
           alert('Error al generar el PDF: ' + error.message);
@@ -28248,28 +28283,7 @@
       window.imprimirReportePreview = function() {
         if (!reportePreviewPDF) { alert('No hay un reporte para imprimir.'); return; }
         try {
-          var blobUrl = reportePreviewPDF.output('bloburl');
-          var printFrame = document.createElement('iframe');
-          printFrame.style.position = 'fixed';
-          printFrame.style.right = '0';
-          printFrame.style.bottom = '0';
-          printFrame.style.width = '0';
-          printFrame.style.height = '0';
-          printFrame.style.border = '0';
-          printFrame.src = blobUrl;
-          printFrame.onload = function() {
-            try {
-              printFrame.contentWindow.focus();
-              printFrame.contentWindow.print();
-            } catch (e) {
-              window.open(blobUrl, '_blank');
-            }
-          };
-          document.body.appendChild(printFrame);
-          setTimeout(function() {
-            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
-            URL.revokeObjectURL(blobUrl);
-          }, 60000);
+          imprimirPDFSeguro(reportePreviewPDF, reportePreviewPDF._nombreArchivoReporte);
         } catch (error) {
           console.error('❌ Error al imprimir el reporte:', error);
           alert('Error al imprimir el reporte: ' + error.message);
@@ -28281,28 +28295,7 @@
           if (typeof window.renderCXP === 'function') window.renderCXP();
           var datos = obtenerDatosCXP();
           var doc = await generarPDFReporteCXP(datos);
-          var blobUrl = doc.output('bloburl');
-          var printFrame = document.createElement('iframe');
-          printFrame.style.position = 'fixed';
-          printFrame.style.right = '0';
-          printFrame.style.bottom = '0';
-          printFrame.style.width = '0';
-          printFrame.style.height = '0';
-          printFrame.style.border = '0';
-          printFrame.src = blobUrl;
-          printFrame.onload = function() {
-            try {
-              printFrame.contentWindow.focus();
-              printFrame.contentWindow.print();
-            } catch (e) {
-              window.open(blobUrl, '_blank');
-            }
-          };
-          document.body.appendChild(printFrame);
-          setTimeout(function() {
-            if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
-            URL.revokeObjectURL(blobUrl);
-          }, 60000);
+          imprimirPDFSeguro(doc, doc._nombreArchivoReporte);
         } catch (error) {
           console.error('❌ Error al imprimir reporte CXP:', error);
           alert('Error al imprimir el reporte: ' + error.message);
