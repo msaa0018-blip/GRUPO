@@ -9327,7 +9327,7 @@
             head: [headers],
             body: rows,
             startY: margin + 40,
-            margin: { top: margin, left: margin, right: margin, bottom: margin },
+            margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
             theme: 'striped',
             // Anchos fijos por columna (A4 horizontal, 782pt útiles) para
             // que ninguna palabra se corte a la mitad; Nombre toma el resto.
@@ -9353,6 +9353,8 @@
               }
             }
           });
+
+          agregarPiePaginaReporte(doc, 'LISTA-PROVEEDORES-' + fechaAAMMDD());
 
           var blobUrl = doc.output('bloburl');
           var printFrame = document.createElement('iframe');
@@ -12012,7 +12014,9 @@
           doc.text(formatoMoneda(granTotal, 'MXN'), pageWidth - margin, y, { align: 'right' });
           y += 40;
 
-          var pieY = doc.internal.pageSize.height - 55;
+          // La leyenda se sube para dejar libre la franja del pie de
+          // página estándar (a 1.5 cm del borde, ver agregarPiePaginaReporte).
+          var pieY = doc.internal.pageSize.height - MARGEN_REPORTE_PT - 40;
           doc.setDrawColor(200, 200, 200);
           doc.setLineWidth(0.5);
           doc.line(margin, pieY, pageWidth - margin, pieY);
@@ -12025,6 +12029,8 @@
           doc.setTextColor(80, 80, 80);
           doc.setFont('helvetica', 'normal');
           doc.text(d.folio || d.codigo || '', pageWidth / 2, pieY + 20, { align: 'center' });
+
+          agregarPiePaginaReporte(doc, d.folio || d.codigo || 'SPM');
 
           if (soloPreview) {
             // Vista previa: se muestra en el modal genérico de PDF (el
@@ -12633,11 +12639,13 @@
             head: [headers],
             body: rows,
             startY: margin + 40,
-            margin: { top: margin, left: margin, right: margin, bottom: margin },
+            margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
             theme: 'striped',
             styles: { fontSize: 8, cellPadding: 5, font: 'helvetica' },
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
           });
+
+          agregarPiePaginaReporte(doc, 'LISTA-COLABORADORES-' + fechaAAMMDD());
 
           colaboradoresPreviewPDF = doc;
           document.getElementById('colaboradoresPreviewModal').classList.add('active');
@@ -13603,7 +13611,7 @@
         var totalPaginas = doc.internal.getNumberOfPages();
         for (var p = 1; p <= totalPaginas; p++) {
           doc.setPage(p);
-          var pieY = doc.internal.pageSize.height - 20;
+          var pieY = doc.internal.pageSize.height - MARGEN_REPORTE_PT;
           doc.setDrawColor(200, 200, 200);
           doc.setLineWidth(0.5);
           doc.line(margin, pieY - 8, pageWidth - margin, pieY - 8);
@@ -22692,7 +22700,7 @@
           var empresasOrdenadas = Object.keys(grupos).sort();
           empresasOrdenadas.forEach(function(claveEmpresa) {
             var grupoEmpresa = grupos[claveEmpresa];
-            if (cursorY > doc.internal.pageSize.getHeight() - margin - 50) { doc.addPage(); cursorY = margin + 14; }
+            if (cursorY > doc.internal.pageSize.getHeight() - MARGEN_INFERIOR_REPORTE - 50) { doc.addPage(); cursorY = margin + 14; }
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.setTextColor(23, 63, 115);
@@ -22702,7 +22710,7 @@
             var deptosOrdenados = Object.keys(grupoEmpresa.departamentos).sort();
             deptosOrdenados.forEach(function(claveDepto) {
               var grupoDepto = grupoEmpresa.departamentos[claveDepto];
-              if (cursorY > doc.internal.pageSize.getHeight() - margin - 50) { doc.addPage(); cursorY = margin + 14; }
+              if (cursorY > doc.internal.pageSize.getHeight() - MARGEN_INFERIOR_REPORTE - 50) { doc.addPage(); cursorY = margin + 14; }
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(10);
               doc.setTextColor(60, 60, 60);
@@ -22731,7 +22739,7 @@
                 head: [headers],
                 body: rows,
                 startY: cursorY + 16,
-                margin: { top: margin, left: margin + 8, right: margin, bottom: margin },
+                margin: { top: margin, left: margin + 8, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
                 theme: 'striped',
                 styles: { fontSize: 7, cellPadding: 3, font: 'helvetica' },
                 headStyles: { fillColor: [90, 100, 110], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' }
@@ -22739,6 +22747,8 @@
               cursorY = doc.lastAutoTable.finalY + 18;
             });
           });
+
+          agregarPiePaginaReporte(doc, 'REPORTE-REPSE-' + fechaAAMMDD());
 
           var blobUrl = doc.output('bloburl');
           var printFrame = document.createElement('iframe');
@@ -24369,7 +24379,7 @@
           head: [headers],
           body: rows,
           startY: y,
-          margin: { left: margin, right: margin },
+          margin: { left: margin, right: margin, bottom: MARGEN_REPORTE_PT + 50 },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
           columnStyles: {
@@ -24396,7 +24406,9 @@
         doc.text(formatoMoneda(datos.suma || 0, datos.moneda), pageWidth - margin, y, { align: 'right' });
         y += 40;
 
-        var pieY = doc.internal.pageSize.height - 55;
+        // La leyenda se sube para dejar libre la franja del pie de página
+        // estándar (a 1.5 cm del borde, ver agregarPiePaginaReporte).
+        var pieY = doc.internal.pageSize.height - MARGEN_REPORTE_PT - 40;
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.line(margin, pieY, pageWidth - margin, pieY);
@@ -24409,6 +24421,8 @@
         doc.setTextColor(80, 80, 80);
         doc.setFont('helvetica', 'normal');
         doc.text(datos.folio || '', pageWidth / 2, pieY + 20, { align: 'center' });
+
+        agregarPiePaginaReporte(doc, datos.folio || 'OF');
 
         return doc;
       }
@@ -28353,6 +28367,11 @@
       // Margen inferior para autoTable: la tabla salta de hoja antes de
       // invadir la franja del pie.
       var MARGEN_INFERIOR_REPORTE = ALTURA_PIE_REPORTE + 16;
+
+      function fechaAAMMDD() {
+        var h = new Date();
+        return String(h.getFullYear()).slice(2) + String(h.getMonth() + 1).padStart(2, '0') + String(h.getDate()).padStart(2, '0');
+      }
 
       function agregarPiePaginaReporte(doc, nombreArchivo) {
         var pageWidth = doc.internal.pageSize.getWidth();
