@@ -6652,6 +6652,9 @@
 
       var usuariosDB = [];
       var actual = null;
+      // Margen de impresión de reportes y listas: 1.5 cm por cada lado
+      // (hoja A4), para que ninguna impresora corte el contenido.
+      var MARGEN_REPORTE_PT = 1.5 * 28.3464567;
       var proyectos = [];
       var ordenes = [];
       var cuentasCXC = [];
@@ -9288,16 +9291,16 @@
           var { jsPDF } = window.jspdf;
           var doc = new jsPDF('l', 'pt', 'a4');
           var pageWidth = doc.internal.pageSize.getWidth();
-          var margin = 30;
+          var margin = MARGEN_REPORTE_PT;
 
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(14);
           doc.setTextColor(23, 63, 115);
-          doc.text('Listado de Proveedores', margin, 30);
+          doc.text('Listado de Proveedores', margin, margin + 14);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
-          doc.text('Generado: ' + new Date().toLocaleString(), margin, 44);
+          doc.text('Generado: ' + new Date().toLocaleString(), margin, margin + 28);
 
           var headers = ['Nombre', 'Sucursal', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Dirección', 'CP', 'Banco MXN', 'Cuenta MXN', 'Clave MXN', 'Condiciones'];
           var rows = proveedoresCatalogoCache.map(function(p) {
@@ -9323,8 +9326,8 @@
           doc.autoTable({
             head: [headers],
             body: rows,
-            startY: 56,
-            margin: { left: margin, right: margin },
+            startY: margin + 40,
+            margin: { top: margin, left: margin, right: margin, bottom: margin },
             theme: 'striped',
             // Anchos fijos por columna (A4 horizontal, 782pt útiles) para
             // que ninguna palabra se corte a la mitad; Nombre toma el resto.
@@ -12600,16 +12603,16 @@
           var { jsPDF } = window.jspdf;
           var doc = new jsPDF('l', 'pt', 'a4');
           var pageWidth = doc.internal.pageSize.getWidth();
-          var margin = 30;
+          var margin = MARGEN_REPORTE_PT;
 
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(14);
           doc.setTextColor(23, 63, 115);
-          doc.text('Listado de Colaboradores', margin, 30);
+          doc.text('Listado de Colaboradores', margin, margin + 14);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
-          doc.text('Generado: ' + new Date().toLocaleString(), margin, 44);
+          doc.text('Generado: ' + new Date().toLocaleString(), margin, margin + 28);
 
           var headers = ['Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA'];
           var rows = colaboradoresCache.map(function(u) {
@@ -12629,8 +12632,8 @@
           doc.autoTable({
             head: [headers],
             body: rows,
-            startY: 56,
-            margin: { left: margin, right: margin },
+            startY: margin + 40,
+            margin: { top: margin, left: margin, right: margin, bottom: margin },
             theme: 'striped',
             styles: { fontSize: 8, cellPadding: 5, font: 'helvetica' },
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
@@ -22672,8 +22675,8 @@
           var { jsPDF } = window.jspdf;
           var doc = new jsPDF('l', 'pt', 'a4');
           var pageWidth = doc.internal.pageSize.getWidth();
-          var margin = 30;
-          var cursorY = 30;
+          var margin = MARGEN_REPORTE_PT;
+          var cursorY = margin + 14;
 
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(14);
@@ -22689,7 +22692,7 @@
           var empresasOrdenadas = Object.keys(grupos).sort();
           empresasOrdenadas.forEach(function(claveEmpresa) {
             var grupoEmpresa = grupos[claveEmpresa];
-            if (cursorY > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); cursorY = 30; }
+            if (cursorY > doc.internal.pageSize.getHeight() - margin - 50) { doc.addPage(); cursorY = margin + 14; }
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.setTextColor(23, 63, 115);
@@ -22699,7 +22702,7 @@
             var deptosOrdenados = Object.keys(grupoEmpresa.departamentos).sort();
             deptosOrdenados.forEach(function(claveDepto) {
               var grupoDepto = grupoEmpresa.departamentos[claveDepto];
-              if (cursorY > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); cursorY = 30; }
+              if (cursorY > doc.internal.pageSize.getHeight() - margin - 50) { doc.addPage(); cursorY = margin + 14; }
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(10);
               doc.setTextColor(60, 60, 60);
@@ -22728,7 +22731,7 @@
                 head: [headers],
                 body: rows,
                 startY: cursorY + 16,
-                margin: { left: margin + 8, right: margin },
+                margin: { top: margin, left: margin + 8, right: margin, bottom: margin },
                 theme: 'striped',
                 styles: { fontSize: 7, cellPadding: 3, font: 'helvetica' },
                 headStyles: { fillColor: [90, 100, 110], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' }
@@ -28110,12 +28113,12 @@
             imgWidth = imgWidth * (maxHeight / imgHeight);
             imgHeight = maxHeight;
           }
-          doc.addImage(imgData, logoTipo, margin, 22, imgWidth, imgHeight);
+          doc.addImage(imgData, logoTipo, margin, margin, imgWidth, imgHeight);
         } catch (e) {
           doc.setFontSize(10);
           doc.setTextColor(11, 26, 51);
           doc.setFont('helvetica', 'bold');
-          doc.text(nombreEmpresa, margin, 40, { align: 'left' });
+          doc.text(nombreEmpresa, margin, margin + 18, { align: 'left' });
         }
 
         // Logo de la EMPRESA del usuario a la DERECHA del encabezado (solo
@@ -28145,12 +28148,12 @@
                 anchoDer = anchoDer * (42 / altoDer);
                 altoDer = 42;
               }
-              doc.addImage(imgDataDer, tipoDerecha, pageWidth - margin - anchoDer, 22, anchoDer, altoDer);
+              doc.addImage(imgDataDer, tipoDerecha, pageWidth - margin - anchoDer, margin, anchoDer, altoDer);
             } catch (eDer) {
               doc.setFontSize(10);
               doc.setTextColor(11, 26, 51);
               doc.setFont('helvetica', 'bold');
-              doc.text(nombreDerecha, pageWidth - margin, 40, { align: 'right' });
+              doc.text(nombreDerecha, pageWidth - margin, margin + 18, { align: 'right' });
             }
             doc.setTextColor(0, 0, 0);
           }
@@ -28354,7 +28357,7 @@
       function agregarPiePaginaReporte(doc, nombreArchivo) {
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
-        var margin = 30;
+        var margin = MARGEN_REPORTE_PT;
         var pieY = pageHeight - ALTURA_PIE_REPORTE;
         var ahora = new Date();
         var fechaCorta = String(ahora.getDate()).padStart(2, '0') + '/' + String(ahora.getMonth() + 1).padStart(2, '0') + '/' + String(ahora.getFullYear()).slice(-2);
@@ -28387,8 +28390,8 @@
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
-        var margin = 30;
-        var y = 46;
+        var margin = MARGEN_REPORTE_PT;
+        var y = margin + 24;
 
         await agregarLogoUsuarioReporte(doc, pageWidth, margin, { logoEmpresaDerecha: true });
 
@@ -28499,7 +28502,7 @@
           head: [headersOC],
           body: rowsOC,
           startY: y,
-          margin: { left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+          margin: { top: margin, left: margin, right: margin, bottom: Math.max(MARGEN_INFERIOR_REPORTE, margin) },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [11, 26, 51] }
         });
@@ -28513,8 +28516,8 @@
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
-        var margin = 30;
-        var y = 46;
+        var margin = MARGEN_REPORTE_PT;
+        var y = margin + 24;
 
         await agregarLogoUsuarioReporte(doc, pageWidth, margin, { logoEmpresaDerecha: true });
 
@@ -28572,7 +28575,7 @@
           head: [headers],
           body: rows,
           startY: y,
-          margin: { left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+          margin: { top: margin, left: margin, right: margin, bottom: Math.max(MARGEN_INFERIOR_REPORTE, margin) },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [11, 26, 51] }
         });
@@ -28586,8 +28589,8 @@
         var { jsPDF } = window.jspdf;
         var doc = new jsPDF('l', 'pt', 'a4');
         var pageWidth = doc.internal.pageSize.getWidth();
-        var margin = 30;
-        var y = 46;
+        var margin = MARGEN_REPORTE_PT;
+        var y = margin + 24;
 
         await agregarLogoUsuarioReporte(doc, pageWidth, margin);
 
@@ -28648,7 +28651,7 @@
           head: [headers],
           body: rows,
           startY: y,
-          margin: { left: margin, right: margin },
+          margin: { top: margin, left: margin, right: margin, bottom: margin },
           styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
           headStyles: { fillColor: [11, 26, 51] }
         });
