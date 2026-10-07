@@ -17755,6 +17755,22 @@
         return URL_APP_TELEGRAM + '?complemento=' + oc.id + (factura && factura.id ? '&factura=' + factura.id : '');
       }
 
+      // ===== REGLA FISCAL DEL COMPLEMENTO DE PAGO =====
+      // Solo las facturas PPD (pago en parcialidades o diferido) requieren
+      // complemento de pago. Las PUE (pago en una sola exhibición) NO lo
+      // requieren. La OC marca "complemento_requerido = false" cuando sus
+      // facturas ya cubren el total y ninguna PPD queda sin complemento;
+      // en ese caso Contabilidad puede concluirla sin complemento.
+      function facturaRequiereComplemento(f) {
+        return !!f && String(f.tipo || '').toUpperCase() === 'PPD';
+      }
+      function ocComplementoListo(o) {
+        return !!o && (!!o.complemento_pago_url || o.complemento_requerido === false);
+      }
+      function ocRequiereSubirComplemento(o) {
+        return !!o && !o.complemento_pago_url && o.complemento_requerido !== false;
+      }
+
       async function solicitarComplementoPagoTelegram(oc, factura) {
         var resultado = { enviados: [], motivo: '' };
         try {
@@ -18133,13 +18149,29 @@
           // ya tenía todos sus complementos (complemento_pago_url), al
           // agregar una factura nueva vuelve a quedar pendiente, para que
           // Contabilidad no pueda concluirla hasta que llegue el nuevo.
-          if (oc.complemento_pago_url) updatesOC.complemento_pago_url = null;
-          await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
+          // Solo una factura PPD vuelve a dejar la OC pendiente de
+          // complemento; una PUE no lo requiere.
+          var esFacturaPPD = facturaRequiereComplemento(facturaGuardada);
+          if (esFacturaPPD && oc.complemento_pago_url) updatesOC.complemento_pago_url = null;
+          var sumaTrasFactura = sumaFacturasOC();
+          var completaTrasFactura = (sumaTrasFactura - esperado.monto) >= -TOLERANCIA_MONTO_FACTURA;
+          var ppdSinComplemento = ocConclusionPendiente.facturas.filter(function(f) {
+            return facturaRequiereComplemento(f) && !f.complemento_pago_url;
+          }).length;
+          // La OC ya no necesita complemento cuando sus facturas cubren el
+          // total y ninguna PPD está pendiente de complemento.
+          updatesOC.complemento_requerido = !(completaTrasFactura && ppdSinComplemento === 0);
+          var { error: errorUpdOC } = await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
+          if (errorUpdOC && /complemento_requerido/.test(errorUpdOC.message || '')) {
+            // Columna aún no creada (falta correr el SQL): se guarda lo demás.
+            delete updatesOC.complemento_requerido;
+            await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
+          }
           Object.assign(oc, updatesOC);
 
-          // POR CADA factura subida se solicita por Telegram su complemento
-          // de pago (a DMHS), con el link directo para subirlo.
-          var promesaSolicitudComplemento = solicitarComplementoPagoTelegram(oc, facturaGuardada);
+          // Solo por cada factura PPD se solicita por Telegram su
+          // complemento de pago (a DMHS), con el link directo para subirlo.
+          var promesaSolicitudComplemento = esFacturaPPD ? solicitarComplementoPagoTelegram(oc, facturaGuardada) : null;
 
           window.renderFacturasAgregadasOC();
 
@@ -18172,7 +18204,9 @@
           }
 
           if (montoCompleto) {
-            mostrarFacturaComprobada('Finanzas debe subir el complemento de pago ("💰 Complemento Pago") para que Contabilidad pueda concluirla.');
+            mostrarFacturaComprobada(ocComplementoListo(oc)
+              ? 'Factura PUE: no requiere complemento de pago. Contabilidad ya puede concluir la OC ("🏁 Concluir").'
+              : 'Finanzas debe subir el complemento de pago de la(s) factura(s) PPD ("💰 Complemento Pago") para que Contabilidad pueda concluirla.');
           } else if (alcanzoLimite) {
             if (textoPaso) textoPaso.textContent = '⚠️ Se alcanzó el máximo de ' + MAX_FACTURAS_POR_OC + ' facturas y el monto acumulado (' + formatoMoneda(sumaActual, esperado.moneda) + ') no cubre el total de la OC (' + formatoMoneda(esperado.monto, esperado.moneda) + '). No es posible concluir el proceso; contacta a Finanzas/Administración.';
             if (btnContinuar) btnContinuar.classList.add('hidden');
@@ -18236,10 +18270,14 @@
           if (facturaId) {
             factura = facturas.find(function(f) { return f.id === facturaId; }) || null;
             if (!factura) return alert('⚠️ No se encontró la factura indicada en esta OC.');
+            if (!facturaRequiereComplemento(factura)) return alert('ℹ️ Esta factura es PUE: no requiere complemento de pago.');
             if (factura.complemento_pago_url) return alert('✅ Esta factura ya tiene su complemento de pago.');
           } else {
-            factura = facturas.find(function(f) { return !f.complemento_pago_url; }) || null;
-            if (!factura) return alert('✅ Todas las facturas de esta OC ya tienen su complemento de pago, pendiente de confirmación de Contabilidad.');
+            factura = facturas.find(function(f) { return facturaRequiereComplemento(f) && !f.complemento_pago_url; }) || null;
+            if (!factura) {
+              if (!facturas.some(facturaRequiereComplemento)) return alert('ℹ️ Las facturas de esta OC son PUE: no requieren complemento de pago.');
+              return alert('✅ Todas las facturas PPD de esta OC ya tienen su complemento de pago, pendiente de confirmación de Contabilidad.');
+            }
           }
         } else if (oc.complemento_pago_url) {
           return alert('Esta OC ya tiene un complemento de pago subido, pendiente de confirmación de Contabilidad.');
@@ -18250,7 +18288,7 @@
         archivoComplementoPagoOCPendiente = null;
         var codigoEl = document.getElementById('complementoPagoOCCodigo');
         if (codigoEl) {
-          var pendientes = facturas.filter(function(f) { return !f.complemento_pago_url; }).length;
+          var pendientes = facturas.filter(function(f) { return facturaRequiereComplemento(f) && !f.complemento_pago_url; }).length;
           codigoEl.textContent = '— ' + (oc.codigo || ('OC-' + oc.id)) +
             (factura ? ' · Factura ' + (facturas.indexOf(factura) + 1) + ' de ' + facturas.length + ' (' + factura.uuid + ', ' + formatoMoneda(Number(factura.monto) || 0, oc.moneda || 'MXN') + ')' + (pendientes > 1 ? ' · ' + pendientes + ' pendientes' : '') : '');
         }
@@ -18281,6 +18319,7 @@
             var facturas = await facturasDeOC(oc.id);
             var factura = facturas.find(function(f) { return f.id === enlace.facturaId; });
             if (!factura) return cerrarSesionPorLinkComplemento('⚠️ No se encontró la factura del link en la OC ' + (oc.codigo || oc.id) + '.');
+            if (!facturaRequiereComplemento(factura)) return cerrarSesionPorLinkComplemento('ℹ️ Esta factura es PUE: no requiere complemento de pago.');
             if (factura.complemento_pago_url) {
               var fechaSubida = factura.complemento_fecha_subida ? new Date(factura.complemento_fecha_subida).toLocaleDateString('es-MX') : '';
               return cerrarSesionPorLinkComplemento('✅ Complemento de pago subido previamente' + (fechaSubida ? ' (' + fechaSubida + ')' : '') + '. El link ya ha sido atendido.');
@@ -18376,11 +18415,17 @@
           // solo cuando TODAS sus facturas ya lo tienen.
           if (pendientesComplemento === 0) {
             var updates = {
+              complemento_requerido: false,
               complemento_pago_url: url,
               complemento_pago_subido_por: actual.u,
               complemento_pago_fecha_subida: ahoraComplemento
             };
             var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+            if (error && /complemento_requerido/.test(error.message || '')) {
+              delete updates.complemento_requerido;
+              var r2 = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+              error = r2.error;
+            }
             if (error) throw error;
             Object.assign(oc, updates);
           }
@@ -18422,7 +18467,7 @@
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
         if (!oc.uuidfactura) return alert('Aún no se ha registrado ninguna factura para esta OC.');
-        if (!oc.complemento_pago_url) return alert('⚠️ Todavía no se ha subido el complemento de pago de esta OC. Finanzas debe subirlo antes ("💰 Complemento Pago").');
+        if (!ocComplementoListo(oc)) return alert('⚠️ Todavía no se ha subido el complemento de pago de la(s) factura(s) PPD de esta OC. Finanzas debe subirlo antes ("💰 Complemento Pago").');
 
         ocConclusionPendiente = { oc: oc, facturas: [] };
         try {
@@ -18466,7 +18511,9 @@
             (oc.complemento_pago_url
               ? ' &nbsp;|&nbsp; Complemento de pago: ✅ subido por ' + escapeHTML(oc.complemento_pago_subido_por || '—') +
                 ' &nbsp;<button type="button" class="btn-imprimir" onclick="window.abrirFacturaVer(\'' + escapeHTML(oc.complemento_pago_url) + '\', \'Complemento de Pago\')">👁️ Ver</button>'
-              : ' &nbsp;|&nbsp; Complemento de pago: ⚠️ pendiente');
+              : (oc.complemento_requerido === false
+                  ? ' &nbsp;|&nbsp; Complemento de pago: no requerido (factura PUE)'
+                  : ' &nbsp;|&nbsp; Complemento de pago: ⚠️ pendiente'));
         }
 
         var msg = document.getElementById('msgConcluirOC');
@@ -18492,8 +18539,8 @@
           return;
         }
         var oc = ocConclusionPendiente.oc;
-        if (!oc.complemento_pago_url) {
-          alert('⚠️ Todavía no se ha subido el complemento de pago de esta OC. Finanzas debe subirlo antes de poder concluir.');
+        if (!ocComplementoListo(oc)) {
+          alert('⚠️ Todavía no se ha subido el complemento de pago de la(s) factura(s) PPD de esta OC. Finanzas debe subirlo antes de poder concluir.');
           return;
         }
 
@@ -22189,12 +22236,12 @@
               if (rol === 'Finanzas' || rol === 'Administrador') {
                 // Subir factura es exclusivo del solicitante/responsable de la OC: Finanzas ya no tiene aquí el botón "📄 Factura".
                 // El complemento de pago sí le corresponde a Finanzas, después de que ya se registró la factura.
-                if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && o.uuidfactura && !o.complemento_pago_url) {
+                if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && o.uuidfactura && ocRequiereSubirComplemento(o)) {
                   acciones += '<button class="btn-success" onclick="window.abrirComplementoPagoOC(' + idxOriginal + ')">💰 Complemento Pago</button>';
                 }
               }
               // Concluir la OC es exclusivo de Contabilidad/Administrador, y solo hasta que Finanzas subió el complemento de pago.
-              if ((rol === 'Contabilidad' || rol === 'Administrador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && o.uuidfactura && o.complemento_pago_url) {
+              if ((rol === 'Contabilidad' || rol === 'Administrador') && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && o.uuidfactura && ocComplementoListo(o)) {
                 acciones += '<button class="btn-success" onclick="window.abrirConcluirOC(' + idxOriginal + ')">🏁 Concluir</button>';
               }
 
