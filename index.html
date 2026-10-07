@@ -12667,6 +12667,14 @@
         var empresa = document.getElementById('colabEmpresa').value;
         var selDepto = document.getElementById('colabDepartamento');
         var valorPrevio = selDepto.value;
+        // Empresa sin departamentos (SMV, ICE, ISCI): el departamento es la
+        // misma empresa (su abreviatura), igual que en proyectos y OC.
+        if (empresa && getDepartamentosPorEmpresa(empresa).length === 0) {
+          var abrevEmpresaColab = getAbreviaturaEmpresa(empresa) || empresa;
+          selDepto.innerHTML = '<option value="' + escapeHTML(abrevEmpresaColab) + '">' + escapeHTML(abrevEmpresaColab) + '</option>';
+          selDepto.value = abrevEmpresaColab;
+          return;
+        }
         selDepto.innerHTML = '<option value="">Selecciona departamento</option>' +
           getDepartamentosPorEmpresa(empresa).map(function(dp) { return '<option value="' + escapeHTML(dp.nombre) + '">' + escapeHTML(dp.nombre) + '</option>'; }).join('');
         if (getDepartamentosPorEmpresa(empresa).some(function(dp) { return dp.nombre === valorPrevio; })) selDepto.value = valorPrevio;
@@ -12721,6 +12729,11 @@
           return;
         }
 
+        // Si la empresa no tiene departamentos, se guarda la empresa
+        // (abreviatura) como departamento.
+        if (empresa && !departamento && getDepartamentosPorEmpresa(empresa).length === 0) {
+          departamento = getAbreviaturaEmpresa(empresa) || empresa;
+        }
         var permisos = empresa ? [{ empresa: empresa, depto: departamento || '' }] : [];
 
         try {
