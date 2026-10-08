@@ -26285,9 +26285,14 @@
             '<style>' +
             '@page { size: A4 ' + (horizontal ? 'landscape' : 'portrait') + '; margin: ' + MARGEN_IMPRESION_MM + 'mm; }' +
             'html, body { margin: 0; padding: 0; background: #fff; }' +
-            '.hoja { width: ' + anchoHoja + '; height: ' + altoHoja + '; overflow: hidden; page-break-after: always; break-after: page; }' +
+            // La hoja ocupa TODA el área imprimible del papel que se elija
+            // (A4, Carta, etc.) y la imagen se centra horizontal y
+            // verticalmente: mismo espacio a la izquierda y a la derecha.
+            'html, body { width: 100%; height: 100%; }' +
+            '.hoja { width: 100%; height: 100vh; max-height: ' + altoHoja + '; display: flex; align-items: center; justify-content: center; overflow: hidden; page-break-after: always; break-after: page; }' +
+            '@media print { .hoja { max-height: none; } }' +
             '.hoja:last-child { page-break-after: auto; break-after: auto; }' +
-            '.hoja img { display: block; width: 100%; height: 100%; object-fit: contain; }' +
+            '.hoja img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; }' +
             '</style></head><body>' +
             imagenes.map(function(src) { return '<div class="hoja"><img src="' + src + '"></div>'; }).join('') +
             '</body></html>';
