@@ -26274,11 +26274,16 @@
           var titulo = String(nombreArchivo || doc._nombreArchivoReporte || 'documento').replace(/\.pdf$/i, '');
           // Hoja apenas 0.5 mm más chica que A4 para que el navegador
           // nunca genere una hoja en blanco extra por redondeo.
-          var anchoHoja = horizontal ? '297mm' : '210mm';
-          var altoHoja = horizontal ? '209.5mm' : '296.5mm';
+          // Margen de impresión de 1 cm por lado: la hoja del PDF se
+          // escala para caber DENTRO de ese margen, así el pie de página
+          // nunca queda en el límite del papel ni en la zona que la
+          // impresora no alcanza a imprimir.
+          var MARGEN_IMPRESION_MM = 10;
+          var anchoHoja = ((horizontal ? 297 : 210) - 2 * MARGEN_IMPRESION_MM) + 'mm';
+          var altoHoja = ((horizontal ? 210 : 297) - 2 * MARGEN_IMPRESION_MM - 0.5) + 'mm';
           var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + escapeHTML(titulo) + '</title>' +
             '<style>' +
-            '@page { size: A4 ' + (horizontal ? 'landscape' : 'portrait') + '; margin: 0; }' +
+            '@page { size: A4 ' + (horizontal ? 'landscape' : 'portrait') + '; margin: ' + MARGEN_IMPRESION_MM + 'mm; }' +
             'html, body { margin: 0; padding: 0; background: #fff; }' +
             '.hoja { width: ' + anchoHoja + '; height: ' + altoHoja + '; overflow: hidden; page-break-after: always; break-after: page; }' +
             '.hoja:last-child { page-break-after: auto; break-after: auto; }' +
