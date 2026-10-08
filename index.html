@@ -4158,6 +4158,9 @@
           </div>
           <div class="modal-body">
             <div class="cxc-form-row">
+              <input id="colabNombreCompleto" placeholder="Nombre completo" autocomplete="off">
+            </div>
+            <div class="cxc-form-row">
               <input id="colabUsuario" placeholder="Usuario (iniciales) *" style="text-transform:uppercase;">
               <select id="colabRol">
                 <option value="" disabled selected hidden>Selecciona rol *</option>
@@ -6184,6 +6187,7 @@
       </div>
       <div class="modal-body"><div id="colaboradoresPreviewFrame" class="visualizar-pdf-viewer"></div></div>
       <div class="modal-footer">
+        <button type="button" id="btnToggleSalariosColab" class="btn-imprimir" onclick="window.toggleSalariosListaColaboradores()" title="Incluir u omitir Salario semanal y TDD BBVA">💲 Con salarios</button>
         <button class="btn-imprimir" onclick="window.imprimirPreviewColaboradores()">🖨️ Imprimir</button>
       </div>
     </div>
@@ -12546,7 +12550,12 @@
         if (!cuerpo) return;
         if (!usuarioPuedeGestionarColaboradores()) return;
         try {
-          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,salario_semanal,tdd_bbva,telefono,email').order('usuario');
+          var { data, error } = await supabase.from('usuarios').select('usuario,nombre_completo,rol,permisos,salario_semanal,tdd_bbva,telefono,email').order('usuario');
+          if (error && /nombre_completo/.test(error.message || '')) {
+            // Columna aún no creada (falta correr el SQL): se carga sin ella.
+            var r2 = await supabase.from('usuarios').select('usuario,rol,permisos,salario_semanal,tdd_bbva,telefono,email').order('usuario');
+            data = r2.data; error = r2.error;
+          }
           if (error) throw error;
           // Las cuentas de sistema ADMIN y FINANZAS no son colaboradores:
           // no se muestran en la lista ni se incluyen al imprimirla.
@@ -12588,7 +12597,23 @@
       // mismo catálogo ya cargado en pantalla, sin nueva consulta a
       // Supabase) y lo muestra en una ventana modal, con el mismo patrón
       // de blob + iframe que ya usa la previsualización de la OC.
+      // Estado del botón "💲 Con salarios / 🚫 Sin salarios" de la ventana
+      // 🧑‍💻 Lista de Colaboradores. Por default incluye salarios.
+      var listaColaboradoresConSalarios = true;
+      function actualizarBotonSalariosColab() {
+        var btn = document.getElementById('btnToggleSalariosColab');
+        if (!btn) return;
+        btn.textContent = listaColaboradoresConSalarios ? '💲 Con salarios' : '🚫 Sin salarios';
+        btn.classList.toggle('seleccionado', !listaColaboradoresConSalarios);
+      }
+      window.toggleSalariosListaColaboradores = async function() {
+        listaColaboradoresConSalarios = !listaColaboradoresConSalarios;
+        actualizarBotonSalariosColab();
+        await window.imprimirListaColaboradores();
+      };
+
       window.imprimirListaColaboradores = async function() {
+        actualizarBotonSalariosColab();
         if (!usuarioPuedeGestionarColaboradores()) return alert('⚠️ Solo ADMIN puede imprimir la lista de colaboradores.');
         if (!colaboradoresCache.length) return alert('No hay colaboradores registrados para imprimir.');
         try {
@@ -12606,19 +12631,30 @@
           doc.setTextColor(100, 100, 100);
           doc.text('Generado: ' + new Date().toLocaleString(), margin, margin + 28);
 
-          var headers = ['Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA'];
+          // Con salarios: listado original (incluye Salario semanal y TDD
+          // BBVA). Sin salarios: se omiten ambos y el Nombre completo va
+          // como primera columna a la izquierda.
+          var conSalarios = listaColaboradoresConSalarios;
+          var headers = conSalarios
+            ? ['Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA']
+            : ['Nombre completo', 'Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email'];
           var rows = colaboradoresCache.map(function(u) {
             var permiso = (u.permisos && u.permisos[0]) || {};
-            return [
+            var base = [
               u.usuario || '',
               u.rol || '',
               getAbreviaturaEmpresa(permiso.empresa) || permiso.empresa || '—',
               mostrarDepto(getAbreviaturaDepartamento(permiso.depto, permiso.empresa) || permiso.depto) || '—',
               u.telefono || '—',
-              u.email || '—',
-              formatoMoneda(u.salario_semanal || 0, 'MXN'),
-              formatoMoneda(u.tdd_bbva != null ? u.tdd_bbva : TDD_BBVA_DEFAULT, 'MXN')
+              u.email || '—'
             ];
+            if (conSalarios) {
+              return base.concat([
+                formatoMoneda(u.salario_semanal || 0, 'MXN'),
+                formatoMoneda(u.tdd_bbva != null ? u.tdd_bbva : TDD_BBVA_DEFAULT, 'MXN')
+              ]);
+            }
+            return [u.nombre_completo || '—'].concat(base);
           });
 
           doc.autoTable({
@@ -12632,7 +12668,7 @@
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }
           });
 
-          agregarPiePaginaReporte(doc, 'LISTA-COLABORADORES-' + fechaAAMMDD());
+          agregarPiePaginaReporte(doc, 'LISTA-COLABORADORES-' + (conSalarios ? '' : 'SIN-SALARIOS-') + fechaAAMMDD());
 
           colaboradoresPreviewPDF = doc;
           document.getElementById('colaboradoresPreviewModal').classList.add('active');
@@ -12688,6 +12724,8 @@
         document.getElementById('colaboradorModalTitulo').textContent = 'Nuevo Colaborador';
         document.getElementById('colabUsuario').value = '';
         document.getElementById('colabUsuario').disabled = false;
+        var inputNombreNuevo = document.getElementById('colabNombreCompleto');
+        if (inputNombreNuevo) inputNombreNuevo.value = '';
         var selRol = document.getElementById('colabRol');
         selRol.innerHTML = '<option value="" disabled selected hidden>Selecciona rol *</option>' +
           ROLES_COLABORADOR.map(function(r) { return '<option value="' + r + '">' + r + '</option>'; }).join('');
@@ -12774,6 +12812,20 @@
           // Chat ID de Telegram (avisos de pago): RPC aparte, para no tocar
           // actualizar_colaborador / crear_colaborador. Si falla (p.ej. la
           // migración aún no se aplica), el colaborador ya quedó guardado.
+          // Nombre completo: RPC aparte (actualizar_nombre_colaborador), igual
+          // que el Chat ID de Telegram. Si falla, el colaborador ya quedó guardado.
+          var inputNombreGuardar = document.getElementById('colabNombreCompleto');
+          if (inputNombreGuardar) {
+            var nombreCompleto = (inputNombreGuardar.value || '').trim().replace(/\s+/g, ' ');
+            var { error: errorNombre } = await supabase.rpc('actualizar_nombre_colaborador', {
+              p_usuario: colaboradorEditando !== null ? colaboradorEditando : usuario,
+              p_nombre_completo: nombreCompleto || null
+            });
+            if (errorNombre) {
+              console.error('No se pudo guardar el nombre completo:', errorNombre);
+              alert('⚠️ El colaborador se guardó, pero no se pudo guardar el nombre completo: ' + errorNombre.message);
+            }
+          }
           var inputTelegramGuardar = document.getElementById('colabTelegram');
           if (inputTelegramGuardar) {
             var chatIdTelegram = (inputTelegramGuardar.value || '').trim();
@@ -12807,6 +12859,8 @@
         if (msg) msg.innerHTML = '';
         document.getElementById('colaboradorModalTitulo').textContent = 'Editar Colaborador — ' + usuario;
         document.getElementById('colabUsuario').value = u.usuario;
+        var inputNombreEd = document.getElementById('colabNombreCompleto');
+        if (inputNombreEd) inputNombreEd.value = u.nombre_completo || '';
         document.getElementById('colabUsuario').disabled = true; // el usuario (iniciales) no se cambia una vez creado
         var selRol = document.getElementById('colabRol');
         selRol.innerHTML = '<option value="" disabled hidden>Selecciona rol *</option>' +
