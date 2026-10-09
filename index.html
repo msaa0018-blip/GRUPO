@@ -12702,12 +12702,12 @@
           doc.setTextColor(100, 100, 100);
           doc.text('Generado: ' + new Date().toLocaleString(), margin, margin + 28);
 
-          // Con salarios: listado original (incluye Salario semanal y TDD
-          // BBVA). Sin salarios: se omiten ambos y el Nombre completo va
-          // como primera columna a la izquierda.
+          // Ambas versiones llevan el Nombre completo como primera columna.
+          // Con salarios: incluye Salario semanal y TDD BBVA. Sin salarios:
+          // se omiten esas dos columnas.
           var conSalarios = listaColaboradoresConSalarios;
           var headers = conSalarios
-            ? ['Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA']
+            ? ['Nombre completo', 'Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA']
             : ['Nombre completo', 'Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email'];
           var rows = colaboradoresCache.map(function(u) {
             var permiso = (u.permisos && u.permisos[0]) || {};
@@ -12720,7 +12720,7 @@
               u.email || '—'
             ];
             if (conSalarios) {
-              return base.concat([
+              return [u.nombre_completo || '—'].concat(base).concat([
                 formatoMoneda(u.salario_semanal || 0, 'MXN'),
                 formatoMoneda(u.tdd_bbva != null ? u.tdd_bbva : TDD_BBVA_DEFAULT, 'MXN')
               ]);
