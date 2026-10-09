@@ -3683,6 +3683,15 @@
         <div style="margin-bottom:12px;display:flex;gap:10px;">
           <button style="width:100%;" onclick="window.imprimirListaVehiculos()">🖨️ Imprimir Lista</button>
         </div>
+        <div class="flex" style="margin-bottom:12px;">
+          <select id="filtroVehEmpresa" onchange="window.cambiarFiltroEmpresaVehiculos()" title="Filtrar por empresa">
+            <option value="">🏢 Todas las empresas</option>
+          </select>
+          <select id="filtroVehDepartamento" onchange="window.renderTablaVehiculos()" title="Filtrar por departamento">
+            <option value="">🏷️ Todos los departamentos</option>
+          </select>
+          <span id="filtroVehConteo" class="text-muted" style="flex:0 0 auto;min-width:0;font-size:13px;"></span>
+        </div>
         <div class="table-wrapper">
           <table>
             <thead><tr><th>Nombre</th><th>Placas</th><th>Combustible</th><th>Empresa</th><th>Departamento</th><th>Acciones</th></tr></thead>
@@ -10403,10 +10412,99 @@
           vehiculosCache = [];
         }
 
+        llenarFiltrosVehiculos();
+        window.renderTablaVehiculos();
+
+        ['nvoVehEmpresa', 'edVehEmpresa', 'valeEmpresa'].forEach(function(id) {
+          var sel = document.getElementById(id);
+          if (sel && !sel.dataset.poblado) {
+            getEmpresasCatalogo().forEach(function(e) {
+              var opt = document.createElement('option');
+              opt.value = e.nombre;
+              opt.textContent = e.nombre;
+              sel.appendChild(opt);
+            });
+            sel.dataset.poblado = '1';
+          }
+        });
+      };
+
+      // ===== Filtro de vehículos por empresa / departamento =====
+      // Las opciones salen de los propios vehículos registrados, para que
+      // solo aparezcan empresas y departamentos que sí tienen vehículos.
+      var FILTRO_VEH_SIN_VALOR = '__sin__';
+      function llenarFiltrosVehiculos() {
+        var selEmp = document.getElementById('filtroVehEmpresa');
+        if (!selEmp) return;
+        var previa = selEmp.value;
+        var empresas = [];
+        var hayGeneral = false;
+        vehiculosCache.forEach(function(v) {
+          if (!v.empresa) { hayGeneral = true; return; }
+          if (empresas.indexOf(v.empresa) === -1) empresas.push(v.empresa);
+        });
+        empresas.sort();
+        selEmp.innerHTML = '<option value="">🏢 Todas las empresas</option>' +
+          empresas.map(function(e) {
+            var abrev = getAbreviaturaEmpresa(e);
+            return '<option value="' + escapeHTML(e) + '">' + escapeHTML(abrev && abrev !== e ? abrev + ' — ' + e : e) + '</option>';
+          }).join('') +
+          (hayGeneral ? '<option value="' + FILTRO_VEH_SIN_VALOR + '">Sin empresa (Todas)</option>' : '');
+        if (Array.prototype.some.call(selEmp.options, function(o) { return o.value === previa; })) selEmp.value = previa;
+        llenarFiltroDeptoVehiculos();
+      }
+
+      function llenarFiltroDeptoVehiculos() {
+        var selEmp = document.getElementById('filtroVehEmpresa');
+        var selDep = document.getElementById('filtroVehDepartamento');
+        if (!selEmp || !selDep) return;
+        var empresa = selEmp.value;
+        var previa = selDep.value;
+        var deptos = [];
+        var haySinDepto = false;
+        vehiculosCache.forEach(function(v) {
+          if (empresa === FILTRO_VEH_SIN_VALOR ? !!v.empresa : (empresa && v.empresa !== empresa)) return;
+          if (!v.departamento) { haySinDepto = true; return; }
+          if (deptos.indexOf(v.departamento) === -1) deptos.push(v.departamento);
+        });
+        deptos.sort();
+        selDep.innerHTML = '<option value="">🏷️ Todos los departamentos</option>' +
+          deptos.map(function(d) { return '<option value="' + escapeHTML(d) + '">' + escapeHTML(d) + '</option>'; }).join('') +
+          (haySinDepto ? '<option value="' + FILTRO_VEH_SIN_VALOR + '">Toda la empresa (sin departamento)</option>' : '');
+        if (Array.prototype.some.call(selDep.options, function(o) { return o.value === previa; })) selDep.value = previa;
+      }
+
+      // Vehículos que pasan el filtro actual (también lo usa la lista impresa).
+      function vehiculosFiltrados() {
+        var selEmp = document.getElementById('filtroVehEmpresa');
+        var selDep = document.getElementById('filtroVehDepartamento');
+        var empresa = selEmp ? selEmp.value : '';
+        var depto = selDep ? selDep.value : '';
+        return vehiculosCache.filter(function(v) {
+          if (empresa === FILTRO_VEH_SIN_VALOR) { if (v.empresa) return false; }
+          else if (empresa && v.empresa !== empresa) return false;
+          if (depto === FILTRO_VEH_SIN_VALOR) { if (v.departamento) return false; }
+          else if (depto && v.departamento !== depto) return false;
+          return true;
+        });
+      }
+
+      window.cambiarFiltroEmpresaVehiculos = function() {
+        llenarFiltroDeptoVehiculos();
+        window.renderTablaVehiculos();
+      };
+
+      window.renderTablaVehiculos = function() {
+        var lista = vehiculosFiltrados();
+        var conteo = document.getElementById('filtroVehConteo');
+        if (conteo) conteo.textContent = lista.length + ' de ' + vehiculosCache.length + ' vehículo(s)';
         var cuerpo = document.getElementById('cuerpoVehiculos');
         if (cuerpo) {
           cuerpo.innerHTML = '';
-          vehiculosCache.forEach(function(v) {
+          if (!lista.length) {
+            cuerpo.innerHTML = '<tr><td colspan="6" style="text-align:center;" class="text-muted">No hay vehículos con este filtro.</td></tr>';
+          }
+          lista.forEach(function(v) {
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(v.nombre) + '</td>' +
@@ -10422,19 +10520,6 @@
             cuerpo.appendChild(fila);
           });
         }
-
-        ['nvoVehEmpresa', 'edVehEmpresa', 'valeEmpresa'].forEach(function(id) {
-          var sel = document.getElementById(id);
-          if (sel && !sel.dataset.poblado) {
-            getEmpresasCatalogo().forEach(function(e) {
-              var opt = document.createElement('option');
-              opt.value = e.nombre;
-              opt.textContent = e.nombre;
-              sel.appendChild(opt);
-            });
-            sel.dataset.poblado = '1';
-          }
-        });
       };
 
       // Llena el select de departamentos del vehículo. Si la empresa no
@@ -12791,10 +12876,17 @@
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
-          doc.text('Generado: ' + new Date().toLocaleString() + '   ·   ' + vehiculosCache.length + ' vehículo(s)', margin, margin + 28);
+          var selEmpImp = document.getElementById('filtroVehEmpresa');
+          var selDepImp = document.getElementById('filtroVehDepartamento');
+          var textoFiltro = [];
+          if (selEmpImp && selEmpImp.value) textoFiltro.push('Empresa: ' + selEmpImp.options[selEmpImp.selectedIndex].text.replace(/^🏢\s*/, ''));
+          if (selDepImp && selDepImp.value) textoFiltro.push('Departamento: ' + selDepImp.options[selDepImp.selectedIndex].text.replace(/^🏷️\s*/, ''));
+          doc.text('Generado: ' + new Date().toLocaleString() + '   ·   ' + vehiculosFiltrados().length + ' vehículo(s)' + (textoFiltro.length ? '   ·   ' + textoFiltro.join('  |  ') : ''), margin, margin + 28);
 
           var headers = ['#', 'Nombre', 'Placas', 'Combustible', 'Empresa', 'Departamento'];
-          var rows = vehiculosCache.map(function(v, i) {
+          var listaImprimir = vehiculosFiltrados();
+          if (!listaImprimir.length) return alert('No hay vehículos con el filtro seleccionado.');
+          var rows = listaImprimir.map(function(v, i) {
             var depto = v.departamento ? (getAbreviaturaDepartamento(v.departamento, v.empresa) || v.departamento) : 'Toda la empresa';
             return [
               String(i + 1),
