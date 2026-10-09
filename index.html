@@ -3694,7 +3694,7 @@
                 <td><input id="nvoVehPlacas" placeholder="Placas"></td>
                 <td>
                   <select id="nvoVehCombustible">
-                    <option value="Gasolina">Gasolina</option>
+                    <option value="Gasolina Magna">Gasolina Magna</option>
                     <option value="Gasolina Premium">Gasolina Premium</option>
                     <option value="Diesel">Diesel</option>
                     <option value="Ambos">Ambos</option>
@@ -4546,7 +4546,7 @@
               <input id="edVehNombre" placeholder="Nombre *">
               <input id="edVehPlacas" placeholder="Placas">
               <select id="edVehCombustible">
-                <option value="Gasolina">Gasolina</option>
+                <option value="Gasolina Magna">Gasolina Magna</option>
                 <option value="Gasolina Premium">Gasolina Premium</option>
                 <option value="Diesel">Diesel</option>
                 <option value="Ambos">Ambos</option>
@@ -10412,7 +10412,7 @@
             fila.innerHTML =
               '<td>' + escapeHTML(v.nombre) + '</td>' +
               '<td>' + escapeHTML(v.placas) + '</td>' +
-              '<td>' + escapeHTML(v.tipo_combustible || 'Gasolina') + '</td>' +
+              '<td>' + escapeHTML(v.tipo_combustible || 'Gasolina Magna') + '</td>' +
               '<td>' + escapeHTML(v.empresa || 'Todas') + '</td>' +
               '<td>' + escapeHTML(v.departamento || 'Toda la empresa') + '</td>' +
               '<td style="text-align:center;">' +
@@ -10477,7 +10477,7 @@
         var nuevo = {
           nombre: nombre.toUpperCase(),
           placas: document.getElementById('nvoVehPlacas').value.trim().toUpperCase(),
-          tipo_combustible: document.getElementById('nvoVehCombustible').value || 'Gasolina',
+          tipo_combustible: document.getElementById('nvoVehCombustible').value || 'Gasolina Magna',
           empresa: document.getElementById('nvoVehEmpresa').value || null,
           departamento: document.getElementById('nvoVehDepartamento').value || null,
           activo: true
@@ -10487,7 +10487,7 @@
           if (error) throw error;
           document.getElementById('nvoVehNombre').value = '';
           document.getElementById('nvoVehPlacas').value = '';
-          document.getElementById('nvoVehCombustible').value = 'Gasolina';
+          document.getElementById('nvoVehCombustible').value = 'Gasolina Magna';
           document.getElementById('nvoVehEmpresa').value = '';
           window.actualizarDeptosNuevoVehiculo();
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Vehículo agregado.</div>';
@@ -10505,7 +10505,7 @@
         if (!v) return;
         document.getElementById('edVehNombre').value = v.nombre || '';
         document.getElementById('edVehPlacas').value = v.placas || '';
-        document.getElementById('edVehCombustible').value = v.tipo_combustible || 'Gasolina';
+        document.getElementById('edVehCombustible').value = v.tipo_combustible || 'Gasolina Magna';
         document.getElementById('edVehEmpresa').value = v.empresa || '';
         window.actualizarDeptosEditarVehiculo();
         var selDeptoVehEd = document.getElementById('edVehDepartamento');
@@ -10542,7 +10542,7 @@
         var datos = {
           nombre: nombre.toUpperCase(),
           placas: document.getElementById('edVehPlacas').value.trim().toUpperCase(),
-          tipo_combustible: document.getElementById('edVehCombustible').value || 'Gasolina',
+          tipo_combustible: document.getElementById('edVehCombustible').value || 'Gasolina Magna',
           empresa: document.getElementById('edVehEmpresa').value || null,
           departamento: document.getElementById('edVehDepartamento').value || null
         };
@@ -10712,6 +10712,9 @@
           'Gasolina': [
             { value: 'Gasolina Magna', label: 'Gasolina Magna' },
             { value: 'Gasolina Premium', label: 'Gasolina Premium' }
+          ],
+          'Gasolina Magna': [
+            { value: 'Gasolina Magna', label: 'Gasolina Magna' }
           ],
           'Gasolina Premium': [
             { value: 'Gasolina Premium', label: 'Gasolina Premium' }
@@ -12798,7 +12801,7 @@
               String(i + 1),
               v.nombre || '—',
               v.placas || '—',
-              v.tipo_combustible || 'Gasolina',
+              v.tipo_combustible || 'Gasolina Magna',
               v.empresa ? (getAbreviaturaEmpresa(v.empresa) || v.empresa) : 'Todas',
               depto
             ];
