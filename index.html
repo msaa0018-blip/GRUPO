@@ -3681,6 +3681,9 @@
       <div id="panelVehiculos" class="card hidden">
         <h2>🚗 Vehículos</h2>
         <p class="text-muted" style="margin-bottom:12px;">Alta, baja y modificación de vehículos, y catálogos relacionados a Vales de Gasolina (VSC): proveedores (estaciones de gasolina), clientes, centros de negocio/sucursal y proyectos/contrato/OC.</p>
+        <div style="margin-bottom:12px;display:flex;gap:10px;">
+          <button style="width:100%;" onclick="window.imprimirListaVehiculos()">🖨️ Imprimir Lista</button>
+        </div>
         <div class="table-wrapper">
           <table>
             <thead><tr><th>Nombre</th><th>Placas</th><th>Combustible</th><th>Empresa</th><th>Departamento</th><th>Acciones</th></tr></thead>
@@ -6214,7 +6217,7 @@
   <div id="colaboradoresPreviewModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>🧑‍💻 Lista de Colaboradores</h3>
+        <h3 id="colaboradoresPreviewTitulo">🧑‍💻 Lista de Colaboradores</h3>
         <div class="pdfPreview-btn-group">
           <button onclick="window.cerrarPreviewColaboradores()">✕</button>
         </div>
@@ -12678,6 +12681,10 @@
 
       window.imprimirListaColaboradores = async function() {
         actualizarBotonSalariosColab();
+        var tituloPrevColab = document.getElementById('colaboradoresPreviewTitulo');
+        if (tituloPrevColab) tituloPrevColab.textContent = '🧑‍💻 Lista de Colaboradores';
+        var btnSalColab = document.getElementById('btnToggleSalariosColab');
+        if (btnSalColab) btnSalColab.classList.remove('hidden');
         if (!usuarioPuedeGestionarColaboradores()) return alert('⚠️ Solo ADMIN puede imprimir la lista de colaboradores.');
         if (!colaboradoresCache.length) return alert('No hay colaboradores registrados para imprimir.');
         try {
@@ -12753,6 +12760,69 @@
         } catch (error) {
           console.error('❌ Error al imprimir la lista de colaboradores:', error);
           alert('Error al imprimir la lista: ' + error.message);
+        }
+      };
+
+      // Lista de Vehículos en PDF (mismo formato que la lista de
+      // Colaboradores: A4 horizontal, márgenes de 1.5 cm, tabla con
+      // cuadrícula y pie de página). Se muestra en la misma ventana de
+      // vista previa, sin el botón de salarios.
+      window.imprimirListaVehiculos = async function() {
+        if (!vehiculosCache || !vehiculosCache.length) {
+          try { await window.cargarVehiculos(); } catch (e) {}
+        }
+        if (!vehiculosCache || !vehiculosCache.length) return alert('No hay vehículos registrados para imprimir.');
+        try {
+          var { jsPDF } = window.jspdf;
+          var doc = new jsPDF('l', 'pt', 'a4');
+          var margin = MARGEN_REPORTE_PT;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.setTextColor(23, 63, 115);
+          doc.text('Listado de Vehículos', margin, margin + 14);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Generado: ' + new Date().toLocaleString() + '   ·   ' + vehiculosCache.length + ' vehículo(s)', margin, margin + 28);
+
+          var headers = ['#', 'Nombre', 'Placas', 'Combustible', 'Empresa', 'Departamento'];
+          var rows = vehiculosCache.map(function(v, i) {
+            var depto = v.departamento ? (getAbreviaturaDepartamento(v.departamento, v.empresa) || v.departamento) : 'Toda la empresa';
+            return [
+              String(i + 1),
+              v.nombre || '—',
+              v.placas || '—',
+              v.tipo_combustible || 'Gasolina',
+              v.empresa ? (getAbreviaturaEmpresa(v.empresa) || v.empresa) : 'Todas',
+              depto
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: margin + 40,
+            margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 5, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
+            alternateRowStyles: { fillColor: [235, 238, 242] },
+            headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
+            columnStyles: { 0: { cellWidth: 28, halign: 'center' } }
+          });
+
+          agregarPiePaginaReporte(doc, 'LISTA-VEHICULOS-' + fechaAAMMDD());
+
+          colaboradoresPreviewPDF = doc;
+          var tituloPrev = document.getElementById('colaboradoresPreviewTitulo');
+          if (tituloPrev) tituloPrev.textContent = '🚗 Lista de Vehículos';
+          var btnSal = document.getElementById('btnToggleSalariosColab');
+          if (btnSal) btnSal.classList.add('hidden');
+          document.getElementById('colaboradoresPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('colaboradoresPreviewFrame', doc);
+        } catch (e) {
+          console.error('❌ Error generando el PDF de vehículos:', e.stack || e);
+          alert('No se pudo generar el PDF de vehículos.\n\nDetalle: ' + (e.message || e));
         }
       };
 
