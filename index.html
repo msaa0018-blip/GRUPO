@@ -3751,6 +3751,9 @@
 
       <div id="panelClientes" class="card hidden">
         <h2>🧑‍💼 Clientes</h2>
+        <div style="margin-bottom:12px;display:flex;gap:10px;">
+          <button style="width:100%;" onclick="window.imprimirListaClientes()">🖨️ Previsualizar / Imprimir Lista</button>
+        </div>
         <div class="table-wrapper">
           <table id="tablaClientes">
             <thead>
@@ -12930,6 +12933,66 @@
         } catch (e) {
           console.error('❌ Error generando el PDF de vehículos:', e.stack || e);
           alert('No se pudo generar el PDF de vehículos.\n\nDetalle: ' + (e.message || e));
+        }
+      };
+
+      // Lista de Clientes en PDF: misma ventana de vista previa y mismo
+      // formato que las listas de Colaboradores y Vehículos (A4 horizontal,
+      // márgenes de 1.5 cm, tabla con cuadrícula y pie de página).
+      window.imprimirListaClientes = async function() {
+        if (!clientesCache || !clientesCache.length) {
+          try { await window.cargarClientes(); } catch (e) {}
+        }
+        if (!clientesCache || !clientesCache.length) return alert('No hay clientes registrados para imprimir.');
+        try {
+          var { jsPDF } = window.jspdf;
+          var doc = new jsPDF('l', 'pt', 'a4');
+          var margin = MARGEN_REPORTE_PT;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.setTextColor(23, 63, 115);
+          doc.text('Listado de Clientes', margin, margin + 14);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text('Generado: ' + new Date().toLocaleString() + '   ·   ' + clientesCache.length + ' cliente(s)', margin, margin + 28);
+
+          var headers = ['#', 'Nombre', 'RFC', 'Dirección Fiscal', 'Centro de Negocio / Sucursal'];
+          var rows = clientesCache.map(function(c, i) {
+            return [
+              String(i + 1),
+              c.nombre || '—',
+              c.rfc || '—',
+              c.direccion_fiscal || '—',
+              c.centro_negocio || '—'
+            ];
+          });
+
+          doc.autoTable({
+            head: [headers],
+            body: rows,
+            startY: margin + 40,
+            margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            theme: 'grid',
+            styles: { fontSize: 9, cellPadding: 5, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
+            alternateRowStyles: { fillColor: [235, 238, 242] },
+            headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
+            columnStyles: { 0: { cellWidth: 28, halign: 'center' }, 2: { cellWidth: 95 } }
+          });
+
+          agregarPiePaginaReporte(doc, 'LISTA-CLIENTES-' + fechaAAMMDD());
+
+          colaboradoresPreviewPDF = doc;
+          var tituloPrev = document.getElementById('colaboradoresPreviewTitulo');
+          if (tituloPrev) tituloPrev.textContent = '🧑‍💼 Lista de Clientes';
+          var btnSal = document.getElementById('btnToggleSalariosColab');
+          if (btnSal) btnSal.classList.add('hidden');
+          document.getElementById('colaboradoresPreviewModal').classList.add('active');
+          await renderizarPDFEnContenedor('colaboradoresPreviewFrame', doc);
+        } catch (e) {
+          console.error('❌ Error generando el PDF de clientes:', e.stack || e);
+          alert('No se pudo generar el PDF de clientes.\n\nDetalle: ' + (e.message || e));
         }
       };
 
