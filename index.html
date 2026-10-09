@@ -3757,6 +3757,7 @@
               <tr>
                 <th>Nombre</th>
                 <th>RFC</th>
+                <th>Dirección Fiscal</th>
                 <th>Centro de Negocio / Sucursal</th>
                 <th>Acciones</th>
               </tr>
@@ -3766,6 +3767,7 @@
               <tr>
                 <td><input id="nvoClienteNombre" placeholder="Nombre *"></td>
                 <td><input id="nvoClienteRFC" placeholder="RFC"></td>
+                <td><input id="nvoClienteDireccionFiscal" placeholder="Dirección fiscal"></td>
                 <td><input id="nvoClienteCentroNegocio" list="listaCentrosNegocio" placeholder="Centro de negocio / sucursal *" autocomplete="off"><datalist id="listaCentrosNegocio"></datalist></td>
                 <td><button class="success" onclick="window.agregarCliente()">➕</button></td>
               </tr>
@@ -4155,6 +4157,7 @@
             <div class="cxc-form-row">
               <input id="edClienteNombre" placeholder="Nombre *">
               <input id="edClienteRFC" placeholder="RFC">
+              <input id="edClienteDireccionFiscal" placeholder="Dirección fiscal">
               <select id="edClienteCentroNegocio"><option value="" disabled selected hidden>Centro de negocio / sucursal</option></select>
             </div>
             <div id="msgEditarCliente"></div>
@@ -12554,6 +12557,7 @@
             fila.innerHTML =
               '<td>' + escapeHTML(c.nombre) + '</td>' +
               '<td>' + escapeHTML(c.rfc) + '</td>' +
+              '<td>' + escapeHTML(c.direccion_fiscal || '') + '</td>' +
               '<td>' + escapeHTML(c.centro_negocio) + '</td>' +
               '<td style="text-align:center;">' +
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesCliente(' + c.id + ')">' +
@@ -12608,12 +12612,14 @@
           var nuevo = {
             nombre: nombre.toUpperCase(),
             rfc: document.getElementById('nvoClienteRFC').value.trim().toUpperCase(),
+            direccion_fiscal: (document.getElementById('nvoClienteDireccionFiscal').value || '').trim().toUpperCase() || null,
             centro_negocio: centroNegocioNvo
           };
           var { error } = await supabase.from('clientes').insert([nuevo]);
           if (error) throw error;
           document.getElementById('nvoClienteNombre').value = '';
           document.getElementById('nvoClienteRFC').value = '';
+          document.getElementById('nvoClienteDireccionFiscal').value = '';
           document.getElementById('nvoClienteCentroNegocio').value = '';
           if (msg) msg.innerHTML = '<div class="success-msg">✅ Cliente agregado.</div>';
           window.cargarClientes();
@@ -12630,6 +12636,7 @@
         if (!c) return;
         document.getElementById('edClienteNombre').value = c.nombre || '';
         document.getElementById('edClienteRFC').value = c.rfc || '';
+        document.getElementById('edClienteDireccionFiscal').value = c.direccion_fiscal || '';
         document.getElementById('edClienteCentroNegocio').value = c.centro_negocio || '';
         clienteEditandoId = id;
         var msg = document.getElementById('msgEditarCliente');
@@ -12658,6 +12665,7 @@
         var datos = {
           nombre: nombre.toUpperCase(),
           rfc: document.getElementById('edClienteRFC').value.trim().toUpperCase(),
+          direccion_fiscal: (document.getElementById('edClienteDireccionFiscal').value || '').trim().toUpperCase() || null,
           centro_negocio: centroNegocioEd
         };
         try {
