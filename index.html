@@ -10433,28 +10433,33 @@
         });
       };
 
-      window.actualizarDeptosNuevoVehiculo = function() {
-        var empresa = document.getElementById('nvoVehEmpresa').value;
-        var sel = document.getElementById('nvoVehDepartamento');
+      // Llena el select de departamentos del vehículo. Si la empresa no
+      // tiene departamentos registrados (SMV, ICE, ISCI), la única opción
+      // es la propia empresa (su abreviatura), ya seleccionada — igual que
+      // en Colaboradores, proyectos y OC.
+      function llenarDeptosVehiculo(empresa, sel) {
         sel.innerHTML = '<option value="">Selecciona departamento</option>';
-        getDepartamentosPorEmpresa(empresa).forEach(function(d) {
+        var deptos = getDepartamentosPorEmpresa(empresa);
+        if (empresa && deptos.length === 0) {
+          var abrev = getAbreviaturaEmpresa(empresa) || empresa;
+          sel.innerHTML = '<option value="' + escapeHTML(abrev) + '">' + escapeHTML(abrev) + '</option>';
+          sel.value = abrev;
+          return;
+        }
+        deptos.forEach(function(d) {
           var opt = document.createElement('option');
           opt.value = d.nombre;
           opt.textContent = d.nombre;
           sel.appendChild(opt);
         });
+      }
+
+      window.actualizarDeptosNuevoVehiculo = function() {
+        llenarDeptosVehiculo(document.getElementById('nvoVehEmpresa').value, document.getElementById('nvoVehDepartamento'));
       };
 
       window.actualizarDeptosEditarVehiculo = function() {
-        var empresa = document.getElementById('edVehEmpresa').value;
-        var sel = document.getElementById('edVehDepartamento');
-        sel.innerHTML = '<option value="">Selecciona departamento</option>';
-        getDepartamentosPorEmpresa(empresa).forEach(function(d) {
-          var opt = document.createElement('option');
-          opt.value = d.nombre;
-          opt.textContent = d.nombre;
-          sel.appendChild(opt);
-        });
+        llenarDeptosVehiculo(document.getElementById('edVehEmpresa').value, document.getElementById('edVehDepartamento'));
       };
 
       window.agregarVehiculo = async function() {
@@ -10498,7 +10503,18 @@
         document.getElementById('edVehCombustible').value = v.tipo_combustible || 'Gasolina';
         document.getElementById('edVehEmpresa').value = v.empresa || '';
         window.actualizarDeptosEditarVehiculo();
-        document.getElementById('edVehDepartamento').value = v.departamento || '';
+        var selDeptoVehEd = document.getElementById('edVehDepartamento');
+        if (v.departamento) {
+          // Si el vehículo ya tenía un departamento que no está en la lista
+          // (p. ej. guardado con otro formato), se conserva como opción.
+          if (!Array.prototype.some.call(selDeptoVehEd.options, function(o) { return o.value === v.departamento; })) {
+            var optPrevia = document.createElement('option');
+            optPrevia.value = v.departamento;
+            optPrevia.textContent = v.departamento;
+            selDeptoVehEd.appendChild(optPrevia);
+          }
+          selDeptoVehEd.value = v.departamento;
+        }
         vehiculoEditandoId = id;
         var msg = document.getElementById('msgEditarVehiculo');
         if (msg) msg.innerHTML = '';
