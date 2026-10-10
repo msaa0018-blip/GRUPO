@@ -5922,8 +5922,8 @@
       </div>
 
       <div id="panelOF" class="card hidden">
-        <h2>🧾 Órdenes de Facturación (OF)</h2>
-        <p class="text-muted" style="margin-bottom:12px;">Generación y autorización de órdenes de facturación por departamento.</p>
+        <h2 id="tituloPanelOF">🧾 Órdenes de Facturación (OF)</h2>
+        <p id="descPanelOF" class="text-muted" style="margin-bottom:12px;">Generación y autorización de órdenes de facturación por departamento.</p>
         <div class="cxp-filtros">
           <select id="ofFiltroDepto" onchange="window.renderOF()"><option value="">Todos los departamentos</option></select>
           <select id="ofFiltroEstado" onchange="window.renderOF()">
@@ -8401,6 +8401,7 @@
         // Sin esto, el sistema restringido las filtraba todas (ninguna
         // coincidía literalmente con "oc") y el submenú se veía vacío.
         if (modulo === 'oc_crear' || modulo === 'oc_bandeja' || modulo === 'oc_control' || modulo === 'bandeja_oc_egresos') modulo = 'oc';
+        if (modulo === 'cxf') modulo = 'of';
         // El módulo CXP siempre queda libre para visualizar, sin importar
         // si el sistema está restringido o no.
         if (modulo === 'cxp') return true;
@@ -8696,6 +8697,8 @@
           var rolesExcluidosOF = []; // Todos los roles autenticados pueden ENTRAR al módulo OF (ver, y en el caso de Finanzas/Admin, gestionar). Quién puede CREAR una OF se controla aparte, más abajo.
           if (actual && rolesExcluidosOF.indexOf(actual.rol) === -1) {
             modulos.push({ id: 'of', icono: '📄', nombre: 'OF' });
+            // CXF: Bandeja de OF + Reporte CXF (separado del alta de OF).
+            modulos.push({ id: 'cxf', icono: '📑', nombre: 'CXF' });
           }
           if (usuarioPuedeVerREPSE(actual)) {
             modulos.push({ id: 'repse', icono: '🦺', nombre: 'REPSE' });
@@ -8755,6 +8758,8 @@
               window.mostrarModulo('cxc');
             } else if (modulo === 'of') {
               window.mostrarModulo('of');
+            } else if (modulo === 'cxf') {
+              window.mostrarModulo('cxf');
             } else if (modulo === 'oc') {
               irADirectoCrearOC();
             } else if (modulo === 'oc_crear') {
@@ -8883,7 +8888,7 @@
           window.mostrarMenuMaestro('vales', 'VALES');
         } else if (moduloActual === 'cxp' || moduloActual === 'proyectos' || moduloActual === 'egresos' || moduloActual === 'spm' || moduloActual === 'oc') {
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
-        } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'ingresos') {
+        } else if (moduloActual === 'cxc' || moduloActual === 'of' || moduloActual === 'cxf' || moduloActual === 'ingresos') {
           window.mostrarMenuMaestro('ingresos', 'INGRESOS');
         } else if (moduloActual === 'alta_registros' || moduloActual === 'proveedores' || moduloActual === 'productos' || moduloActual === 'clientes' || moduloActual === 'vehiculos' || moduloActual === 'empresas') {
           window.mostrarMenuMaestro('alta_registros', 'ALTA DE REGISTROS');
@@ -9387,6 +9392,8 @@
             body: rows,
             startY: margin + 40,
             margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            // Ninguna fila se parte entre dos hojas: si no cabe completa, pasa entera a la siguiente.
+            rowPageBreak: 'avoid',
             theme: 'grid',
             // Anchos fijos por columna (A4 horizontal, 782pt útiles) para
             // que ninguna palabra se corte a la mitad; Nombre toma el resto.
@@ -12836,6 +12843,8 @@
             body: rows,
             startY: margin + 40,
             margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            // Ninguna fila se parte entre dos hojas: si no cabe completa, pasa entera a la siguiente.
+            rowPageBreak: 'avoid',
             theme: 'grid',
             styles: { fontSize: 8.5, cellPadding: 5, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
             alternateRowStyles: { fillColor: [235, 238, 242] },
@@ -12914,6 +12923,8 @@
             body: rows,
             startY: margin + 40,
             margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            // Ninguna fila se parte entre dos hojas: si no cabe completa, pasa entera a la siguiente.
+            rowPageBreak: 'avoid',
             theme: 'grid',
             styles: { fontSize: 9, cellPadding: 5, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
             alternateRowStyles: { fillColor: [235, 238, 242] },
@@ -12974,11 +12985,13 @@
             body: rows,
             startY: margin + 40,
             margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            // Ninguna fila se parte entre dos hojas: si no cabe completa, pasa entera a la siguiente.
+            rowPageBreak: 'avoid',
             theme: 'grid',
             styles: { fontSize: 9, cellPadding: 5, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
             alternateRowStyles: { fillColor: [235, 238, 242] },
             headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
-            columnStyles: { 0: { cellWidth: 28, halign: 'center' }, 2: { cellWidth: 95 } }
+            columnStyles: { 0: { cellWidth: 28, halign: 'center' }, 1: { cellWidth: 170 }, 2: { cellWidth: 95 }, 4: { cellWidth: 140 } }
           });
 
           agregarPiePaginaReporte(doc, 'LISTA-CLIENTES-' + fechaAAMMDD());
@@ -14989,6 +15002,10 @@
           return;
         }
         moduloActual = modulo;
+        // CXF usa el mismo panel de OF, pero solo con "📋 Bandeja de OF" y
+        // "🖨️ Reporte CXF"; el módulo OF queda solo con el alta de OF.
+        var modoPanelOF = (modulo === 'cxf') ? 'cxf' : 'of';
+        if (modulo === 'cxf') modulo = 'of';
         document.getElementById('menuMaestroPrincipal').classList.remove('visible');
         document.getElementById('menuMaestroPrincipal').classList.add('hidden');
         document.getElementById('menuMaestro').classList.remove('visible');
@@ -15171,7 +15188,18 @@
             // no el formulario de alta de nueva Orden de Facturación.
             var puedeAbrirNuevaOF = !(actual && actual.rol === 'Director General');
             var btnAbrirNuevaOF = panelOF.querySelector('.cxp-filtros button[onclick*="ofFormularioNuevo"]');
-            if (btnAbrirNuevaOF) btnAbrirNuevaOF.classList.toggle('hidden', !puedeAbrirNuevaOF);
+            if (btnAbrirNuevaOF) btnAbrirNuevaOF.classList.toggle('hidden', !puedeAbrirNuevaOF || modoPanelOF === 'cxf');
+            // Botones exclusivos del módulo CXF (no se muestran en OF).
+            var btnReporteCXF = panelOF.querySelector('.cxp-filtros button[onclick*="previsualizarReporteCXF"]');
+            var btnBandejaOF = panelOF.querySelector('.cxp-filtros button[onclick*="bandejaOFCard"]');
+            if (btnReporteCXF) btnReporteCXF.classList.toggle('hidden', modoPanelOF !== 'cxf');
+            if (btnBandejaOF) btnBandejaOF.classList.toggle('hidden', modoPanelOF !== 'cxf');
+            var tituloPanelOF = document.getElementById('tituloPanelOF');
+            if (tituloPanelOF) tituloPanelOF.textContent = modoPanelOF === 'cxf' ? '📑 Cuentas por Facturar (CXF)' : '🧾 Órdenes de Facturación (OF)';
+            var descPanelOF = document.getElementById('descPanelOF');
+            if (descPanelOF) descPanelOF.textContent = modoPanelOF === 'cxf'
+              ? 'Bandeja de Órdenes de Facturación y Reporte CXF.'
+              : 'Generación de órdenes de facturación por departamento.';
             window.renderOF();
           } else {
             alert('⚠️ No tienes permiso para acceder a Órdenes de Facturación.');
@@ -23128,6 +23156,8 @@
                 body: rows,
                 startY: cursorY + 16,
                 margin: { top: margin, left: margin + 8, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+            // Ninguna fila se parte entre dos hojas: si no cabe completa, pasa entera a la siguiente.
+            rowPageBreak: 'avoid',
                 theme: 'grid',
                 styles: { fontSize: 7, cellPadding: 3, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
                 alternateRowStyles: { fillColor: [235, 238, 242] },
