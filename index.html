@@ -3259,6 +3259,64 @@
     max-width: 100% !important;
     margin-left: auto;
   }
+
+  /* ===== ENCABEZADO SIN EMPALMES =====
+     El usuario/rol ya no flota encima del encabezado: ocupa su propio
+     espacio entre el logo y los botones, y si no cabe pasa a 2 renglones
+     (nunca queda debajo de los botones ni se corta). Los 3 botones del
+     encabezado se hacen más angostos en pantallas chicas. */
+  #mainHeader { gap: 8px; }
+  #mainHeader .header-left { flex: 0 0 auto; max-width: 30%; }
+  #mainHeader .header-center {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 6px;
+    justify-content: center;
+  }
+  #mainHeader .header-usuario-rol {
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    max-width: 100% !important;
+    min-width: 0;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+    text-align: center;
+  }
+  #mainHeader .header-right {
+    flex: 0 0 auto;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+  @media (max-width: 600px) {
+    #mainHeader { padding-left: 8px; padding-right: 8px; gap: 6px; }
+    #mainHeader .header-left .logo-img { height: 26px; max-height: 26px; }
+    #mainHeader .header-usuario-rol { font-size: 11px; }
+    #mainHeader .header-center .depto-logo-header { max-width: 40px; max-height: 26px; }
+    #mainHeader .header-right { gap: 5px; }
+    #mainHeader .header-right .btn-volver-menu,
+    #mainHeader .header-right .btn-cerrar-sesion-header,
+    #mainHeader .header-right .btn-bloqueo-sistema {
+      width: 44px !important; min-width: 44px !important; max-width: 44px !important; height: 36px !important; font-size: 15px;
+    }
+  }
+  @media (max-width: 360px) {
+    #mainHeader .header-left .logo-img { height: 22px; max-height: 22px; }
+    #mainHeader .header-usuario-rol { font-size: 10px; }
+    #mainHeader .header-right .btn-volver-menu,
+    #mainHeader .header-right .btn-cerrar-sesion-header,
+    #mainHeader .header-right .btn-bloqueo-sistema {
+      width: 38px !important; min-width: 38px !important; max-width: 38px !important; height: 34px !important;
+    }
+  }
+
+  /* Etiquetas junto a campos: nunca más angostas que su texto (no se
+     encima la etiqueta sobre el campo). */
+  .flex > label { min-width: max-content !important; flex-shrink: 0; }
 </style>
 </head>
 <body>
