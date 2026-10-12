@@ -3206,6 +3206,59 @@
     border-color: var(--orange-gold);
     color: var(--orange-gold);
   }
+
+  /* ===== BOTONES: TEXTO SIEMPRE COMPLETO Y SIN DESBORDAR =====
+     Ningún botón recorta su texto con "…": si no cabe en una línea,
+     el texto pasa a la siguiente y el botón crece en alto. Los grupos
+     de botones se acomodan en varias filas al reducir la pantalla en
+     lugar de salirse del área visible. Dentro de tablas (que ya tienen
+     scroll horizontal) el texto se mantiene en una sola línea completa. */
+  button {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: normal;
+    word-break: normal;
+    height: auto;
+    line-height: 1.25;
+    text-align: center;
+    max-width: 100%;
+  }
+  td button, th button, .table-wrapper button {
+    white-space: nowrap !important;
+    max-width: none;
+  }
+  .oc-acciones-container {
+    flex-wrap: wrap !important;
+  }
+  .oc-acciones-container button {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 32px;
+    padding: 4px 8px !important;
+  }
+  /* Botones de opciones (modales de acciones): nunca más angostos que su palabra más larga. */
+  .btn-accion-producto { min-width: min-content; }
+  .btn-modal-x.btn-modal-x-texto {
+    width: auto !important;
+    max-width: 100% !important;
+    padding: 0 12px !important;
+    white-space: nowrap !important;
+    font-size: 14px !important;
+  }
+  /* Botones dentro de grupos flex: pueden encogerse hasta su palabra
+     más larga (el texto baja de renglón) en lugar de salirse. */
+  button { min-width: min-content; }
+  .btn-modal-x { min-width: 36px !important; }
+  /* Encabezados de ventanas modal: si los botones no caben junto al
+     título, bajan a otra fila en lugar de salirse de la ventana. */
+  .modal-header { flex-wrap: wrap; row-gap: 8px; }
+  .modal-header .pdfPreview-btn-group {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    max-width: 100% !important;
+    margin-left: auto;
+  }
 </style>
 </head>
 <body>
@@ -3911,7 +3964,7 @@
           <h2 style="margin:0;">📥 Buzón</h2>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="success" onclick="window.abrirNuevaConversacionBuzon()" style="padding:8px 12px; font-size:13px; min-height:36px;">✉️ Nueva conversación</button>
-            <button class="success" onclick="window.abrirNuevoComunicado()" style="padding:8px 12px; font-size:13px; min-height:36px;">🗞️ Nuevo comunicado</button>
+            <button class="success" id="btnNuevoComunicadoBuzon" onclick="window.abrirNuevoComunicado()" style="padding:8px 12px; font-size:13px; min-height:36px;">🗞️ Nuevo comunicado</button>
           </div>
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Conversaciones independientes entre los usuarios que participan en cada una. Cada chat es privado: solo tú y quienes fueron agregados como destinatarios/involucrados de esa conversación pueden verlo, incluido su asunto.</p>
@@ -4003,7 +4056,7 @@
             <h3>🗞️ Nuevo Comunicado</h3>
             <div class="pdfPreview-btn-group">
               <button class="btn-modal-x" onclick="window.cerrarNuevoComunicado()">✕</button>
-              <button class="btn-modal-x" onclick="window.mostrarComunicadoComplejo()">📎 Comunicado complejo</button>
+              <button class="btn-modal-x btn-modal-x-texto" onclick="window.mostrarComunicadoComplejo()">📎 Comunicado complejo</button>
               <button class="success btn-modal-x" onclick="window.generarComunicado()">➜</button>
             </div>
           </div>
@@ -5243,7 +5296,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorComprasMesCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">🛒 Compras del mes</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorComprasMesCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorComprasMesCard')">↩️ Volver</button>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
             <select id="indicadorComprasMesSelectMes" onchange="window.renderIndicadorComprasMes()"></select>
@@ -5262,7 +5315,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorVentasMesCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">💵 Ventas del mes</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorVentasMesCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorVentasMesCard')">↩️ Volver</button>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
             <select id="indicadorVentasMesSelectMes" onchange="window.renderIndicadorVentasMes()"></select>
@@ -5311,7 +5364,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorProyectosActivosCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">📁 Proyectos activos</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorProyectosActivosCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorProyectosActivosCard')">↩️ Volver</button>
           </div>
           <div style="overflow-x:auto;">
             <table>
@@ -5325,7 +5378,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorCXPCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">💳 Cuentas por pagar — OC pendientes de pago</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorCXPCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorCXPCard')">↩️ Volver</button>
           </div>
           <div style="overflow-x:auto;">
             <table>
@@ -5339,7 +5392,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorClientesCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;" id="indicadorClientesTitulo">📋 Clientes</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorClientesCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorClientesCard')">↩️ Volver</button>
           </div>
           <div id="indicadorClientesListaWrap" style="overflow-x:auto;">
             <table>
@@ -5362,7 +5415,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorProveedoresCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;" id="indicadorProveedoresTitulo">🏭 Proveedores</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorProveedoresCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorProveedoresCard')">↩️ Volver</button>
           </div>
           <div id="indicadorProveedoresListaWrap" style="overflow-x:auto;">
             <table>
@@ -5385,7 +5438,7 @@
         <div class="indicadores-tabla-wrapper card modal-card hidden" id="indicadorAlertasCard">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">⚠️ Alertas Críticas</h4>
-            <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarModalCard('indicadorAlertasCard')">↩️ Volver</button>
+            <button class="cerrar-modal-btn btn-modal-x btn-modal-x-texto" onclick="window.cerrarModalCard('indicadorAlertasCard')">↩️ Volver</button>
           </div>
           <div style="overflow-x:auto;">
             <table>
@@ -8394,8 +8447,10 @@
       // ============================================================
       var SISTEMA_RESTRINGIDO_KEY = 'allin_sistema_restringido';
       var CANDADO_SISTEMA_PASSWORD = '980813';
-      var MODULOS_PRINCIPALES_PERMITIDOS = ['egresos', 'alta_registros', 'almacenes'];
-      var MODULOS_INTERNOS_PERMITIDOS = ['oc', 'proyectos', 'cxp', 'proveedores', 'productos', 'clientes', 'vehiculos', 'almacenes'];
+      // Versión restringida (🔒): EGRESOS sin SPM ni VALES, INGRESOS sin
+      // REPSE (solo CXC, OF y CXF) y BUZÓN sin "Nuevo comunicado".
+      var MODULOS_PRINCIPALES_PERMITIDOS = ['egresos', 'ingresos', 'buzon', 'alta_registros', 'almacenes'];
+      var MODULOS_INTERNOS_PERMITIDOS = ['oc', 'proyectos', 'cxp', 'cxc', 'of', 'buzon', 'proveedores', 'productos', 'clientes', 'vehiculos', 'almacenes'];
 
       function sistemaRestringidoActivo() {
         var valor = localStorage.getItem(SISTEMA_RESTRINGIDO_KEY);
@@ -8431,6 +8486,8 @@
 
       function aplicarBloqueoSistemaMenus() {
         actualizarBotonBloqueoSistema();
+        var btnComunicadoBloqueo = document.getElementById('btnNuevoComunicadoBuzon');
+        if (btnComunicadoBloqueo) btnComunicadoBloqueo.classList.toggle('hidden', sistemaRestringidoActivo());
         if (!sistemaRestringidoActivo()) {
           document.querySelectorAll('#modulosGridPrincipal .modulo-item').forEach(function(item) {
             var modulo = item.dataset.modulo;
@@ -13833,6 +13890,10 @@
 
       window.abrirNuevoComunicado = async function() {
         if (!actual) return;
+        if (sistemaRestringidoActivo()) {
+          alert('🔒 Los comunicados no están disponibles en la versión restringida.');
+          return;
+        }
         var msg = document.getElementById('msgComunicado');
         if (msg) msg.innerHTML = '';
 
@@ -15446,6 +15507,9 @@
           window.mostrarDocCXP(modulo.toUpperCase());
         } else if (modulo === 'buzon') {
           if (panelBuzon) panelBuzon.classList.remove('hidden');
+          // En la versión restringida (🔒) no se pueden emitir comunicados.
+          var btnComunicado = document.getElementById('btnNuevoComunicadoBuzon');
+          if (btnComunicado) btnComunicado.classList.toggle('hidden', sistemaRestringidoActivo());
           window.cargarBuzon();
         }
 
