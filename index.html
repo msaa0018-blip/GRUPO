@@ -3813,6 +3813,15 @@
           <button class="success" style="width:50%;" onclick="window.abrirAgregarColaborador()">➕ Agregar Colaborador</button>
           <button style="width:50%;" onclick="window.imprimirListaColaboradores()">🖨️ Imprimir Lista</button>
         </div>
+        <div class="flex" style="margin-bottom:12px;">
+          <select id="filtroColabEmpresa" onchange="window.cambiarFiltroEmpresaColaboradores()" title="Filtrar por empresa">
+            <option value="">🏢 Todas las empresas</option>
+          </select>
+          <select id="filtroColabDepartamento" onchange="window.renderTablaColaboradores()" title="Filtrar por departamento">
+            <option value="">🏷️ Todos los departamentos</option>
+          </select>
+          <span id="filtroColabConteo" class="text-muted" style="flex:0 0 auto;min-width:0;font-size:13px;"></span>
+        </div>
         <div class="table-wrapper">
           <table id="tablaColaboradores">
             <thead>
@@ -12739,13 +12748,145 @@
           colaboradoresCache = (data || []).filter(function(u) {
             return USUARIOS_OCULTOS_COLABORADORES.indexOf(String(u.usuario || '').trim().toUpperCase()) === -1;
           });
+          llenarFiltrosColaboradores();
+          window.renderTablaColaboradores();
+        } catch (e) {
+          console.error('Error cargando colaboradores:', e);
+          cuerpo.innerHTML = '<tr><td colspan="10">❌ Error al cargar colaboradores: ' + escapeHTML(e.message) + '</td></tr>';
+        }
+      };
+
+      // ===== FILTROS DE LA LISTA DE COLABORADORES =====
+      // Desplegables de Empresa y Departamento. Las opciones salen de los
+      // propios colaboradores (todas sus empresas/departamentos asignados).
+      // Para SMV, ICE e ISCI el departamento es la abreviatura de la
+      // empresa. Filtran la tabla y también el PDF de 🖨️ Imprimir Lista.
+      function empresaDeptoPermisoColab(pm) {
+        pm = pm || {};
+        var emp = getAbreviaturaEmpresa(pm.empresa) || pm.empresa || '';
+        var dep = pm.depto ? (getAbreviaturaDepartamento(pm.depto, pm.empresa) || pm.depto) : '';
+        if (!dep && emp) dep = emp;
+        return { empresa: String(emp).trim(), depto: String(dep).trim() };
+      }
+
+      function permisosColab(u) {
+        var lista = (u && Array.isArray(u.permisos)) ? u.permisos : [];
+        return lista.length ? lista.map(empresaDeptoPermisoColab) : [];
+      }
+
+      function llenarFiltrosColaboradores() {
+        var selEmp = document.getElementById('filtroColabEmpresa');
+        if (!selEmp) return;
+        var previa = selEmp.value;
+        var empresas = [];
+        colaboradoresCache.forEach(function(u) {
+          permisosColab(u).forEach(function(p) {
+            if (p.empresa && empresas.indexOf(p.empresa) === -1) empresas.push(p.empresa);
+          });
+        });
+        empresas.sort();
+        selEmp.innerHTML = '<option value="">🏢 Todas las empresas</option>' + empresas.map(function(e) {
+          return '<option value="' + escapeHTML(e) + '">🏢 ' + escapeHTML(e) + '</option>';
+        }).join('');
+        if (previa && empresas.indexOf(previa) !== -1) selEmp.value = previa;
+        llenarDeptosFiltroColaboradores();
+      }
+
+      function llenarDeptosFiltroColaboradores() {
+        var selEmp = document.getElementById('filtroColabEmpresa');
+        var selDep = document.getElementById('filtroColabDepartamento');
+        if (!selDep) return;
+        var previa = selDep.value;
+        var empSel = selEmp ? selEmp.value : '';
+        var deptos = [];
+        colaboradoresCache.forEach(function(u) {
+          permisosColab(u).forEach(function(p) {
+            if (empSel && p.empresa !== empSel) return;
+            // Sin empresa seleccionada se muestra "EMPRESA / DEPTO" para distinguir
+            // departamentos con el mismo nombre en distintas empresas (ej. VC).
+            var clave = empSel ? p.depto : (p.empresa + '|' + p.depto);
+            if (p.depto && deptos.indexOf(clave) === -1) deptos.push(clave);
+          });
+        });
+        deptos.sort();
+        selDep.innerHTML = '<option value="">🏷️ Todos los departamentos</option>' + deptos.map(function(d) {
+          var texto = d.indexOf('|') !== -1 ? d.split('|')[1] + ' (' + d.split('|')[0] + ')' : d;
+          return '<option value="' + escapeHTML(d) + '">🏷️ ' + escapeHTML(texto) + '</option>';
+        }).join('');
+        if (previa && deptos.indexOf(previa) !== -1) selDep.value = previa;
+      }
+
+      window.cambiarFiltroEmpresaColaboradores = function() {
+        var selDep = document.getElementById('filtroColabDepartamento');
+        if (selDep) selDep.value = '';
+        llenarDeptosFiltroColaboradores();
+        window.renderTablaColaboradores();
+      };
+
+      // Permiso que se muestra en la fila: el que coincide con el filtro
+      // (para colaboradores con varias empresas/departamentos) o el primero.
+      function permisoVisibleColab(u) {
+        var lista = (u && Array.isArray(u.permisos)) ? u.permisos : [];
+        if (!lista.length) return {};
+        var selEmp = document.getElementById('filtroColabEmpresa');
+        var selDep = document.getElementById('filtroColabDepartamento');
+        var empSel = selEmp ? selEmp.value : '';
+        var depSel = selDep ? selDep.value : '';
+        if (!empSel && !depSel) return lista[0] || {};
+        var depEmp = '', depNombre = depSel;
+        if (depSel.indexOf('|') !== -1) { depEmp = depSel.split('|')[0]; depNombre = depSel.split('|')[1]; }
+        var hallado = lista.find(function(pm) {
+          var p = empresaDeptoPermisoColab(pm);
+          return (!empSel || p.empresa === empSel) && (!depEmp || p.empresa === depEmp) && (!depNombre || p.depto === depNombre);
+        });
+        return hallado || lista[0] || {};
+      }
+
+      function colaboradoresFiltrados() {
+        var selEmp = document.getElementById('filtroColabEmpresa');
+        var selDep = document.getElementById('filtroColabDepartamento');
+        var empSel = selEmp ? selEmp.value : '';
+        var depSel = selDep ? selDep.value : '';
+        if (!empSel && !depSel) return colaboradoresCache.slice();
+        var depEmp = '', depNombre = depSel;
+        if (depSel.indexOf('|') !== -1) { depEmp = depSel.split('|')[0]; depNombre = depSel.split('|')[1]; }
+        return colaboradoresCache.filter(function(u) {
+          return permisosColab(u).some(function(p) {
+            if (empSel && p.empresa !== empSel) return false;
+            if (depEmp && p.empresa !== depEmp) return false;
+            if (depNombre && p.depto !== depNombre) return false;
+            return true;
+          });
+        });
+      }
+
+      function textoFiltroColaboradores() {
+        var partes = [];
+        var selEmp = document.getElementById('filtroColabEmpresa');
+        var selDep = document.getElementById('filtroColabDepartamento');
+        if (selEmp && selEmp.value) partes.push('Empresa: ' + selEmp.value);
+        if (selDep && selDep.value) partes.push('Departamento: ' + selDep.options[selDep.selectedIndex].text.replace(/^🏷️\s*/, ''));
+        return partes.join('  |  ');
+      }
+
+      window.renderTablaColaboradores = function() {
+        var cuerpo = document.getElementById('cuerpoColaboradores');
+        if (!cuerpo) return;
+        try {
+          var lista = colaboradoresFiltrados();
+          var conteo = document.getElementById('filtroColabConteo');
+          if (conteo) conteo.textContent = lista.length + ' de ' + colaboradoresCache.length;
           cuerpo.innerHTML = '';
           if (!colaboradoresCache.length) {
             cuerpo.innerHTML = '<tr><td colspan="10">No hay colaboradores registrados.</td></tr>';
             return;
           }
-          colaboradoresCache.forEach(function(u) {
-            var permiso = (u.permisos && u.permisos[0]) || {};
+          if (!lista.length) {
+            cuerpo.innerHTML = '<tr><td colspan="10">No hay colaboradores con el filtro seleccionado.</td></tr>';
+            return;
+          }
+          lista.forEach(function(u) {
+            var permiso = permisoVisibleColab(u);
             var fila = document.createElement('tr');
             fila.innerHTML =
               '<td>' + escapeHTML(u.usuario) + '</td>' +
@@ -12810,7 +12951,8 @@
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9);
           doc.setTextColor(100, 100, 100);
-          doc.text('Generado: ' + new Date().toLocaleString(), margin, margin + 28);
+          var filtroTxtColab = textoFiltroColaboradores();
+          doc.text('Generado: ' + new Date().toLocaleString() + '   ·   ' + colaboradoresFiltrados().length + ' colaborador(es)' + (filtroTxtColab ? '   ·   ' + filtroTxtColab : ''), margin, margin + 28);
 
           // Ambas versiones llevan el Nombre completo como primera columna.
           // Con salarios: incluye Salario semanal y TDD BBVA. Sin salarios:
@@ -12819,8 +12961,10 @@
           var headers = conSalarios
             ? ['Nombre completo', 'Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email', 'Salario semanal', 'TDD BBVA']
             : ['Nombre completo', 'Usuario', 'Rol', 'Empresa', 'Departamento', 'Teléfono', 'Email'];
-          var rows = colaboradoresCache.map(function(u) {
-            var permiso = (u.permisos && u.permisos[0]) || {};
+          var listaColabImprimir = colaboradoresFiltrados();
+          if (!listaColabImprimir.length) return alert('No hay colaboradores con el filtro seleccionado.');
+          var rows = listaColabImprimir.map(function(u) {
+            var permiso = permisoVisibleColab(u);
             var base = [
               u.usuario || '',
               u.rol || '',
@@ -14927,8 +15071,11 @@
       window.eliminarProductoCatalogo = async function(id) {
         if (!confirm('¿Eliminar este producto del catálogo?')) return;
         try {
+          var { data: prodEliminar } = await supabase.from('productos')
+            .select('codigo, descripcion, cantidad, almacen_id').eq('id', id).maybeSingle();
           var { error } = await supabase.from('productos').delete().eq('id', id);
           if (error) throw error;
+          notificarProductoEliminadoTelegram(prodEliminar);
           window.cargarProductosCatalogo();
         } catch (e) {
           console.error('Error eliminando producto:', e);
@@ -17592,6 +17739,90 @@
         } catch (e) {
           console.error('Error registrando movimiento de inventario:', e);
         }
+        // Aviso por Telegram (no bloquea el movimiento si falla).
+        notificarMovimientoInventarioTelegram(datos);
+      }
+
+      // ===== AVISO DE MOVIMIENTOS DE ALMACÉN POR TELEGRAM =====
+      // Cada entrada/salida de inventario en un almacén de VEXPAR
+      // OPERACIONES (alta con existencia, ajustes, edición de cantidad,
+      // movimientos manuales y movimientos por OC) se avisa por Telegram
+      // a los usuarios de USUARIOS_AVISO_INVENTARIO_VEXPAR, con el
+      // producto, la cantidad, la existencia actual, el almacén, el motivo
+      // y quién lo registró. Chat ID en usuarios.telegram_chat_id.
+      var USUARIOS_AVISO_INVENTARIO_VEXPAR = ['IQA2'];
+
+      function esAlmacenVexpar(almacen) {
+        if (!almacen || !almacen.empresa) return false;
+        return getAbreviaturaEmpresa(almacen.empresa) === 'VOP' ||
+          normalizar(almacen.empresa).indexOf('VEXPAR') !== -1;
+      }
+
+      async function notificarMovimientoInventarioTelegram(datos) {
+        try {
+          if (!datos || !datos.producto_id || !Number(datos.cantidad)) return;
+          var { data: prod, error } = await supabase.from('productos')
+            .select('codigo, descripcion, cantidad, almacen_id').eq('id', datos.producto_id).maybeSingle();
+          if (error || !prod) return;
+          var almacen = (almacenesCache || []).find(function(a) { return String(a.id) === String(prod.almacen_id); });
+          if (!esAlmacenVexpar(almacen)) return;
+
+          var cantidad = Number(datos.cantidad) || 0;
+          var esEntrada = cantidad >= 0;
+          var ahora = new Date();
+          var fechaTxt = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+            ' ' + ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+          var texto =
+            (esEntrada ? '📥 <b>Entrada de almacén — VEXPAR</b>' : '📤 <b>Salida de almacén — VEXPAR</b>') + '\n\n' +
+            '📅 <b>Fecha:</b> ' + escaparHTMLTelegram(fechaTxt) + '\n' +
+            '🏬 <b>Almacén:</b> ' + escaparHTMLTelegram(almacen.nombre || datos.almacen || '—') + '\n' +
+            '🔖 <b>Código:</b> ' + escaparHTMLTelegram(datos.codigo || prod.codigo || '—') + '\n' +
+            '📦 <b>Producto:</b> ' + escaparHTMLTelegram(datos.descripcion || prod.descripcion || '—') + '\n' +
+            (esEntrada ? '➕' : '➖') + ' <b>Cantidad:</b> ' + escaparHTMLTelegram((esEntrada ? '+' : '-') + Math.abs(cantidad)) + '\n' +
+            '📊 <b>Existencia actual:</b> ' + escaparHTMLTelegram(prod.cantidad == null ? '—' : prod.cantidad) + '\n' +
+            '📝 <b>Motivo:</b> ' + escaparHTMLTelegram(datos.motivo || '—') + '\n' +
+            '👤 <b>Registró:</b> ' + escaparHTMLTelegram((actual && actual.usuario) || '—');
+
+          for (var i = 0; i < USUARIOS_AVISO_INVENTARIO_VEXPAR.length; i++) {
+            var u = USUARIOS_AVISO_INVENTARIO_VEXPAR[i];
+            var chatId = await obtenerTelegramChatIdUsuario(u);
+            if (!chatId) {
+              console.warn('Aviso de inventario VEXPAR: ' + u + ' no tiene Chat ID de Telegram registrado.');
+              continue;
+            }
+            if (await enviarTelegramAChat(chatId, texto)) {
+              console.log('✅ Aviso de movimiento de inventario enviado por Telegram a ' + u);
+            }
+          }
+        } catch (e) {
+          console.error('No se pudo enviar el aviso de inventario por Telegram:', e);
+        }
+      }
+
+      // Producto eliminado del catálogo en un almacén de VEXPAR.
+      async function notificarProductoEliminadoTelegram(prod) {
+        try {
+          if (!prod) return;
+          var almacen = (almacenesCache || []).find(function(a) { return String(a.id) === String(prod.almacen_id); });
+          if (!esAlmacenVexpar(almacen)) return;
+          var ahora = new Date();
+          var fechaTxt = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+            ' ' + ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+          var texto =
+            '🗑️ <b>Producto eliminado del inventario — VEXPAR</b>\n\n' +
+            '📅 <b>Fecha:</b> ' + escaparHTMLTelegram(fechaTxt) + '\n' +
+            '🏬 <b>Almacén:</b> ' + escaparHTMLTelegram(almacen.nombre || '—') + '\n' +
+            '🔖 <b>Código:</b> ' + escaparHTMLTelegram(prod.codigo || '—') + '\n' +
+            '📦 <b>Producto:</b> ' + escaparHTMLTelegram(prod.descripcion || '—') + '\n' +
+            '📊 <b>Existencia al eliminar:</b> ' + escaparHTMLTelegram(prod.cantidad == null ? '—' : prod.cantidad) + '\n' +
+            '👤 <b>Eliminó:</b> ' + escaparHTMLTelegram((actual && actual.usuario) || '—');
+          for (var i = 0; i < USUARIOS_AVISO_INVENTARIO_VEXPAR.length; i++) {
+            var chatId = await obtenerTelegramChatIdUsuario(USUARIOS_AVISO_INVENTARIO_VEXPAR[i]);
+            if (chatId) await enviarTelegramAChat(chatId, texto);
+          }
+        } catch (e) {
+          console.error('No se pudo enviar el aviso de producto eliminado por Telegram:', e);
+        }
       }
 
       window.cargarMovimientosInventario = async function() {
@@ -17921,7 +18152,7 @@
           if (error) throw error;
           Object.assign(oc, updates);
 
-          // Aviso de "Pago realizado" por Telegram a los Jefes de Departamento de la OC
+          // Aviso de "Pago realizado" por Telegram al Solicitante y a los Jefes de Departamento de la OC
           // (no bloquea: si falla, el pago ya quedó registrado).
           if (msg) msg.innerHTML = '<div class="success-msg">⏳ Pago registrado. Enviando aviso por Telegram…</div>';
           var resultadoAviso = await notificarPagoOCTelegram(oc, {
@@ -17947,8 +18178,8 @@
 
       // ===== AVISO DE PAGO DE OC POR TELEGRAM =====
       // Cada vez que CCHF registra un pago (total, o cada pago de un
-      // 50/50), SOLO los Jefes de Departamento del departamento de la OC
-      // (empresa + departamento del proyecto de la OC) reciben por Telegram
+      // 50/50), el Solicitante de la OC y los Jefes de Departamento del
+      // departamento de la OC (empresa + departamento del proyecto) reciben por Telegram
       // el mensaje "Pago realizado" con fecha, proveedor, monto y concepto.
       // Se envía al chat personal de cada jefe: el Chat ID se captura en
       // 👥 Colaboradores (columna usuarios.telegram_chat_id, leída con la
@@ -18058,11 +18289,21 @@
             console.warn(resultado.motivo);
             return resultado;
           }
-          var jefes = obtenerJefesDepartamentoOC(oc).filter(function(j, idx, arr) {
+          // Destinatarios: el Solicitante de la OC (quien la elaboró y quien
+          // la aprobó como solicitante, si es un usuario real) y los Jefes
+          // de Departamento del departamento de la OC. Sin duplicados y sin
+          // incluir a quien registró el pago.
+          var existeUsuario = function(u) {
+            return (usuariosDB || []).some(function(x) { return x.usuario === u; });
+          };
+          var solicitantes = [oc.responsable, oc.nombresolicitante].filter(function(u) {
+            return u && u !== 'No definido' && existeUsuario(u);
+          });
+          var jefes = solicitantes.concat(obtenerJefesDepartamentoOC(oc)).filter(function(j, idx, arr) {
             return j && j !== quienPago && arr.indexOf(j) === idx;
           });
           if (jefes.length === 0) {
-            resultado.motivo = 'No hay ningún usuario con rol Jefe Departamento y permiso en ' +
+            resultado.motivo = 'La OC no tiene Solicitante registrado y no hay ningún usuario con rol Jefe Departamento y permiso en ' +
               (getAbreviaturaEmpresa(proyectoOC.empresa) || proyectoOC.empresa || '—') + ' / ' + (proyectoOC.departamento || '—') + '.';
             console.warn(resultado.motivo);
             return resultado;
@@ -18089,7 +18330,7 @@
             var chatId = await obtenerTelegramChatIdUsuario(jefes[i]);
             if (!chatId) {
               resultado.sinChatId.push(jefes[i]);
-              console.warn('El Jefe de Departamento ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.');
+              console.warn('El usuario ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.');
               continue;
             }
             if (await enviarTelegramDocumento(chatId, texto, info.comprobanteArchivo || null, info.comprobanteUrl || null, nombreComprobante)) {
