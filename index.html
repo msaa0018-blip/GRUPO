@@ -18502,20 +18502,12 @@
         return resultado;
       }
 
-      // ¿La OC pasó por autorización del Director (excedió el % del límite
-      // del proyecto)? Se detecta porque se le envió la solicitud por
-      // Telegram (telegram_message_id) o porque la autorización del Director
-      // ocurrió después de la del Jefe (en las autorizaciones automáticas
-      // ambas fechas se registran en el mismo instante).
+      // ¿Se le envió al Director el mensaje de Telegram pidiéndole que
+      // autorizara la OC (por superar el % del límite del proyecto)? Solo
+      // en ese caso recibe después el aviso de pago. Las OC autorizadas
+      // automáticamente no cuentan.
       function ocRequirioAutorizacionDirector(oc) {
-        if (!oc) return false;
-        if (oc.telegram_message_id) return true;
-        if (oc.fechaaprobaciondirector && oc.fechaaprobacionjefe) {
-          var tDir = new Date(oc.fechaaprobaciondirector).getTime();
-          var tJefe = new Date(oc.fechaaprobacionjefe).getTime();
-          if (!isNaN(tDir) && !isNaN(tJefe) && (tDir - tJefe) > 60000) return true;
-        }
-        return false;
+        return !!(oc && oc.telegram_message_id);
       }
 
       function textoResultadoAvisoTelegram(r) {
