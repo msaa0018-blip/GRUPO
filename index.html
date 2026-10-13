@@ -18276,14 +18276,16 @@
 
           // Aviso de "Pago realizado" por Telegram al Solicitante y a los Jefes de Departamento de la OC
           // (no bloquea: si falla, el pago ya quedó registrado).
-          if (msg) msg.innerHTML = '<div class="success-msg">⏳ Pago registrado. Enviando aviso por Telegram…</div>';
+          if (msg) msg.innerHTML = '<div class="success-msg">⏳ Pago registrado. Terminando…</div>';
           var resultadoAviso = await notificarPagoOCTelegram(oc, {
             numeroPago: comprobantePagoNumeroPendiente,
             es5050: es5050,
             comprobanteArchivo: comprobantePagoArchivoPendiente,
             comprobanteUrl: url
           });
-          mensajeFinal += '\n\n' + textoResultadoAvisoTelegram(resultadoAviso);
+          // El resultado del aviso (a quién se envió) no se muestra a quien
+          // registra el pago; solo queda en la consola.
+          console.log('Aviso de pago por Telegram:', textoResultadoAvisoTelegram(resultadoAviso));
 
           indexComprobantePagoPendiente = null;
           comprobantePagoArchivoPendiente = null;
@@ -18300,9 +18302,8 @@
 
       // ===== AVISO DE PAGO DE OC POR TELEGRAM =====
       // Cada vez que CCHF registra un pago (total, o cada pago de un
-      // 50/50), los involucrados de la OC (elaborador, responsable,
-      // solicitante, jefe que autorizó y participantes de sus chats) y los
-      // Jefes de Departamento del departamento de la OC reciben por Telegram
+      // 50/50), el Elaborador, el Solicitante y los Jefes de Departamento
+      // del departamento de la OC reciben por Telegram
       // el mensaje "Pago realizado" con fecha, proveedor, monto y concepto.
       // Se envía al chat personal de cada jefe: el Chat ID se captura en
       // 👥 Colaboradores (columna usuarios.telegram_chat_id, leída con la
@@ -18412,44 +18413,18 @@
             console.warn(resultado.motivo);
             return resultado;
           }
-          // Destinatarios: el Solicitante de la OC (quien la elaboró y quien
-          // la aprobó como solicitante, si es un usuario real) y los Jefes
-          // de Departamento del departamento de la OC. Sin duplicados y sin
-          // incluir a quien registró el pago.
           var existeUsuario = function(u) {
             return (usuariosDB || []).some(function(x) { return x.usuario === u; });
           };
-          // Involucrados de la OC: quien la elaboró, el responsable, quien
-          // la aprobó como solicitante y el jefe que la autorizó, más los
-          // participantes de las conversaciones (💬 Chat) de esa OC.
-          var involucradosOC = [oc.responsable, oc.elaborador, oc.nombresolicitante, oc.nombrejefe];
-          try {
-            var { data: convsOC } = await supabase.from('buzon_conversaciones')
-              .select('creador, destinatarios, involucrados').eq('oc_id', oc.id);
-            (convsOC || []).forEach(function(c) { involucradosOC = involucradosOC.concat(buzonParticipantes(c)); });
-          } catch (eConv) {
-            console.warn('No se pudieron leer los chats de la OC para el aviso de pago:', eConv);
-          }
-          var solicitantes = involucradosOC.filter(function(u) {
-            return u && u !== 'No definido' && u !== 'Desconocido' && u !== 'ADMIN' && existeUsuario(u);
-          });
-          // Director General: solo recibe el aviso de pago de las OC que
-          // requirieron SU autorización (por superar el % del límite del
-          // proyecto). En las OC autorizadas automáticamente no se le avisa,
-          // aunque aparezca en algún chat de la OC.
-          var esDirector = function(u) {
-            var reg = (usuariosDB || []).find(function(x) { return x.usuario === u; });
-            return !!reg && usuarioTieneAlgunRol(reg, ['Director General']);
-          };
-          var directorAutorizo = ocRequirioAutorizacionDirector(oc);
-          var destinatariosPago = solicitantes.concat(obtenerJefesDepartamentoOC(oc)).filter(function(u) {
-            return !esDirector(u);
-          });
-          if (directorAutorizo) {
-            (usuariosDB || []).forEach(function(u) {
-              if (usuarioTieneAlgunRol(u, ['Director General'])) destinatariosPago.push(u.usuario);
-            });
-          }
+          // Destinatarios del aviso de pago: el Elaborador, el Solicitante y
+          // los Jefes de Departamento del departamento de la OC. Nadie más
+          // (ni Director, ni Contabilidad, ni participantes de chats).
+          var usuarioValido = function(u) { return u && u !== 'No definido' && u !== 'Desconocido' && existeUsuario(u); };
+          // Elaborador: quien capturó la OC (si no quedó, el responsable).
+          var elaboradorOC = usuarioValido(oc.elaborador) ? oc.elaborador : (usuarioValido(oc.responsable) ? oc.responsable : null);
+          // Solicitante: quien aprobó la OC como solicitante (si no quedó, el responsable).
+          var solicitanteOC = usuarioValido(oc.nombresolicitante) ? oc.nombresolicitante : (usuarioValido(oc.responsable) ? oc.responsable : null);
+          var destinatariosPago = [elaboradorOC, solicitanteOC].filter(Boolean).concat(obtenerJefesDepartamentoOC(oc));
           var jefes = destinatariosPago.filter(function(j, idx, arr) {
             return j && j !== quienPago && arr.indexOf(j) === idx;
           });
@@ -18500,14 +18475,6 @@
           resultado.motivo = 'Error al enviar: ' + (e && e.message ? e.message : e);
         }
         return resultado;
-      }
-
-      // ¿Se le envió al Director el mensaje de Telegram pidiéndole que
-      // autorizara la OC (por superar el % del límite del proyecto)? Solo
-      // en ese caso recibe después el aviso de pago. Las OC autorizadas
-      // automáticamente no cuentan.
-      function ocRequirioAutorizacionDirector(oc) {
-        return !!(oc && oc.telegram_message_id);
       }
 
       function textoResultadoAvisoTelegram(r) {
