@@ -18300,8 +18300,9 @@
 
       // ===== AVISO DE PAGO DE OC POR TELEGRAM =====
       // Cada vez que CCHF registra un pago (total, o cada pago de un
-      // 50/50), el Solicitante de la OC y los Jefes de Departamento del
-      // departamento de la OC (empresa + departamento del proyecto) reciben por Telegram
+      // 50/50), los involucrados de la OC (elaborador, responsable,
+      // solicitante, jefe que autorizó y participantes de sus chats) y los
+      // Jefes de Departamento del departamento de la OC reciben por Telegram
       // el mensaje "Pago realizado" con fecha, proveedor, monto y concepto.
       // Se envía al chat personal de cada jefe: el Chat ID se captura en
       // 👥 Colaboradores (columna usuarios.telegram_chat_id, leída con la
@@ -18418,10 +18419,38 @@
           var existeUsuario = function(u) {
             return (usuariosDB || []).some(function(x) { return x.usuario === u; });
           };
-          var solicitantes = [oc.responsable, oc.nombresolicitante].filter(function(u) {
-            return u && u !== 'No definido' && existeUsuario(u);
+          // Involucrados de la OC: quien la elaboró, el responsable, quien
+          // la aprobó como solicitante y el jefe que la autorizó, más los
+          // participantes de las conversaciones (💬 Chat) de esa OC.
+          var involucradosOC = [oc.responsable, oc.elaborador, oc.nombresolicitante, oc.nombrejefe];
+          try {
+            var { data: convsOC } = await supabase.from('buzon_conversaciones')
+              .select('creador, destinatarios, involucrados').eq('oc_id', oc.id);
+            (convsOC || []).forEach(function(c) { involucradosOC = involucradosOC.concat(buzonParticipantes(c)); });
+          } catch (eConv) {
+            console.warn('No se pudieron leer los chats de la OC para el aviso de pago:', eConv);
+          }
+          var solicitantes = involucradosOC.filter(function(u) {
+            return u && u !== 'No definido' && u !== 'Desconocido' && u !== 'ADMIN' && existeUsuario(u);
           });
-          var jefes = solicitantes.concat(obtenerJefesDepartamentoOC(oc)).filter(function(j, idx, arr) {
+          // Director General: solo recibe el aviso de pago de las OC que
+          // requirieron SU autorización (por superar el % del límite del
+          // proyecto). En las OC autorizadas automáticamente no se le avisa,
+          // aunque aparezca en algún chat de la OC.
+          var esDirector = function(u) {
+            var reg = (usuariosDB || []).find(function(x) { return x.usuario === u; });
+            return !!reg && usuarioTieneAlgunRol(reg, ['Director General']);
+          };
+          var directorAutorizo = ocRequirioAutorizacionDirector(oc);
+          var destinatariosPago = solicitantes.concat(obtenerJefesDepartamentoOC(oc)).filter(function(u) {
+            return !esDirector(u);
+          });
+          if (directorAutorizo) {
+            (usuariosDB || []).forEach(function(u) {
+              if (usuarioTieneAlgunRol(u, ['Director General'])) destinatariosPago.push(u.usuario);
+            });
+          }
+          var jefes = destinatariosPago.filter(function(j, idx, arr) {
             return j && j !== quienPago && arr.indexOf(j) === idx;
           });
           if (jefes.length === 0) {
@@ -18448,6 +18477,7 @@
             '🧾 OC: ' + escaparHTMLTelegram(oc.codigo || ('OC-' + oc.id));
           var nombreComprobante = (oc.codigo || ('OC-' + oc.id)) + '-PAGO' + (info.numeroPago || 1) + '.pdf';
 
+          var chatsYaAvisados = {};
           for (var i = 0; i < jefes.length; i++) {
             var chatId = await obtenerTelegramChatIdUsuario(jefes[i]);
             if (!chatId) {
@@ -18455,6 +18485,9 @@
               console.warn('El usuario ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.');
               continue;
             }
+            // Misma persona con 2 cuentas (ej. IQA1/IQA2): un solo aviso.
+            if (chatsYaAvisados[chatId]) { resultado.enviados.push(jefes[i]); continue; }
+            chatsYaAvisados[chatId] = true;
             if (await enviarTelegramDocumento(chatId, texto, info.comprobanteArchivo || null, info.comprobanteUrl || null, nombreComprobante)) {
               resultado.enviados.push(jefes[i]);
               console.log('✅ Aviso de pago enviado por Telegram a ' + jefes[i]);
@@ -18467,6 +18500,22 @@
           resultado.motivo = 'Error al enviar: ' + (e && e.message ? e.message : e);
         }
         return resultado;
+      }
+
+      // ¿La OC pasó por autorización del Director (excedió el % del límite
+      // del proyecto)? Se detecta porque se le envió la solicitud por
+      // Telegram (telegram_message_id) o porque la autorización del Director
+      // ocurrió después de la del Jefe (en las autorizaciones automáticas
+      // ambas fechas se registran en el mismo instante).
+      function ocRequirioAutorizacionDirector(oc) {
+        if (!oc) return false;
+        if (oc.telegram_message_id) return true;
+        if (oc.fechaaprobaciondirector && oc.fechaaprobacionjefe) {
+          var tDir = new Date(oc.fechaaprobaciondirector).getTime();
+          var tJefe = new Date(oc.fechaaprobacionjefe).getTime();
+          if (!isNaN(tDir) && !isNaN(tJefe) && (tDir - tJefe) > 60000) return true;
+        }
+        return false;
       }
 
       function textoResultadoAvisoTelegram(r) {
