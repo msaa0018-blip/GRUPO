@@ -6493,6 +6493,10 @@
           </table>
         </div>
         <button onclick="window.agregarFilaEditarProductosOC()" class="success" style="margin-top:8px;">➕ Agregar Producto</button>
+        <div style="margin-top:10px;">
+          <label style="font-weight:500;display:block;margin-bottom:4px;">Justificación de la modificación *</label>
+          <textarea id="editarJustificacionOC" rows="2" placeholder="Explica por qué se modifica la OC (obligatorio)" style="width:100%;box-sizing:border-box;"></textarea>
+        </div>
         <div id="msgEditarProductosOC" style="margin-top:8px;"></div>
         <p style="margin-top:10px;font-size:12px;color:var(--gray-600);">
           ℹ️ Si esta OC ya está <strong>PAGADA</strong>, el inventario de los productos con "Código" se ajustará automáticamente según la diferencia entre lo que había antes y lo que quede después de guardar.
@@ -6876,7 +6880,9 @@
       // ============================================================
       // CONFIGURACIÓN
       // ============================================================
-      var TELEGRAM_BOT_TOKEN = '8952977572:AAHu1uBFrlRb6KcKPSyF5RJbURaBXu5lm_U';
+      // El token del bot de Telegram YA NO está en el navegador: vive en
+      // Supabase (tabla privada config_privada) y todos los envíos pasan
+      // por la función RPC telegram_api (ver telegramAPI más abajo).
       // Respaldo SOLO si ningún Director General tiene Chat ID guardado en
       // usuarios.telegram_chat_id (la fuente principal es la base de datos,
       // ver obtenerChatIdDirectorTelegram).
@@ -7810,6 +7816,56 @@
         return listaRoles.some(function(r) { return rolesUsuario.indexOf(r) !== -1; });
       }
 
+      // Si un usuario tiene el rol Jefe Departamento junto con Solicitante
+      // y/o Elaborador, manda el de Jefe: se descartan los otros dos para
+      // que el sistema lo trate en todo como Jefe de Departamento.
+      function rolConPrioridadJefe(rolStr) {
+        if (!rolStr) return rolStr;
+        var roles = String(rolStr).split(',').map(function(r) { return r.trim(); }).filter(Boolean);
+        if (roles.indexOf('Jefe Departamento') === -1) return rolStr;
+        roles = roles.filter(function(r) { return r !== 'Solicitante' && r !== 'Elaborador'; });
+        return roles.join(',');
+      }
+
+      // ===== PERMISOS POR ROL DE ACCIONES PUNTUALES =====
+      var ROLES_POR_ACCION = {
+        eliminar_cxc: ['Administrador'],
+        marcar_cxc: ['Administrador', 'Finanzas'],
+        aprobar_vsc: ['Jefe Departamento', 'Administrador', 'Director General'],
+        eliminar_proveedor: ['Administrador'],
+        eliminar_producto: ['Administrador'],
+        eliminar_almacen: ['Administrador']
+      };
+      function puedeAccionPorRol(accion, usuario) {
+        return usuarioTieneAlgunRol(usuario || actual, ROLES_POR_ACCION[accion] || []);
+      }
+      function textoRolesAccion(accion) {
+        return (ROLES_POR_ACCION[accion] || []).join(', ');
+      }
+
+      // ===== VISIBILIDAD POR EMPRESA Y DEPARTAMENTO =====
+      // Todos los usuarios se rigen por empresa y departamento: ven los
+      // registros cuya empresa/departamento coincide con alguno de sus
+      // permisos. Excepción: Administrador, Director General, Finanzas y
+      // Contabilidad tienen permisos especiales y ven todo.
+      var ROLES_PERMISOS_ESPECIALES = ['Administrador', 'Director General', 'Finanzas', 'Contabilidad'];
+      function usuarioConPermisosEspeciales(usuario) {
+        return usuarioTieneAlgunRol(usuario, ROLES_PERMISOS_ESPECIALES);
+      }
+      function registroVisiblePorEmpresaDepto(r, usuario) {
+        usuario = usuario || actual;
+        if (!usuario || !r) return false;
+        if (usuarioConPermisosEspeciales(usuario)) return true;
+        var empNorm = normalizar(r.empresa);
+        var deptoNorm = deptoParaComparar(r.empresa, r.departamento);
+        return (usuario.permisos || []).some(function(pm) {
+          return normalizar(pm.empresa) === empNorm && deptoParaComparar(pm.empresa, pm.depto) === deptoNorm;
+        });
+      }
+      function filtrarPorEmpresaDepto(lista) {
+        return (lista || []).filter(function(r) { return registroVisiblePorEmpresaDepto(r); });
+      }
+
       function usuarioPuedeAcceder(usuario, empresa, depto) {
         if (!usuario) return false;
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) return true;
@@ -7867,9 +7923,15 @@
       // ALTA DE REGISTROS (Proveedores/Productos): acceso exclusivo del
       // rol Administrador, más el usuario IQA (mismos permisos que Admin
       // en este módulo específico).
+      // Usuario especial IQA (incluye sus cuentas IQA1 / IQA2): entra a
+      // Alta de registros (Proveedores y Productos) y a Almacenes.
+      function esUsuarioIQA(usuario) {
+        return !!usuario && /^IQA\d*$/.test(String(usuario.usuario || usuario.u || '').trim().toUpperCase());
+      }
+
       function usuarioPuedeAltaRegistros(usuario) {
         if (!usuario) return false;
-        return usuario.rol === 'Administrador' || usuario.usuario === 'IQA';
+        return usuario.rol === 'Administrador' || esUsuarioIQA(usuario);
       }
 
       // ALMACENES: el Administrador ve/gestiona todos los almacenes sin
@@ -7878,7 +7940,7 @@
       // empresa/departamento (filtrados en filtrarAlmacenesSegunUsuario).
       function usuarioPuedeVerAlmacenes(usuario) {
         if (!usuario) return false;
-        return usuario.rol === 'Administrador' || usuario.usuario === 'IQA' || usuario.rol === 'Jefe Departamento';
+        return usuario.rol === 'Administrador' || esUsuarioIQA(usuario) || usuario.rol === 'Jefe Departamento';
       }
 
       // Devuelve solo los almacenes visibles para el usuario: todos para
@@ -7887,7 +7949,7 @@
       function filtrarAlmacenesSegunUsuario(usuario, listaAlmacenes) {
         var lista = listaAlmacenes || almacenesCache || [];
         if (!usuario) return [];
-        if (usuario.rol === 'Administrador' || usuario.usuario === 'IQA') return lista;
+        if (usuario.rol === 'Administrador' || esUsuarioIQA(usuario)) return lista;
         if (usuario.rol === 'Jefe Departamento') {
           return lista.filter(function(a) {
             if (!a.empresa) return true; // Almacén global ("Todas"): visible para cualquier Jefe
@@ -7928,9 +7990,10 @@
         return !!usuario && (usuario.rol === 'Finanzas' || esUsuarioPagosCCHF(usuario));
       }
 
+      // CCHF es el ÚNICO que registra pagos de OC (sube comprobante y
+      // marca PAGADA / Pendiente), sin respaldo de otro rol.
       function usuarioPuedeMarcarOCPagada(usuario) {
-        if (!usuario) return false;
-        return esUsuarioPagosCCHF(usuario) || usuario.rol === 'Administrador';
+        return esUsuarioPagosCCHF(usuario);
       }
 
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
@@ -8027,7 +8090,7 @@
         // "pertenece" al usuario si él la elaboró O si él es el
         // solicitante designado (sin importar cuál de los dos roles tenga
         // su cuenta).
-        if (usuarioTieneAlgunRol(usuario, ['Elaborador', 'Solicitante'])) {
+        if (usuarioTieneAlgunRol(usuario, ['Elaborador', 'Solicitante']) && !usuarioTieneRol(usuario, 'Jefe Departamento')) {
           ocFiltradas = ocFiltradas.filter(function(o) {
             return o.elaborador === usuario.usuario || o.responsable === usuario.usuario;
           });
@@ -8441,7 +8504,9 @@
           // necesita usuario/rol/permisos para pintar la UI y calcular accesos.
           var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,telefono,email');
           if (error) throw error;
-          usuariosDB = data || [];
+          usuariosDB = (data || []).map(function(u) {
+            return Object.assign({}, u, { rol: rolConPrioridadJefe(u.rol) });
+          });
           console.log('✅ Usuarios cargados desde Supabase:', usuariosDB.length);
           return true;
         } catch (e) {
@@ -8562,7 +8627,8 @@
       // FUNCIONES DE NAVEGACIÓN
       // ============================================================
       var SISTEMA_RESTRINGIDO_KEY = 'allin_sistema_restringido';
-      var CANDADO_SISTEMA_PASSWORD = '980813';
+      // La contraseña del candado ya NO está en el navegador: se valida en
+      // Supabase con la RPC verificar_candado (guardada cifrada).
       // Versión restringida (🔒): EGRESOS sin SPM ni VALES, INGRESOS sin
       // REPSE (solo CXC, OF y CXF) y BUZÓN sin "Nuevo comunicado".
       var MODULOS_PRINCIPALES_PERMITIDOS = ['egresos', 'ingresos', 'buzon', 'alta_registros', 'almacenes'];
@@ -8638,13 +8704,23 @@
         });
       }
 
-      window.toggleBloqueoSistema = function() {
+      window.toggleBloqueoSistema = async function() {
         var passwordIngresada = prompt('🔒 Ingresa la contraseña para cambiar de vista:');
         if (passwordIngresada === null) {
           // El usuario canceló el ingreso de contraseña: no se cambia de vista.
           return;
         }
-        if (passwordIngresada !== CANDADO_SISTEMA_PASSWORD) {
+        var claveCorrecta = false;
+        try {
+          var { data: okClave, error: errClave } = await supabase.rpc('verificar_candado', { p_clave: passwordIngresada });
+          if (errClave) throw errClave;
+          claveCorrecta = okClave === true;
+        } catch (e) {
+          console.error('Error verificando la contraseña del candado:', e);
+          alert('❌ No se pudo verificar la contraseña: ' + (e.message || e));
+          return;
+        }
+        if (!claveCorrecta) {
           alert('❌ Contraseña incorrecta. No puedes cambiar de vista.');
           return;
         }
@@ -9020,17 +9096,12 @@
         var spanVSC = document.getElementById('moduloTotalVale_vsc');
         if (!spanVC && !spanVI && !spanVSC) return;
 
-        var esGlobal = esRolGlobalCXP(actual);
-        var empresaPropia = (!esGlobal && actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
-        var deptoPropio = (!esGlobal && actual && actual.permisos && actual.permisos[0] && actual.permisos[0].depto) || '';
-
+        // Solo empresa + departamento del usuario (todos sus permisos).
         async function totalDocumentoCXP(tipo) {
-          var q = supabase.from('documentos_cxp').select('monto').eq('tipo', tipo).eq('estado', 'PAGADA');
-          if (empresaPropia) q = q.eq('empresa', empresaPropia);
-          if (deptoPropio) q = q.eq('departamento', deptoPropio);
+          var q = supabase.from('documentos_cxp').select('monto, empresa, departamento').eq('tipo', tipo).eq('estado', 'PAGADA');
           var { data, error } = await q;
           if (error) throw error;
-          return (data || []).reduce(function(s, d) { return s + (Number(d.monto) || 0); }, 0);
+          return filtrarPorEmpresaDepto(data).reduce(function(s, d) { return s + (Number(d.monto) || 0); }, 0);
         }
 
         try {
@@ -9047,12 +9118,10 @@
         }
         if (spanVSC) {
           try {
-            var qVSC = supabase.from('vales_gasolina').select('importe, monto, estado').in('estado', ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA']);
-            if (empresaPropia) qVSC = qVSC.eq('empresa', empresaPropia);
-            if (deptoPropio) qVSC = qVSC.eq('departamento', deptoPropio);
+            var qVSC = supabase.from('vales_gasolina').select('importe, monto, estado, empresa, departamento').in('estado', ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA']);
             var rVSC = await qVSC;
             if (rVSC.error) throw rVSC.error;
-            var totalVSC = (rVSC.data || []).reduce(function(s, v) { return s + (Number(v.importe) || Number(v.monto) || 0); }, 0);
+            var totalVSC = filtrarPorEmpresaDepto(rVSC.data).reduce(function(s, v) { return s + (Number(v.importe) || Number(v.monto) || 0); }, 0);
             spanVSC.textContent = formatoMoneda(totalVSC, 'MXN');
           } catch (e) {
             console.error('Error calculando total de VSC:', e);
@@ -9664,6 +9733,7 @@
       };
 
       window.eliminarProveedorCatalogo = async function(id) {
+        if (!puedeAccionPorRol('eliminar_proveedor')) return alert('❌ Solo ' + textoRolesAccion('eliminar_proveedor') + ' puede eliminar proveedores.');
         if (!confirm('¿Eliminar este proveedor del catálogo?')) return;
         try {
           var { error } = await supabase.from('proveedores').delete().eq('id', id);
@@ -9838,6 +9908,8 @@
         accionProveedorActual = { id: id, accion: null };
         document.getElementById('proveedorAccionesNombre').textContent = proveedor.nombre || 'Proveedor';
         document.querySelectorAll('#proveedorAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
+        var btnElimProv = document.querySelector('#proveedorAccionesModal [data-accion="eliminar"]');
+        if (btnElimProv) btnElimProv.style.display = puedeAccionPorRol('eliminar_proveedor') ? '' : 'none';
         document.getElementById('proveedorAccionesModal').classList.add('active');
       };
 
@@ -10175,6 +10247,7 @@
       };
 
       window.eliminarAlmacen = async function(id) {
+        if (!puedeAccionPorRol('eliminar_almacen')) return alert('❌ Solo ' + textoRolesAccion('eliminar_almacen') + ' puede eliminar almacenes.');
         if (!confirm('¿Eliminar este almacén? Los productos asignados a él quedarán sin almacén ni nave.')) return;
         try {
           // La columna almacen_id en productos ya tiene ON DELETE SET NULL,
@@ -10264,6 +10337,8 @@
         accionAlmacenActual = { id: id, accion: null };
         document.getElementById('almacenAccionesNombre').textContent = a.nombre || 'Almacén';
         document.querySelectorAll('#almacenAccionesModal .btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
+        var btnElimAlm = document.querySelector('#almacenAccionesModal [data-accion="eliminar"]');
+        if (btnElimAlm) btnElimAlm.style.display = puedeAccionPorRol('eliminar_almacen') ? '' : 'none';
         document.getElementById('almacenAccionesModal').classList.add('active');
       };
 
@@ -11185,13 +11260,10 @@
         if (!cuerpo) return;
         try {
           var query = supabase.from('vales_gasolina').select('*').order('fecha_creacion', { ascending: false });
-          if (!esRolGlobalCXP(actual)) {
-            var empresaPropia = (actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
-            if (empresaPropia) query = query.eq('empresa', empresaPropia);
-          }
           var { data, error } = await query;
           if (error) throw error;
-          valesGasolinaCache = data || [];
+          // VSC: solo los de la empresa y departamento del usuario.
+          valesGasolinaCache = filtrarPorEmpresaDepto(data);
           cuerpo.innerHTML = '';
           if (!valesGasolinaCache.length) {
             cuerpo.innerHTML = '<tr><td colspan="11">No hay vales registrados.</td></tr>';
@@ -11248,7 +11320,7 @@
         var btnAprobar = document.getElementById('btnAccionValeAprobar');
         var btnPagar = document.getElementById('btnAccionValePagar');
         var btnCancelar = document.getElementById('btnAccionValeCancelar');
-        var puedeAprobar = v.estado === 'CREADA' && actual && (actual.rol === 'Jefe Departamento' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeAprobar = v.estado === 'CREADA' && puedeAccionPorRol('aprobar_vsc');
         if (btnAprobar) btnAprobar.style.display = puedeAprobar ? '' : 'none';
         // El resto del flujo (Imprimir PDF / Comprobar / Cerrar) ahora vive
         // dentro de "Visualizar" (👁️), junto al diagrama de proceso.
@@ -11288,6 +11360,9 @@
       };
 
       window.aprobarValeGasolina = async function(id) {
+        if (!puedeAccionPorRol('aprobar_vsc')) return alert('❌ Solo ' + textoRolesAccion('aprobar_vsc') + ' puede aprobar vales VSC.');
+        var valeAprobar = (valesGasolinaCache || []).find(function(x) { return x.id === id; });
+        if (valeAprobar && valeAprobar.estado !== 'CREADA') return alert('⚠️ Este vale ya no está pendiente de aprobación.');
         try {
           var { error } = await supabase.from('vales_gasolina').update({
             estado: 'APROBADA_JEFE',
@@ -11413,7 +11488,7 @@
 
         var acciones = document.getElementById('valeVisualizarAcciones');
         var botones = '';
-        var puedeAprobar = v.estado === 'CREADA' && actual && (actual.rol === 'Jefe Departamento' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeAprobar = v.estado === 'CREADA' && puedeAccionPorRol('aprobar_vsc');
         if (puedeAprobar) {
           botones += '<button class="success" onclick="window.aprobarValeGasolina(' + v.id + ').then(window.cerrarVisualizarVale)">✅ Aprobar</button>';
         }
@@ -12589,13 +12664,9 @@
         modal.classList.add('active');
         try {
           var query = supabase.from('vales_gasolina').select('*');
-          if (!esRolGlobalCXP(actual)) {
-            var empresaPropia = (actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
-            if (empresaPropia) query = query.eq('empresa', empresaPropia);
-          }
           var { data, error } = await query;
           if (error) throw error;
-          var vales = data || [];
+          var vales = filtrarPorEmpresaDepto(data);
 
           if (!vehiculosCache.length) await window.cargarVehiculos();
 
@@ -15246,6 +15317,7 @@
       };
 
       window.eliminarProductoCatalogo = async function(id) {
+        if (!puedeAccionPorRol('eliminar_producto')) return alert('❌ Solo ' + textoRolesAccion('eliminar_producto') + ' puede eliminar productos.');
         if (!confirm('¿Eliminar este producto del catálogo?')) return;
         try {
           var { data: prodEliminar } = await supabase.from('productos')
@@ -15271,6 +15343,8 @@
         document.getElementById('productoAccionesStockActual').textContent = producto.cantidad || 0;
         document.getElementById('productoAccionesCantidad').value = '';
         document.querySelectorAll('.btn-accion-producto').forEach(function(b) { b.classList.remove('seleccionado'); });
+        var btnElimProd = document.querySelector('#productoAccionesModal [data-accion="eliminar"]');
+        if (btnElimProd) btnElimProd.style.display = puedeAccionPorRol('eliminar_producto') ? '' : 'none';
         document.getElementById('productoAccionesModal').classList.add('active');
       };
 
@@ -15673,7 +15747,7 @@
           if (error) throw error;
           if (data && (data.rol === 'Director General' || data.rol === 'Administrador' || data.rol === 'Jefe Departamento')) {
             // Actualizar el rol en el objeto actual
-            actual.rol = data.rol;
+            actual.rol = rolConPrioridadJefe(data.rol);
             return true;
           }
           return false;
@@ -17583,6 +17657,7 @@
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
+        await registrarBitacoraOC(oc, 'CANCELADA', Number(oc.montototal) || 0, 0, motivoCancelacion);
 
         if (oc.id === ocNotificadaId) {
           await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
@@ -17617,9 +17692,12 @@
 
       window.abrirModalParidadOC = function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (!usuarioTieneRol(actual, 'Elaborador')) return alert('Solo el elaborador puede definir la paridad final.');
         var oc = ordenes[index];
         if (!oc) return;
+        // Solo quien elaboró ESTA OC puede capturar su paridad final.
+        if (!oc.elaborador || String(oc.elaborador).toUpperCase() !== String(actual.usuario || actual.u || '').toUpperCase()) {
+          return alert('❌ Solo el elaborador de esta OC (' + (oc.elaborador || '—') + ') puede definir la paridad final.');
+        }
         if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
         var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
         if (!proyecto) return alert('Proyecto no encontrado');
@@ -18383,18 +18461,26 @@
         }
       }
 
+      // Llama a la API de Telegram a través de Supabase (RPC telegram_api),
+      // que agrega el token del lado del servidor. Devuelve la respuesta de
+      // Telegram ({ ok, result, description }).
+      async function telegramAPI(metodo, payload) {
+        try {
+          var { data, error } = await supabase.rpc('telegram_api', { p_metodo: metodo, p_payload: payload });
+          if (error) return { ok: false, description: error.message || String(error) };
+          return data || { ok: false, description: 'Sin respuesta' };
+        } catch (e) {
+          return { ok: false, description: e && e.message ? e.message : String(e) };
+        }
+      }
+
       function escaparHTMLTelegram(txt) {
         return String(txt == null ? '' : txt).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
 
       async function enviarTelegramAChat(chatId, textoHTML) {
         try {
-          var response = await fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text: textoHTML, parse_mode: 'HTML', disable_web_page_preview: true })
-          });
-          var data = await response.json();
+          var data = await telegramAPI('sendMessage', { chat_id: chatId, text: textoHTML, parse_mode: 'HTML', disable_web_page_preview: true });
           if (!data.ok) {
             console.error('❌ Telegram rechazó el aviso:', data);
             return false;
@@ -18428,26 +18514,11 @@
       // comprobante. Si ambas fallan, manda el aviso como texto con el
       // enlace al comprobante, para que el aviso nunca se pierda.
       async function enviarTelegramDocumento(chatId, textoHTML, archivo, urlArchivo, nombreArchivo) {
-        var endpoint = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendDocument';
+        // El envío pasa por Supabase (telegram_api), así que el comprobante
+        // se manda por su URL pública (el archivo ya está en Storage).
         try {
-          if (archivo) {
-            var fd = new FormData();
-            fd.append('chat_id', chatId);
-            fd.append('caption', textoHTML);
-            fd.append('parse_mode', 'HTML');
-            fd.append('document', archivo, nombreArchivo);
-            var r1 = await fetch(endpoint, { method: 'POST', body: fd });
-            var d1 = await r1.json();
-            if (d1.ok) return true;
-            console.warn('Telegram no aceptó el comprobante como archivo:', d1);
-          }
           if (urlArchivo) {
-            var r2 = await fetch(endpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: chatId, document: urlArchivo, caption: textoHTML, parse_mode: 'HTML' })
-            });
-            var d2 = await r2.json();
+            var d2 = await telegramAPI('sendDocument', { chat_id: chatId, document: urlArchivo, caption: textoHTML, parse_mode: 'HTML' });
             if (d2.ok) return true;
             console.warn('Telegram no aceptó el comprobante por URL:', d2);
           }
@@ -18552,12 +18623,23 @@
       // pago solicitado" con fecha de pago, proveedor, monto, concepto y
       // código de la OC.
       var USUARIOS_COMPLEMENTO_PAGO = ['DMHS'];
-      // Quién sube el complemento de pago de una CXC (pago recibido de un
-      // cliente): los usuarios de USUARIOS_COMPLEMENTO_PAGO o el Administrador.
-      function usuarioSubeComplementoCXC(u) {
+      // COMPLEMENTO DE PAGO
+      // * OC: lo sube el responsable de esa OC (el mismo que sube la factura).
+      // * CXC: lo sube el responsable de la factura (para dar seguimiento)
+      //   o DMHS (USUARIOS_COMPLEMENTO_PAGO). DMHS solo sube complementos
+      //   de CXC, nunca de OC.
+      function esUsuarioComplementoCXC(u) {
         if (!u) return false;
-        if (u.rol === 'Administrador') return true;
         return USUARIOS_COMPLEMENTO_PAGO.indexOf(String(u.usuario || u.u || '').trim().toUpperCase()) !== -1;
+      }
+      function usuarioSubeComplementoOC(u, oc) {
+        if (!u || !oc) return false;
+        return normalizar(u.usuario || u.u) === normalizar(oc.responsable);
+      }
+      function usuarioSubeComplementoCXC(u, cuenta) {
+        if (!u) return false;
+        if (esUsuarioComplementoCXC(u)) return true;
+        return !!(cuenta && cuenta.responsable && normalizar(u.usuario || u.u) === normalizar(cuenta.responsable));
       }
 
       // Fecha de pago real: confirmación del pago (50/50) o, si no hay,
@@ -18995,12 +19077,9 @@
           }
           Object.assign(oc, updatesOC);
 
-          // Solo por cada factura PPD se solicita por Telegram su
-          // complemento de pago (a DMHS), con el link directo para subirlo.
-          // El complemento de pago de las facturas PPD de una OC lo sube el
-          // mismo responsable de la OC (quien sube la factura), así que ya
-          // no se solicita por Telegram a DMHS. DMHS solo sube los
-          // complementos de las CXC (pagos recibidos de clientes).
+          // El complemento de pago de la OC lo sube el mismo responsable
+          // (quien sube la factura): ya no se solicita por Telegram a DMHS,
+          // que solo sube complementos de CXC.
           var promesaSolicitudComplemento = null;
 
           window.renderFacturasAgregadasOC();
@@ -19088,9 +19167,8 @@
       window.abrirComplementoPagoOC = async function(index, facturaId) {
         var oc = ordenes[index];
         if (!oc) return;
-        // El complemento de pago de la OC lo sube el solicitante/responsable
-        // de la OC (el mismo que sube la factura); Administrador de respaldo.
-        if (!actual || (actual.u !== oc.responsable && actual.rol !== 'Administrador')) return alert('❌ Solo el solicitante/responsable (' + (oc.responsable || '—') + ') puede subir el complemento de pago de esta OC.');
+        // El complemento de pago de la OC lo sube SOLO el responsable de la OC.
+        if (!usuarioSubeComplementoOC(actual, oc)) return alert('❌ Solo el responsable de la OC (' + (oc.responsable || '—') + ') puede subir su complemento de pago.');
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (!oc.uuidfactura) return alert('Aún no se ha registrado la factura de esta OC.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
@@ -19299,7 +19377,7 @@
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
         if (!oc.uuidfactura) return alert('Aún no se ha registrado ninguna factura para esta OC.');
-        if (!ocComplementoListo(oc)) return alert('⚠️ Todavía no se ha subido el complemento de pago de la(s) factura(s) PPD de esta OC. Finanzas debe subirlo antes ("💰 Complemento Pago").');
+        if (!ocComplementoListo(oc)) return alert('⚠️ Todavía no se ha subido el complemento de pago de la(s) factura(s) PPD de esta OC. El responsable de la OC debe subirlo antes ("💰 Complemento Pago").');
 
         ocConclusionPendiente = { oc: oc, facturas: [] };
         try {
@@ -19372,7 +19450,7 @@
         }
         var oc = ocConclusionPendiente.oc;
         if (!ocComplementoListo(oc)) {
-          alert('⚠️ Todavía no se ha subido el complemento de pago de la(s) factura(s) PPD de esta OC. Finanzas debe subirlo antes de poder concluir.');
+          alert('⚠️ Todavía no se ha subido el complemento de pago de la(s) factura(s) PPD de esta OC. El responsable de la OC debe subirlo antes de poder concluir.');
           return;
         }
 
@@ -19408,6 +19486,44 @@
           alert('❌ No se pudo concluir la OC: ' + e.message);
         }
       };
+
+      // ===== BITÁCORA DE ACTIVIDAD DE OC (tabla bitacora_oc) =====
+      // Cada vez que una OC se elimina, se modifica o se cancela queda un
+      // registro con: la OC, la acción, el monto anterior, el monto final,
+      // la justificación, el usuario y la fecha/hora. Ver
+      // crear_bitacora_oc.sql. Si falla, se avisa pero no se detiene la
+      // acción (ya se ejecutó).
+      async function registrarBitacoraOC(oc, accion, montoAnterior, montoFinal, justificacion) {
+        try {
+          var reg = {
+            oc_id: oc && oc.id ? oc.id : null,
+            oc_codigo: (oc && oc.codigo) || ('OC-' + (oc && oc.id)),
+            accion: accion,
+            monto_anterior: Number(montoAnterior) || 0,
+            monto_final: Number(montoFinal) || 0,
+            moneda: (oc && oc.moneda) || 'MXN',
+            justificacion: justificacion || '',
+            usuario: (actual && (actual.usuario || actual.u)) || '',
+            fecha: new Date().toISOString()
+          };
+          var { error } = await supabase.from('bitacora_oc').insert([reg]);
+          if (error) throw error;
+          return true;
+        } catch (e) {
+          console.error('No se pudo registrar la bitácora de la OC:', e);
+          alert('⚠️ La acción se realizó, pero no se pudo guardar el registro en la bitácora: ' + (e && e.message ? e.message : e));
+          return false;
+        }
+      }
+
+      // Pide la justificación (obligatoria). Devuelve el texto o null si se canceló.
+      function pedirJustificacionOC(texto) {
+        var j = prompt(texto);
+        if (j === null) return null;
+        j = j.trim();
+        if (!j) { alert('⚠️ La justificación es obligatoria.'); return null; }
+        return j;
+      }
 
       window.marcarPendiente = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
@@ -19458,8 +19574,12 @@
         if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
         var oc = ordenes[index];
         if (!confirm('¿Eliminar OC ' + oc.codigo + '?')) return;
+        var justificacionEliminar = pedirJustificacionOC('Justificación de la eliminación de la OC ' + oc.codigo + ' (obligatoria):');
+        if (justificacionEliminar === null) return;
+        var montoAntesEliminar = Number(oc.montototal) || 0;
         var { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
         if (error) return alert('Error al eliminar OC');
+        await registrarBitacoraOC(oc, 'ELIMINADA', montoAntesEliminar, 0, justificacionEliminar);
         ordenes.splice(index, 1);
         render();
       };
@@ -19541,10 +19661,16 @@
         motivo = motivo.trim();
         if (!motivo) { alert('⚠️ Debes indicar el motivo.'); return; }
 
-        var updates = { estado: 'CANCELADA' };
+        var updates = { estado: 'CANCELADA', motivo_cancelacion: motivo, cancelado_por: actual.u, fecha_cancelacion: new Date().toISOString() };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error) return alert('Error al actualizar OC');
+        if (error) {
+          // Columnas de cancelación no disponibles: se guarda solo el estado.
+          var r2 = await supabase.from('ordenes').update({ estado: 'CANCELADA' }).eq('id', oc.id);
+          if (r2.error) return alert('Error al actualizar OC');
+          updates = { estado: 'CANCELADA' };
+        }
         Object.assign(oc, updates);
+        await registrarBitacoraOC(oc, 'CANCELADA', Number(oc.montototal) || 0, 0, motivo);
         await agregarNotaOC(oc, 'OC CANCELADA', motivo);
         render();
       };
@@ -19638,17 +19764,11 @@
       async function enviarNotificacionTelegram(mensaje) {
         try {
           var chatIdDirector = await obtenerChatIdDirectorTelegram();
-          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage';
-          var response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatIdDirector,
-              text: mensaje,
-              parse_mode: 'Markdown'
-            })
+          var data = await telegramAPI('sendMessage', {
+            chat_id: chatIdDirector,
+            text: mensaje,
+            parse_mode: 'Markdown'
           });
-          var data = await response.json();
           if (data.ok) {
             console.log('✅ Notificación enviada a Telegram');
             return (data.result && data.result.message_id) || null;
@@ -19678,17 +19798,11 @@
         try {
           if (!oc || !oc.telegram_message_id) return false;
           var chatIdDirectorReaccion = await obtenerChatIdDirectorTelegram();
-          var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/setMessageReaction';
-          var response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatIdDirectorReaccion,
-              message_id: oc.telegram_message_id,
-              reaction: [{ type: 'emoji', emoji: emoji }]
-            })
+          var data = await telegramAPI('setMessageReaction', {
+            chat_id: chatIdDirectorReaccion,
+            message_id: oc.telegram_message_id,
+            reaction: [{ type: 'emoji', emoji: emoji }]
           });
-          var data = await response.json();
           if (!data.ok) {
             console.warn('⚠️ Telegram no aceptó la reacción "' + emoji + '":', data);
             return false;
@@ -20358,10 +20472,10 @@
         if (!actual) return alert('No has iniciado sesión');
         var cuenta = cuentasCXC[index];
         if (!cuenta) return;
-        // El complemento que se emite después de recibir el pago del
-        // cliente lo sube DMHS (USUARIOS_COMPLEMENTO_PAGO); Administrador de respaldo.
-        if (!usuarioSubeComplementoCXC(actual)) {
-          return alert('❌ Solo ' + USUARIOS_COMPLEMENTO_PAGO.join(', ') + ' puede subir el complemento de pago de las cuentas por cobrar.');
+        // El complemento de la CXC lo sube el responsable de la factura
+        // (seguimiento) o DMHS (USUARIOS_COMPLEMENTO_PAGO).
+        if (!usuarioSubeComplementoCXC(actual, cuenta)) {
+          return alert('❌ Solo el responsable de la factura (' + (cuenta.responsable || '—') + ') o ' + USUARIOS_COMPLEMENTO_PAGO.join(', ') + ' puede subir el complemento de pago de esta cuenta por cobrar.');
         }
         if (cuenta.complemento_pago_url) return alert('Esta cuenta ya tiene un complemento de pago subido, pendiente de confirmación de Finanzas.');
         if (cuenta.estado === 'PAGADO') return alert('Esta cuenta ya está pagada.');
@@ -20598,7 +20712,13 @@
         var fechaInicio = document.getElementById('cxcFechaInicio').value;
         var fechaFin = document.getElementById('cxcFechaFin').value;
 
-        var cuentas = cuentasCXC.slice();
+        // Empresa/departamento del usuario (los roles especiales ven todo).
+        // El responsable de la factura y DMHS siempre ven las suyas para
+        // poder subir el complemento.
+        var cuentas = cuentasCXC.filter(function(c) {
+          if (registroVisiblePorEmpresaDepto(obtenerInfoProyectoCXC(c))) return true;
+          return usuarioSubeComplementoCXC(actual, c);
+        });
 
         if (filtroCliente) cuentas = cuentas.filter(function(c) { return c.cliente === filtroCliente; });
 
@@ -20669,13 +20789,10 @@
         if (!cuerpo || !tipoDocCXPActual) return;
         try {
           var query = supabase.from('documentos_cxp').select('*').eq('tipo', tipoDocCXPActual).order('fecha_registro', { ascending: false });
-          if (!esRolGlobalCXP(actual)) {
-            var empresaPropia = (actual && actual.permisos && actual.permisos[0] && actual.permisos[0].empresa) || '';
-            if (empresaPropia) query = query.eq('empresa', empresaPropia);
-          }
           var { data, error } = await query;
           if (error) throw error;
-          documentosCXPCache = data || [];
+          // VC / VI / SPM: solo los de la empresa y departamento del usuario.
+          documentosCXPCache = filtrarPorEmpresaDepto(data);
           cuerpo.innerHTML = '';
           if (!documentosCXPCache.length) {
             cuerpo.innerHTML = '<tr><td colspan="11">No hay documentos registrados.</td></tr>';
@@ -22168,6 +22285,7 @@
       };
 
       window.eliminarCXC = async function(index) {
+        if (!puedeAccionPorRol('eliminar_cxc')) return alert('❌ Solo ' + textoRolesAccion('eliminar_cxc') + ' puede eliminar cuentas por cobrar.');
         var cuenta = cuentasCXC[index];
         if (!cuenta) return alert('Cuenta no encontrada');
         if (!confirm('¿Eliminar la cuenta por cobrar de ' + cuenta.cliente + '?')) return;
@@ -22186,6 +22304,7 @@
       };
 
       window.marcarCXC = async function(index, estado) {
+        if (!puedeAccionPorRol('marcar_cxc')) return alert('❌ Solo ' + textoRolesAccion('marcar_cxc') + ' puede marcar cuentas por cobrar.');
         var cuenta = cuentasCXC[index];
         if (!cuenta) return alert('Cuenta no encontrada');
         try {
@@ -22271,10 +22390,10 @@
               // en dos pasos — 1) el solicitante/responsable sube el
               // complemento de pago, 2) Finanzas confirma y concluye.
               if (!c.complemento_pago_url) {
-                if (usuarioSubeComplementoCXC(actual)) {
+                if (usuarioSubeComplementoCXC(actual, c)) {
                   acciones += '<button class="success" onclick="window.abrirComplementoPagoCXC(' + idxOriginal + ')">📎 Subir complemento de pago</button>';
                 } else {
-                  acciones += '<span class="text-muted" style="font-size:12px;">⏳ Pendiente de complemento (' + USUARIOS_COMPLEMENTO_PAGO.join(', ') + ')</span>';
+                  acciones += '<span class="text-muted" style="font-size:12px;">⏳ Pendiente de complemento (' + escapeHTML([c.responsable].concat(USUARIOS_COMPLEMENTO_PAGO).filter(Boolean).join(' / ')) + ')</span>';
                 }
               } else if (actual && (actual.rol === 'Finanzas' || actual.rol === 'Administrador')) {
                 acciones += '<button class="success" onclick="window.confirmarPagoCXCFinanzas(' + idxOriginal + ')">✔️ Confirmar pago</button>';
@@ -22283,10 +22402,14 @@
               }
             } else {
               // Cuentas manuales/legacy sin OF asociada: se conserva el flujo anterior.
-              acciones += '<button class="success" onclick="window.marcarCXC(' + idxOriginal + ', \'PAGADO\')">✅ Marcar pagado</button>';
+              if (puedeAccionPorRol('marcar_cxc')) {
+                acciones += '<button class="success" onclick="window.marcarCXC(' + idxOriginal + ', \'PAGADO\')">✅ Marcar pagado</button>';
+              }
             }
           }
-          acciones += '<button class="danger" onclick="window.eliminarCXC(' + idxOriginal + ')">🗑️</button>';
+          if (puedeAccionPorRol('eliminar_cxc')) {
+            acciones += '<button class="danger" onclick="window.eliminarCXC(' + idxOriginal + ')">🗑️</button>';
+          }
 
           tbody.innerHTML +=
             '<tr>' +
@@ -23078,7 +23201,7 @@
                   acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
                   acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
                 }
-                if (rolIncluye(rol, 'Elaborador') && o.estado === 'PENDIENTE_PARIDAD') {
+                if (o.estado === 'PENDIENTE_PARIDAD' && o.elaborador && String(o.elaborador).toUpperCase() === String(actual.usuario || actual.u || '').toUpperCase()) {
                   acciones += '<button class="btn-warning" onclick="window.abrirModalParidadOC(' + idxOriginal + ')">💰 Paridad</button>';
                 }
                 if (o.responsable === actual.u && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
@@ -23087,7 +23210,7 @@
               }
 
               // Subir el pago y marcar la OC como PAGADA/Pendiente es
-              // exclusivo del usuario CCHF (más Administrador de respaldo),
+              // exclusivo del usuario CCHF,
               // para cualquier empresa/departamento -- ver
               // usuarioPuedeMarcarOCPagada. Ya no depende del rol Finanzas.
               if (usuarioPuedeMarcarOCPagada(actual)) {
@@ -23099,9 +23222,9 @@
                   }
                 }
               }
-              if (o.responsable === actual.u || rol === 'Administrador') {
-                // La factura Y el complemento de pago de la OC los sube el
-                // solicitante/responsable de la OC (Administrador de respaldo).
+              if (usuarioSubeComplementoOC(actual, o)) {
+                // La factura y el complemento de pago de la OC los sube
+                // solo el responsable de esa OC.
                 if (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && o.uuidfactura && ocRequiereSubirComplemento(o)) {
                   acciones += '<button class="btn-success" onclick="window.abrirComplementoPagoOC(' + idxOriginal + ')">💰 Complemento Pago</button>';
                 }
@@ -23787,6 +23910,8 @@
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
         editandoOCIndex = index;
+        var txtJustificacionOC = document.getElementById('editarJustificacionOC');
+        if (txtJustificacionOC) txtJustificacionOC.value = '';
 
         var elCodigo = document.getElementById('editarProductosOCCodigo');
         if (elCodigo) elCodigo.textContent = oc.codigo || '';
@@ -23994,6 +24119,12 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Captura la Fecha del 2do. pago (condición 50/50).</div>';
           return;
         }
+        var justificacionEdicionOC = ((document.getElementById('editarJustificacionOC') || {}).value || '').trim();
+        if (!justificacionEdicionOC) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Escribe la justificación de la modificación.</div>';
+          return;
+        }
+        var montoAntesEdicionOC = Number(oc.montototal) || 0;
 
         try {
           var updates = {
@@ -24006,6 +24137,7 @@
           };
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
+          await registrarBitacoraOC(oc, 'MODIFICADA', montoAntesEdicionOC, nuevoTotal, justificacionEdicionOC);
 
           // El inventario SOLO se ajusta si la OC ya está pagada Y
           // facturada (CONCLUIDA) — ya se le había sumado el inventario en
@@ -24450,7 +24582,7 @@
           actual = {
             usuario: userData.usuario,
             u: userData.usuario,
-            rol: userData.rol,
+            rol: rolConPrioridadJefe(userData.rol),
             permisos: userData.permisos || []
           };
 
@@ -27528,6 +27660,12 @@
         if (!fechaEntrega) { mostrarError('Captura la Fecha de entrega.'); return null; }
 
         var condicionPagoSeleccionada = (document.getElementById('condicionesComercialesOC') ? document.getElementById('condicionesComercialesOC').value : '');
+        // Método de pago, Régimen fiscal y Condiciones comerciales son obligatorios.
+        var metodoPagoSeleccionado = document.getElementById('metodoPagoOC') ? document.getElementById('metodoPagoOC').value : '';
+        if (!metodoPagoSeleccionado) { mostrarError('Selecciona el Método de pago.'); return null; }
+        var regimenFiscalSeleccionado = document.getElementById('regimenFiscalOC') ? document.getElementById('regimenFiscalOC').value : '';
+        if (!regimenFiscalSeleccionado) { mostrarError('Selecciona el Régimen fiscal.'); return null; }
+        if (!condicionPagoSeleccionada) { mostrarError('Selecciona las Condiciones comerciales.'); return null; }
         var fechaPago2 = document.getElementById('fechaPago2OC') ? (document.getElementById('fechaPago2OC').value || null) : null;
         if (condicionPagoSeleccionada === '50/50 FINIQUITO Y ANTICIPO' && !fechaPago2) {
           mostrarError('Captura la Fecha del 2do. pago (condición 50/50).');
