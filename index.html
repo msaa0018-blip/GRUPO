@@ -1728,6 +1728,9 @@
   .buzon-chat-hilo .buzon-msg .buzon-msg-adjunto a { color: #027eb5 !important; }
   .buzon-chat-hilo .buzon-msg.seguido { border-radius: 8px; }
   .buzon-chat-hilo .buzon-msg.seguido .buzon-msg-autor { display: none; }
+  .buzon-msg-estado { font-size: 11px; margin-left: 2px; }
+  .buzon-msg.buzon-msg-fallido { opacity: .7; outline: 1px dashed #ef4444; }
+  .buzon-subiendo { font-size: 11px; opacity: .7; }
   .buzon-dia { align-self: center; background: #fff; color: #54656f; font-size: 12px; padding: 4px 12px; border-radius: 8px; margin: 8px 0; box-shadow: 0 1px .5px rgba(0,0,0,.13); }
   .buzon-chat-aviso:empty, .buzon-chat-adjunto-nombre:empty { display: none; }
   .buzon-chat-aviso { padding: 4px 12px; background: #f0f2f5; }
@@ -14801,6 +14804,8 @@
           if (error) throw error;
           if (!hilo) return;
           var mensajes = data || [];
+          // Mientras hay un envío en curso no se repinta (evita parpadeos).
+          if (silencioso && buzonEnviosPendientes > 0) return;
           // Refresco automático: solo se vuelve a pintar si llegaron mensajes nuevos.
           if (silencioso && hilo.dataset.total === String(mensajes.length) && hilo.dataset.conv === String(id)) return;
           hilo.dataset.total = String(mensajes.length);
@@ -14869,49 +14874,113 @@
         }
       };
 
+      // Envío inmediato (como WhatsApp): la burbuja aparece al instante con
+      // 🕓 y el campo se limpia; el guardado en Supabase corre en segundo
+      // plano y al confirmarse cambia a ✓. Si falla, se marca con ❌ y el
+      // texto regresa al campo para reintentar.
+      var buzonEnviosPendientes = 0;
       window.enviarRespuestaBuzon = async function() {
         var msg = buzonEl('msg');
-        var texto = buzonEl('Respuesta').value.trim();
+        var campoResp = buzonEl('Respuesta');
+        var texto = campoResp.value.trim();
         var inputArchivo = buzonEl('Archivo');
         var archivo = (inputArchivo.files && inputArchivo.files[0]) || null;
-        if (!buzonConversacionAbiertaId) return;
+        var convId = buzonConversacionAbiertaId;
+        if (!convId) return;
         if (!texto && !archivo) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Escribe una respuesta o adjunta un documento antes de enviar.</div>';
           return;
         }
+        var hilo = buzonEl('Hilo');
+        var vistaPanel = !!hilo && hilo.id === 'buzonPaneHilo';
+        var ahora = new Date();
+
+        // 1) Burbuja inmediata
+        campoResp.value = '';
+        campoResp.style.height = '';
+        inputArchivo.value = '';
+        buzonEl('ArchivoNombre').textContent = '';
+        if (msg) msg.innerHTML = '';
+        var burbuja = null;
+        if (hilo) {
+          var vacio = hilo.querySelector('.buzon-dia');
+          if (vacio && vacio.textContent === 'Aún no hay mensajes') vacio.remove();
+          if (vistaPanel) {
+            var seps = hilo.querySelectorAll('.buzon-dia');
+            var ultimoSep = seps.length ? seps[seps.length - 1].textContent : '';
+            if (ultimoSep !== 'Hoy') {
+              var sep = document.createElement('div');
+              sep.className = 'buzon-dia';
+              sep.textContent = 'Hoy';
+              hilo.appendChild(sep);
+            }
+          }
+          var burbujas = hilo.querySelectorAll('.buzon-msg');
+          var anterior = burbujas.length ? burbujas[burbujas.length - 1] : null;
+          var ultimoNodo = hilo.lastElementChild;
+          burbuja = document.createElement('div');
+          burbuja.className = 'buzon-msg propio' + (vistaPanel && anterior && anterior === ultimoNodo && anterior.classList.contains('propio') ? ' seguido' : '');
+          var horaTxt = vistaPanel ? ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ahora.toLocaleString();
+          burbuja.innerHTML =
+            '<div class="buzon-msg-autor">' + escapeHTML(actual.usuario || '') + '</div>' +
+            (texto ? '<div class="buzon-msg-texto">' + escapeHTML(texto).replace(/\n/g, '<br>') + '</div>' : '') +
+            (archivo ? '<div class="buzon-msg-adjunto">📎 ' + escapeHTML(archivo.name) + ' <span class="buzon-subiendo">(subiendo…)</span></div>' : '') +
+            '<div class="buzon-msg-fecha">' + horaTxt + ' <span class="buzon-msg-estado">🕓</span></div>';
+          hilo.appendChild(burbuja);
+          hilo.scrollTop = hilo.scrollHeight;
+        }
+        if (vistaPanel && window.matchMedia && window.matchMedia('(min-width: 769px)').matches) campoResp.focus();
+
+        // 2) Guardado en segundo plano
+        buzonEnviosPendientes++;
         try {
           var adjunto = archivo ? await subirDocumentoBuzon(archivo) : null;
-          if (archivo && !adjunto) {
-            if (msg) msg.innerHTML = '<div class="alert">⚠️ La respuesta se enviará, pero el documento adjunto no se pudo subir.</div>';
+          if (archivo && !adjunto && msg) {
+            msg.innerHTML = '<div class="alert">⚠️ El mensaje se envió, pero el documento adjunto no se pudo subir.</div>';
           }
-
+          var fechaISO = new Date().toISOString();
           var { error: errorMsg } = await supabase.from('buzon_mensajes').insert([{
-            conversacion_id: buzonConversacionAbiertaId,
+            conversacion_id: convId,
             autor: actual.usuario,
             contenido: texto || '',
             adjunto_url: adjunto ? adjunto.url : null,
             adjunto_nombre: adjunto ? adjunto.nombre : null,
-            fecha: new Date().toISOString()
+            fecha: fechaISO
           }]);
           if (errorMsg) throw errorMsg;
+          // La fecha de última actividad se actualiza sin esperar.
+          supabase.from('buzon_conversaciones').update({ ultima_actividad: fechaISO }).eq('id', convId)
+            .then(function(r) { if (r && r.error) console.warn('No se actualizó la última actividad:', r.error); });
 
-          await supabase
-            .from('buzon_conversaciones')
-            .update({ ultima_actividad: new Date().toISOString() })
-            .eq('id', buzonConversacionAbiertaId);
-
-          var campoResp = buzonEl('Respuesta');
-          campoResp.value = '';
-          campoResp.style.height = '';
-          buzonEl('Archivo').value = '';
-          buzonEl('ArchivoNombre').textContent = '';
-          if (!archivo && msg) msg.innerHTML = '';
-          var enPanel = buzonVistaPanel();
-          await window.renderHiloBuzon(buzonConversacionAbiertaId);
-          if (enPanel) window.cargarBuzon();
+          if (burbuja) {
+            var est = burbuja.querySelector('.buzon-msg-estado');
+            if (est) est.textContent = '✓';
+            var sub = burbuja.querySelector('.buzon-msg-adjunto');
+            if (sub && adjunto) sub.innerHTML = '<a href="' + escapeHTML(adjunto.url) + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">📎 ' + escapeHTML(adjunto.nombre || archivo.name) + '</a>';
+            else if (sub && archivo && !adjunto) sub.remove();
+          }
+          if (hilo && hilo.dataset.conv === String(convId)) {
+            hilo.dataset.total = String((Number(hilo.dataset.total) || 0) + 1);
+          }
+          // La conversación sube al primer lugar de la lista, sin recargar.
+          var convCache = (buzonConversacionesCache || []).find(function(c) { return c.id === convId; });
+          if (convCache) {
+            convCache.ultima_actividad = fechaISO;
+            buzonConversacionesCache.sort(function(a, b) { return new Date(b.ultima_actividad || b.fecha_creacion) - new Date(a.ultima_actividad || a.fecha_creacion); });
+            if (vistaPanel) window.filtrarListaBuzon();
+          }
         } catch (e) {
           console.error('Error enviando la respuesta:', e);
-          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo enviar: ' + escapeHTML(e.message) + '</div>';
+          if (burbuja) {
+            var est2 = burbuja.querySelector('.buzon-msg-estado');
+            if (est2) est2.textContent = '❌';
+            burbuja.classList.add('buzon-msg-fallido');
+            burbuja.title = 'No se envió';
+          }
+          if (texto && !campoResp.value) campoResp.value = texto;
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo enviar: ' + escapeHTML(e.message || String(e)) + '. El texto quedó en el campo para reintentar.</div>';
+        } finally {
+          buzonEnviosPendientes--;
         }
       };
 
