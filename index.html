@@ -18658,7 +18658,7 @@
       // de autorización del Director: exclusivo de los usuarios de
       // USUARIOS_COMPLEMENTO_PAGO, abre directo la carga del complemento
       // de ESA factura y, al terminar, cierra la sesión).
-      var URL_APP_TELEGRAM = 'https://msaa0018-blip.github.io/GRUPO/';
+      var URL_APP_TELEGRAM = 'https://gestion.extingue.com.mx/';
       function linkComplementoFactura(oc, factura) {
         return URL_APP_TELEGRAM + '?complemento=' + oc.id + (factura && factura.id ? '&factura=' + factura.id : '');
       }
@@ -19834,7 +19834,7 @@
         mensaje += '📊 *Presupuesto:* ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
         mensaje += '📊 *Límite ' + pctLimite + '%:* ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n\n';
         mensaje += '🔗 *Para autorizar, ingresa al sistema:*\n';
-        mensaje += 'https://msaa0018-blip.github.io/GRUPO/?oc=' + ocId + '\n\n';
+        mensaje += URL_APP_TELEGRAM + '?oc=' + ocId + '\n\n';
         mensaje += '_Esta notificación es automática. Por favor, revisa el sistema para autorizar._';
         return mensaje;
       }
@@ -19851,11 +19851,25 @@
         return !!(usuario && ROLES_CXP_GLOBAL.indexOf(usuario.rol) !== -1);
       }
 
+      // CXP para CCHF (pagos): además de lo de su empresa/departamento, ve
+      // las OC PENDIENTES DE PAGO (autorizadas y aún sin pagar) de TODAS
+      // las empresas y departamentos. Este permiso es del usuario, no
+      // depende de sus permisos de empresa/departamento.
+      function ocPendienteDePago(o) {
+        return !!o && o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA';
+      }
+      function agregarOCsPendientesPagoCXP(usuario, lista) {
+        if (!esUsuarioPagosCCHF(usuario)) return lista;
+        var ids = {};
+        lista.forEach(function(o) { ids[o.id] = true; });
+        return lista.concat(ordenes.filter(function(o) { return !ids[o.id] && ocPendienteDePago(o); }));
+      }
+
       function cargarFiltrosCXP() {
         var selectEmpresa = document.getElementById('cxpFiltroEmpresa');
         var selectDepto = document.getElementById('cxpFiltroDepto');
         var selectProyecto = document.getElementById('cxpFiltroProyecto');
-        var esGlobal = esRolGlobalCXP(actual);
+        var esGlobal = esRolGlobalCXP(actual) || esUsuarioPagosCCHF(actual);
 
         // Si el usuario (aunque su rol tenga visión global en CXP, p.ej.
         // Administrador o Finanzas) tiene una única empresa/departamento
@@ -20044,7 +20058,8 @@
       };
 
       function obtenerDatosCXP() {
-        var esGlobal = esRolGlobalCXP(actual);
+        var esPagosCCHF = esUsuarioPagosCCHF(actual);
+        var esGlobal = esRolGlobalCXP(actual) || esPagosCCHF;
 
         var filtroEmpresa = document.getElementById('cxpFiltroEmpresa').value;
         var filtroDepto = document.getElementById('cxpFiltroDepto').value;
@@ -20068,6 +20083,9 @@
         // el filtro de la UI — así un valor manipulado en el <select>,
         // la URL, localStorage o sessionStorage no puede ampliar el acceso.
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
+        // CCHF: todos los proyectos, para incluir las OC pendientes de
+        // pago de cualquier empresa/departamento (ver más abajo).
+        if (esPagosCCHF) proyectosVisibles = proyectos.slice();
 
         if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.empresa === filtroEmpresa; });
         if (filtroDepto) {
@@ -20083,7 +20101,7 @@
         // por diferencias triviales de espacios/capitalización entre
         // ordenes.proyecto y proyectos.nombre. Si una OC no tiene
         // proyecto correspondiente ni así, queda excluida.
-        var ocVisibles = filtrarOCParaCXP(actual);
+        var ocVisibles = agregarOCsPendientesPagoCXP(actual, filtrarOCParaCXP(actual));
         var nombresProyectosNorm = {};
         proyectosVisibles.forEach(function(p) { nombresProyectosNorm[normalizar(p.nombre)] = true; });
         ocVisibles = ocVisibles.filter(function(o) { return !!nombresProyectosNorm[normalizar(o.proyecto)]; });
