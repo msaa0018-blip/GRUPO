@@ -1662,6 +1662,98 @@
   .buzon-checklist-item input[type="checkbox"] { width: 16px; height: 16px; min-height: auto; padding: 0; margin: 0; flex-shrink: 0; }
   .buzon-checklist-vacio { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
 
+  /* ===== BUZÓN estilo WhatsApp / Telegram ===== */
+  #panelBuzon { padding: 0; overflow: hidden; }
+  .buzon-app {
+    display: grid; grid-template-columns: minmax(260px, 340px) 1fr;
+    height: min(78vh, 760px); min-height: 460px; background: #fff;
+  }
+  .buzon-sidebar { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--gray-200, #e2e8f0); background: #fff; }
+  .buzon-sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; background: var(--gray-50); border-bottom: 1px solid var(--gray-200, #e2e8f0); }
+  .buzon-sidebar-header h2 { margin: 0 !important; padding: 0 !important; border: none !important; font-size: 18px; }
+  .buzon-sidebar-acciones { display: flex; gap: 6px; flex-shrink: 0; }
+  .buzon-icon-btn {
+    width: 38px !important; height: 38px; min-width: 38px; min-height: 38px !important; padding: 0 !important;
+    border-radius: 50% !important; border: none; background: transparent; color: var(--gray-700, #334155);
+    font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; box-shadow: none;
+  }
+  .buzon-icon-btn:hover { background: var(--gray-100); }
+  .buzon-buscador { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); }
+  .buzon-buscador input { width: 100%; box-sizing: border-box; border-radius: 20px; background: var(--gray-100); border: 1px solid transparent; padding: 8px 14px; font-size: 14px; min-height: 38px; }
+  .buzon-buscador input:focus { background: #fff; border-color: var(--gray-300); outline: none; }
+  .buzon-lista { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+  .buzon-lista > p { padding: 16px; margin: 0; }
+  .buzon-fila { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--gray-100); position: relative; }
+  .buzon-fila:hover { background: var(--gray-50); }
+  .buzon-fila.activa { background: #e9edef; }
+  .buzon-avatar {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; color: #fff; font-weight: 700;
+    font-size: 15px; display: flex; align-items: center; justify-content: center; letter-spacing: .5px;
+  }
+  .buzon-fila-cuerpo { flex: 1 1 auto; min-width: 0; }
+  .buzon-fila-linea { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+  .buzon-fila-titulo { font-weight: 600; font-size: 15px; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .buzon-fila-hora { font-size: 11px; color: var(--gray-500); white-space: nowrap; flex-shrink: 0; }
+  .buzon-fila-sub { font-size: 13px; color: var(--gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+  .buzon-fila-borrar { width: 28px !important; height: 28px; min-width: 28px; min-height: 28px !important; padding: 0 !important; font-size: 12px; border-radius: 6px !important; flex-shrink: 0; opacity: .55; }
+  .buzon-fila:hover .buzon-fila-borrar { opacity: 1; }
+
+  .buzon-chat { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #efeae2; }
+  .buzon-chat-vacio { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: var(--gray-50); color: var(--gray-500); }
+  .buzon-chat-vacio-icono { font-size: 54px; margin-bottom: 10px; }
+  .buzon-chat-vacio-titulo { font-size: 20px; font-weight: 600; color: var(--gray-700, #334155); margin-bottom: 6px; }
+  .buzon-chat-vacio-texto { max-width: 380px; font-size: 14px; line-height: 1.5; }
+  .buzon-chat-conv { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  .buzon-chat-conv.hidden, .buzon-chat-vacio.hidden { display: none !important; }
+  .buzon-chat-header { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--gray-50); border-bottom: 1px solid var(--gray-200, #e2e8f0); min-height: 60px; }
+  .buzon-chat-header .buzon-avatar { width: 40px; height: 40px; font-size: 14px; }
+  .buzon-chat-header-info { min-width: 0; flex: 1 1 auto; }
+  .buzon-chat-titulo { font-weight: 600; font-size: 15px; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .buzon-chat-subtitulo { font-size: 12px; color: var(--gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .buzon-chat-volver { display: none !important; }
+  .buzon-chat-hilo {
+    flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 14px 6%;
+    display: flex; flex-direction: column; gap: 4px;
+    background-color: #efeae2;
+    background-image: radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .buzon-chat-hilo .buzon-msg { max-width: min(72%, 560px); box-shadow: 0 1px .5px rgba(0,0,0,.13); border-radius: 8px; padding: 6px 9px 4px; font-size: 14px; position: relative; margin-bottom: 2px; }
+  .buzon-chat-hilo .buzon-msg.propio { background: #d9fdd3; color: #111b21; border-top-right-radius: 0; }
+  .buzon-chat-hilo .buzon-msg.ajeno { background: #fff; color: #111b21; border-top-left-radius: 0; }
+  .buzon-chat-hilo .buzon-msg.propio .buzon-msg-autor { display: none; }
+  .buzon-chat-hilo .buzon-msg .buzon-msg-autor { font-size: 12.5px; opacity: 1; }
+  .buzon-chat-hilo .buzon-msg .buzon-msg-fecha { font-size: 11px; color: #667781; opacity: 1; margin-top: 2px; }
+  .buzon-chat-hilo .buzon-msg .buzon-msg-adjunto a { color: #027eb5 !important; }
+  .buzon-chat-hilo .buzon-msg.seguido { border-radius: 8px; }
+  .buzon-chat-hilo .buzon-msg.seguido .buzon-msg-autor { display: none; }
+  .buzon-dia { align-self: center; background: #fff; color: #54656f; font-size: 12px; padding: 4px 12px; border-radius: 8px; margin: 8px 0; box-shadow: 0 1px .5px rgba(0,0,0,.13); }
+  .buzon-chat-aviso:empty, .buzon-chat-adjunto-nombre:empty { display: none; }
+  .buzon-chat-aviso { padding: 4px 12px; background: #f0f2f5; }
+  .buzon-chat-adjunto-nombre { padding: 6px 16px; background: #f0f2f5; font-size: 12px; color: var(--gray-600); border-top: 1px solid var(--gray-200, #e2e8f0); }
+  .buzon-chat-composer { display: flex; align-items: flex-end; gap: 6px; padding: 8px 10px; background: #f0f2f5; }
+  .buzon-adjuntar { position: relative; overflow: hidden; }
+  .buzon-adjuntar input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  #buzonPaneRespuesta { flex: 1 1 auto; min-width: 0; width: auto; resize: none; border-radius: 20px; border: none; padding: 10px 14px; font-size: 14px; line-height: 1.35; max-height: 140px; min-height: 42px; background: #fff; box-sizing: border-box; }
+  #buzonPaneRespuesta:focus { outline: none; }
+  .buzon-enviar {
+    width: 42px !important; height: 42px; min-width: 42px; min-height: 42px !important; padding: 0 !important;
+    border-radius: 50% !important; border: none; background: #00a884 !important; color: #fff !important;
+    font-size: 17px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;
+  }
+  .buzon-enviar:hover { filter: brightness(1.06); }
+
+  @media (max-width: 768px) {
+    .buzon-app { grid-template-columns: 1fr; height: calc(100dvh - 150px); min-height: 420px; }
+    .buzon-app .buzon-chat { display: none; }
+    .buzon-app.chat-abierto .buzon-sidebar { display: none; }
+    .buzon-app.chat-abierto .buzon-chat { display: flex; }
+    .buzon-chat-volver { display: inline-flex !important; }
+    .buzon-chat-hilo { padding: 10px 3%; }
+    .buzon-chat-hilo .buzon-msg { max-width: 85%; }
+  }
+
   /* ===== MODAL: OPCIONES DE PRODUCTO (Agregar/Quitar/Eliminar) ===== */
   #productoAccionesModal, #proveedorAccionesModal, #ocAccionesModal, #editarProveedorModal, #almacenAccionesModal, #editarAlmacenModal, #editarProductoModal, #fotoProductoModal, #docCxpAccionesModal, #clienteAccionesModal, #editarClienteModal, #clienteProyectosModal, #comprobantePagoModal, #adjuntarFacturaModal, #concluirOCModal, #proyectoAccionesModal, #editarProyectoModal, #repseAsignarColaboradoresModal, #aprobarOFModal, #complementoPagoCXCModal, #complementoPagoOCModal, #comprobantePagoOFModal, #ofAccionesModal, #ofCancelacionModal, #colaboradorModal, #colaboradorAccionesModal {
     position: fixed;
@@ -4030,36 +4122,52 @@
 
       <!-- ===== MÓDULO BUZÓN (mensajería interna entre usuarios) ===== -->
       <div id="panelBuzon" class="card hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-          <h2 style="margin:0;">📥 Buzón</h2>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="success" onclick="window.abrirNuevaConversacionBuzon()" style="padding:8px 12px; font-size:13px; min-height:36px;">✉️ Nueva conversación</button>
-            <button class="success" id="btnNuevoComunicadoBuzon" onclick="window.abrirNuevoComunicado()" style="padding:8px 12px; font-size:13px; min-height:36px;">🗞️ Nuevo comunicado</button>
-          </div>
+        <div id="buzonApp" class="buzon-app">
+          <!-- Lista de conversaciones (izquierda) -->
+          <aside class="buzon-sidebar">
+            <div class="buzon-sidebar-header">
+              <h2>📥 Buzón</h2>
+              <div class="buzon-sidebar-acciones">
+                <button type="button" class="buzon-icon-btn" title="Nueva conversación" aria-label="Nueva conversación" onclick="window.abrirNuevaConversacionBuzon()">✉️</button>
+                <button type="button" class="buzon-icon-btn" id="btnNuevoComunicadoBuzon" title="Nuevo comunicado" aria-label="Nuevo comunicado" onclick="window.abrirNuevoComunicado()">🗞️</button>
+              </div>
+            </div>
+            <div class="buzon-buscador">
+              <input type="search" id="buzonBuscar" placeholder="🔍 Buscar conversación o persona" oninput="window.filtrarListaBuzon()" autocomplete="off">
+            </div>
+            <div id="buzonListaConversaciones" class="buzon-lista"></div>
+            <div id="msgBuzon"></div>
+          </aside>
+
+          <!-- Conversación abierta (derecha) -->
+          <section class="buzon-chat">
+            <div id="buzonPaneVacio" class="buzon-chat-vacio">
+              <div class="buzon-chat-vacio-icono">💬</div>
+              <div class="buzon-chat-vacio-titulo">Buzón interno</div>
+              <div class="buzon-chat-vacio-texto">Selecciona una conversación de la lista para verla aquí. Cada chat es privado: solo lo ven sus participantes.</div>
+            </div>
+            <div id="buzonPaneConv" class="buzon-chat-conv hidden">
+              <div class="buzon-chat-header">
+                <button type="button" class="buzon-icon-btn buzon-chat-volver" title="Volver" aria-label="Volver a la lista" onclick="window.cerrarConversacionBuzon()">←</button>
+                <div id="buzonPaneAvatar" class="buzon-avatar"></div>
+                <div class="buzon-chat-header-info">
+                  <div id="buzonPaneAsunto" class="buzon-chat-titulo">Conversación</div>
+                  <div id="buzonPaneParticipantes" class="buzon-chat-subtitulo"></div>
+                </div>
+              </div>
+              <div id="buzonPaneHilo" class="buzon-chat-hilo"></div>
+              <div id="msgBuzonPane" class="buzon-chat-aviso"></div>
+              <div id="buzonPaneArchivoNombre" class="buzon-chat-adjunto-nombre"></div>
+              <div class="buzon-chat-composer">
+                <label class="buzon-icon-btn buzon-adjuntar" title="Adjuntar documento" aria-label="Adjuntar documento">📎
+                  <input type="file" id="buzonPaneArchivo" onchange="window.mostrarNombreArchivoBuzon(this, 'buzonPaneArchivoNombre')">
+                </label>
+                <textarea id="buzonPaneRespuesta" rows="1" placeholder="Escribe un mensaje" onkeydown="window.teclaRespuestaBuzon(event)" oninput="window.autoAjustarRespuestaBuzon(this)"></textarea>
+                <button type="button" class="buzon-enviar" title="Enviar" aria-label="Enviar" onclick="window.enviarRespuestaBuzon()">➤</button>
+              </div>
+            </div>
+          </section>
         </div>
-        <p class="text-muted" style="margin-bottom:12px;">Conversaciones independientes entre los usuarios que participan en cada una. Cada chat es privado: solo tú y quienes fueron agregados como destinatarios/involucrados de esa conversación pueden verlo, incluido su asunto.</p>
-        <div id="buzonListaConversaciones"></div>
-        <div id="buzonPaginacionContainer" class="oc-paginacion-container">
-          <div class="oc-paginacion-info">
-            <span id="buzonPaginacionContador">Mostrando 0 - 0 de 0</span>
-            <label class="oc-paginacion-filas-label">
-              Filas por página:
-              <select id="buzonFilasPorPagina">
-                <option value="5">5</option>
-                <option value="10" selected>10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </label>
-          </div>
-          <div class="oc-paginacion-botones">
-            <button id="buzonPaginacionAnterior" onclick="window.paginaAnteriorBuzon()">← Anterior</button>
-            <span id="buzonPaginacionNumeros" class="oc-paginacion-numeros"></span>
-            <button id="buzonPaginacionSiguiente" onclick="window.paginaSiguienteBuzon()">Siguiente →</button>
-          </div>
-        </div>
-        <div id="msgBuzon"></div>
       </div>
 
       <!-- ===== MODAL: NUEVA CONVERSACIÓN (BUZÓN) ===== -->
@@ -13736,8 +13844,98 @@
       // Dibuja una lista de conversaciones (genéricas del buzón, o de una
       // OC en particular) dentro de "cont". Compartida por cargarBuzon y
       // cargarChatsOC para no duplicar la plantilla de cada tarjeta.
+      // ----- Utilidades visuales del buzón tipo WhatsApp -----
+      var BUZON_COLORES_AVATAR = ['#00a884', '#3b82f6', '#8b5cf6', '#ef4444', '#f59e0b', '#0ea5e9', '#ec4899', '#14b8a6', '#6366f1', '#84cc16'];
+      function buzonColorAvatar(texto) {
+        var h = 0, t = String(texto || '');
+        for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+        return BUZON_COLORES_AVATAR[h % BUZON_COLORES_AVATAR.length];
+      }
+      function buzonIniciales(texto) {
+        var palabras = String(texto || '?').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+        if (!palabras.length) return '?';
+        return (palabras[0][0] + (palabras[1] ? palabras[1][0] : '')).toUpperCase();
+      }
+      function buzonHoraCorta(fecha) {
+        if (!fecha) return '';
+        var d = new Date(fecha);
+        if (isNaN(d.getTime())) return '';
+        var hoy = new Date();
+        var ayer = new Date(); ayer.setDate(hoy.getDate() - 1);
+        if (d.toDateString() === hoy.toDateString()) return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        if (d.toDateString() === ayer.toDateString()) return 'Ayer';
+        return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: '2-digit' });
+      }
+      function buzonEtiquetaDia(fecha) {
+        var d = new Date(fecha), hoy = new Date(), ayer = new Date();
+        ayer.setDate(hoy.getDate() - 1);
+        if (d.toDateString() === hoy.toDateString()) return 'Hoy';
+        if (d.toDateString() === ayer.toDateString()) return 'Ayer';
+        return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      }
+      function buzonPintarAvatar(el, texto) {
+        if (!el) return;
+        el.textContent = buzonIniciales(texto);
+        el.style.background = buzonColorAvatar(texto);
+      }
+      // ¿La conversación se muestra dentro del panel (vista tipo WhatsApp)
+      // o en la ventana flotante (chats de una OC u OF)?
+      function buzonVistaPanel() {
+        var panel = document.getElementById('panelBuzon');
+        return !!panel && !panel.classList.contains('hidden') && !ocChatContexto && !ofChatContexto;
+      }
+      function buzonEl(nombre) {
+        if (buzonVistaPanel()) return document.getElementById(nombre === 'msg' ? 'msgBuzonPane' : 'buzonPane' + nombre);
+        return document.getElementById(nombre === 'msg' ? 'msgBuzonConv' : 'buzonConv' + nombre);
+      }
+
+      function buzonRenderListaWhatsApp(conversaciones, cont, mensajeVacio) {
+        if (!conversaciones.length) {
+          cont.innerHTML = '<p class="text-muted">' + mensajeVacio + '</p>';
+          return;
+        }
+        cont.innerHTML = '';
+        conversaciones.forEach(function(conv) {
+          var participantes = buzonParticipantes(conv).filter(function(u) { return u !== (actual ? actual.usuario : null); });
+          var fila = document.createElement('div');
+          fila.className = 'buzon-fila' + (conv.id === buzonConversacionAbiertaId ? ' activa' : '');
+          fila.dataset.convId = conv.id;
+          var asunto = conv.asunto || '(Sin asunto)';
+          var htmlBorrar = buzonEsAdmin()
+            ? '<button class="danger buzon-fila-borrar" title="Eliminar conversación" onclick="window.eliminarConversacionBuzon(' + conv.id + ', event)">🗑️</button>'
+            : '';
+          fila.innerHTML =
+            '<div class="buzon-avatar" style="background:' + buzonColorAvatar(asunto) + ';">' + escapeHTML(buzonIniciales(asunto)) + '</div>' +
+            '<div class="buzon-fila-cuerpo">' +
+              '<div class="buzon-fila-linea">' +
+                '<div class="buzon-fila-titulo">' + escapeHTML(asunto) + '</div>' +
+                '<div class="buzon-fila-hora">' + escapeHTML(buzonHoraCorta(conv.ultima_actividad || conv.fecha_creacion)) + '</div>' +
+              '</div>' +
+              '<div class="buzon-fila-linea">' +
+                '<div class="buzon-fila-sub">👥 ' + escapeHTML(participantes.join(', ') || '—') + '</div>' +
+                htmlBorrar +
+              '</div>' +
+            '</div>';
+          fila.addEventListener('click', function() { window.abrirConversacionBuzon(conv.id); });
+          cont.appendChild(fila);
+        });
+      }
+
+      window.filtrarListaBuzon = function() {
+        var cont = document.getElementById('buzonListaConversaciones');
+        if (!cont) return;
+        var input = document.getElementById('buzonBuscar');
+        var q = normalizar(input ? input.value : '');
+        var lista = (buzonConversacionesCache || []).filter(function(c) {
+          if (!q) return true;
+          return normalizar(c.asunto).indexOf(q) !== -1 || normalizar(buzonParticipantes(c).join(' ')).indexOf(q) !== -1;
+        });
+        buzonRenderListaWhatsApp(lista, cont, q ? 'Sin resultados para la búsqueda.' : 'No tienes conversaciones todavía. Usa ✉️ para iniciar una.');
+      };
+
       function buzonRenderListaConversaciones(conversaciones, cont, mensajeVacio) {
         if (!cont) return;
+        if (cont.id === 'buzonListaConversaciones') { buzonRenderListaWhatsApp(conversaciones, cont, mensajeVacio); return; }
         if (conversaciones.length === 0) {
           cont.innerHTML = '<p class="text-muted">' + mensajeVacio + '</p>';
           return;
@@ -13764,12 +13962,24 @@
         });
       }
 
+      function buzonMostrarPanelVacio() {
+        buzonConversacionAbiertaId = null;
+        var vacio = document.getElementById('buzonPaneVacio');
+        var conv = document.getElementById('buzonPaneConv');
+        if (vacio) vacio.classList.remove('hidden');
+        if (conv) conv.classList.add('hidden');
+        var app = document.getElementById('buzonApp');
+        if (app) app.classList.remove('chat-abierto');
+        document.querySelectorAll('#buzonListaConversaciones .buzon-fila.activa').forEach(function(f) { f.classList.remove('activa'); });
+      }
+
       window.cargarBuzon = async function() {
         ocChatContexto = null;
+        ofChatContexto = null;
         var cont = document.getElementById('buzonListaConversaciones');
         var msg = document.getElementById('msgBuzon');
         if (msg) msg.innerHTML = '';
-        if (cont) cont.innerHTML = '<p class="text-muted">Cargando conversaciones...</p>';
+        if (cont && !cont.querySelector('.buzon-fila')) cont.innerHTML = '<p class="text-muted">Cargando conversaciones...</p>';
         try {
           var { data, error } = await supabase
             .from('buzon_conversaciones')
@@ -13785,11 +13995,13 @@
             return buzonUsuarioParticipa(c, actual ? actual.usuario : null);
           });
 
-          buzonPaginacion.cont = cont;
-          buzonPaginacion.mensajeVacio = 'No tienes conversaciones todavía. Usa "✉️ Nueva conversación" para iniciar una.';
-          buzonPaginacion.datosFiltrados = buzonConversacionesCache;
-          buzonPaginacion.paginaActual = 1;
-          renderBuzonPaginado();
+          // Vista tipo WhatsApp: todas las conversaciones en la lista de la
+          // izquierda (con buscador), sin paginación.
+          window.filtrarListaBuzon();
+          // Si la conversación abierta ya no está disponible, se cierra.
+          if (buzonConversacionAbiertaId && !buzonConversacionesCache.some(function(c) { return c.id === buzonConversacionAbiertaId; })) {
+            buzonMostrarPanelVacio();
+          }
         } catch (e) {
           console.error('Error cargando el buzón:', e);
           if (cont) cont.innerHTML = '';
@@ -14527,20 +14739,37 @@
         if (modalListaOF) modalListaOF.classList.remove('active');
 
         buzonConversacionAbiertaId = id;
-        document.getElementById('buzonConvAsunto').textContent = conv.asunto || '(Sin asunto)';
         var participantes = buzonParticipantes(conv);
-        document.getElementById('buzonConvParticipantes').textContent = '👥 Participantes: ' + participantes.join(', ');
-        document.getElementById('buzonConvRespuesta').value = '';
-        document.getElementById('buzonConvArchivo').value = '';
-        document.getElementById('buzonConvArchivoNombre').textContent = '';
-        document.getElementById('msgBuzonConv').innerHTML = '';
-        document.getElementById('buzonConversacionModal').classList.add('active');
+        buzonEl('Asunto').textContent = conv.asunto || '(Sin asunto)';
+        buzonEl('Participantes').textContent = buzonVistaPanel() ? participantes.join(', ') : '👥 Participantes: ' + participantes.join(', ');
+        buzonEl('Respuesta').value = '';
+        buzonEl('Archivo').value = '';
+        buzonEl('ArchivoNombre').textContent = '';
+        buzonEl('msg').innerHTML = '';
+        if (buzonVistaPanel()) {
+          // Vista tipo WhatsApp: la conversación se abre a la derecha.
+          buzonPintarAvatar(document.getElementById('buzonPaneAvatar'), conv.asunto || '(Sin asunto)');
+          document.getElementById('buzonPaneVacio').classList.add('hidden');
+          document.getElementById('buzonPaneConv').classList.remove('hidden');
+          document.getElementById('buzonApp').classList.add('chat-abierto');
+          document.querySelectorAll('#buzonListaConversaciones .buzon-fila').forEach(function(f) {
+            f.classList.toggle('activa', String(f.dataset.convId) === String(id));
+          });
+          var resp = document.getElementById('buzonPaneRespuesta');
+          if (resp) resp.style.height = '';
+        } else {
+          document.getElementById('buzonConversacionModal').classList.add('active');
+        }
         await window.renderHiloBuzon(id);
+        if (buzonVistaPanel() && window.matchMedia && window.matchMedia('(min-width: 769px)').matches) {
+          var r = document.getElementById('buzonPaneRespuesta');
+          if (r) r.focus();
+        }
       };
 
-      window.renderHiloBuzon = async function(id) {
-        var hilo = document.getElementById('buzonConvHilo');
-        if (hilo) hilo.innerHTML = '<p class="text-muted">Cargando mensajes...</p>';
+      window.renderHiloBuzon = async function(id, silencioso) {
+        var hilo = buzonEl('Hilo');
+        if (hilo && !silencioso) hilo.innerHTML = '<p class="text-muted">Cargando mensajes...</p>';
         try {
           var { data, error } = await supabase
             .from('buzon_mensajes')
@@ -14549,11 +14778,33 @@
             .order('fecha', { ascending: true });
           if (error) throw error;
           if (!hilo) return;
+          var mensajes = data || [];
+          // Refresco automático: solo se vuelve a pintar si llegaron mensajes nuevos.
+          if (silencioso && hilo.dataset.total === String(mensajes.length) && hilo.dataset.conv === String(id)) return;
+          hilo.dataset.total = String(mensajes.length);
+          hilo.dataset.conv = String(id);
+          var vistaPanel = hilo.id === 'buzonPaneHilo';
           hilo.innerHTML = '';
-          (data || []).forEach(function(m) {
+          if (vistaPanel && !mensajes.length) {
+            hilo.innerHTML = '<div class="buzon-dia">Aún no hay mensajes</div>';
+          }
+          var diaAnterior = null, autorAnterior = null;
+          mensajes.forEach(function(m) {
             var esPropio = actual && m.autor === actual.usuario;
+            if (vistaPanel) {
+              var dia = new Date(m.fecha).toDateString();
+              if (dia !== diaAnterior) {
+                var sep = document.createElement('div');
+                sep.className = 'buzon-dia';
+                sep.textContent = buzonEtiquetaDia(m.fecha);
+                hilo.appendChild(sep);
+                diaAnterior = dia;
+                autorAnterior = null;
+              }
+            }
             var burbuja = document.createElement('div');
-            burbuja.className = 'buzon-msg ' + (esPropio ? 'propio' : 'ajeno');
+            burbuja.className = 'buzon-msg ' + (esPropio ? 'propio' : 'ajeno') + (vistaPanel && autorAnterior === m.autor ? ' seguido' : '');
+            autorAnterior = m.autor;
             var htmlAdjunto = '';
             if (m.adjunto_url) {
               htmlAdjunto = '<div class="buzon-msg-adjunto"><a href="' + escapeHTML(m.adjunto_url) + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">📎 ' + escapeHTML(m.adjunto_nombre || 'Documento adjunto') + '</a></div>';
@@ -14561,11 +14812,15 @@
             var htmlTexto = m.contenido
               ? '<div class="buzon-msg-texto">' + escapeHTML(m.contenido).replace(/\n/g, '<br>') + '</div>'
               : '';
+            var colorAutor = vistaPanel ? ' style="color:' + buzonColorAvatar(m.autor) + ';"' : '';
+            var fechaTxt = vistaPanel
+              ? new Date(m.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+              : new Date(m.fecha).toLocaleString();
             burbuja.innerHTML =
-              '<div class="buzon-msg-autor">' + escapeHTML(m.autor || '') + '</div>' +
+              '<div class="buzon-msg-autor"' + colorAutor + '>' + escapeHTML(m.autor || '') + '</div>' +
               htmlTexto +
               htmlAdjunto +
-              '<div class="buzon-msg-fecha">' + new Date(m.fecha).toLocaleString() + '</div>';
+              '<div class="buzon-msg-fecha">' + fechaTxt + '</div>';
             hilo.appendChild(burbuja);
           });
           hilo.scrollTop = hilo.scrollHeight;
@@ -14576,6 +14831,11 @@
       };
 
       window.cerrarConversacionBuzon = function() {
+        if (buzonVistaPanel()) {
+          // Vista tipo WhatsApp: "←" regresa a la lista (en celular).
+          buzonMostrarPanelVacio();
+          return;
+        }
         document.getElementById('buzonConversacionModal').classList.remove('active');
         buzonConversacionAbiertaId = null;
         // Si esta conversación se abrió desde el chat de una OC, se
@@ -14587,9 +14847,9 @@
       };
 
       window.enviarRespuestaBuzon = async function() {
-        var msg = document.getElementById('msgBuzonConv');
-        var texto = document.getElementById('buzonConvRespuesta').value.trim();
-        var inputArchivo = document.getElementById('buzonConvArchivo');
+        var msg = buzonEl('msg');
+        var texto = buzonEl('Respuesta').value.trim();
+        var inputArchivo = buzonEl('Archivo');
         var archivo = (inputArchivo.files && inputArchivo.files[0]) || null;
         if (!buzonConversacionAbiertaId) return;
         if (!texto && !archivo) {
@@ -14617,17 +14877,41 @@
             .update({ ultima_actividad: new Date().toISOString() })
             .eq('id', buzonConversacionAbiertaId);
 
-          document.getElementById('buzonConvRespuesta').value = '';
-          document.getElementById('buzonConvArchivo').value = '';
-          document.getElementById('buzonConvArchivoNombre').textContent = '';
+          var campoResp = buzonEl('Respuesta');
+          campoResp.value = '';
+          campoResp.style.height = '';
+          buzonEl('Archivo').value = '';
+          buzonEl('ArchivoNombre').textContent = '';
           if (!archivo && msg) msg.innerHTML = '';
+          var enPanel = buzonVistaPanel();
           await window.renderHiloBuzon(buzonConversacionAbiertaId);
-          window.cargarBuzon();
+          if (enPanel) window.cargarBuzon();
         } catch (e) {
           console.error('Error enviando la respuesta:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo enviar: ' + escapeHTML(e.message) + '</div>';
         }
       };
+
+      // Enter envía; Shift+Enter hace salto de línea (como WhatsApp Web).
+      window.teclaRespuestaBuzon = function(ev) {
+        if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) {
+          ev.preventDefault();
+          window.enviarRespuestaBuzon();
+        }
+      };
+      window.autoAjustarRespuestaBuzon = function(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+      };
+
+      // Refresco automático del buzón mientras está abierto (cada 15 s):
+      // actualiza la lista y, si llegaron mensajes nuevos, la conversación.
+      setInterval(function() {
+        if (!actual || !buzonVistaPanel() || document.hidden) return;
+        var abierta = buzonConversacionAbiertaId;
+        window.cargarBuzon();
+        if (abierta) window.renderHiloBuzon(abierta, true);
+      }, 15000);
 
       var accionClienteActual = null;
 
