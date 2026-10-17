@@ -8673,7 +8673,29 @@
             }
           });
         canalesRealtimeActivos.push(canalVSC);
+
+        // Buzón: un mensaje nuevo (de cualquier participante) aparece al
+        // instante en la conversación abierta y la lista se reordena.
+        var canalBuzon = supabase.channel('sync-buzon')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buzon_mensajes' }, function(payload) { programarRefrescoRealtimeBuzon(payload && payload.new); })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'buzon_conversaciones' }, function() { programarRefrescoRealtimeBuzon(null); })
+          .subscribe(function(status, err) {
+            console.log('📡 Canal Realtime "sync-buzon":', status, err || '');
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error('❌ No se pudo conectar el Buzón en tiempo real. Revisa que "buzon_mensajes" y "buzon_conversaciones" estén agregadas a la publicación supabase_realtime en Supabase. Mientras tanto se actualiza cada 5 segundos.');
+            }
+          });
+        canalesRealtimeActivos.push(canalBuzon);
       };
+
+      var refrescoRealtimeBuzonPendiente = null;
+      function programarRefrescoRealtimeBuzon(mensajeNuevo) {
+        if (refrescoRealtimeBuzonPendiente) clearTimeout(refrescoRealtimeBuzonPendiente);
+        refrescoRealtimeBuzonPendiente = setTimeout(function() {
+          refrescoRealtimeBuzonPendiente = null;
+          try { window.refrescarBuzonAbierto(); } catch (e) { console.error('Error al sincronizar el Buzón en tiempo real:', e); }
+        }, 250);
+      }
 
       function programarRefrescoRealtimeOC() {
         if (refrescoRealtimeOCPendiente) clearTimeout(refrescoRealtimeOCPendiente);
@@ -14825,6 +14847,7 @@
           });
           hilo.scrollTop = hilo.scrollHeight;
         } catch (e) {
+          if (silencioso) { console.warn('No se pudo actualizar el buzón:', e); return; }
           console.error('Error cargando mensajes del buzón:', e);
           if (hilo) hilo.innerHTML = '<p class="alert">❌ No se pudieron cargar los mensajes.</p>';
         }
@@ -14904,14 +14927,34 @@
         el.style.height = Math.min(el.scrollHeight, 140) + 'px';
       };
 
-      // Refresco automático del buzón mientras está abierto (cada 15 s):
-      // actualiza la lista y, si llegaron mensajes nuevos, la conversación.
+      // Actualiza el Buzón sin que el usuario cambie de elemento: la
+      // conversación abierta (en el panel o en la ventana de una OC/OF) y
+      // la lista de conversaciones. Lo llaman el canal en tiempo real y,
+      // como respaldo, un refresco cada 5 segundos.
+      var refrescandoBuzon = false;
+      window.refrescarBuzonAbierto = async function() {
+        if (!actual || refrescandoBuzon) return;
+        var modalConv = document.getElementById('buzonConversacionModal');
+        var modalAbierto = !!modalConv && modalConv.classList.contains('active');
+        var enPanel = buzonVistaPanel();
+        if (!enPanel && !modalAbierto) return;
+        refrescandoBuzon = true;
+        try {
+          var abierta = buzonConversacionAbiertaId;
+          if (abierta) await window.renderHiloBuzon(abierta, true);
+          if (enPanel) await window.cargarBuzon();
+        } finally {
+          refrescandoBuzon = false;
+        }
+      };
       setInterval(function() {
-        if (!actual || !buzonVistaPanel() || document.hidden) return;
-        var abierta = buzonConversacionAbiertaId;
-        window.cargarBuzon();
-        if (abierta) window.renderHiloBuzon(abierta, true);
-      }, 15000);
+        if (document.hidden) return;
+        window.refrescarBuzonAbierto();
+      }, 5000);
+      // Al volver a la pestaña/app, se actualiza de inmediato.
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) window.refrescarBuzonAbierto();
+      });
 
       var accionClienteActual = null;
 
