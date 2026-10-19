@@ -5655,7 +5655,7 @@
           <input id="centroTrabajoProyecto" placeholder="Centro de trabajo (según cliente)" disabled style="background:var(--gray-200);">
           <input id="presupuesto" type="number" placeholder="Presupuesto *">
           <select id="monedaProyecto"><option value="MXN">MXN</option><option value="USD">USD</option></select>
-          <input id="utilidadProyecto" type="number" min="0" max="100" step="0.01" value="40" placeholder="% Utilidad (por defecto 40%)" title="Porcentaje de utilidad del proyecto. Por defecto 40% (límite operativo 60% del presupuesto). Empresas como SUMINISERVICES pueden usar un porcentaje distinto.">
+          <input id="utilidadProyecto" type="number" value="40" disabled style="background:var(--gray-200);" placeholder="% Utilidad: 40% (60% disponible)" title="Todos los proyectos se crean con 60% disponible (40% de utilidad). Solo el Administrador puede cambiar el porcentaje desde Editar proyecto.">
           <input id="fechaInicio" type="date">
           <input id="fechaTermino" type="date">
           <div style="display:flex; align-items:center; gap:16px; padding:6px 10px; border:1px solid var(--gray-300); border-radius:6px; background:var(--gray-100);" title="REPSE: indica si este proyecto implica suministro, servicios en sitio, o ambos.">
@@ -8323,13 +8323,24 @@
       // partidas que le corresponden a cada uno — así solo se descuenta
       // de cada proyecto lo que realmente es suyo, sin tocar el monto
       // total ni el flujo de aprobación/pago de la OC.
-      function gastoProyectoMoneda(nombreProyecto) {
+      // Para la REGLA DEL LÍMITE (aprobación de OC): cuenta lo ya
+      // comprometido en el proyecto = OC AUTORIZADAS (aún sin pagar) +
+      // PAGADAS + CONCLUIDAS, sin contar la OC que se está evaluando.
+      function comprometidoProyectoMoneda(nombreProyecto, excluirOcId) {
+        return gastoProyectoMoneda(nombreProyecto, function(o) {
+          if (excluirOcId !== undefined && excluirOcId !== null && o.id === excluirOcId) return false;
+          if (o.estado === 'CANCELADA') return false;
+          return o.estadopago === 'PAGADA' || o.estado === 'AUTORIZADA' || o.estado === 'CONCLUIDA';
+        });
+      }
+
+      function gastoProyectoMoneda(nombreProyecto, filtroOC) {
         var proyecto = proyectos.find(function(p) { return p.nombre === nombreProyecto; });
         if (!proyecto) return 0;
         var monedaProyecto = proyecto.moneda || 'MXN';
         return ordenes
           .filter(function(o) {
-            if (o.estadopago !== 'PAGADA') return false;
+            if (filtroOC ? !filtroOC(o) : o.estadopago !== 'PAGADA') return false;
             if (o.proyecto === nombreProyecto) return true;
             if (o.es_multiproyecto) {
               return partidasOCParaProrrateo(o).some(function(p) { return p.proyecto === nombreProyecto; });
@@ -17885,9 +17896,10 @@
           return;
         }
 
-        var comprometidoPrevio = gastoProyectoMoneda(proyecto.nombre);
-        var excedePorSiSola = montoEnMonedaProyecto > proyecto.limite;
-        var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= proyecto.limite;
+        var limiteVigente = limiteProyecto(proyecto);
+        var comprometidoPrevio = comprometidoProyectoMoneda(proyecto.nombre, oc.id);
+        var excedePorSiSola = montoEnMonedaProyecto > limiteVigente;
+        var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= limiteVigente;
 
         if (!excedePorSiSola && !excedeAcumulado) {
           var updates = {
@@ -17945,7 +17957,7 @@
 
           var motivoExceso = excedePorSiSola ?
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
-            'La suma de lo ya pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
+            'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
 
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
           var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
@@ -18221,9 +18233,10 @@
           }
         }
 
-        var comprometidoPrevio = gastoProyectoMoneda(proyecto.nombre);
-        var excedePorSiSola = montoEnMonedaProyecto > proyecto.limite;
-        var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= proyecto.limite;
+        var limiteVigente = limiteProyecto(proyecto);
+        var comprometidoPrevio = comprometidoProyectoMoneda(proyecto.nombre, oc.id);
+        var excedePorSiSola = montoEnMonedaProyecto > limiteVigente;
+        var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= limiteVigente;
 
         if (!oc.fechaaprobacionsolicitante) { updates.fechaaprobacionsolicitante = new Date().toISOString();
           updates.nombresolicitante = 'No definido'; }
@@ -20105,9 +20118,13 @@
         }
       };
 
+      // INMOBIENES funciona igual que las demás empresas y departamentos:
+      // su Jefe de Departamento ya NO puede autorizar ni cancelar una OC
+      // que supere el límite del proyecto (eso es exclusivo del Director
+      // General). Se deja la función para no romper las llamadas, pero ya
+      // no otorga ninguna excepción.
       function ocEsInmobienes(oc) {
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
-        return proyecto ? esDepartamentoInmobienes(proyecto.departamento) : false;
+        return false;
       }
 
       function esDepartamentoInmobienes(departamento) {
@@ -20124,15 +20141,22 @@
       // un proyecto. Por defecto es 60% (utilidad 40%), pero empresas como
       // SUMINISERVICES pueden tener un % de utilidad distinto, definido por
       // el Jefe de Departamento al crear el proyecto (campo utilidad_pct).
+      // Límite operativo: 60% del presupuesto (40% de utilidad) en TODAS
+      // las empresas y departamentos. Solo el Administrador puede cambiar
+      // el % de un proyecto (Editar proyecto); el Jefe de Departamento lo
+      // crea siempre con 60%.
       function obtenerPorcentajeLimite(proyecto) {
         if (!proyecto) return 60;
-        if (proyecto.utilidad_pct !== null && proyecto.utilidad_pct !== undefined && proyecto.utilidad_pct !== '') {
+        if (proyecto.utilidad_pct !== null && proyecto.utilidad_pct !== undefined && proyecto.utilidad_pct !== '' && !isNaN(Number(proyecto.utilidad_pct))) {
           return 100 - Number(proyecto.utilidad_pct);
         }
-        if (proyecto.presupuesto > 0 && proyecto.limite !== null && proyecto.limite !== undefined) {
-          return Math.round((proyecto.limite / proyecto.presupuesto) * 100);
-        }
         return 60;
+      }
+      // Límite en la moneda del proyecto, calculado siempre a partir del
+      // presupuesto y el % vigente (no del valor guardado).
+      function limiteProyecto(proyecto) {
+        if (!proyecto) return 0;
+        return (Number(proyecto.presupuesto) || 0) * obtenerPorcentajeLimite(proyecto) / 100;
       }
 
       // ============================================================
@@ -20228,7 +20252,7 @@
         mensaje += '💰 *Total:* ' + formatoMoneda(datosOC.montototal, datosOC.moneda) + '\n';
         mensaje += '💰 *Equivalente MXN:* ' + formatoMoneda(datosOC.montomxn, 'MXN') + '\n';
         mensaje += '📊 *Presupuesto:* ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
-        mensaje += '📊 *Límite ' + pctLimite + '%:* ' + formatoMoneda(proyecto.limite, proyecto.moneda) + '\n\n';
+        mensaje += '📊 *Límite ' + pctLimite + '%:* ' + formatoMoneda(limiteProyecto(proyecto), proyecto.moneda) + '\n\n';
         mensaje += '🔗 *Para autorizar, ingresa al sistema:*\n';
         mensaje += URL_APP_TELEGRAM + '?oc=' + ocId + '\n\n';
         mensaje += '_Esta notificación es automática. Por favor, revisa el sistema para autorizar._';
@@ -24631,7 +24655,10 @@
         var presupuesto = Number(document.getElementById('presupuesto').value);
         var moneda = document.getElementById('monedaProyecto').value;
         var utilidadInputEl = document.getElementById('utilidadProyecto');
-        var utilidadPct = utilidadInputEl && utilidadInputEl.value !== '' ? Number(utilidadInputEl.value) : 40;
+        // El Jefe de Departamento crea el proyecto SIEMPRE con 60% disponible
+        // (40% de utilidad); solo el Administrador puede cambiarlo después.
+        var utilidadPct = 40;
+        if (utilidadInputEl) utilidadInputEl.value = '40';
         var fechaInicio = document.getElementById('fechaInicio').value;
         var fechaTermino = document.getElementById('fechaTermino').value;
         var esSuministro = document.getElementById('proyectoTipoSuministro').checked;
@@ -28046,11 +28073,12 @@
           var avisosPresupuesto = [];
           Object.keys(gastoPorProyectoPartida).forEach(function(nombreP) {
             var px = proyectos.find(function(x) { return x.nombre === nombreP; });
-            if (!px || !px.limite) return;
-            var gastoPrevio = gastoProyectoMoneda(nombreP);
+            var limPx = limiteProyecto(px);
+            if (!px || !limPx) return;
+            var gastoPrevio = comprometidoProyectoMoneda(nombreP);
             var gastoProyectado = gastoPrevio + gastoPorProyectoPartida[nombreP];
-            if (gastoProyectado > px.limite) {
-              avisosPresupuesto.push('• ' + nombreP + ': ' + formatoMoneda(gastoProyectado, 'MXN') + ' de ' + formatoMoneda(px.limite, 'MXN') + ' (límite)');
+            if (gastoProyectado > limPx) {
+              avisosPresupuesto.push('• ' + nombreP + ': ' + formatoMoneda(gastoProyectado, 'MXN') + ' de ' + formatoMoneda(limPx, 'MXN') + ' (límite)');
             }
           });
           if (avisosPresupuesto.length) {
