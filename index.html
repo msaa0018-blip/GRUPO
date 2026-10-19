@@ -4257,6 +4257,7 @@
             </div>
             <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Folio Interno (automático)<input id="comunicadoFolio" readonly style="width:100%;margin-top:4px;background:var(--gray-200);"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Archivo<input id="comunicadoArchivo" placeholder="Archivo / expediente (opcional)" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Ciudad<input id="comunicadoCiudad" value="IRAPUATO, GTO." style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha<input id="comunicadoFecha" type="text" readonly style="width:100%;margin-top:4px;background:var(--gray-200);"></label>
             </div>
@@ -14337,6 +14338,8 @@
         document.getElementById('comunicadoFolio').value = 'Calculando...';
         document.getElementById('comunicadoFecha').value = new Date().toLocaleDateString();
         document.getElementById('comunicadoAsunto').value = '';
+        var archivoComInput = document.getElementById('comunicadoArchivo');
+        if (archivoComInput) archivoComInput.value = '';
         document.getElementById('comunicadoCuerpo').value = '';
         document.getElementById('cuerpoComunicadoCcp').innerHTML = '';
         document.getElementById('comunicadoAdjuntosWrap').style.display = 'none';
@@ -14515,17 +14518,18 @@
 
         var anchoUtil = pageWidth - margin * 2;
 
-        // Fila 1: Doc./Folio Interno (izq) y Ciudad/Fecha (der)
+        // Fila 1: Doc./Archivo (izq) y CD./Fecha/Folio interno (der)
         var wIzq = anchoUtil * 0.55, wDer = anchoUtil * 0.45;
-        var altoFila1 = 34;
+        var altoFila1 = 46;
         doc.setDrawColor(120, 120, 120);
         doc.setLineWidth(0.6);
         doc.rect(margin, y, wIzq, altoFila1);
         doc.rect(margin + wIzq, y, wDer, altoFila1);
         dibujarRenglonEtiquetaValor(doc, margin, y + 13, wIzq, 'Doc.:', datos.tipoDoc);
-        dibujarRenglonEtiquetaValor(doc, margin, y + 27, wIzq, 'Folio Interno:', datos.folioInterno);
-        dibujarRenglonEtiquetaValor(doc, margin + wIzq, y + 13, wDer, 'Ciudad:', datos.ciudad);
+        dibujarRenglonEtiquetaValor(doc, margin, y + 27, wIzq, 'Archivo:', datos.archivo);
+        dibujarRenglonEtiquetaValor(doc, margin + wIzq, y + 13, wDer, 'CD.:', datos.ciudad);
         dibujarRenglonEtiquetaValor(doc, margin + wIzq, y + 27, wDer, 'Fecha:', datos.fecha);
+        dibujarRenglonEtiquetaValor(doc, margin + wIzq, y + 41, wDer, 'Folio interno:', datos.folioInterno);
         y += altoFila1 + 10;
 
         // Fila 2: Remitente (izq) y Destinatario (der)
@@ -14664,6 +14668,7 @@
           // del mismo departamento mientras tanto).
           var folioInterno = await calcularFolioInternoComunicado(empresaRemitente, deptoRemitente);
           var ciudad = document.getElementById('comunicadoCiudad').value;
+          var archivoComunicado = ((document.getElementById('comunicadoArchivo') || {}).value || '').trim().toUpperCase();
           var fecha = document.getElementById('comunicadoFecha').value;
           var referencia = (getAbreviaturaEmpresa(empresaRemitente) || 'GIE') + ':' + (deptoRemitente ? (getAbreviaturaDepartamento(deptoRemitente, empresaRemitente) || deptoRemitente) : 'GRAL') +
             ':' + tipoDoc + ':Mod Membretado:' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + ':' + actual.usuario;
@@ -14693,7 +14698,7 @@
           if (errorComunicado) throw errorComunicado;
 
           var pdfDoc = await generarPDFComunicado({
-            tipoDoc: tipoDoc, formato: formato, folioInterno: folioInterno, ciudad: ciudad, fecha: fecha,
+            tipoDoc: tipoDoc, formato: formato, folioInterno: folioInterno, ciudad: ciudad, fecha: fecha, archivo: archivoComunicado,
             remitente: remitente, destinatario: destinatario, asunto: asunto, cuerpo: cuerpo, ccp: ccp, referencia: referencia
           });
           var pdfBlob = pdfDoc.output('blob');
