@@ -18959,15 +18959,14 @@
           var existeUsuario = function(u) {
             return (usuariosDB || []).some(function(x) { return x.usuario === u; });
           };
-          // Destinatarios del aviso de pago: el Elaborador, el Solicitante y
-          // los Jefes de Departamento del departamento de la OC. Nadie más
-          // (ni Director, ni Contabilidad, ni participantes de chats).
+          // Destinatarios del aviso de pago (al subir el comprobante): SOLO el
+          // Solicitante de la OC y los Jefes de Departamento del departamento
+          // de la OC. Nadie más (ni Elaborador, ni Director, ni Contabilidad).
           var usuarioValido = function(u) { return u && u !== 'No definido' && u !== 'Desconocido' && existeUsuario(u); };
-          // Elaborador: quien capturó la OC (si no quedó, el responsable).
-          var elaboradorOC = usuarioValido(oc.elaborador) ? oc.elaborador : (usuarioValido(oc.responsable) ? oc.responsable : null);
-          // Solicitante: quien aprobó la OC como solicitante (si no quedó, el responsable).
-          var solicitanteOC = usuarioValido(oc.nombresolicitante) ? oc.nombresolicitante : (usuarioValido(oc.responsable) ? oc.responsable : null);
-          var destinatariosPago = [elaboradorOC, solicitanteOC].filter(Boolean).concat(obtenerJefesDepartamentoOC(oc));
+          // Solicitante: el responsable designado de la OC (si no quedó, quien
+          // la aprobó como solicitante).
+          var solicitanteOC = usuarioValido(oc.responsable) ? oc.responsable : (usuarioValido(oc.nombresolicitante) ? oc.nombresolicitante : null);
+          var destinatariosPago = [solicitanteOC].filter(Boolean).concat(obtenerJefesDepartamentoOC(oc));
           var jefes = destinatariosPago.filter(function(j, idx, arr) {
             return j && j !== quienPago && arr.indexOf(j) === idx;
           });
