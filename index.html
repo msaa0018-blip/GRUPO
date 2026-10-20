@@ -12154,7 +12154,11 @@
         });
 
         if (importeTexto) {
+          // jsPDF usa el color del texto como relleno si no se vuelve a
+          // fijar: sin esto el recuadro del importe salía NEGRO.
+          doc.setFillColor(255, 255, 255);
           doc.roundedRect(x + wLabel + wValor, y, wImporte, h, radio, radio, 'F');
+          doc.setTextColor(20, 20, 20);
           doc.setFont(undefined, 'bold');
           doc.setFontSize(9.5);
           doc.text(importeTexto, x + wLabel + wValor + wImporte / 2, y + h / 2 + 3, { align: 'center', maxWidth: wImporte - 6 });
