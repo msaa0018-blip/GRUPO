@@ -8108,6 +8108,20 @@
         return esUsuarioPagosCCHF(usuario);
       }
 
+      // CXP y CXF: estos usuarios ven las OC/OF de TODAS las empresas y
+      // TODOS los departamentos (incluidas las pendientes de pago), sin
+      // depender de sus permisos de empresa/departamento.
+      var USUARIOS_VISTA_GLOBAL_CXP_CXF = ['ADMIN', 'LJGR', 'JLGR', 'CONTABILIDAD', 'FINANZAS', 'CCHF'];
+      var ROLES_VISTA_GLOBAL_CXP_CXF = ['Administrador', 'Director General', 'Contabilidad', 'Finanzas'];
+      function usuarioVeTodoCXPyCXF(usuario) {
+        if (!usuario) return false;
+        var nombre = String(usuario.usuario || usuario.u || '').trim().toUpperCase();
+        return USUARIOS_VISTA_GLOBAL_CXP_CXF.indexOf(nombre) !== -1 || usuarioTieneAlgunRol(usuario, ROLES_VISTA_GLOBAL_CXP_CXF);
+      }
+      function usuarioVeOF(usuario, empresa, departamento) {
+        return usuarioVeTodoCXPyCXF(usuario) || usuarioPuedeAccederOF(usuario, empresa, departamento);
+      }
+
       function usuarioPuedeAccederOF(usuario, empresa, departamento) {
         if (!usuario) return false;
         // Finanzas/Administrador (gestionan aprobaciones y pagos) y Director
@@ -8224,7 +8238,7 @@
       // las OC de su empresa/departamento, las haya creado él o no.
       function filtrarOCParaCXP(usuario) {
         if (!usuario) return [];
-        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
+        if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1 || usuarioVeTodoCXPyCXF(usuario)) {
           return ordenes.slice();
         }
         return ordenes.filter(function(o) {
@@ -16778,7 +16792,7 @@
       window.renderIndicadorVentasMes = function() {
         var mes = Number(document.getElementById('indicadorVentasMesSelectMes').value);
         var anio = Number(document.getElementById('indicadorVentasMesSelectAnio').value);
-        var ofScope = ordenesFacturacion.filter(function(o) { return usuarioPuedeAccederOF(actual, o.empresa, o.departamento); });
+        var ofScope = ordenesFacturacion.filter(function(o) { return usuarioVeOF(actual, o.empresa, o.departamento); });
         var ofMes = ofScope.filter(function(o) {
           if (o.estado !== 'PAGADO' || !o.fecha_pago) return false;
           var f = new Date(o.fecha_pago);
@@ -20272,7 +20286,7 @@
       var ROLES_CXP_GLOBAL = ['Director General', 'Administrador', 'Finanzas', 'Contabilidad'];
 
       function esRolGlobalCXP(usuario) {
-        return !!(usuario && ROLES_CXP_GLOBAL.indexOf(usuario.rol) !== -1);
+        return !!(usuario && (ROLES_CXP_GLOBAL.indexOf(usuario.rol) !== -1 || usuarioVeTodoCXPyCXF(usuario)));
       }
 
       // CXP para CCHF (pagos): además de lo de su empresa/departamento, ve
@@ -20299,8 +20313,11 @@
         // Administrador o Finanzas) tiene una única empresa/departamento
         // asignados en sus permisos, se preseleccionan automáticamente.
         var permisosUsuario = obtenerOpcionesPermisos(actual);
-        var empresaAutoUsuario = permisosUsuario.length === 1 ? permisosUsuario[0].empresa : null;
-        var deptoAutoUsuario = permisosUsuario.length === 1 ? permisosUsuario[0].depto : null;
+        // Los usuarios con vista global arrancan en "Todas las empresas" /
+        // "Todos los departamentos" (sin preselección por sus permisos).
+        var sinPreseleccion = usuarioVeTodoCXPyCXF(actual);
+        var empresaAutoUsuario = (!sinPreseleccion && permisosUsuario.length === 1) ? permisosUsuario[0].empresa : null;
+        var deptoAutoUsuario = (!sinPreseleccion && permisosUsuario.length === 1) ? permisosUsuario[0].depto : null;
 
         // Base de proyectos ya restringida por permisos del usuario
         // (para roles no-globales, filtrarProyectosSegunUsuario ya
@@ -20507,9 +20524,9 @@
         // el filtro de la UI — así un valor manipulado en el <select>,
         // la URL, localStorage o sessionStorage no puede ampliar el acceso.
         var proyectosVisibles = filtrarProyectosSegunUsuario(actual);
-        // CCHF: todos los proyectos, para incluir las OC pendientes de
-        // pago de cualquier empresa/departamento (ver más abajo).
-        if (esPagosCCHF) proyectosVisibles = proyectos.slice();
+        // Vista global (ADMIN, Director, Contabilidad, Finanzas, CCHF):
+        // todos los proyectos de todas las empresas y departamentos.
+        if (esPagosCCHF || usuarioVeTodoCXPyCXF(actual)) proyectosVisibles = proyectos.slice();
 
         if (filtroEmpresa) proyectosVisibles = proyectosVisibles.filter(function(p) { return p.empresa === filtroEmpresa; });
         if (filtroDepto) {
@@ -26881,7 +26898,7 @@
         });
 
         var ofVisibles = ordenesFacturacion.filter(function(o) {
-          return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+          return usuarioVeOF(actual, o.empresa, o.departamento);
         });
         ofVisibles.forEach(function(o) {
           if (o.departamento) deptosSet.add(o.departamento);
@@ -26946,7 +26963,7 @@
         }
 
         var visibles = ordenesFacturacion.filter(function(o) {
-          return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+          return usuarioVeOF(actual, o.empresa, o.departamento);
         });
 
         if (filtroDepto && filtroDepto.value) {
@@ -26970,7 +26987,7 @@
             totalPendiente = 0,
             numPagado = 0,
             numPendiente = 0;
-          var baseResumen = ordenesFacturacion.filter(function(o) { return usuarioPuedeAccederOF(actual, o.empresa, o.departamento); });
+          var baseResumen = ordenesFacturacion.filter(function(o) { return usuarioVeOF(actual, o.empresa, o.departamento); });
           baseResumen.forEach(function(o) {
             var monto = o.monto || o.suma || 0;
             if (o.estado === 'PAGADO') { totalPagado += monto;
@@ -29853,7 +29870,7 @@
       window.previsualizarReporteCXF = async function() {
         try {
           var ofsVisibles = ordenesFacturacion.filter(function(o) {
-            return usuarioPuedeAccederOF(actual, o.empresa, o.departamento);
+            return usuarioVeOF(actual, o.empresa, o.departamento);
           });
           // Se aplican los mismos filtros de Departamento/Estado que la
           // tabla de OF (antes esto requería el botón "Aplicar Filtros",
