@@ -5831,9 +5831,6 @@
         <div class="grupo-formulario">
           <div class="flex" style="align-items:center;gap:12px;">
             <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
-            <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;white-space:nowrap;flex:1;">
-              <input type="checkbox" id="ocEsMultiproyecto" onchange="window.actualizarMultiproyectoOC()" style="width:14px;height:14px;flex-shrink:0;"> ¿Esta OC es multiproyecto?
-            </label>
           </div>
         </div>
         <div class="grupo-formulario hidden" id="grupoProyectosMultiOC">
@@ -28475,7 +28472,9 @@
         // funcionando exactamente igual que antes (se descuenta del único
         // proyecto de la OC).
         var ocEsMultiproyectoCheckbox = document.getElementById('ocEsMultiproyecto');
-        var esMultiproyecto = !!(ocEsMultiproyectoCheckbox && ocEsMultiproyectoCheckbox.checked);
+        // Regla: cada OC pertenece a UN solo proyecto. Ya no se crean OC
+        // multiproyecto (las que ya existían conservan su reparto).
+        var esMultiproyecto = false;
         var selMultiProyectos = document.getElementById('selectProyectosMultiOC');
         var proyectosMultiIds = (esMultiproyecto && selMultiProyectos)
           ? Array.from(selMultiProyectos.selectedOptions).map(function(o) { return parseInt(o.value, 10); })
