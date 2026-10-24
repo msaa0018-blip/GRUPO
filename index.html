@@ -5829,9 +5829,16 @@
           <button class="cerrar-modal-btn btn-modal-x" onclick="window.cerrarPanelOC()">✕</button>
         </div>
         <div class="grupo-formulario">
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:6px;background:var(--gray-100);">
+            <span style="font-weight:600;font-size:13px;color:var(--gray-700);">¿Ligar esta OC a un proyecto? *</span>
+            <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="radio" name="ocLigarProyecto" id="ocLigarProyectoSi" checked onchange="window.cambiarLigarProyectoOC()" style="width:auto;"> Sí (regla del 60/40)</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="radio" name="ocLigarProyecto" id="ocLigarProyectoNo" onchange="window.cambiarLigarProyectoOC()" style="width:auto;"> No (autorización directa del Director)</label>
+          </div>
           <div class="flex" style="align-items:center;gap:12px;">
             <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
+            <select id="empresaDeptoSinProyectoOC" class="hidden" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
           </div>
+          <div id="avisoSinProyectoOC" class="hidden" style="font-size:12px;margin-top:6px;color:var(--gray-700);">⚠️ OC sin proyecto: no se aplica la regla del 60/40. Después de la aprobación del Jefe pasa siempre al Director General para autorizar el pago. Al pagarse se registra como proyecto del departamento.</div>
         </div>
         <div class="grupo-formulario hidden" id="grupoProyectosMultiOC">
           <div class="flex">
@@ -8290,7 +8297,7 @@
           ocFiltradas = ordenes.slice();
         } else {
           ocFiltradas = ordenes.filter(function(o) {
-            var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
+            var p = proyectoDeOC(o);
             if (!p) return false;
             return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
           });
@@ -8320,6 +8327,12 @@
             return o.elaborador === usuario.usuario || o.responsable === usuario.usuario;
           });
         }
+        // MCCC genera OC de todas las empresas: siempre ve las que elaboró.
+        if (usuarioCreaOCTodasEmpresas(usuario)) {
+          var idsVistas = {};
+          ocFiltradas.forEach(function(o) { idsVistas[o.id] = true; });
+          ocFiltradas = ocFiltradas.concat(ordenes.filter(function(o) { return !idsVistas[o.id] && o.elaborador === usuario.usuario; }));
+        }
         // CCHF (pagos): se agregan al final para que el filtro de
         // Elaborador/Solicitante de arriba no las quite.
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) === -1) {
@@ -8341,7 +8354,7 @@
           return ordenes.slice();
         }
         return ordenes.filter(function(o) {
-          var p = proyectos.find(function(proj) { return normalizar(proj.nombre) === normalizar(o.proyecto); });
+          var p = proyectoDeOC(o);
           if (!p) return false;
           return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
         });
@@ -9175,7 +9188,7 @@
           if (actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']))) {
             modulos.push({ id: 'cxp', icono: '💰', nombre: 'CXP' });
           }
-          if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
+          if (actual && (usuarioPuedeCrearOC(actual))) {
             modulos.push({ id: 'oc', icono: '📄', nombre: 'OC' });
           }
           // Acceso directo a "Bandeja de OC" como módulo propio de EGRESOS
@@ -9195,7 +9208,7 @@
         } else if (tipo === 'oc') {
           // OC usa exactamente la misma presentación visual del Menú Maestro
           // de EGRESOS/INGRESOS. Solo cambian el título y sus módulos.
-          if (actual && usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento'])) {
+          if (actual && usuarioPuedeCrearOC(actual)) {
             modulos.push({ id: 'oc_crear', icono: '📄', nombre: 'Crear OC' });
             modulos.push({ id: 'oc_bandeja', icono: '📬', nombre: 'Bandeja de OC' });
             modulos.push({ id: 'oc_control', icono: '📊', nombre: 'Control x Proyecto' });
@@ -16100,7 +16113,7 @@
           return;
         }
 
-        var puedeCrearOC = actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']));
+        var puedeCrearOC = actual && (usuarioPuedeCrearOC(actual));
         var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
         var puedeVerCXP = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
         var puedeVerCXC = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
@@ -16312,7 +16325,7 @@
 
         setTimeout(function() {
           render();
-          if (modulo === 'oc' && actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
+          if (modulo === 'oc' && actual && (usuarioPuedeCrearOC(actual))) {
             window.actualizarDatosOC();
           }
           var cuerpo = document.getElementById('cuerpoProductos');
@@ -16502,7 +16515,7 @@
             balanceMesPorGrupo[key].ventas += ventas || 0;
           }
           comprasMes.forEach(function(o) {
-            var proyectoOC = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var proyectoOC = proyectoDeOC(o);
             sumarBalanceMesGrupo(proyectoOC ? proyectoOC.empresa : null, proyectoOC ? proyectoOC.departamento : null, o.montototal || 0, 0);
           });
           ventasMes.forEach(function(c) {
@@ -16528,7 +16541,7 @@
             var partidasOC = partidasOCParaProrrateo(o);
             var partidasPaqueteria = partidasOC.filter(function(p) { return p.codigo === 'PROD-01004'; });
             if (partidasPaqueteria.length === 0) return;
-            var proyectoOC = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var proyectoOC = proyectoDeOC(o);
             var emp = proyectoOC ? (proyectoOC.empresa || 'Sin empresa') : 'Sin empresa';
             var depto = proyectoOC ? (proyectoOC.departamento || 'Sin departamento') : 'Sin departamento';
             var keyPaq = emp + '|' + depto;
@@ -16575,7 +16588,7 @@
           // 6. Compras por empresa
           var comprasPorEmpresa = {};
           ordenes.forEach(function(o) {
-            var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var proyecto = proyectoDeOC(o);
             if (proyecto) {
               var emp = proyecto.empresa || 'Sin empresa';
               comprasPorEmpresa[emp] = (comprasPorEmpresa[emp] || 0) + (o.montototal || 0);
@@ -16585,7 +16598,7 @@
           // 7. Compras por departamento
           var comprasPorDepto = {};
           ordenes.forEach(function(o) {
-            var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var proyecto = proyectoDeOC(o);
             if (proyecto) {
               var depto = proyecto.departamento || 'Sin departamento';
               comprasPorDepto[depto] = (comprasPorDepto[depto] || 0) + (o.montototal || 0);
@@ -17626,7 +17639,7 @@
             tbodyOC.innerHTML = '<tr><td colspan="6" class="mensaje-sin-datos">No hay OC pendientes</td></tr>';
           } else {
             tbodyOC.innerHTML = ocList.map(function(o) {
-              var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+              var proyecto = proyectoDeOC(o);
               return '<tr>' +
                 '<td><code>' + o.codigo + '</code></td>' +
                 '<td>' + o.proyecto + '</td>' +
@@ -18010,7 +18023,7 @@
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'CREADA') return alert('La OC no está en estado CREADA');
 
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        var proyecto = proyectoDeOC(oc);
         if (!proyecto) return alert('Proyecto no encontrado');
 
         var esInmobienesOC = ocEsInmobienes(oc);
@@ -18060,7 +18073,7 @@
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'APROBADA_SOLICITANTE') return alert('La OC debe estar aprobada por el Solicitante');
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        var proyecto = proyectoDeOC(oc);
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
@@ -18092,12 +18105,13 @@
           return;
         }
 
+        var sinProyectoJefe = ocEsSinProyecto(oc) || !!proyecto.virtual;
         var limiteVigente = limiteProyecto(proyecto);
-        var comprometidoPrevio = comprometidoProyectoMoneda(proyecto.nombre, oc.id);
+        var comprometidoPrevio = sinProyectoJefe ? 0 : comprometidoProyectoMoneda(proyecto.nombre, oc.id);
         var excedePorSiSola = montoEnMonedaProyecto > limiteVigente;
         var excedeAcumulado = (comprometidoPrevio + montoEnMonedaProyecto) >= limiteVigente;
 
-        if (!excedePorSiSola && !excedeAcumulado) {
+        if (!sinProyectoJefe && !excedePorSiSola && !excedeAcumulado) {
           var updates = {
             estado: 'AUTORIZADA',
             fechaaprobacionjefe: new Date().toISOString(),
@@ -18151,9 +18165,9 @@
             productos: productos
           };
 
-          var motivoExceso = excedePorSiSola ?
+          var motivoExceso = sinProyectoJefe ? 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' : (excedePorSiSola ?
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
-            'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
+            'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
 
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
           var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
@@ -18169,7 +18183,7 @@
         }
 
         render();
-        alert('⏳ OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
+        alert(sinProyectoJefe ? '⏳ OC sin proyecto. Enviada al Director General para autorización de pago.' : '⏳ OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -18303,7 +18317,7 @@
           return alert('❌ Solo el elaborador de esta OC (' + (oc.elaborador || '—') + ') puede definir la paridad final.');
         }
         if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        var proyecto = proyectoDeOC(oc);
         if (!proyecto) return alert('Proyecto no encontrado');
         if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
@@ -18384,7 +18398,7 @@
 
       window.finalizarDecisionParidadOC = async function(index, tipoCambioONull, nuevoMontoMXN, mensajeOrigen) {
         var oc = ordenes[index];
-        var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+        var proyecto = proyectoDeOC(oc);
         if (!proyecto) return alert('Proyecto no encontrado');
 
         var montoEnMonedaProyecto = nuevoMontoMXN;
@@ -18439,7 +18453,8 @@
         if (!oc.fechaaprobacionjefe) { updates.fechaaprobacionjefe = new Date().toISOString();
           updates.nombrejefe = 'No definido'; }
 
-        if (!excedePorSiSola && !excedeAcumulado) {
+        var sinProyectoParidad = ocEsSinProyecto(oc) || !!proyecto.virtual;
+        if (!sinProyectoParidad && !excedePorSiSola && !excedeAcumulado) {
           updates.estado = 'AUTORIZADA';
           updates.fechaaprobaciondirector = new Date().toISOString();
           updates.nombredirector = getDirector();
@@ -18485,9 +18500,9 @@
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             productos: productos
           };
-          var motivoExceso = excedePorSiSola ?
+          var motivoExceso = sinProyectoParidad ? 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' : (excedePorSiSola ?
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
-            'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
+            'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
           var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
           if (telegramMessageId) {
@@ -18500,7 +18515,7 @@
           console.error('❌ Error al enviar notificación:', errNotif);
         }
 
-        alert('✅ ' + mensajeOrigen + '. OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
+        alert('✅ ' + mensajeOrigen + (sinProyectoParidad ? '. OC sin proyecto: enviada al Director General para autorización de pago.' : '. OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.'));
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -19019,6 +19034,10 @@
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
           Object.assign(oc, updates);
+          if (updates.estadopago === 'PAGADA' && ocEsSinProyecto(oc)) {
+            var nombreProyNuevo = await registrarOCSinProyectoComoProyecto(oc);
+            if (nombreProyNuevo) mensajeFinal += '\n\n📁 Se registró como proyecto "' + nombreProyNuevo + '" del departamento.';
+          }
 
           // Aviso de "Pago realizado" por Telegram al Solicitante y a los Jefes de Departamento de la OC
           // (no bloquea: si falla, el pago ya quedó registrado).
@@ -19045,6 +19064,51 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo confirmar el pago: ' + escapeHTML(e.message) + '</div>';
         }
       };
+
+      // OC sin proyecto ya PAGADA -> se registra como proyecto del
+      // departamento (nombre = folio de la OC, presupuesto = total pagado,
+      // límite = 100% porque ya está pagada) y la OC queda ligada a él, de
+      // modo que entra a Control por Proyecto y a la contabilidad del
+      // departamento. Si ya existe (p. ej. se repitió el pago), no se duplica.
+      async function registrarOCSinProyectoComoProyecto(oc) {
+        try {
+          if (!oc || !oc.sin_proyecto) return null;
+          var nombre = String(oc.codigo || ('OC-' + oc.id)).toUpperCase();
+          var existente = proyectos.find(function(p) { return normalizar(p.nombre) === normalizar(nombre); });
+          if (!existente) {
+            var hoy = new Date().toISOString().slice(0, 10);
+            var total = Number(oc.montototal) || 0;
+            var nuevo = {
+              empresa: oc.empresa, departamento: oc.departamento, nombre: nombre,
+              centro_trabajo: 'OC SIN PROYECTO', cliente: oc.cliente || 'SIN CLIENTE',
+              presupuesto: total, moneda: oc.moneda || 'MXN', utilidad_pct: 0, limite: total,
+              fecha_inicio: hoy, fecha_termino: hoy, es_suministro: true, es_servicios: false,
+              direccion: null, colaboradores_requeridos: null, origen_oc: oc.codigo || null
+            };
+            var r = await supabase.from('proyectos').insert([nuevo]).select();
+            if (r.error && /origen_oc/.test(r.error.message || '')) {
+              delete nuevo.origen_oc;
+              r = await supabase.from('proyectos').insert([nuevo]).select();
+            }
+            if (r.error) throw r.error;
+            existente = r.data && r.data[0];
+            if (existente && existente.id) {
+              var codigoP = String(existente.id).padStart(4, '0');
+              await supabase.from('proyectos').update({ codigo: codigoP }).eq('id', existente.id);
+              existente.codigo = codigoP;
+              proyectos.push(existente);
+            }
+          }
+          var { error: eUpd } = await supabase.from('ordenes').update({ proyecto: nombre }).eq('id', oc.id);
+          if (eUpd) throw eUpd;
+          oc.proyecto = nombre;
+          return nombre;
+        } catch (e) {
+          console.error('No se pudo registrar la OC sin proyecto como proyecto:', e);
+          alert('⚠️ El pago quedó registrado, pero no se pudo crear el proyecto de la OC sin proyecto: ' + (e.message || e));
+          return null;
+        }
+      }
 
       // ===== AVISO DE PAGO DE OC POR TELEGRAM =====
       // Cada vez que CCHF registra un pago (total, o cada pago de un
@@ -20436,7 +20500,8 @@
 
       function formatearMensajeOC(datosOC, proyecto, ocId, motivoExceso) {
         var pctLimite = obtenerPorcentajeLimite(proyecto);
-        var mensaje = '📋 *NUEVA OC PENDIENTE DE AUTORIZACIÓN* (Supera el ' + pctLimite + '%)\n\n';
+        var esSinProyectoMsg = !!(proyecto && (proyecto.virtual || proyecto.sin_proyecto));
+        var mensaje = esSinProyectoMsg ? '📋 *OC SIN PROYECTO — AUTORIZACIÓN DE PAGO*\n\n' : '📋 *NUEVA OC PENDIENTE DE AUTORIZACIÓN* (Supera el ' + pctLimite + '%)\n\n';
         if (motivoExceso) mensaje += '⚠️ ' + motivoExceso + '\n\n';
         mensaje += '📌 *Código:* ' + datosOC.codigo + '\n';
         mensaje += '🏢 *Empresa:* ' + datosOC.empresa + '\n';
@@ -20451,8 +20516,12 @@
         mensaje += '💰 *Moneda:* ' + datosOC.moneda + '\n';
         mensaje += '💰 *Total:* ' + formatoMoneda(datosOC.montototal, datosOC.moneda) + '\n';
         mensaje += '💰 *Equivalente MXN:* ' + formatoMoneda(datosOC.montomxn, 'MXN') + '\n';
-        mensaje += '📊 *Presupuesto:* ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
-        mensaje += '📊 *Límite ' + pctLimite + '%:* ' + formatoMoneda(limiteProyecto(proyecto), proyecto.moneda) + '\n\n';
+        if (esSinProyectoMsg) {
+          mensaje += '📊 *Proyecto:* No ligada a proyecto (autorización directa)\n\n';
+        } else {
+          mensaje += '📊 *Presupuesto:* ' + formatoMoneda(proyecto.presupuesto, proyecto.moneda) + '\n';
+          mensaje += '📊 *Límite ' + pctLimite + '%:* ' + formatoMoneda(limiteProyecto(proyecto), proyecto.moneda) + '\n\n';
+        }
         mensaje += '🔗 *Para autorizar, ingresa al sistema:*\n';
         mensaje += URL_APP_TELEGRAM + '?oc=' + ocId + '\n\n';
         mensaje += '_Esta notificación es automática. Por favor, revisa el sistema para autorizar._';
@@ -21055,7 +21124,7 @@
         if (cxc.empresa) return { empresa: cxc.empresa, departamento: cxc.departamento || null };
         var orden = ordenes.find(function(o) { return o.codigo === cxc.oc_contrato; });
         if (!orden) return { empresa: null, departamento: null };
-        var proyecto = proyectos.find(function(p) { return p.nombre === orden.proyecto; });
+        var proyecto = proyectoDeOC(orden);
         return { empresa: proyecto ? proyecto.empresa : null, departamento: proyecto ? proyecto.departamento : null };
       }
 
@@ -23894,7 +23963,7 @@
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
           ocVisibles = ocVisibles.filter(function(o) {
-            var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
+            var p = proyectoDeOC(o);
             return p && p.departamento === filtroDepto.value;
           });
         }
@@ -24125,7 +24194,7 @@
               if (!acciones) acciones = '—';
             }
 
-            var proyecto = proyectos.find(function(p) { return p.nombre === o.proyecto; });
+            var proyecto = proyectoDeOC(o);
             var cliente = proyecto ? proyecto.cliente : '—';
             var fechaPago = o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—';
             var fechaEntrega = o.fechaentrega ? new Date(o.fechaentrega).toLocaleDateString() : '—';
@@ -24686,19 +24755,22 @@
 
         ocPaginacion.datosFiltrados = obtenerOCFiltradas();
 
+        var valorPrevioProyectoOC = selectProyecto.value;
+        var proyectosOC = proyectosParaCrearOC(actual).filter(function(p) { return !p.origen_oc && p.centro_trabajo !== 'OC SIN PROYECTO'; });
         selectProyecto.innerHTML = '';
-        if (proyectosVisibles.length === 0) {
+        if (proyectosOC.length === 0) {
           selectProyecto.innerHTML = '<option value="">No hay proyectos disponibles</option>';
         } else {
-          proyectosVisibles.forEach(function(p) {
-            selectProyecto.innerHTML += '<option value="' + p.id + '">' + p.nombre + '</option>';
+          proyectosOC.forEach(function(p) {
+            selectProyecto.innerHTML += '<option value="' + p.id + '">' + escapeHTML(p.nombre) + (usuarioCreaOCTodasEmpresas(actual) ? ' — ' + escapeHTML(getAbreviaturaEmpresa(p.empresa) || p.empresa) + ' / ' + escapeHTML(p.departamento || '') : '') + '</option>';
           });
+          if (valorPrevioProyectoOC && proyectosOC.some(function(p) { return String(p.id) === String(valorPrevioProyectoOC); })) selectProyecto.value = valorPrevioProyectoOC;
         }
 
         proyectosPaginacion.datosFiltrados = proyectosVisibles;
         renderTablaProyectosPaginada();
 
-        if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
+        if (actual && (usuarioPuedeCrearOC(actual))) {
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
             selectProyecto.selectedIndex = 0;
           }
@@ -25641,7 +25713,7 @@
               card.classList.add('hidden');
             });
 
-            var puedeCrearOC = actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']));
+            var puedeCrearOC = actual && (usuarioPuedeCrearOC(actual));
             var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
             var puedeVerCXP = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
             var puedeVerCXC = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
@@ -25673,7 +25745,7 @@
 
             setTimeout(function() {
               render();
-              if (actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']))) {
+              if (actual && (usuarioPuedeCrearOC(actual))) {
                 window.actualizarDatosOC();
               }
               var cuerpo = document.getElementById('cuerpoProductos');
@@ -25747,7 +25819,7 @@
             }
           });
 
-          var puedeCrearOC = actual && (usuarioTieneAlgunRol(actual, ['Elaborador', 'Solicitante', 'Jefe Departamento']));
+          var puedeCrearOC = actual && (usuarioPuedeCrearOC(actual));
           var puedeCrearProyecto = actual && usuarioPuedeCrearProyectos(actual);
           var puedeVerCXP = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
           var puedeVerCXC = actual && (usuarioTieneAlgunRol(actual, ['Director General', 'Administrador', 'Finanzas', 'Contabilidad', 'Jefe Departamento', 'Solicitante', 'Elaborador']));
@@ -27477,7 +27549,166 @@
         }).join('');
       };
 
+      // ===== OC SIN PROYECTO =====
+      // Una OC puede ligarse o no a un proyecto. Ligada: se rige por la
+      // regla del 60/40 del proyecto. Sin proyecto: siempre pasa al
+      // Director General para autorizar el pago (nunca se autoriza en
+      // automático) y, una vez PAGADA, se registra como proyecto del
+      // departamento (nombre = folio de la OC) para la contabilidad.
+      var NOMBRE_OC_SIN_PROYECTO = 'SIN PROYECTO';
+      function ocEsSinProyecto(oc) { return !!(oc && oc.sin_proyecto); }
+      function proyectoDeOC(oc) {
+        if (!oc) return null;
+        var p = proyectos.find(function(x) { return x.nombre === oc.proyecto; });
+        if (!p && oc.proyecto) p = proyectos.find(function(x) { return normalizar(x.nombre) === normalizar(oc.proyecto); });
+        if (p) return p;
+        if (oc.sin_proyecto && oc.empresa) {
+          return { id: null, nombre: oc.proyecto || NOMBRE_OC_SIN_PROYECTO, empresa: oc.empresa, departamento: oc.departamento || '',
+            cliente: oc.cliente || '', moneda: oc.moneda || 'MXN', presupuesto: 0, limite: 0, utilidad_pct: 0, sin_proyecto: true, virtual: true };
+        }
+        return null;
+      }
+      // MCCC puede generar OC de todas las empresas y departamentos.
+      var USUARIOS_OC_TODAS_EMPRESAS = ['MCCC'];
+      function usuarioCreaOCTodasEmpresas(u) {
+        return !!(u && USUARIOS_OC_TODAS_EMPRESAS.indexOf(String(u.usuario || u.u || '').toUpperCase()) !== -1);
+      }
+      function usuarioPuedeCrearOC(u) {
+        return !!(u && (usuarioTieneAlgunRol(u, ['Elaborador', 'Solicitante', 'Jefe Departamento']) || usuarioCreaOCTodasEmpresas(u)));
+      }
+      function proyectosParaCrearOC(u) {
+        return usuarioCreaOCTodasEmpresas(u) ? proyectos.slice() : filtrarProyectosSegunUsuario(u);
+      }
+      // Membrete: los usuarios especiales eligen cualquiera; los demás
+      // usan el membrete fijo de su empresa (los que no tengan uno
+      // definido todavía siguen eligiendo).
+      function usuarioEligeMembrete(u) {
+        return !!(u && (['Administrador', 'Director General', 'Finanzas', 'Contabilidad'].indexOf(u.rol) !== -1 || usuarioCreaOCTodasEmpresas(u)));
+      }
+      function membreteFijoEmpresa(empresa) {
+        var e = normalizar(empresa);
+        if (e.indexOf('SUMINISERVICES') !== -1) return '11';   // SUMINISERVICES MEMBRETE
+        if (e.indexOf('EXTINGUE') !== -1) return '9';          // Membrete Dálmata
+        return null;
+      }
+      function membreteFijoParaOC(empresa) {
+        return usuarioEligeMembrete(actual) ? null : membreteFijoEmpresa(empresa);
+      }
+      function aplicarMembreteFijoOC(empresa) {
+        var sel = document.getElementById('formatoMembreteOC');
+        if (!sel) return;
+        var fijo = membreteFijoParaOC(empresa);
+        if (fijo) {
+          sel.value = fijo;
+          sel.disabled = true;
+          sel.style.background = 'var(--gray-200)';
+          sel.title = 'Membrete asignado a tu empresa';
+        } else {
+          sel.disabled = false;
+          sel.style.background = '';
+          sel.title = '';
+        }
+      }
+      function ocSinProyectoSeleccionado() {
+        var r = document.getElementById('ocLigarProyectoNo');
+        return !!(r && r.checked);
+      }
+      function opcionesEmpresaDeptoSinProyecto() {
+        var lista = [];
+        var agregar = function(empresa, depto) {
+          if (!empresa) return;
+          if (!depto) depto = getDepartamentosPorEmpresa(empresa).length === 0 ? (getAbreviaturaEmpresa(empresa) || empresa) : '';
+          if (!depto) return;
+          var clave = empresa + '||' + depto;
+          if (!lista.some(function(x) { return x.clave === clave; })) lista.push({ clave: clave, empresa: empresa, depto: depto });
+        };
+        if (usuarioCreaOCTodasEmpresas(actual)) {
+          getEmpresasCatalogo().forEach(function(emp) {
+            var deps = getDepartamentosPorEmpresa(emp.nombre);
+            if (deps.length === 0) agregar(emp.nombre, '');
+            deps.forEach(function(d) { agregar(emp.nombre, d.nombre); });
+          });
+        } else {
+          (obtenerOpcionesPermisos(actual) || []).forEach(function(pm) {
+            if (!pm.depto && getDepartamentosPorEmpresa(pm.empresa).length > 0) {
+              getDepartamentosPorEmpresa(pm.empresa).forEach(function(d) { agregar(pm.empresa, d.nombre); });
+            } else {
+              agregar(pm.empresa, pm.depto);
+            }
+          });
+        }
+        return lista;
+      }
+      function empresaDeptoSinProyectoOC() {
+        var sel = document.getElementById('empresaDeptoSinProyectoOC');
+        if (!sel || !sel.value) return null;
+        var partes = sel.value.split('||');
+        return { empresa: partes[0], depto: partes[1] || '' };
+      }
+      window.cambiarLigarProyectoOC = function() {
+        var sinProyecto = ocSinProyectoSeleccionado();
+        var selProy = document.getElementById('selectProyecto');
+        var selED = document.getElementById('empresaDeptoSinProyectoOC');
+        var aviso = document.getElementById('avisoSinProyectoOC');
+        if (selProy) selProy.classList.toggle('hidden', sinProyecto);
+        if (aviso) aviso.classList.toggle('hidden', !sinProyecto);
+        if (selED) {
+          selED.classList.toggle('hidden', !sinProyecto);
+          if (sinProyecto) {
+            var previo = selED.value;
+            var ops = opcionesEmpresaDeptoSinProyecto();
+            selED.innerHTML = ops.length
+              ? ops.map(function(o) { return '<option value="' + escapeHTML(o.clave) + '">' + escapeHTML(o.empresa + ' — ' + o.depto) + '</option>'; }).join('')
+              : '<option value="">No tienes empresa/departamento asignado</option>';
+            if (previo && ops.some(function(o) { return o.clave === previo; })) selED.value = previo;
+          }
+        }
+        window.actualizarDatosOC();
+      };
+      function llenarSolicitantesOC(empresa, departamento) {
+        var selectSol = document.getElementById('solicitanteOC');
+        var posiblesSolicitantes = getPosiblesResponsables().filter(function(u) {
+          return usuarioPuedeAcceder(u, empresa, departamento);
+        });
+        if (actual && actual.rol === 'Jefe Departamento') {
+          var jefeUsuario = usuariosDB.find(function(u) { return u.usuario === actual.usuario && u.rol === 'Jefe Departamento'; });
+          if (jefeUsuario && usuarioPuedeAcceder(jefeUsuario, empresa, departamento) && !posiblesSolicitantes.some(function(u) { return u.usuario === jefeUsuario.usuario; })) {
+            posiblesSolicitantes.push(jefeUsuario);
+          }
+        }
+        selectSol.innerHTML = '';
+        if (posiblesSolicitantes.length === 0) {
+          selectSol.innerHTML = '<option value="">No hay solicitantes disponibles</option>';
+        } else {
+          posiblesSolicitantes.forEach(function(u) {
+            var opt = document.createElement('option');
+            opt.value = u.usuario;
+            opt.textContent = u.usuario + ' (' + u.rol + ')';
+            if (actual && u.usuario === actual.usuario) opt.selected = true;
+            selectSol.appendChild(opt);
+          });
+        }
+      }
+
       window.actualizarDatosOC = function() {
+        if (ocSinProyectoSeleccionado()) {
+          var empresaInputSP = document.getElementById('empresaOC');
+          var deptoInputSP = document.getElementById('departamentoOC');
+          var ed = empresaDeptoSinProyectoOC();
+          if (!ed) {
+            empresaInputSP.value = 'Selecciona empresa/departamento';
+            deptoInputSP.value = '';
+            document.getElementById('solicitanteOC').innerHTML = '<option value="">Selecciona empresa/departamento</option>';
+            return;
+          }
+          empresaInputSP.value = ed.empresa;
+          deptoInputSP.value = ed.depto;
+          empresaInputSP.disabled = true; deptoInputSP.disabled = true;
+          llenarSolicitantesOC(ed.empresa, ed.depto);
+          aplicarMembreteFijoOC(ed.empresa);
+          window.actualizarContactoSolicitanteOC();
+          return;
+        }
         var selectProyecto = document.getElementById('selectProyecto');
         var empresaInput = document.getElementById('empresaOC');
         var deptoInput = document.getElementById('departamentoOC');
@@ -27569,6 +27800,7 @@
         }
 
         if (typeof window.actualizarSelectsProyectoPartidas === 'function') window.actualizarSelectsProyectoPartidas();
+        aplicarMembreteFijoOC(proyecto.empresa);
         window.actualizarContactoSolicitanteOC();
       };
 
@@ -27926,7 +28158,7 @@
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
           ocVisibles = ocVisibles.filter(function(o) {
-            var p = proyectos.find(function(proj) { return proj.nombre === o.proyecto; });
+            var p = proyectoDeOC(o);
             return p && p.departamento === filtroDepto.value;
           });
         }
@@ -28244,7 +28476,7 @@
         document.body.style.cursor = 'wait';
 
         try {
-          var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+          var proyecto = proyectoDeOC(oc);
           if (!proyecto) return alert('Proyecto no encontrado');
           var productos = oc.productos || [];
           if (typeof productos === 'string') {
@@ -28424,12 +28656,20 @@
           else alert(texto);
         };
 
-        var selectProyecto = document.getElementById('selectProyecto');
-        var selectedId = parseInt(selectProyecto ? selectProyecto.value : '');
-        var proyecto = proyectos.find(function(p) { return p.id === selectedId; });
-        if (!proyecto) {
-          mostrarError('Selecciona un proyecto válido.');
-          return null;
+        var sinProyectoOC = ocSinProyectoSeleccionado();
+        var proyecto;
+        if (sinProyectoOC) {
+          var edSP = empresaDeptoSinProyectoOC();
+          if (!edSP) { mostrarError('Selecciona la empresa y el departamento de la OC sin proyecto.'); return null; }
+          proyecto = { id: null, nombre: NOMBRE_OC_SIN_PROYECTO, empresa: edSP.empresa, departamento: edSP.depto, cliente: '', moneda: 'MXN', sin_proyecto: true };
+        } else {
+          var selectProyecto = document.getElementById('selectProyecto');
+          var selectedId = parseInt(selectProyecto ? selectProyecto.value : '');
+          proyecto = proyectos.find(function(p) { return p.id === selectedId; });
+          if (!proyecto) {
+            mostrarError('Selecciona un proyecto válido, o marca que la OC no se liga a un proyecto.');
+            return null;
+          }
         }
 
         var proveedor = (document.getElementById('proveedor').value || '').trim().toUpperCase();
@@ -28611,7 +28851,8 @@
           fechaentrega: fechaEntrega,
           responsable: responsable,
           solicitante: responsable,
-          formatomembrete: (document.getElementById('formatoMembreteOC') ? document.getElementById('formatoMembreteOC').value : '1'),
+          formatomembrete: membreteFijoParaOC(proyecto.empresa) || (document.getElementById('formatoMembreteOC') ? document.getElementById('formatoMembreteOC').value : '1'),
+          sin_proyecto: sinProyectoOC,
           condicionpago: condicionPagoSeleccionada,
           fechapago2: fechaPago2,
           motivo: (document.getElementById('notasOC') ? document.getElementById('notasOC').value.trim() : null) || null,
@@ -28743,8 +28984,17 @@
           proveedor_email: datos.provEmail || null
         };
 
+        if (datos.sin_proyecto) {
+          nuevaOC.sin_proyecto = true;
+          nuevaOC.empresa = datos.empresa;
+          nuevaOC.departamento = datos.departamento;
+        }
         var { data, error } = await insertarOCConRespaldo(nuevaOC);
         if (error) { console.error('❌ Error de Supabase:', error);
+          if (datos.sin_proyecto && /sin_proyecto|empresa|departamento/.test(error.message || '')) {
+            alert('Error al guardar OC: falta correr en Supabase el SQL "oc_sin_proyecto.sql" (columnas sin_proyecto, empresa y departamento en ordenes).');
+            return;
+          }
           alert('Error al guardar OC: ' + error.message); return; }
 
         window.cerrarPreview();
@@ -28928,6 +29178,8 @@
 
         var formatoMembreteOC = document.getElementById('formatoMembreteOC');
         if (formatoMembreteOC) formatoMembreteOC.selectedIndex = 0;
+        var ligarSiOC = document.getElementById('ocLigarProyectoSi');
+        if (ligarSiOC) { ligarSiOC.checked = true; if (typeof window.cambiarLigarProyectoOC === 'function') window.cambiarLigarProyectoOC(); }
 
         var condicionesComercialesOC = document.getElementById('condicionesComercialesOC');
         if (condicionesComercialesOC) condicionesComercialesOC.selectedIndex = 0;
@@ -28955,7 +29207,7 @@
         var oc = ordenes[index];
         if (!oc) return alert('OC no encontrada');
         try {
-          var proyecto = proyectos.find(function(p) { return p.nombre === oc.proyecto; });
+          var proyecto = proyectoDeOC(oc);
           if (!proyecto) return alert('Proyecto no encontrado');
           var productos = oc.productos || [];
           if (typeof productos === 'string') {
