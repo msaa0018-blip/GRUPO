@@ -20796,7 +20796,15 @@
         var ocVisibles = agregarOCsPendientesPagoCXP(actual, filtrarOCParaCXP(actual));
         var nombresProyectosNorm = {};
         proyectosVisibles.forEach(function(p) { nombresProyectosNorm[normalizar(p.nombre)] = true; });
-        ocVisibles = ocVisibles.filter(function(o) { return !!nombresProyectosNorm[normalizar(o.proyecto)]; });
+        ocVisibles = ocVisibles.filter(function(o) {
+          if (nombresProyectosNorm[normalizar(o.proyecto)]) return true;
+          // OC sin proyecto (aún sin pagar): se muestran por su propia
+          // empresa/departamento, salvo que se filtre por un proyecto.
+          if (!ocEsSinProyecto(o) || filtroProyecto) return false;
+          if (filtroEmpresa && o.empresa !== filtroEmpresa) return false;
+          if (filtroDepto && deptoParaComparar(o.empresa, o.departamento) !== deptoParaComparar(filtroEmpresa || o.empresa, filtroDepto)) return false;
+          return esGlobal || usuarioPuedeAcceder(actual, o.empresa, o.departamento) || esPagosCCHF;
+        });
 
         if (fechaInicio) {
           var fechaInicioObj = new Date(fechaInicio);
@@ -31192,6 +31200,220 @@
         nameDisplay.textContent = nombreMostrar;
         container.classList.remove('hidden');
       }
+
+      // ============================================================
+      // REGLAS DE CAPTURA (manual GIE-TI-201026-MANUAL_OC)
+      // No se admite: Ñ, acentos, puntos, caracteres especiales
+      // (# / & % $ " '), espacios en claves ni claves que inicien con
+      // número. Se revisan formatos de RFC, CP, CLABE, teléfono, email y
+      // UUID. Cualquier intento marca el campo en rojo y NO se guarda.
+      // ============================================================
+      var REGLAS_CAMPOS = (function() {
+        var m = {};
+        function add(ids, tipo, etiqueta) { ids.forEach(function(id) { m[id] = { tipo: tipo, etiqueta: etiqueta }; }); }
+        // Proveedores (alta y edición)
+        ['nvoProv', 'edProv'].forEach(function(p) {
+          add([p + 'Nombre'], 'texto', 'Razón social');
+          add([p + 'NombreComercial'], 'texto', 'Nombre comercial');
+          add([p + 'Sucursal'], 'texto', 'Sucursal');
+          add([p + 'RFC'], 'rfc', 'RFC');
+          add([p + 'Contacto'], 'texto', 'Contacto');
+          add([p + 'Telefono'], 'tel', 'Teléfono');
+          add([p + 'Email'], 'email', 'Email');
+          add([p + 'Direccion'], 'domicilio', 'Dirección');
+          add([p + 'CP'], 'cp', 'CP');
+          add([p + 'Clave'], 'clabe', 'CLABE MXN');
+          add([p + 'Banco', p + 'BancoUSD'], 'texto', 'Banco');
+        });
+        // Productos y servicios por proveedor
+        add(['psDescripcion'], 'descripcion', 'Descripción');
+        add(['psNumeroParte'], 'clave', 'Número de parte');
+        add(['psMarca', 'psModelo'], 'texto', 'Marca / modelo');
+        // Productos de inventario (alta y edición)
+        ['nvoProd', 'edProd'].forEach(function(p) {
+          add([p + 'Descripcion'], 'descripcion', 'Descripción');
+          add([p + 'NumeroParte'], 'clave', 'Número de parte');
+          add([p + 'Marca', p + 'Modelo'], 'texto', 'Marca / modelo');
+          add([p + 'Ubicacion'], 'clave', 'Ubicación');
+        });
+        // Proyectos
+        add(['nombreProyecto'], 'clave', 'Nombre del proyecto');
+        add(['direccionProyecto', 'edProyectoDireccion'], 'domicilio', 'Dirección del servicio');
+        // Almacenes y vehículos
+        add(['nvoAlmNombre', 'edAlmNombre'], 'clave', 'Nombre del almacén');
+        add(['nvoVehNombre', 'edVehNombre'], 'clave', 'Nombre del vehículo');
+        add(['nvoVehPlacas', 'edVehPlacas'], 'clave', 'Placas');
+        // Clientes
+        ['nvoCliente', 'edCliente'].forEach(function(p) {
+          add([p + 'Nombre'], 'texto', 'Nombre del cliente');
+          add([p + 'CentroNegocio'], 'texto', 'Centro de negocio');
+          add([p + 'RFC'], 'rfc', 'RFC');
+          add([p + 'DireccionFiscal'], 'domicilio', 'Dirección fiscal');
+        });
+        // Colaboradores
+        add(['colabUsuario'], 'clave', 'Usuario');
+        add(['colabNombreCompleto'], 'texto', 'Nombre completo');
+        add(['colabTelefono'], 'tel', 'Teléfono');
+        add(['colabEmail'], 'email', 'Email');
+        // OC
+        add(['direccionEntrega'], 'domicilio', 'Dirección de entrega');
+        add(['conceptoOC'], 'texto', 'Concepto');
+        add(['notasOC'], 'texto', 'Notas');
+        add(['cp'], 'cp', 'Código postal');
+        add(['sucursal', 'responsableEntregaOC', 'sucursalEntregaOC'], 'texto', 'Sucursal / responsable de entrega');
+        // Factura de OC
+        add(['facturaUUIDInput'], 'uuid', 'UUID de la factura');
+        add(['facturaNotaInput'], 'texto', 'Nota de la factura');
+        // OF
+        add(['ofRazonSocial'], 'texto', 'Razón social');
+        add(['ofRFC'], 'rfc', 'RFC');
+        add(['ofDireccion'], 'domicilio', 'Dirección');
+        add(['ofCP'], 'cp', 'CP');
+        // Catálogos VSC
+        add(['nvoVscCatNombre'], 'texto', 'Nombre');
+        return m;
+      })();
+
+      var RE_PROHIBIDOS_TEXTO = /[ÑñÁÉÍÓÚÜáéíóúü.#\/&%$"'´`¨]/;
+      function erroresReglaValor(valor, tipo) {
+        var v = String(valor == null ? '' : valor).trim();
+        if (!v) return [];
+        var e = [];
+        if (tipo === 'texto' || tipo === 'clave' || tipo === 'domicilio' || tipo === 'descripcion') {
+          if (/[Ññ]/.test(v)) e.push('no se admite la letra Ñ (escribe N)');
+          if (/[ÁÉÍÓÚÜáéíóúü´`¨]/.test(v)) e.push('no se admiten acentos');
+          // Domicilios y descripciones aceptan punto y coma ("," y ".").
+          if (tipo !== 'domicilio' && tipo !== 'descripcion' && /\./.test(v)) e.push('no se admiten puntos');
+          // Domicilios aceptan # (número exterior/interior); las
+          // descripciones aceptan caracteres especiales.
+          var especiales = tipo === 'descripcion' ? null : (tipo === 'domicilio' ? /[\/&%$"']/ : /[#\/&%$"']/);
+          if (especiales && especiales.test(v)) e.push(tipo === 'domicilio' ? 'no se admiten caracteres especiales (/ & % $ " \'); el # sí se admite' : 'no se admiten caracteres especiales (# / & % $ " \')');
+          if (/[a-z]/.test(v)) e.push('debe ir en MAYÚSCULAS');
+        }
+        if (tipo === 'clave') {
+          if (/\s/.test(v)) e.push('no se admiten espacios (usa guion bajo: OBRA_NORTE)');
+          if (/^[0-9]/.test(v)) e.push('no puede iniciar con número');
+          if (!e.length && !/^[A-Z][A-Z0-9_-]*$/.test(v)) e.push('solo letras, números, guion y guion bajo');
+        }
+        if (tipo === 'rfc' && !/^[A-Z]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(v)) e.push('RFC inválido: 12 caracteres (moral) o 13 (física), sin espacios ni guiones');
+        if (tipo === 'cp' && !/^[0-9]{5}$/.test(v)) e.push('el código postal lleva 5 dígitos');
+        if (tipo === 'clabe' && !/^[0-9]{18}$/.test(v)) e.push('la CLABE lleva 18 dígitos');
+        if (tipo === 'tel' && !/^(\+[0-9]{1,3})?[0-9]{10}$/.test(v)) e.push('el teléfono lleva 10 dígitos, con lada internacional opcional al inicio (+52), sin espacios ni guiones');
+        if (tipo === 'email' && !/^[A-Za-z0-9_+-]+(\.[A-Za-z0-9_+-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(v)) e.push('email inválido (usuario@dominio.com)');
+        if (tipo === 'uuid' && !/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/.test(v)) e.push('UUID inválido: 36 caracteres en grupos 8-4-4-4-12');
+        return e;
+      }
+      function marcarCampoRegla(el, errores) {
+        if (!el) return;
+        var idMsg = el.id + '__regla';
+        var msg = document.getElementById(idMsg);
+        if (errores.length) {
+          el.style.borderColor = '#c0392b'; el.style.boxShadow = '0 0 0 2px rgba(192,57,43,.18)';
+          el.setAttribute('aria-invalid', 'true');
+          if (!msg) { msg = document.createElement('div'); msg.id = idMsg; msg.style.cssText = 'color:#c0392b;font-size:11px;margin-top:3px;'; el.insertAdjacentElement('afterend', msg); }
+          msg.textContent = '⚠️ ' + errores.join('; ');
+        } else {
+          el.style.borderColor = ''; el.style.boxShadow = ''; el.removeAttribute('aria-invalid');
+          if (msg) msg.remove();
+        }
+      }
+      function erroresCamposVisibles(contenedor) {
+        var lista = [];
+        Object.keys(REGLAS_CAMPOS).forEach(function(id) {
+          var el = document.getElementById(id);
+          if (!el || el.disabled) return;
+          if (contenedor && !contenedor.contains(el)) return;
+          if (!contenedor && el.offsetParent === null) return;
+          var regla = REGLAS_CAMPOS[id];
+          var errs = erroresReglaValor(el.value, regla.tipo);
+          marcarCampoRegla(el, errs);
+          if (errs.length) lista.push('• ' + regla.etiqueta + ' ("' + el.value.trim() + '"): ' + errs.join('; '));
+        });
+        return lista;
+      }
+      function avisarErroresReglas(lista) {
+        alert('❌ No se puede guardar. Corrige estos datos según las reglas de captura:\n\n' + lista.join('\n'));
+      }
+      // Mayúsculas automáticas y marca en rojo mientras se escribe.
+      document.addEventListener('input', function(ev) {
+        var el = ev.target; if (!el || !el.id || !REGLAS_CAMPOS[el.id]) return;
+        var tipo = REGLAS_CAMPOS[el.id].tipo;
+        if (['texto', 'clave', 'rfc', 'uuid', 'domicilio', 'descripcion'].indexOf(tipo) !== -1 && el.value !== el.value.toUpperCase()) {
+          var pos = el.selectionStart; el.value = el.value.toUpperCase();
+          try { el.setSelectionRange(pos, pos); } catch (e) {}
+        }
+        marcarCampoRegla(el, erroresReglaValor(el.value, tipo));
+      }, true);
+      // Envuelve las funciones de guardado: si algún campo rompe una
+      // regla, se avisa y no se ejecuta el guardado.
+      [
+        ['agregarProveedorCatalogo', '#nuevoProveedorModal'], ['guardarEdicionProveedor', '#editarProveedorModal'],
+        ['guardarProdServ', '#prodServModal'], ['agregarProductoCatalogo', '#nuevoProductoModal'], ['guardarEdicionProducto', '#editarProductoModal'],
+        ['crearProyecto', '#panelProyecto'], ['guardarEdicionProyecto', '#editarProyectoModal'],
+        ['agregarAlmacen', null], ['guardarEdicionAlmacen', '#editarAlmacenModal'],
+        ['agregarVehiculo', null], ['guardarEdicionVehiculo', null],
+        ['agregarCliente', null], ['guardarEdicionCliente', '#editarClienteModal'],
+        ['guardarColaborador', '#colaboradorModal'],
+        ['previsualizarOC', '#panelOC'], ['confirmarDesdePreview', '#panelOC'],
+        ['agregarFacturaOC', '#adjuntarFacturaModal'], ['guardarOF', null],
+        ['agregarVscCatalogo', null], ['guardarEdicionVscCatalogo', null]
+      ].forEach(function(par) {
+        var nombre = par[0], selector = par[1];
+        var original = window[nombre];
+        if (typeof original !== 'function') return;
+        window[nombre] = function() {
+          var cont = selector ? document.querySelector(selector) : null;
+          var errores = erroresCamposVisibles(cont);
+          if (errores.length) { avisarErroresReglas(errores); return; }
+          return original.apply(this, arguments);
+        };
+      });
+      // Nombres de archivos adjuntos: sin Ñ, acentos, espacios, puntos
+      // (salvo la extensión) ni caracteres especiales, y sin iniciar con
+      // número. Las fotos tomadas con la cámara (ticket de vale) se
+      // exceptúan porque el celular les pone el nombre.
+      var ARCHIVOS_EXENTOS = ['valeTicketInput'];
+      function erroresNombreArchivo(nombre) {
+        var base = String(nombre || ''); var p = base.lastIndexOf('.');
+        var sinExt = p > 0 ? base.slice(0, p) : base;
+        var e = [];
+        if (/[Ññ]/.test(sinExt)) e.push('lleva Ñ');
+        if (/[ÁÉÍÓÚÜáéíóúü]/.test(sinExt)) e.push('lleva acentos');
+        if (/\s/.test(sinExt)) e.push('lleva espacios');
+        if (/\./.test(sinExt)) e.push('lleva puntos');
+        if (/[#\/&%$"'()\[\]{}!¡¿?,;:+=@~^*]/.test(sinExt)) e.push('lleva caracteres especiales');
+        if (/^[0-9]/.test(sinExt)) e.push('inicia con número');
+        if (/[a-z]/.test(sinExt)) e.push('no está en MAYÚSCULAS');
+        return e;
+      }
+      function revisarArchivos(files) {
+        var malos = [];
+        Array.prototype.forEach.call(files || [], function(f) {
+          var e = erroresNombreArchivo(f.name);
+          if (e.length) malos.push('• ' + f.name + ': ' + e.join(', '));
+        });
+        return malos;
+      }
+      document.addEventListener('change', function(ev) {
+        var el = ev.target;
+        if (!el || el.type !== 'file' || ARCHIVOS_EXENTOS.indexOf(el.id) !== -1) return;
+        var malos = revisarArchivos(el.files);
+        if (malos.length) {
+          ev.stopImmediatePropagation(); ev.preventDefault();
+          el.value = '';
+          alert('❌ Archivo no admitido. Renómbralo según las reglas (ej. COMPROBANTE_OC_FERREBAJIO.pdf):\n\n' + malos.join('\n'));
+        }
+      }, true);
+      document.addEventListener('drop', function(ev) {
+        var files = ev.dataTransfer && ev.dataTransfer.files;
+        if (!files || !files.length) return;
+        var malos = revisarArchivos(files);
+        if (malos.length) {
+          ev.stopImmediatePropagation(); ev.preventDefault();
+          alert('❌ Archivo no admitido. Renómbralo según las reglas (ej. COMPROBANTE_OC_FERREBAJIO.pdf):\n\n' + malos.join('\n'));
+        }
+      }, true);
+      window.__reglasCaptura = { erroresReglaValor: erroresReglaValor, erroresNombreArchivo: erroresNombreArchivo };
 
     })();
   </script>
