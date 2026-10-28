@@ -21593,7 +21593,7 @@
         if (!match) return;
         var concepto = document.getElementById('docCxpConcepto');
         if (concepto && !concepto.value.trim()) {
-          concepto.value = 'CARGA DE IAVE PARA VEHÍCULO ' + String(match.nombre).toUpperCase();
+          concepto.value = 'CARGA DE IAVE PARA VEHICULO ' + String(match.nombre).toUpperCase();
         }
       };
 
@@ -31213,7 +31213,7 @@
         function add(ids, tipo, etiqueta) { ids.forEach(function(id) { m[id] = { tipo: tipo, etiqueta: etiqueta }; }); }
         // Proveedores (alta y edición)
         ['nvoProv', 'edProv'].forEach(function(p) {
-          add([p + 'Nombre'], 'texto', 'Razón social');
+          add([p + 'Nombre'], 'razon', 'Razón social');
           add([p + 'NombreComercial'], 'texto', 'Nombre comercial');
           add([p + 'Sucursal'], 'texto', 'Sucursal');
           add([p + 'RFC'], 'rfc', 'RFC');
@@ -31224,28 +31224,34 @@
           add([p + 'CP'], 'cp', 'CP');
           add([p + 'Clave'], 'clabe', 'CLABE MXN');
           add([p + 'Banco', p + 'BancoUSD'], 'texto', 'Banco');
+          add([p + 'CuentaBancaria', p + 'CuentaBancariaUSD'], 'numero', 'Cuenta bancaria');
+          add([p + 'CIE', p + 'CIEUSD'], 'numero', 'CIE');
+          add([p + 'Swift', p + 'SwiftUSD'], 'swift', 'SWIFT');
+          add([p + 'ClaveUSD'], 'codigo', 'Clave USD (ABA / IBAN)');
         });
         // Productos y servicios por proveedor
         add(['psDescripcion'], 'descripcion', 'Descripción');
-        add(['psNumeroParte'], 'clave', 'Número de parte');
+        add(['psNumeroParte'], 'parte', 'Número de parte');
         add(['psMarca', 'psModelo'], 'texto', 'Marca / modelo');
         // Productos de inventario (alta y edición)
         ['nvoProd', 'edProd'].forEach(function(p) {
           add([p + 'Descripcion'], 'descripcion', 'Descripción');
-          add([p + 'NumeroParte'], 'clave', 'Número de parte');
+          add([p + 'NumeroParte'], 'parte', 'Número de parte');
           add([p + 'Marca', p + 'Modelo'], 'texto', 'Marca / modelo');
           add([p + 'Ubicacion'], 'clave', 'Ubicación');
         });
         // Proyectos
         add(['nombreProyecto'], 'clave', 'Nombre del proyecto');
         add(['direccionProyecto', 'edProyectoDireccion'], 'domicilio', 'Dirección del servicio');
+        add(['edProyectoCliente'], 'texto', 'Cliente');
+        add(['edProyectoCentroTrabajo'], 'texto', 'Centro de trabajo');
         // Almacenes y vehículos
         add(['nvoAlmNombre', 'edAlmNombre'], 'clave', 'Nombre del almacén');
         add(['nvoVehNombre', 'edVehNombre'], 'clave', 'Nombre del vehículo');
         add(['nvoVehPlacas', 'edVehPlacas'], 'clave', 'Placas');
         // Clientes
         ['nvoCliente', 'edCliente'].forEach(function(p) {
-          add([p + 'Nombre'], 'texto', 'Nombre del cliente');
+          add([p + 'Nombre'], 'razon', 'Nombre del cliente');
           add([p + 'CentroNegocio'], 'texto', 'Centro de negocio');
           add([p + 'RFC'], 'rfc', 'RFC');
           add([p + 'DireccionFiscal'], 'domicilio', 'Dirección fiscal');
@@ -31255,46 +31261,76 @@
         add(['colabNombreCompleto'], 'texto', 'Nombre completo');
         add(['colabTelefono'], 'tel', 'Teléfono');
         add(['colabEmail'], 'email', 'Email');
+        add(['colabTelegram'], 'chatid', 'Chat ID de Telegram');
         // OC
         add(['direccionEntrega'], 'domicilio', 'Dirección de entrega');
         add(['conceptoOC'], 'texto', 'Concepto');
         add(['notasOC'], 'texto', 'Notas');
         add(['cp'], 'cp', 'Código postal');
         add(['sucursal', 'responsableEntregaOC', 'sucursalEntregaOC'], 'texto', 'Sucursal / responsable de entrega');
+        add(['referencia'], 'texto', 'Referencia de pago');
+        add(['editarJustificacionOC'], 'descripcion', 'Justificación de la edición');
         // Factura de OC
         add(['facturaUUIDInput'], 'uuid', 'UUID de la factura');
         add(['facturaNotaInput'], 'texto', 'Nota de la factura');
         // OF
-        add(['ofRazonSocial'], 'texto', 'Razón social');
+        add(['ofRazonSocial'], 'razon', 'Razón social');
+        add(['ofODCContrato'], 'texto', 'ODC o contrato');
+        add(['ofOCNumero'], 'texto', 'Número de OC');
+        add(['aprobarOFFolio'], 'codigo', 'Folio de factura');
+        add(['ofCancelacionUuid'], 'uuid', 'UUID del CFDI que sustituye');
+        add(['ofCancelacionComentario', 'comprobantePagoOFRazonDiferencia'], 'descripcion', 'Comentario');
+        // CXC / documentos CXP
+        add(['cxcCliente'], 'texto', 'Cliente');
+        add(['cxcOCContrato'], 'texto', 'OC / contrato');
+        add(['cxcConcepto', 'docCxpConcepto'], 'descripcion', 'Concepto');
+        add(['cxcFolioFactura', 'docCxpFolio'], 'codigo', 'Folio');
+        add(['docCxpBeneficiario'], 'texto', 'Beneficiario');
+        // Inventario: movimiento manual
+        add(['inventarioMovMotivo'], 'descripcion', 'Motivo / referencia');
         add(['ofRFC'], 'rfc', 'RFC');
         add(['ofDireccion'], 'domicilio', 'Dirección');
         add(['ofCP'], 'cp', 'CP');
         // Catálogos VSC
-        add(['nvoVscCatNombre'], 'texto', 'Nombre');
+        add(['nvoVscCatNombre', 'edVscCatNombre'], 'texto', 'Nombre');
         return m;
       })();
 
+      var RE_SOCIEDAD = /\s(S ?A( ?P ?I| ?B)?( DE C ?V)?|S DE R ?L( DE C ?V)?|S ?R ?L|S ?C|S ?A ?S|S ?P ?R( DE R ?L)?|S ?C ?P|S DE S ?S)$/;
       var RE_PROHIBIDOS_TEXTO = /[ÑñÁÉÍÓÚÜáéíóúü.#\/&%$"'´`¨]/;
       function erroresReglaValor(valor, tipo) {
         var v = String(valor == null ? '' : valor).trim();
         if (!v) return [];
         var e = [];
-        if (tipo === 'texto' || tipo === 'clave' || tipo === 'domicilio' || tipo === 'descripcion') {
+        if (tipo === 'texto' || tipo === 'razon' || tipo === 'clave' || tipo === 'parte' || tipo === 'domicilio' || tipo === 'descripcion') {
           if (/[Ññ]/.test(v)) e.push('no se admite la letra Ñ (escribe N)');
           if (/[ÁÉÍÓÚÜáéíóúü´`¨]/.test(v)) e.push('no se admiten acentos');
           // Domicilios y descripciones aceptan punto y coma ("," y ".").
-          if (tipo !== 'domicilio' && tipo !== 'descripcion' && /\./.test(v)) e.push('no se admiten puntos');
+          if (tipo !== 'domicilio' && tipo !== 'descripcion' && tipo !== 'parte' && /\./.test(v)) e.push('no se admiten puntos');
           // Domicilios aceptan # (número exterior/interior); las
           // descripciones aceptan caracteres especiales.
-          var especiales = tipo === 'descripcion' ? null : (tipo === 'domicilio' ? /[\/&%$"']/ : /[#\/&%$"']/);
+          var especiales = tipo === 'descripcion' ? null : tipo === 'parte' ? /[#&%$"']/ : (tipo === 'domicilio' ? /[\/&%$"']/ : /[#\/&%$"']/);
           if (especiales && especiales.test(v)) e.push(tipo === 'domicilio' ? 'no se admiten caracteres especiales (/ & % $ " \'); el # sí se admite' : 'no se admiten caracteres especiales (# / & % $ " \')');
           if (/[a-z]/.test(v)) e.push('debe ir en MAYÚSCULAS');
+        }
+        // Número de parte (excepción): es el código del fabricante o del
+        // proveedor, así que SÍ puede iniciar con número y llevar guion,
+        // guion bajo, diagonal, punto y +. Sin espacios, Ñ ni acentos.
+        if (tipo === 'parte') {
+          if (/\s/.test(v)) e.push('no se admiten espacios');
+          if (!e.length && !/^[A-Z0-9][A-Z0-9_\-\/.+]*$/.test(v)) e.push('solo letras MAYÚSCULAS, números, guion, guion bajo, / . y +');
         }
         if (tipo === 'clave') {
           if (/\s/.test(v)) e.push('no se admiten espacios (usa guion bajo: OBRA_NORTE)');
           if (/^[0-9]/.test(v)) e.push('no puede iniciar con número');
           if (!e.length && !/^[A-Z][A-Z0-9_-]*$/.test(v)) e.push('solo letras, números, guion y guion bajo');
         }
+        // Razón social: sin la sociedad (SA DE CV, SAPI, S DE RL, SC, AC, SAS...).
+        if (tipo === 'razon' && RE_SOCIEDAD.test(v.replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim())) e.push('no incluyas la sociedad en la razón social (escribe ANSUL, no ANSUL SA DE CV)');
+        if (tipo === 'numero' && !/^[0-9]+$/.test(v)) e.push('solo números, sin espacios ni guiones');
+        if (tipo === 'codigo' && !/^[A-Z0-9_-]+$/.test(v)) e.push('solo letras MAYÚSCULAS, números y guion, sin espacios, Ñ, acentos ni puntos');
+        if (tipo === 'swift' && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(v)) e.push('SWIFT inválido: 8 u 11 caracteres, sin espacios');
+        if (tipo === 'chatid' && !/^-?[0-9]+$/.test(v)) e.push('el chat ID de Telegram lleva solo números');
         if (tipo === 'rfc' && !/^[A-Z]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(v)) e.push('RFC inválido: 12 caracteres (moral) o 13 (física), sin espacios ni guiones');
         if (tipo === 'cp' && !/^[0-9]{5}$/.test(v)) e.push('el código postal lleva 5 dígitos');
         if (tipo === 'clabe' && !/^[0-9]{18}$/.test(v)) e.push('la CLABE lleva 18 dígitos');
@@ -31329,6 +31365,16 @@
           marcarCampoRegla(el, errs);
           if (errs.length) lista.push('• ' + regla.etiqueta + ' ("' + el.value.trim() + '"): ' + errs.join('; '));
         });
+        // Partidas de la OC (filas creadas por el sistema, sin id): la
+        // descripción sigue la regla de descripciones.
+        var raiz = contenedor || document;
+        Array.prototype.forEach.call(raiz.querySelectorAll('#panelOC textarea.desc, #editarProductosOCModal textarea.desc'), function(el, n) {
+          if (el.disabled || (!contenedor && el.offsetParent === null)) return;
+          var errs = erroresReglaValor(el.value, 'descripcion');
+          if (!el.id) el.id = 'partidaDesc_' + Date.now() + '_' + n;
+          marcarCampoRegla(el, errs);
+          if (errs.length) lista.push('• Descripción de la partida ("' + el.value.trim() + '"): ' + errs.join('; '));
+        });
         return lista;
       }
       function avisarErroresReglas(lista) {
@@ -31336,9 +31382,12 @@
       }
       // Mayúsculas automáticas y marca en rojo mientras se escribe.
       document.addEventListener('input', function(ev) {
-        var el = ev.target; if (!el || !el.id || !REGLAS_CAMPOS[el.id]) return;
-        var tipo = REGLAS_CAMPOS[el.id].tipo;
-        if (['texto', 'clave', 'rfc', 'uuid', 'domicilio', 'descripcion'].indexOf(tipo) !== -1 && el.value !== el.value.toUpperCase()) {
+        var el = ev.target; if (!el) return;
+        var esPartida = el.matches && el.matches('#panelOC textarea.desc, #editarProductosOCModal textarea.desc');
+        if (!esPartida && (!el.id || !REGLAS_CAMPOS[el.id])) return;
+        var tipo = esPartida ? 'descripcion' : REGLAS_CAMPOS[el.id].tipo;
+        if (esPartida && !el.id) el.id = 'partidaDesc_' + Date.now();
+        if (['texto', 'razon', 'clave', 'parte', 'rfc', 'uuid', 'domicilio', 'descripcion', 'codigo', 'swift'].indexOf(tipo) !== -1 && el.value !== el.value.toUpperCase()) {
           var pos = el.selectionStart; el.value = el.value.toUpperCase();
           try { el.setSelectionRange(pos, pos); } catch (e) {}
         }
@@ -31356,7 +31405,12 @@
         ['guardarColaborador', '#colaboradorModal'],
         ['previsualizarOC', '#panelOC'], ['confirmarDesdePreview', '#panelOC'],
         ['agregarFacturaOC', '#adjuntarFacturaModal'], ['guardarOF', null],
-        ['agregarVscCatalogo', null], ['guardarEdicionVscCatalogo', null]
+        ['agregarVscCatalogo', '#panelVehiculos'], ['guardarEdicionVscCatalogo', '#editarVscCatalogoModal'],
+        ['guardarEdicionProductosOC', '#editarProductosOCModal'],
+        ['registrarMovimientoManualInventario', '#panelInventario'],
+        ['confirmarAprobarOF', '#aprobarOFModal'], ['confirmarSolicitudCancelacionOF', '#ofCancelacionModal'],
+        ['confirmarComprobantePagoOF', '#comprobantePagoOFModal'],
+        ['agregarCXC', '#agregarCXCModal'], ['agregarDocumentoCXP', '#agregarDocumentoCXPModal']
       ].forEach(function(par) {
         var nombre = par[0], selector = par[1];
         var original = window[nombre];
