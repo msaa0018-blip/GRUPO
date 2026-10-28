@@ -1366,7 +1366,7 @@
   }
 
   /* ===== MODAL: EDITAR PRODUCTOS DE UNA OC (solo Administrador) ===== */
-  #editarProductosOCModal, #almacenesDashboardModal, #almacenProductosModal {
+  #editarProductosOCModal, #almacenesDashboardModal, #almacenProductosModal, #imprimirOCPeriodoModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1383,8 +1383,8 @@
     padding: 16px;
     box-sizing: border-box;
   }
-  #editarProductosOCModal.active, #almacenesDashboardModal.active, #almacenProductosModal.active { display: flex }
-  #editarProductosOCModal .modal-content, #almacenesDashboardModal .modal-content, #almacenProductosModal .modal-content {
+  #editarProductosOCModal.active, #almacenesDashboardModal.active, #almacenProductosModal.active, #imprimirOCPeriodoModal.active { display: flex }
+  #editarProductosOCModal .modal-content, #almacenesDashboardModal .modal-content, #almacenProductosModal .modal-content, #imprimirOCPeriodoModal .modal-content {
     background: var(--modal-surface);
     border-radius: var(--modal-radius);
     border: 1px solid var(--modal-border);
@@ -1398,7 +1398,7 @@
     flex-direction: column;
     box-sizing: border-box;
   }
-  #editarProductosOCModal .modal-header, #almacenesDashboardModal .modal-header, #almacenProductosModal .modal-header {
+  #editarProductosOCModal .modal-header, #almacenesDashboardModal .modal-header, #almacenProductosModal .modal-header, #imprimirOCPeriodoModal .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1408,9 +1408,9 @@
     border-bottom: 2px solid var(--modal-accent);
     padding-bottom: 12px;
   }
-  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
-  #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group, #almacenProductosModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
-  #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body, #almacenProductosModal .modal-body { overflow: auto; }
+  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h, #imprimirOCPeriodoModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
+  #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group, #almacenProductosModal .modal-header .pdfPreview-btn-group, #imprimirOCPeriodoModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
+  #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body, #almacenProductosModal .modal-body, #imprimirOCPeriodoModal .modal-body { overflow: auto; }
 
   .almacen-kpi-card {
     background: var(--gray-100);
@@ -5505,6 +5505,23 @@
           <span class="fecha-actualizacion" id="indicadoresFecha">Actualizando...</span>
         </div>
 
+        <!-- Periodo de los indicadores: tiempo real (mes actual, se
+             actualiza solo) o un mes, un año o un rango de fechas. -->
+        <div id="indicadoresPeriodoBar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 14px;">
+          <select id="indPeriodoModo" onchange="window.cambiarPeriodoIndicadores()" style="flex:1 1 220px;max-width:280px;" title="Periodo de los indicadores">
+            <option value="tiempo_real">🟢 Tiempo real (mes actual)</option>
+            <option value="mes">📅 Por mes</option>
+            <option value="anio">🗓️ Por año</option>
+            <option value="rango">↔️ Por periodo (desde / hasta)</option>
+          </select>
+          <select id="indPeriodoMes" class="hidden" onchange="window.cambiarPeriodoIndicadores()" style="flex:1 1 140px;max-width:180px;"></select>
+          <select id="indPeriodoAnio" class="hidden" onchange="window.cambiarPeriodoIndicadores()" style="flex:1 1 110px;max-width:140px;"></select>
+          <input id="indPeriodoDesde" type="date" class="hidden" onchange="window.cambiarPeriodoIndicadores()" style="flex:1 1 150px;max-width:180px;" title="Desde">
+          <input id="indPeriodoHasta" type="date" class="hidden" onchange="window.cambiarPeriodoIndicadores()" style="flex:1 1 150px;max-width:180px;" title="Hasta">
+          <button onclick="window.actualizarIndicadoresAhora()" style="flex:0 0 auto;width:auto;">🔄 Actualizar ahora</button>
+          <span id="indPeriodoEtiqueta" style="flex:1 1 100%;font-size:12px;color:var(--gray-600);"></span>
+        </div>
+
         <!-- KPIs (40%) + Radar Ejecutivo (60%) -->
         <div class="indicadores-top-layout">
           <div class="indicadores-kpi-col">
@@ -6461,6 +6478,57 @@
         </div>
       </div>
 
+      <!-- ===== IMPRIMIR OC DEL DEPARTAMENTO POR PERIODO ===== -->
+      <div id="imprimirOCPeriodoModal">
+        <div class="modal-content" style="max-width:560px;">
+          <div class="modal-header">
+            <h3>🖨️ Imprimir OC del departamento</h3>
+            <div class="pdfPreview-btn-group">
+              <button onclick="window.cerrarImprimirOCPeriodo()">✕</button>
+              <button class="success" onclick="window.generarImpresionOCPeriodo()">✔️</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">Departamento:</label>
+              <select id="impOCDepto"></select>
+            </div>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">Periodo:</label>
+              <select id="impOCAtajo" onchange="window.aplicarAtajoImprimirOC()">
+                <option value="mes">Mes actual</option>
+                <option value="mes_ant">Mes anterior</option>
+                <option value="anio">Año actual</option>
+                <option value="libre">Elegir fechas</option>
+              </select>
+              <div class="flex" style="margin-top:6px;">
+                <label style="flex:0 0 auto;min-width:0;">Desde:</label><input id="impOCDesde" type="date" onchange="document.getElementById('impOCAtajo').value='libre'">
+                <label style="flex:0 0 auto;min-width:0;">Hasta:</label><input id="impOCHasta" type="date" onchange="document.getElementById('impOCAtajo').value='libre'">
+              </div>
+            </div>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">Tomar la fecha de:</label>
+              <select id="impOCBaseFecha">
+                <option value="creacion">Creación de la OC</option>
+                <option value="pago">Fecha de pago</option>
+              </select>
+            </div>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">Qué imprimir:</label>
+              <select id="impOCTipo">
+                <option value="listado">Listado de OC con totales (1 reporte)</option>
+                <option value="completas">Cada OC completa, en su formato (un solo PDF)</option>
+              </select>
+            </div>
+            <div class="grupo-formulario">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input id="impOCIncluirCanceladas" type="checkbox" style="width:auto;min-height:0;"> Incluir OC canceladas</label>
+            </div>
+            <div id="impOCResumen" style="font-size:13px;color:var(--gray-700);"></div>
+            <div id="msgImprimirOCPeriodo"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== BANDEJA DE OC ===== -->
       <div class="card modal-card hidden" id="bandejaOCCard">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -6547,6 +6615,7 @@
           <button id="btnPendientesPagar" class="btn-pendientes-pagar hidden" onclick="window.filtrarPendientesPagar()">💰 Pendientes por Pagar</button>
           <button id="btnLimpiarFiltros" class="btn-pendientes-pagar hidden" onclick="window.limpiarFiltros()" style="background:var(--color-gris);">🗑️ Limpiar Filtros</button>
           <button id="btnToggleMisOC" class="btn-pendientes-pagar" onclick="window.toggleVerSoloMisOC()" style="background:var(--color-azul);">👤 Solo mis OC</button>
+          <button id="btnImprimirOCPeriodo" class="btn-pendientes-pagar" onclick="window.abrirImprimirOCPeriodo()" style="background:var(--color-azul);">🖨️ Imprimir OC del periodo</button>
         </div>
         <div id="resumenTotales" class="resumen-totales"></div>
         <div class="table-wrapper">
@@ -16132,12 +16201,13 @@
             // Cargar indicadores
             panelIndicadores.classList.remove('hidden');
             panelIndicadores.classList.add('visible');
+            prepararPeriodoIndicadores();
             cargarIndicadores();
-            // Actualizar cada 60 segundos
+            // Tiempo real: se vuelven a leer los datos cada 30 segundos.
             if (indicadoresTimer) clearInterval(indicadoresTimer);
             indicadoresTimer = setInterval(function() {
               cargarIndicadores();
-            }, 60000);
+            }, 30000);
           });
           return;
         }
@@ -16403,6 +16473,115 @@
       }
 
       // ============================================================
+      // PERIODO DE LOS INDICADORES
+      // ============================================================
+      var MESES_IND = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      function aISOFechaInd(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+      function prepararPeriodoIndicadores() {
+        var selMes = document.getElementById('indPeriodoMes');
+        var selAnio = document.getElementById('indPeriodoAnio');
+        if (!selMes || !selAnio) return;
+        var hoy = new Date();
+        if (!selMes.options.length) {
+          selMes.innerHTML = MESES_IND.map(function(m, i) { return '<option value="' + i + '">' + m + '</option>'; }).join('');
+          selMes.value = String(hoy.getMonth());
+        }
+        // Años: desde la OC más antigua (o 5 años atrás) hasta el actual.
+        var anioMin = hoy.getFullYear() - 4;
+        (ordenes || []).forEach(function(o) {
+          var a = fechaSoloDia(o.fechacreacion).getFullYear();
+          if (a && a < anioMin && a > 2000) anioMin = a;
+        });
+        var previo = selAnio.value;
+        var html = '';
+        for (var a = hoy.getFullYear(); a >= anioMin; a--) html += '<option value="' + a + '">' + a + '</option>';
+        selAnio.innerHTML = html;
+        selAnio.value = previo || String(hoy.getFullYear());
+        var desde = document.getElementById('indPeriodoDesde');
+        var hasta = document.getElementById('indPeriodoHasta');
+        if (desde && !desde.value) desde.value = aISOFechaInd(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+        if (hasta && !hasta.value) hasta.value = aISOFechaInd(hoy);
+      }
+      function rangoPeriodoIndicadores() {
+        var hoy = new Date();
+        var modo = (document.getElementById('indPeriodoModo') || {}).value || 'tiempo_real';
+        var mes = parseInt((document.getElementById('indPeriodoMes') || {}).value, 10);
+        var anio = parseInt((document.getElementById('indPeriodoAnio') || {}).value, 10);
+        if (isNaN(mes)) mes = hoy.getMonth();
+        if (isNaN(anio)) anio = hoy.getFullYear();
+        var r;
+        if (modo === 'mes') {
+          r = { ini: new Date(anio, mes, 1), fin: new Date(anio, mes + 1, 1), etiqueta: MESES_IND[mes] + ' ' + anio };
+        } else if (modo === 'anio') {
+          r = { ini: new Date(anio, 0, 1), fin: new Date(anio + 1, 0, 1), etiqueta: 'Año ' + anio };
+        } else if (modo === 'rango') {
+          var vd = (document.getElementById('indPeriodoDesde') || {}).value;
+          var vh = (document.getElementById('indPeriodoHasta') || {}).value;
+          var ini = vd ? fechaSoloDia(vd) : new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+          var finIncl = vh ? fechaSoloDia(vh) : hoy;
+          if (finIncl < ini) { var t = ini; ini = finIncl; finIncl = t; }
+          var fin = new Date(finIncl.getFullYear(), finIncl.getMonth(), finIncl.getDate() + 1);
+          r = { ini: ini, fin: fin, etiqueta: ini.toLocaleDateString('es-MX') + ' al ' + finIncl.toLocaleDateString('es-MX') };
+        } else {
+          r = { ini: new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin: new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1),
+                etiqueta: MESES_IND[hoy.getMonth()] + ' ' + hoy.getFullYear() + ' (tiempo real)', esTiempoReal: true };
+        }
+        r.modo = modo;
+        r.esTiempoReal = !!r.esTiempoReal;
+        r.porDia = (r.fin - r.ini) / 86400000 <= 62;
+        return r;
+      }
+      function fechaEnPeriodoInd(v, r) {
+        if (!v) return false;
+        var d = fechaSoloDia(v);
+        return !isNaN(d) && d >= r.ini && d < r.fin;
+      }
+      function cxcParaIndicadores(r) {
+        var lista = cuentasCXC || [];
+        if (r.esTiempoReal) return lista;
+        return lista.filter(function(c) { return fechaEnPeriodoInd(c.fecha_pago || c.fecha_factura || c.fecha || c.created_at, r); });
+      }
+      function serieComprasVentasInd(r, compras, ventas) {
+        var claves = [], etiquetas = [], idx = {};
+        var d = new Date(r.ini);
+        while (d < r.fin) {
+          var k = r.porDia ? aISOFechaInd(d) : (d.getFullYear() + '-' + d.getMonth());
+          idx[k] = claves.length; claves.push(k);
+          etiquetas.push(r.porDia ? String(d.getDate()) + (r.modo === 'rango' ? '/' + (d.getMonth() + 1) : '') : MESES_IND[d.getMonth()].slice(0, 3) + (r.modo === 'anio' ? '' : ' ' + String(d.getFullYear()).slice(2)));
+          d = r.porDia ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1) : new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        }
+        var vc = claves.map(function() { return 0; }), vv = claves.map(function() { return 0; });
+        function clave(v) { var f = fechaSoloDia(v); return r.porDia ? aISOFechaInd(f) : (f.getFullYear() + '-' + f.getMonth()); }
+        compras.forEach(function(o) { var i = idx[clave(o.fechacreacion)]; if (i !== undefined) vc[i] += Number(o.montomxn || o.montototal) || 0; });
+        ventas.forEach(function(c) { var i = idx[clave(c.fecha_pago)]; if (i !== undefined) vv[i] += Number(c.importe) || 0; });
+        return { etiquetas: etiquetas, compras: vc.map(function(x) { return Math.round(x * 100) / 100; }), ventas: vv.map(function(x) { return Math.round(x * 100) / 100; }) };
+      }
+      function actualizarEtiquetasPeriodoInd(r) {
+        var et = document.getElementById('indPeriodoEtiqueta');
+        if (et) et.textContent = r.esTiempoReal
+          ? '🟢 Tiempo real: compras, ventas y balance de ' + r.etiqueta.replace(' (tiempo real)', '') + '; el resto es el acumulado. Se actualiza solo cada 30 segundos.'
+          : '📌 Periodo: ' + r.etiqueta + '. Todos los indicadores se calculan con las OC creadas y las CXC cobradas en este periodo.';
+        var sufijo = r.esTiempoReal ? 'del mes' : '— ' + r.etiqueta;
+        var h1 = document.querySelector('.chart-card[data-chart="compras_mes"] h4');
+        var h2 = document.querySelector('.chart-card[data-chart="ventas_mes"] h4');
+        if (h1) h1.textContent = '📈 Compras ' + sufijo;
+        if (h2) h2.textContent = '📈 Ventas ' + sufijo;
+      }
+      window.cambiarPeriodoIndicadores = function() {
+        var modo = (document.getElementById('indPeriodoModo') || {}).value || 'tiempo_real';
+        var vis = { indPeriodoMes: modo === 'mes', indPeriodoAnio: modo === 'mes' || modo === 'anio', indPeriodoDesde: modo === 'rango', indPeriodoHasta: modo === 'rango' };
+        Object.keys(vis).forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.toggle('hidden', !vis[id]); });
+        procesarIndicadores();
+      };
+      window.actualizarIndicadoresAhora = function() {
+        var fechaEl = document.getElementById('indicadoresFecha');
+        if (fechaEl) fechaEl.textContent = 'Actualizando...';
+        cargarIndicadores();
+      };
+
+      // ============================================================
       // FUNCIÓN PARA CARGAR INDICADORES
       // ============================================================
       async function cargarIndicadores() {
@@ -16433,6 +16612,7 @@
           proyectos = proyData.data || [];
           cuentasCXC = cxcData.data || [];
           ordenesFacturacion = ofData.data || [];
+          prepararPeriodoIndicadores();
 
           var tiempoCarga = Date.now() - inicio;
           console.log('📊 Indicadores cargados en ' + tiempoCarga + 'ms');
@@ -16471,6 +16651,15 @@
           // mostrando el total del grupo.
           var ordenes = filtrarOCSegunUsuario(actual);
           var proyectos = filtrarProyectosSegunUsuario(actual);
+          // Periodo elegido: en "tiempo real" las compras/ventas son del
+          // mes actual y el resto es el acumulado (como siempre). En mes,
+          // año o rango TODOS los indicadores se calculan solo con las OC
+          // creadas y las CXC cobradas dentro de ese periodo.
+          var rangoInd = rangoPeriodoIndicadores();
+          if (!rangoInd.esTiempoReal) {
+            ordenes = ordenes.filter(function(o) { return fechaEnPeriodoInd(o.fechacreacion, rangoInd); });
+          }
+          var cuentasCXC = cxcParaIndicadores(rangoInd);
 
           // Versión de gastoProyectoMoneda acotada al alcance del usuario
           // (usa las variables ordenes/proyectos locales de arriba, no las
@@ -16519,17 +16708,18 @@
           // ========== KPI ==========
           // 1. Compras del mes (OC creadas en el mes)
           var comprasMes = ordenes.filter(function(o) {
-            var fecha = new Date(o.fechacreacion);
-            return fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual;
+            return o.estado !== 'CANCELADA' && fechaEnPeriodoInd(o.fechacreacion, rangoInd);
           });
-          var totalComprasMes = comprasMes.reduce(function(s, o) { return s + (o.montototal || 0); }, 0);
+          var totalComprasMes = comprasMes.reduce(function(s, o) { return s + (Number(o.montomxn) || (o.moneda === 'USD' ? 0 : Number(o.montototal)) || 0); }, 0); // equivalente en MXN (antes sumaba USD como si fueran pesos)
 
           // 2. Ventas del mes (CXC pagadas en el mes)
           var ventasMes = cuentasCXC.filter(function(c) {
             if (c.estado !== 'PAGADO') return false;
-            var fecha = new Date(c.fecha_pago);
-            return fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual;
+            return fechaEnPeriodoInd(c.fecha_pago, rangoInd);
           });
+          // Serie para las gráficas de compras y ventas (datos reales:
+          // por día si el periodo es de hasta 62 días, si no por mes).
+          var serieInd = serieComprasVentasInd(rangoInd, comprasMes, ventasMes);
           var totalVentasMes = ventasMes.reduce(function(s, c) { return s + (c.importe || 0); }, 0);
 
           // 2b. Balance del mes: compras del mes vs ventas del mes,
@@ -16815,8 +17005,11 @@
             balanceMesLista: balanceMesLista,
             balanceMesTotal: totalVentasMes - totalComprasMes,
             paqueteriaLista: paqueteriaLista,
-            paqueteriaTotal: paqueteriaTotal
+            paqueteriaTotal: paqueteriaTotal,
+            serie: serieInd,
+            periodo: rangoInd
           };
+          actualizarEtiquetasPeriodoInd(rangoInd);
 
           // Renderizar KPI
           renderKPI();
@@ -16844,14 +17037,14 @@
         var kpis = [{
           icono: '🛒',
           valor: '$' + formatearNumeroMexico(d.comprasMes, true),
-          label: 'Compras del mes',
+          label: (d.periodo && !d.periodo.esTiempoReal) ? 'Compras del periodo' : 'Compras del mes',
           cambio: d.comprasMesCount + ' OC',
           clase: 'border-primary kpi-compras-mes',
           click: function() { window.abrirIndicadorComprasMes(); }
         }, {
           icono: '💵',
           valor: '$' + formatearNumeroMexico(d.ventasMes, true),
-          label: 'Ventas del mes',
+          label: (d.periodo && !d.periodo.esTiempoReal) ? 'Ventas del periodo' : 'Ventas del mes',
           cambio: d.ventasMesCount + ' facturas',
           clase: 'border-green kpi-ventas-mes',
           click: function() { window.abrirIndicadorVentasMes(); }
@@ -16872,7 +17065,7 @@
         }, {
           icono: '⚖️',
           valor: (d.balanceMesTotal >= 0 ? '+' : '-') + '$' + formatearNumeroMexico(Math.abs(d.balanceMesTotal), true),
-          label: 'Balance del mes',
+          label: (d.periodo && !d.periodo.esTiempoReal) ? 'Balance del periodo' : 'Balance del mes',
           cambio: 'Compras vs Ventas',
           clase: d.balanceMesTotal >= 0 ? 'border-green' : 'border-red',
           click: function() { window.abrirIndicadorBalanceMes(); }
@@ -17278,11 +17471,10 @@
 
         // 1. Compras del mes (simulando días)
         var ctx1 = document.getElementById('chartComprasMes');
+        var serieGraf = (d && d.serie) || { etiquetas: [], compras: [], ventas: [] };
+        var dias = serieGraf.etiquetas;
         if (ctx1) {
-          var dias = ['1', '5', '10', '15', '20', '25', '30'];
-          var valores = dias.map(function() {
-            return Math.round(1000 + Math.random() * 9000);
-          });
+          var valores = serieGraf.compras;
           chartsInstances.comprasMes = new Chart(ctx1, {
             type: 'bar',
             data: {
@@ -17312,9 +17504,7 @@
         // 2. Ventas del mes
         var ctx2 = document.getElementById('chartVentasMes');
         if (ctx2) {
-          var valores2 = dias.map(function() {
-            return Math.round(500 + Math.random() * 5000);
-          });
+          var valores2 = serieGraf.ventas;
           chartsInstances.ventasMes = new Chart(ctx2, {
             type: 'bar',
             data: {
@@ -17457,8 +17647,10 @@
               responsive: true,
               maintainAspectRatio: false,
               plugins: { legend: { display: false } },
+              // Barras horizontales: el eje Y lleva los nombres y el X los montos.
               scales: {
-                y: { beginAtZero: true, ticks: { callback: function(v) { return '$' + v.toLocaleString(); } } }
+                x: { beginAtZero: true, ticks: { callback: function(v) { return '$' + Number(v).toLocaleString(); } } },
+                y: { ticks: { autoSkip: false } }
               },
               indexAxis: 'y'
             }
@@ -17489,8 +17681,10 @@
               responsive: true,
               maintainAspectRatio: false,
               plugins: { legend: { display: false } },
+              // Barras horizontales: el eje Y lleva los nombres y el X los montos.
               scales: {
-                y: { beginAtZero: true, ticks: { callback: function(v) { return '$' + v.toLocaleString(); } } }
+                x: { beginAtZero: true, ticks: { callback: function(v) { return '$' + Number(v).toLocaleString(); } } },
+                y: { ticks: { autoSkip: false } }
               },
               indexAxis: 'y'
             }
@@ -29255,12 +29449,7 @@
         if (typeof window.actualizarDatosOC === 'function') window.actualizarDatosOC();
       }
 
-      window.imprimirOC = async function(index) {
-        var oc = ordenes[index];
-        if (!oc) return alert('OC no encontrada');
-        try {
-          var proyecto = proyectoDeOC(oc);
-          if (!proyecto) return alert('Proyecto no encontrado');
+      function datosOCParaPDF(oc, proyecto) {
           var productos = oc.productos || [];
           if (typeof productos === 'string') {
             try { productos = JSON.parse(productos); } catch (e) { productos = []; }
@@ -29308,6 +29497,16 @@
             provTelefono: oc.proveedor_telefono || '',
             provEmail: oc.proveedor_email || ''
           };
+          return datosOC;
+      }
+
+      window.imprimirOC = async function(index) {
+        var oc = ordenes[index];
+        if (!oc) return alert('OC no encontrada');
+        try {
+          var proyecto = proyectoDeOC(oc);
+          if (!proyecto) return alert('Proyecto no encontrado');
+          var datosOC = datosOCParaPDF(oc, proyecto);
           var doc = await generarPDFParaPreview(datosOC, oc);
           await imprimirPDFSeguro(doc, oc.codigo, function() { doc.save(oc.codigo + '.pdf'); });
         } catch (error) {
@@ -31244,6 +31443,191 @@
         nameDisplay.textContent = nombreMostrar;
         container.classList.remove('hidden');
       }
+
+      // ============================================================
+      // BANDEJA DE OC: IMPRIMIR TODAS LAS OC DEL DEPARTAMENTO POR PERIODO
+      // Solo incluye OC que el usuario puede ver (filtrarOCSegunUsuario).
+      // Dos formatos: listado con totales (1 reporte) o cada OC completa
+      // en su formato, unidas en un solo PDF.
+      // ============================================================
+      function grupoDeptoOC(o) {
+        var p = proyectoDeOC(o);
+        var emp = (p && p.empresa) || o.empresa || '';
+        var dep = (p && p.departamento) || o.departamento || '';
+        return { empresa: emp, departamento: dep, clave: emp + '|' + dep };
+      }
+      function textoGrupoDepto(g) {
+        var ab = getAbreviaturaEmpresa(g.empresa);
+        return (ab && ab !== g.empresa ? ab : g.empresa || 'SIN EMPRESA') + ' — ' + (g.departamento || 'SIN DEPARTAMENTO');
+      }
+      window.abrirImprimirOCPeriodo = function() {
+        if (!actual) return;
+        var lista = filtrarOCSegunUsuario(actual);
+        var grupos = {};
+        lista.forEach(function(o) { var g = grupoDeptoOC(o); if (g.empresa || g.departamento) grupos[g.clave] = g; });
+        var claves = Object.keys(grupos).sort(function(a, b) { return textoGrupoDepto(grupos[a]).localeCompare(textoGrupoDepto(grupos[b])); });
+        var sel = document.getElementById('impOCDepto');
+        sel.innerHTML = (claves.length > 1 ? '<option value="__todos__">Todos mis departamentos</option>' : '') +
+          claves.map(function(k) { return '<option value="' + escapeHTML(k) + '">' + escapeHTML(textoGrupoDepto(grupos[k])) + '</option>'; }).join('');
+        // Por omisión: el departamento del usuario (o el filtrado en la Bandeja).
+        var def = obtenerEmpresaDeptoDefault(actual) || {};
+        var claveDef = (def.empresa || '') + '|' + (def.departamento || '');
+        var filtroDep = (document.getElementById('filtroDepto') || {}).value || '';
+        var porFiltro = filtroDep ? claves.find(function(k) { return grupos[k].departamento === filtroDep; }) : null;
+        if (porFiltro) sel.value = porFiltro;
+        else if (grupos[claveDef]) sel.value = claveDef;
+        if (!claves.length) sel.innerHTML = '<option value="">No hay OC disponibles</option>';
+        document.getElementById('impOCAtajo').value = 'mes';
+        window.aplicarAtajoImprimirOC();
+        document.getElementById('msgImprimirOCPeriodo').innerHTML = '';
+        document.getElementById('impOCResumen').textContent = '';
+        document.getElementById('imprimirOCPeriodoModal').classList.add('active');
+      };
+      window.cerrarImprimirOCPeriodo = function() {
+        document.getElementById('imprimirOCPeriodoModal').classList.remove('active');
+      };
+      window.aplicarAtajoImprimirOC = function() {
+        var v = document.getElementById('impOCAtajo').value;
+        var hoy = new Date(), ini, fin;
+        if (v === 'mes') { ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1); fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); }
+        else if (v === 'mes_ant') { ini = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1); fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0); }
+        else if (v === 'anio') { ini = new Date(hoy.getFullYear(), 0, 1); fin = new Date(hoy.getFullYear(), 11, 31); }
+        else return;
+        document.getElementById('impOCDesde').value = aISOFechaInd(ini);
+        document.getElementById('impOCHasta').value = aISOFechaInd(fin);
+      };
+      function ocDelPeriodoParaImprimir() {
+        var clave = document.getElementById('impOCDepto').value;
+        var vd = document.getElementById('impOCDesde').value, vh = document.getElementById('impOCHasta').value;
+        if (!vd || !vh) return { error: 'Elige las fechas Desde y Hasta.' };
+        var ini = fechaSoloDia(vd), finIncl = fechaSoloDia(vh);
+        if (finIncl < ini) return { error: 'La fecha Hasta no puede ser anterior a Desde.' };
+        var fin = new Date(finIncl.getFullYear(), finIncl.getMonth(), finIncl.getDate() + 1);
+        var base = document.getElementById('impOCBaseFecha').value;
+        var incluirCanceladas = document.getElementById('impOCIncluirCanceladas').checked;
+        var lista = filtrarOCSegunUsuario(actual).filter(function(o) {
+          if (!incluirCanceladas && o.estado === 'CANCELADA') return false;
+          if (clave && clave !== '__todos__' && grupoDeptoOC(o).clave !== clave) return false;
+          var v = base === 'pago' ? o.fechapago : o.fechacreacion;
+          if (!v) return false;
+          var d = fechaSoloDia(v);
+          return d >= ini && d < fin;
+        }).sort(function(a, b) {
+          var ka = base === 'pago' ? a.fechapago : a.fechacreacion, kb = base === 'pago' ? b.fechapago : b.fechacreacion;
+          return fechaSoloDia(ka) - fechaSoloDia(kb);
+        });
+        var sel = document.getElementById('impOCDepto');
+        var textoDepto = clave === '__todos__' ? 'Todos mis departamentos' : (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '');
+        return { lista: lista, ini: ini, finIncl: finIncl, base: base, textoDepto: textoDepto };
+      }
+      function cargarPdfLibOC() {
+        if (window.PDFLib) return Promise.resolve(window.PDFLib);
+        return new Promise(function(res, rej) {
+          var sc = document.createElement('script');
+          sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+          sc.onload = function() { window.PDFLib ? res(window.PDFLib) : rej(new Error('No se cargó la librería para unir PDF.')); };
+          sc.onerror = function() { rej(new Error('No se pudo cargar la librería para unir PDF (revisa tu conexión).')); };
+          document.head.appendChild(sc);
+        });
+      }
+      function docPDFDesdeBytes(bytes, nombre) {
+        function blob() { return new Blob([bytes], { type: 'application/pdf' }); }
+        return {
+          _nombreArchivoReporte: nombre,
+          output: function(t) {
+            if (t === 'arraybuffer') return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            if (t === 'bloburl' || t === 'bloburi') return URL.createObjectURL(blob());
+            return blob();
+          },
+          save: function(n) {
+            var a = document.createElement('a'); a.href = URL.createObjectURL(blob()); a.download = n || (nombre + '.pdf');
+            document.body.appendChild(a); a.click(); a.remove();
+          }
+        };
+      }
+      window.generarImpresionOCPeriodo = async function() {
+        var msg = document.getElementById('msgImprimirOCPeriodo');
+        var res = ocDelPeriodoParaImprimir();
+        if (res.error) { msg.innerHTML = '<div class="alert">⚠️ ' + escapeHTML(res.error) + '</div>'; return; }
+        var lista = res.lista;
+        var textoPeriodo = res.ini.toLocaleDateString('es-MX') + ' al ' + res.finIncl.toLocaleDateString('es-MX') + ' (por ' + (res.base === 'pago' ? 'fecha de pago' : 'fecha de creación') + ')';
+        if (!lista.length) { msg.innerHTML = '<div class="alert">⚠️ No hay OC de ' + escapeHTML(res.textoDepto) + ' en el periodo ' + escapeHTML(textoPeriodo) + '.</div>'; return; }
+        var tipo = document.getElementById('impOCTipo').value;
+        var nombre = 'OC-' + (res.textoDepto || 'DEPTO').replace(/[^A-Z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toUpperCase() + '-' + aISOFechaInd(res.ini).replace(/-/g, '') + '-' + aISOFechaInd(res.finIncl).replace(/-/g, '');
+        try {
+          if (tipo === 'listado') {
+            msg.innerHTML = '<div class="success-msg">⏳ Generando listado de ' + lista.length + ' OC...</div>';
+            var { jsPDF } = window.jspdf;
+            var doc = new jsPDF('l', 'pt', 'a4');
+            var margin = MARGEN_REPORTE_PT;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(23, 63, 115);
+            doc.text('Ordenes de Compra - ' + res.textoDepto, margin, margin + 14);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+            doc.text('Periodo: ' + textoPeriodo + '   |   ' + lista.length + ' OC   |   Generado por ' + (actual.usuario || '') + ' el ' + new Date().toLocaleString('es-MX'), margin, margin + 28);
+            var totMXN = 0, totUSD = 0, totEq = 0;
+            var rows = lista.map(function(o, i) {
+              var monto = Number(o.montototal) || 0;
+              if (o.estado !== 'CANCELADA') { if (o.moneda === 'USD') totUSD += monto; else totMXN += monto; totEq += Number(o.montomxn) || (o.moneda === 'USD' ? 0 : monto); }
+              return [i + 1, o.codigo || '', o.proyecto || '—', String(o.proveedor || '').slice(0, 28), String(o.concepto || '—').slice(0, 60),
+                String(o.estado || '').replace(/_/g, ' ') + (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' ? ' / PAGADA' : ''),
+                o.fechacreacion ? fechaSoloDia(o.fechacreacion).toLocaleDateString('es-MX') : '—',
+                o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString('es-MX') : '—',
+                o.moneda || 'MXN', formatearNumeroMexico(monto, true)];
+            });
+            doc.autoTable({
+              head: [['#', 'Codigo', 'Proyecto', 'Proveedor', 'Concepto', 'Estado', 'F. creacion', 'F. pago', 'Moneda', 'Total']],
+              body: rows,
+              foot: [[
+                { content: 'Totales (sin canceladas):  MXN ' + formatearNumeroMexico(totMXN, true) + '   |   USD ' + formatearNumeroMexico(totUSD, true) + '   |   Equivalente MXN ' + formatearNumeroMexico(totEq, true), colSpan: 10, styles: { halign: 'right' } }
+              ]],
+              startY: margin + 40,
+              margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
+              rowPageBreak: 'avoid', theme: 'grid', showFoot: 'lastPage',
+              styles: { fontSize: 7, cellPadding: 3, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
+              alternateRowStyles: { fillColor: [235, 238, 242] },
+              headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontStyle: 'bold' },
+              footStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontStyle: 'bold' },
+              columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 150 }, 6: { cellWidth: 52 }, 7: { cellWidth: 52 }, 8: { cellWidth: 38 }, 9: { cellWidth: 70, halign: 'right' } },
+              didParseCell: function(data) {
+                if (data.section === 'body' && lista[data.row.index] && lista[data.row.index].estado === 'CANCELADA') data.cell.styles.textColor = [150, 150, 150];
+              }
+            });
+            agregarPiePaginaReporte(doc, nombre);
+            msg.innerHTML = '';
+            window.cerrarImprimirOCPeriodo();
+            imprimirPDFSeguro(doc, doc._nombreArchivoReporte || nombre);
+            return;
+          }
+          // Cada OC completa, en un solo PDF
+          if (lista.length > 40 && !confirm('Son ' + lista.length + ' OC. Generarlas todas puede tardar varios minutos. ¿Continuar?')) return;
+          var PDFLib = await cargarPdfLibOC();
+          var final = await PDFLib.PDFDocument.create();
+          var omitidas = [];
+          for (var i = 0; i < lista.length; i++) {
+            var o = lista[i];
+            msg.innerHTML = '<div class="success-msg">⏳ Generando OC ' + (i + 1) + ' de ' + lista.length + ': ' + escapeHTML(o.codigo || '') + '</div>';
+            var proyecto = proyectoDeOC(o);
+            if (!proyecto) { omitidas.push(o.codigo); continue; }
+            try {
+              var d1 = await generarPDFParaPreview(datosOCParaPDF(o, proyecto), o);
+              var src = await PDFLib.PDFDocument.load(d1.output('arraybuffer'));
+              var pags = await final.copyPages(src, src.getPageIndices());
+              pags.forEach(function(pg) { final.addPage(pg); });
+            } catch (eOC) { console.error('No se pudo generar la OC ' + o.codigo, eOC); omitidas.push(o.codigo); }
+          }
+          if (!final.getPageCount()) throw new Error('No se pudo generar ninguna OC.');
+          var bytes = await final.save();
+          var docUnido = docPDFDesdeBytes(bytes, nombre);
+          msg.innerHTML = omitidas.length ? '<div class="alert">⚠️ No se pudieron incluir: ' + escapeHTML(omitidas.join(', ')) + '</div>' : '';
+          if (!omitidas.length) window.cerrarImprimirOCPeriodo();
+          if (final.getPageCount() <= 20) await imprimirPDFSeguro(docUnido, nombre, function() { docUnido.save(nombre + '.pdf'); });
+          else if (esDispositivoMovilImpresion()) docUnido.save(nombre + '.pdf');
+          else imprimirPDFBlobDirecto(docUnido);
+        } catch (e) {
+          console.error('Error al imprimir OC del periodo:', e);
+          msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(e.message || String(e)) + '</div>';
+        }
+      };
 
       // ============================================================
       // REGLAS DE CAPTURA (manual GIE-TI-201026-MANUAL_OC)
