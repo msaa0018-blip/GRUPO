@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="ejecutivo">
 <head>
+<script>
+  // Fechas guardadas como "AAAA-MM-DD" (sin hora): se interpretan en la
+  // hora local de México. new Date('2026-10-30') las toma como medianoche
+  // UTC y en México se veían un día antes (29/10).
+  function fechaSoloDia(v) {
+    if (!v) return new Date(NaN);
+    var t = String(v);
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t.slice(0, 10));
+    if (m && (t.length === 10 || /T00:00:00(\.0+)?(Z|\+00:?00)?$/.test(t))) return new Date(+m[1], +m[2] - 1, +m[3]);
+    return new Date(t);
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes">
 <title>ALLIN</title>
@@ -534,6 +546,14 @@
     border-color: var(--secondary);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, .2);
   }
+  /* Listas desplegables: color fijo del texto y del fondo de las
+     opciones, para que se vean igual con el tema oscuro de Windows /
+     Android (antes la lista se abría en blanco, sin texto). */
+  :root { color-scheme: light; }
+  select { color: #1f2937; background-color: #fff; }
+  select option, select optgroup { color: #1f2937 !important; background-color: #fff !important; -webkit-text-fill-color: #1f2937; }
+  select option:checked { background-color: #dbeafe !important; color: #0b1a33 !important; }
+  select option:disabled { color: #9ca3af !important; }
   select:disabled, input:disabled {
     background: var(--gray-200);
     color: var(--gray-500);
@@ -3819,7 +3839,7 @@
           <div class="modal-body">
             <button id="ocAccionPausarBtn" class="warning" onclick="window.ejecutarAccionOC('pausar')">⏸️ Pausar</button>
             <button class="danger" onclick="window.ejecutarAccionOC('cancelar')">❌ Cancelar OC</button>
-            <button class="btn-editar" onclick="window.ejecutarAccionOC('editar')">✏️ Editar Productos</button>
+            <button class="btn-editar" onclick="window.ejecutarAccionOC('editar')">✏️ Editar OC (productos, fecha de pago)</button>
             <button class="danger" onclick="window.ejecutarAccionOC('eliminar')">🗑️ Eliminar</button>
           </div>
         </div>
@@ -6628,7 +6648,7 @@
   <div id="editarProductosOCModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>✏️ Editar Productos y Formato — <span id="editarProductosOCCodigo"></span></h3>
+        <h3>✏️ Editar OC: productos, fecha de pago y formato — <span id="editarProductosOCCodigo"></span></h3>
         <div class="pdfPreview-btn-group">
           <button onclick="window.cerrarEditarProductosOC()">✕</button>
           <button class="success" onclick="window.guardarEdicionProductosOC()">✔️</button>
@@ -6671,6 +6691,15 @@
           </div>
           <p style="margin:4px 0 0;font-size:12px;color:var(--gray-600);">
             ℹ️ Solo el Administrador puede cambiar las condiciones comerciales de una OC ya creada, sin importar qué usuario la haya generado.
+          </p>
+        </div>
+        <div class="grupo-formulario">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Fecha de pago:</label>
+            <input id="editarFechaPagoOC" type="date" style="flex:1.5;">
+          </div>
+          <p style="margin:4px 0 0;font-size:12px;color:var(--gray-600);">
+            ℹ️ Solo el Administrador puede cambiar la fecha de pago. La nueva fecha se ve en el reporte de CXP, en la Bandeja y en el PDF de la OC, y el cambio queda en la bitácora con la justificación.
           </p>
         </div>
         <div class="grupo-formulario hidden" id="grupoEditarFechaPago2OC">
@@ -16954,7 +16983,7 @@
         var ocScope = filtrarOCSegunUsuario(actual);
         var ocMes = ocScope.filter(function(o) {
           if (o.estadopago !== 'PAGADA' || !o.fechapago) return false;
-          var f = new Date(o.fechapago);
+          var f = fechaSoloDia(o.fechapago);
           return f.getMonth() === mes && f.getFullYear() === anio;
         });
         var total = ocMes.reduce(function(s, o) { return s + (o.montototal || 0); }, 0);
@@ -16967,7 +16996,7 @@
         if (cuerpo) {
           cuerpo.innerHTML = ocMes.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">No hay compras pagadas en ese mes</td></tr>' :
             ocMes.map(function(o) {
-              return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td></tr>';
+              return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="F.Pago">' + fechaSoloDia(o.fechapago).toLocaleDateString() + '</td></tr>';
             }).join('');
         }
       };
@@ -17103,7 +17132,7 @@
         if (cuerpo) {
           cuerpo.innerHTML = pendientes.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">No hay OC pendientes de pago</td></tr>' :
             pendientes.map(function(o) {
-              return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="F.Pago">' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
+              return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="F.Pago">' + (o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
             }).join('');
         }
         window.abrirModalCard('indicadorCXPCard');
@@ -17161,7 +17190,7 @@
         var cuerpo = document.getElementById('indicadorClientesDetalleCuerpo');
         cuerpo.innerHTML = ocCliente.length === 0 ? '<tr><td colspan="6" class="mensaje-sin-datos">Este cliente no tiene OC registradas</td></tr>' :
           ocCliente.map(function(o) {
-            return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Estado">' + escapeHTML(o.estado || '') + '</td><td data-label="F.Pago">' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
+            return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Proveedor">' + escapeHTML(o.proveedor || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Estado">' + escapeHTML(o.estado || '') + '</td><td data-label="F.Pago">' + (o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
           }).join('');
       };
 
@@ -17205,7 +17234,7 @@
         var cuerpo = document.getElementById('indicadorProveedoresDetalleCuerpo');
         cuerpo.innerHTML = ocProveedor.length === 0 ? '<tr><td colspan="5" class="mensaje-sin-datos">Este proveedor no tiene OC registradas</td></tr>' :
           ocProveedor.map(function(o) {
-            return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Estado">' + escapeHTML(o.estado || '') + '</td><td data-label="F.Pago">' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
+            return '<tr><td data-label="Código">' + escapeHTML(o.codigo || '') + '</td><td data-label="Proyecto">' + escapeHTML(o.proyecto || '') + '</td><td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td><td data-label="Estado">' + escapeHTML(o.estado || '') + '</td><td data-label="F.Pago">' + (o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—') + '</td></tr>';
           }).join('');
       };
 
@@ -17646,7 +17675,7 @@
                 '<td>' + String(o.proveedor || '').slice(0, 15) + '</td>' +
                 '<td>' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
                 '<td><span class="badge badge-pendiente">' + o.estado + '</span></td>' +
-                '<td>' + (o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—') + '</td>' +
+                '<td>' + (o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—') + '</td>' +
                 '</tr>';
             }).join('');
           }
@@ -20511,7 +20540,7 @@
         mensaje += '👤 *Elaborador:* ' + datosOC.elaborador + '\n';
         mensaje += '👤 *Responsable:* ' + datosOC.responsable + '\n';
         mensaje += '🏢 *Proveedor:* ' + datosOC.proveedor + '\n';
-        mensaje += '📅 *Fecha Pago:* ' + new Date(datosOC.fechapago).toLocaleDateString() + '\n';
+        mensaje += '📅 *Fecha Pago:* ' + fechaSoloDia(datosOC.fechapago).toLocaleDateString() + '\n';
         mensaje += '📅 *Fecha Entrega:* ' + new Date(datosOC.fechaentrega).toLocaleDateString() + '\n';
         mensaje += '💰 *Moneda:* ' + datosOC.moneda + '\n';
         mensaje += '💰 *Total:* ' + formatoMoneda(datosOC.montototal, datosOC.moneda) + '\n';
@@ -20809,7 +20838,7 @@
         if (fechaInicio) {
           var fechaInicioObj = new Date(fechaInicio);
           ocVisibles = ocVisibles.filter(function(o) {
-            var fechaOC = new Date(o.fechapago);
+            var fechaOC = fechaSoloDia(o.fechapago);
             return fechaOC >= fechaInicioObj;
           });
         }
@@ -20817,7 +20846,7 @@
           var fechaFinObj = new Date(fechaFin);
           fechaFinObj.setHours(23, 59, 59, 999);
           ocVisibles = ocVisibles.filter(function(o) {
-            var fechaOC = new Date(o.fechapago);
+            var fechaOC = fechaSoloDia(o.fechapago);
             return fechaOC <= fechaFinObj;
           });
         }
@@ -20998,7 +21027,7 @@
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
-              '<td data-label="F.Pago">' + new Date(o.fechapago).toLocaleDateString() + '</td>' +
+              '<td data-label="F.Pago">' + fechaSoloDia(o.fechapago).toLocaleDateString() + '</td>' +
               '<td data-label="F.Aprobación">' + (o.fechaaprobaciondirector ? new Date(o.fechaaprobaciondirector).toLocaleDateString() : (o.fechaaprobacionjefe ? new Date(o.fechaaprobacionjefe).toLocaleDateString() : '—')) + '</td>' +
               '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoLabel + '</span></td>' +
               '</tr>' +
@@ -24204,7 +24233,7 @@
 
             var proyecto = proyectoDeOC(o);
             var cliente = proyecto ? proyecto.cliente : '—';
-            var fechaPago = o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—';
+            var fechaPago = o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—';
             var fechaEntrega = o.fechaentrega ? new Date(o.fechaentrega).toLocaleDateString() : '—';
 
             tablaOC.innerHTML +=
@@ -24888,8 +24917,10 @@
         // aquí sin importar quién haya generado la OC originalmente.
         var selectCondicionesEditarOC = document.getElementById('editarCondicionesComercialesOC');
         if (selectCondicionesEditarOC) selectCondicionesEditarOC.value = oc.condicionpago || '';
+        var inputFechaPagoEditarOC = document.getElementById('editarFechaPagoOC');
+        if (inputFechaPagoEditarOC) inputFechaPagoEditarOC.value = oc.fechapago ? String(oc.fechapago).slice(0, 10) : '';
         var inputFechaPago2EditarOC = document.getElementById('editarFechaPago2OC');
-        if (inputFechaPago2EditarOC) inputFechaPago2EditarOC.value = oc.fechapago2 || '';
+        if (inputFechaPago2EditarOC) inputFechaPago2EditarOC.value = oc.fechapago2 ? String(oc.fechapago2).slice(0, 10) : '';
         window.actualizarVisibilidadFechaPago2EditarOC();
 
         var productosOC = parsearProductosOC(oc);
@@ -25081,6 +25112,14 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Captura la Fecha del 2do. pago (condición 50/50).</div>';
           return;
         }
+        var inputFechaPagoGuardarOC = document.getElementById('editarFechaPagoOC');
+        var nuevaFechaPagoOC = (inputFechaPagoGuardarOC && inputFechaPagoGuardarOC.value) || null;
+        var fechaPagoAnteriorOC = oc.fechapago ? String(oc.fechapago).slice(0, 10) : null;
+        if (!nuevaFechaPagoOC) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Captura la fecha de pago.</div>';
+          return;
+        }
+        var cambioFechaPagoOC = nuevaFechaPagoOC !== fechaPagoAnteriorOC;
         var justificacionEdicionOC = ((document.getElementById('editarJustificacionOC') || {}).value || '').trim();
         if (!justificacionEdicionOC) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Escribe la justificación de la modificación.</div>';
@@ -25097,9 +25136,13 @@
             condicionpago: nuevaCondicionPagoOC,
             fechapago2: nuevaCondicionPagoOC === '50/50 FINIQUITO Y ANTICIPO' ? nuevaFechaPago2OC : null
           };
+          if (cambioFechaPagoOC) updates.fechapago = nuevaFechaPagoOC;
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) throw error;
-          await registrarBitacoraOC(oc, 'MODIFICADA', montoAntesEdicionOC, nuevoTotal, justificacionEdicionOC);
+          var textoFechaBitacora = cambioFechaPagoOC
+            ? ' [FECHA DE PAGO: ' + (fechaPagoAnteriorOC ? fechaSoloDia(fechaPagoAnteriorOC).toLocaleDateString('es-MX') : 'SIN FECHA') + ' -> ' + fechaSoloDia(nuevaFechaPagoOC).toLocaleDateString('es-MX') + ']'
+            : '';
+          await registrarBitacoraOC(oc, 'MODIFICADA', montoAntesEdicionOC, nuevoTotal, justificacionEdicionOC + textoFechaBitacora);
 
           // El inventario SOLO se ajusta si la OC ya está pagada Y
           // facturada (CONCLUIDA) — ya se le había sumado el inventario en
@@ -25118,10 +25161,11 @@
           oc.formatomembrete = nuevoFormatoOC;
           oc.condicionpago = updates.condicionpago;
           oc.fechapago2 = updates.fechapago2;
+          if (cambioFechaPagoOC) oc.fechapago = nuevaFechaPagoOC;
 
           window.cerrarEditarProductosOC();
           render();
-          alert('✅ Productos de la OC actualizados' + (inventarioAjustado ? ' e inventario ajustado automáticamente.' : '.'));
+          alert('✅ OC actualizada' + (cambioFechaPagoOC ? ' (nueva fecha de pago: ' + fechaSoloDia(nuevaFechaPagoOC).toLocaleDateString('es-MX') + ')' : '') + (inventarioAjustado ? ' e inventario ajustado automáticamente.' : '.'));
         } catch (e) {
           console.error('Error guardando edición de productos de la OC:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
@@ -29690,7 +29734,7 @@
         var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
 
         var camposCondicionesExtra = [
-          { label: 'Fecha de Pago:', value: datos.fechapago ? new Date(datos.fechapago).toLocaleDateString() : 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
+          { label: 'Fecha de Pago:', value: datos.fechapago ? fechaSoloDia(datos.fechapago).toLocaleDateString() : 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
           { label: 'Método de pago:', value: formatoMetodoPagoPDF(datos.metodopago) },
           { label: 'Notas:', value: datos.motivo || 'Sin notas.' }
         ];
@@ -30809,7 +30853,7 @@
         var hoyPrioridad = new Date();
         function prioridadPorFechaPago(fechapago) {
           if (!fechapago) return '—';
-          var diasRestantes = (new Date(fechapago) - hoyPrioridad) / (1000 * 60 * 60 * 24);
+          var diasRestantes = (fechaSoloDia(fechapago) - hoyPrioridad) / (1000 * 60 * 60 * 24);
           if (diasRestantes < 5) return 'A';
           if (diasRestantes < 15) return 'B';
           return 'C';
@@ -30831,7 +30875,7 @@
             o.cliente || '—',
             o.codigo,
             o.uuidfactura || '—',
-            o.fechapago ? new Date(o.fechapago).toLocaleDateString() : '—',
+            o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—',
             esUSD ? formatearNumeroMexico(o.montototal, true) : '—',
             !esUSD ? formatoMoneda(o.montototal, 'MXN') : '—',
             prioridadPorFechaPago(o.fechapago)
