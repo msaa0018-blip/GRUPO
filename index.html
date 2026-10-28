@@ -1408,7 +1408,7 @@
     border-bottom: 2px solid var(--modal-accent);
     padding-bottom: 12px;
   }
-  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h, #imprimirOCPeriodoModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
+  #editarProductosOCModal .modal-header h3, #almacenesDashboardModal .modal-header h3, #almacenProductosModal .modal-header h3, #imprimirOCPeriodoModal .modal-header h3 { margin: 0; font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; letter-spacing: .2px; color: var(--modal-text); }
   #editarProductosOCModal .modal-header .pdfPreview-btn-group, #almacenesDashboardModal .modal-header .pdfPreview-btn-group, #almacenProductosModal .modal-header .pdfPreview-btn-group, #imprimirOCPeriodoModal .modal-header .pdfPreview-btn-group { display: flex; gap: 10px; flex-shrink: 0; }
   #editarProductosOCModal .modal-body, #almacenesDashboardModal .modal-body, #almacenProductosModal .modal-body, #imprimirOCPeriodoModal .modal-body { overflow: auto; }
 
@@ -31899,5 +31899,132 @@
 
     })();
   </script>
+<script>
+/* ==================================================================
+   LISTAS DESPLEGABLES PROPIAS (computadora)
+   En algunos equipos con Chrome/Edge en Windows la lista nativa de los
+   <select> se abría en blanco (sin texto) aunque las opciones sí
+   existían: es un problema de dibujo del navegador (escala/zoom de
+   pantalla o modo oscuro), no de los datos. En computadora (mouse) se
+   muestra una lista propia, dibujada por la página, con las mismas
+   opciones; al elegir se asigna el valor y se dispara "change" igual que
+   la nativa. En celular se sigue usando la lista nativa del teléfono.
+   El teclado (flechas, Enter) sigue funcionando sobre el select normal.
+   ================================================================== */
+(function() {
+  var esMouse = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+  if (!esMouse) return;
+  var css = document.createElement('style');
+  css.textContent =
+    '.sel-propio-lista{position:fixed;z-index:99999;background:#fff;color:#1f2937;border:1px solid #94a3b8;border-radius:8px;' +
+    'box-shadow:0 10px 28px rgba(15,23,42,.22);overflow-y:auto;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:14px;padding:4px 0;box-sizing:border-box;}' +
+    '.sel-propio-op{padding:7px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1f2937;line-height:1.3;}' +
+    '.sel-propio-op:hover{background:#dbeafe;color:#0b1a33;}' +
+    '.sel-propio-op.elegida{font-weight:600;background:#eff6ff;}' +
+    '.sel-propio-op.deshab{color:#9ca3af;cursor:default;background:#fff;}' +
+    '.sel-propio-grupo{padding:6px 10px 2px;font-size:12px;font-weight:700;color:#475569;}' +
+    '.sel-propio-buscar{margin:4px 8px 6px;width:calc(100% - 16px);min-height:32px;padding:5px 9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;}';
+  document.head.appendChild(css);
+  var lista = null, selActual = null;
+  function cerrar(sinFoco) {
+    if (lista) { lista.remove(); lista = null; }
+    if (selActual && !sinFoco) { try { selActual.focus({ preventScroll: true }); } catch (e) {} }
+    selActual = null;
+    document.removeEventListener('mousedown', fuera, true);
+    window.removeEventListener('resize', cerrarSinFoco);
+    window.removeEventListener('scroll', alScroll, true);
+  }
+  function cerrarSinFoco() { cerrar(true); }
+  function fuera(ev) { if (lista && !lista.contains(ev.target)) { var mismo = selActual && (ev.target === selActual || selActual.contains(ev.target)); cerrar(!mismo); if (mismo) { ev.preventDefault(); ev.stopPropagation(); } } }
+  function alScroll(ev) { if (lista && !lista.contains(ev.target)) cerrar(true); }
+  function elegir(sel, idx) {
+    var cambio = sel.selectedIndex !== idx;
+    sel.selectedIndex = idx;
+    cerrar();
+    if (cambio) {
+      sel.dispatchEvent(new Event('input', { bubbles: true }));
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+  function sinAcentos(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function abrir(sel) {
+    cerrar(true);
+    selActual = sel;
+    var r = sel.getBoundingClientRect();
+    lista = document.createElement('div');
+    lista.className = 'sel-propio-lista';
+    var opciones = Array.prototype.slice.call(sel.options);
+    var buscador = null;
+    if (opciones.length > 12) {
+      buscador = document.createElement('input');
+      buscador.className = 'sel-propio-buscar';
+      buscador.placeholder = 'Buscar...';
+      buscador.setAttribute('autocomplete', 'off');
+      lista.appendChild(buscador);
+    }
+    var filas = [];
+    var grupoPrevio = null;
+    opciones.forEach(function(op, i) {
+      if (op.hidden || op.style.display === 'none') return;
+      var g = op.parentNode && op.parentNode.tagName === 'OPTGROUP' ? op.parentNode : null;
+      if (g && g !== grupoPrevio) {
+        var gh = document.createElement('div'); gh.className = 'sel-propio-grupo'; gh.textContent = g.label; lista.appendChild(gh);
+      }
+      grupoPrevio = g;
+      var deshab = op.disabled || (g && g.disabled);
+      var d = document.createElement('div');
+      d.className = 'sel-propio-op' + (i === sel.selectedIndex ? ' elegida' : '') + (deshab ? ' deshab' : '');
+      d.textContent = op.text || ' ';
+      d.title = op.text;
+      d.dataset.idx = i;
+      d.addEventListener('mousedown', function(ev) { ev.preventDefault(); ev.stopPropagation(); if (!deshab) elegir(sel, i); });
+      lista.appendChild(d);
+      filas.push(d);
+    });
+    document.body.appendChild(lista);
+    var abajo = window.innerHeight - r.bottom - 8, arriba = r.top - 8;
+    var alto = Math.min(lista.scrollHeight, 340);
+    var haciaArriba = abajo < Math.min(alto, 200) && arriba > abajo;
+    var disponible = Math.max(120, haciaArriba ? arriba : abajo);
+    var ancho = Math.max(r.width, 180);
+    lista.style.maxHeight = Math.min(340, disponible) + 'px';
+    lista.style.width = ancho + 'px';
+    lista.style.left = Math.max(4, Math.min(r.left, window.innerWidth - ancho - 4)) + 'px';
+    if (haciaArriba) lista.style.bottom = (window.innerHeight - r.top + 2) + 'px'; else lista.style.top = (r.bottom + 2) + 'px';
+    var elegida = lista.querySelector('.elegida');
+    if (elegida) elegida.scrollIntoView({ block: 'nearest' });
+    if (buscador) {
+      buscador.addEventListener('mousedown', function(ev) { ev.stopPropagation(); });
+      buscador.addEventListener('input', function() {
+        var q = sinAcentos(buscador.value);
+        filas.forEach(function(f) { f.style.display = sinAcentos(f.textContent).indexOf(q) === -1 ? 'none' : ''; });
+      });
+      buscador.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Escape') { ev.preventDefault(); cerrar(); }
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          var v = filas.filter(function(f) { return f.style.display !== 'none' && !f.classList.contains('deshab'); });
+          if (v.length) elegir(sel, +v[0].dataset.idx);
+        }
+      });
+      setTimeout(function() { buscador.focus(); }, 0);
+    }
+    // Se registran de inmediato: el mousedown que abrió la lista ya está
+    // en curso y no los dispara (la lista de oyentes se copia al inicio).
+    document.addEventListener('mousedown', fuera, true);
+    window.addEventListener('resize', cerrarSinFoco);
+    window.addEventListener('scroll', alScroll, true);
+  }
+  document.addEventListener('mousedown', function(ev) {
+    var sel = ev.target && ev.target.closest ? ev.target.closest('select') : null;
+    if (!sel || sel.multiple || sel.size > 1 || sel.disabled || ev.button !== 0) return;
+    ev.preventDefault();
+    if (lista && selActual === sel) { cerrar(); return; }
+    try { sel.focus({ preventScroll: true }); } catch (e) {}
+    abrir(sel);
+  }, true);
+  document.addEventListener('keydown', function(ev) { if (lista && ev.key === 'Escape') cerrar(); }, true);
+})();
+</script>
 </body>
 </html>
