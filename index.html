@@ -963,6 +963,13 @@
   .productos-tabla input.precio { min-width: 90px; width: 100px; }
   .productos-tabla input.importe { min-width: 200px; background: var(--gray-100); font-weight: bold; font-size: 23px; width: 210px; }
   .productos-tabla select.udm { min-width: 100px; width: 100px; }
+  /* 📦 Productos (inventario): todo a lo ancho, sin barra horizontal en computadora */
+  @media (min-width: 901px) {
+    #tablaProductosCatalogo { table-layout: auto; width: 100%; min-width: 0 !important; }
+    #tablaProductosCatalogo th, #tablaProductosCatalogo td { white-space: normal !important; font-size: 12.5px; padding: 7px 8px; vertical-align: top; word-break: normal; overflow-wrap: anywhere; }
+    #tablaProductosCatalogo td.inv-desc { min-width: 220px; }
+    #tablaProductosCatalogo td small { font-size: 11px; color: var(--gray-600); }
+  }
   .resumen-totales {
     background: var(--gray-50);
     padding: 12px 16px;
@@ -3907,22 +3914,14 @@
           <table id="tablaProductosCatalogo">
             <thead>
               <tr>
-                <th>Código</th>
-                <th>Número de Parte</th>
-                <th>Marca</th>
-                <th>Modelo</th>
-                <th>Descripción</th>
-                <th>Unidad de Medida</th>
-                <th>Precio de Referencia</th>
-                <th>Moneda</th>
+                <th>Código / Núm. parte</th>
+                <th>Descripción / Marca / Modelo</th>
+                <th>UDM</th>
+                <th>Precio ref.</th>
                 <th>Cantidad</th>
                 <th>Condición</th>
-                <th>Ubicación</th>
-                <th>Almacén</th>
-                <th>Nave</th>
-                <th>Origen</th>
-                <th>Fecha de alta</th>
-                <th title="Días transcurridos desde la fecha de alta">Días en inventario</th>
+                <th>Almacén / Nave / Ubicación</th>
+                <th title="Origen, fecha de alta y días en inventario">Origen / Alta</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -8925,7 +8924,61 @@
             }
           });
         canalesRealtimeActivos.push(canalBuzon);
+
+        // Catálogos (proveedores, productos y servicios, inventario,
+        // clientes, almacenes, vehículos, empresas): cuando el Administrador
+        // agrega o modifica algo, se refrescan las listas desplegables y
+        // las tablas abiertas en todos los equipos, sin recargar la página.
+        // Lo que el usuario ya capturó (por ejemplo, las partidas de una OC
+        // a medio hacer) NO se toca: solo se actualizan las opciones.
+        var canalCatalogos = supabase.channel('sync-catalogos');
+        ['proveedores', 'productos_servicios', 'productos', 'clientes', 'almacenes', 'vehiculos', 'empresas_fiscales'].forEach(function(tabla) {
+          canalCatalogos = canalCatalogos.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, function(payload) {
+            console.log('🔄 Realtime catálogo:', payload.eventType, tabla);
+            programarRefrescoRealtimeCatalogo(tabla);
+          });
+        });
+        canalCatalogos.subscribe(function(status, err) {
+          console.log('📡 Canal Realtime "sync-catalogos":', status, err || '');
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error('❌ No se pudo conectar el canal de catálogos en tiempo real. Corre en Supabase el SQL "catalogos_tiempo_real.sql".');
+          }
+        });
+        canalesRealtimeActivos.push(canalCatalogos);
       };
+
+      var refrescoCatalogoPendiente = {};
+      function panelVisible(id) { var el = document.getElementById(id); return !!(el && !el.classList.contains('hidden')); }
+      function programarRefrescoRealtimeCatalogo(tabla) {
+        if (refrescoCatalogoPendiente[tabla]) clearTimeout(refrescoCatalogoPendiente[tabla]);
+        refrescoCatalogoPendiente[tabla] = setTimeout(async function() {
+          refrescoCatalogoPendiente[tabla] = null;
+          try {
+            if (tabla === 'proveedores') {
+              if (typeof window.cargarListaProveedoresOC === 'function') await window.cargarListaProveedoresOC();
+              if (panelVisible('panelProveedores') && typeof window.cargarProveedoresCatalogo === 'function') await window.cargarProveedoresCatalogo();
+              if (panelVisible('panelProdServ') && typeof window.cargarPanelProdServ === 'function') await window.cargarPanelProdServ();
+            } else if (tabla === 'productos_servicios' || tabla === 'productos') {
+              if (typeof window.cargarSelectorProductosCatalogo === 'function') await window.cargarSelectorProductosCatalogo();
+              if (tabla === 'productos_servicios' && panelVisible('panelProdServ') && typeof window.cargarPanelProdServ === 'function') await window.cargarPanelProdServ();
+              if (tabla === 'productos' && panelVisible('panelProductos') && typeof window.cargarProductosCatalogo === 'function') await window.cargarProductosCatalogo();
+            } else if (tabla === 'clientes') {
+              var r = await supabase.from('clientes').select('*').order('nombre');
+              if (!r.error) clientesCache = r.data || [];
+              if (typeof window.cargarClientesParaProyecto === 'function') await window.cargarClientesParaProyecto();
+              if (panelVisible('panelClientes') && typeof window.cargarClientes === 'function') await window.cargarClientes();
+            } else if (tabla === 'almacenes') {
+              if (typeof window.cargarAlmacenes === 'function') await window.cargarAlmacenes();
+            } else if (tabla === 'vehiculos') {
+              if (panelVisible('panelVehiculos') && typeof window.cargarVehiculos === 'function') await window.cargarVehiculos();
+            } else if (tabla === 'empresas_fiscales') {
+              await cargarEmpresasFiscalesDatos();
+            }
+          } catch (e) {
+            console.error('Error al sincronizar el catálogo "' + tabla + '" en tiempo real:', e);
+          }
+        }, 500);
+      }
 
       var refrescoRealtimeBuzonPendiente = null;
       function programarRefrescoRealtimeBuzon(mensajeNuevo) {
@@ -15471,25 +15524,23 @@
           }).forEach(function(p) {
             var almacen = almacenesCache.find(function(a) { return a.id === p.almacen_id; });
             var fila = document.createElement('tr');
+            // Tabla compacta: los datos relacionados van juntos en una
+            // celda (2 líneas) para que todo quepa a lo ancho sin barra de
+            // desplazamiento horizontal en computadora.
+            var txtMMInv = [p.marca ? 'MARCA: ' + p.marca : '', p.modelo ? 'MODELO: ' + p.modelo : ''].filter(Boolean).join(' · ');
+            var txtUbicInv = [almacen ? almacen.nombre : (p.almacen_id ? 'Almacén eliminado' : ''), p.nave ? 'Nave ' + p.nave : '', p.ubicacion || ''].filter(Boolean);
             fila.innerHTML =
-              '<td>' + escapeHTML(p.codigo) + '</td>' +
-              '<td>' + escapeHTML(p.numero_parte) + '</td>' +
-              '<td>' + escapeHTML(p.marca) + '</td>' +
-              '<td>' + escapeHTML(p.modelo) + '</td>' +
-              '<td>' + escapeHTML(p.descripcion) + '</td>' +
+              '<td><strong>' + escapeHTML(p.codigo) + '</strong>' + (p.numero_parte ? '<br><small>' + escapeHTML(p.numero_parte) + '</small>' : '') + '</td>' +
+              '<td class="inv-desc">' + escapeHTML(p.descripcion) + (txtMMInv ? '<br><small class="text-muted">' + escapeHTML(txtMMInv) + '</small>' : '') + '</td>' +
               '<td>' + escapeHTML(p.udm) + '</td>' +
-              '<td>' + formatoMoneda(p.precio_referencia || 0, p.moneda || 'MXN') + '</td>' +
-              '<td>' + (p.moneda === 'USD' ? 'Dólares (USD)' : 'Pesos (MXN)') + '</td>' +
+              '<td style="white-space:nowrap;">' + formatoMoneda(p.precio_referencia || 0, p.moneda || 'MXN') + '<br><small>' + (p.moneda === 'USD' ? 'USD' : 'MXN') + '</small></td>' +
               '<td style="text-align:center;font-weight:600;">' + (p.cantidad || 0) + '</td>' +
               '<td>' + escapeHTML(p.condicion || 'Nuevo') + '</td>' +
-              '<td>' + escapeHTML(p.ubicacion) + '</td>' +
-              '<td>' + escapeHTML(almacen ? almacen.nombre : (p.almacen_id ? 'Almacén eliminado' : '—')) + '</td>' +
-              '<td>' + escapeHTML(p.nave) + '</td>' +
-              '<td style="white-space:nowrap;">' + (origenProducto(p) === 'OC'
-                  ? '🧾 Agregado por OC' + (p.origen_oc ? '<br><small>' + escapeHTML(p.origen_oc) + '</small>' : '')
-                  : '🏭 Agregado desde almacén') + '</td>' +
-              '<td style="white-space:nowrap;">' + fechaAltaCorta(p.fecha_alta || p.created_at) + '</td>' +
-              '<td style="text-align:center;">' + diasDesdeAlta(p.fecha_alta || p.created_at) + '</td>' +
+              '<td>' + (txtUbicInv.length ? escapeHTML(txtUbicInv[0]) + txtUbicInv.slice(1).map(function(x) { return '<br><small>' + escapeHTML(x) + '</small>'; }).join('') : '—') + '</td>' +
+              '<td>' + (origenProducto(p) === 'OC'
+                  ? '🧾 Por OC' + (p.origen_oc ? '<br><small>' + escapeHTML(p.origen_oc) + '</small>' : '')
+                  : '🏭 Almacén') +
+                '<br><small>' + fechaAltaCorta(p.fecha_alta || p.created_at) + ' · ' + diasDesdeAlta(p.fecha_alta || p.created_at) + ' días</small></td>' +
               '<td style="text-align:center;">' +
                 '<button class="btn-hamburguesa" title="Opciones" onclick="window.abrirModalAccionesProducto(' + p.id + ')">' +
                   '<span></span><span></span><span></span>' +
@@ -23690,6 +23741,26 @@
           ' · ' + (it.udm || 'PZA') + ' · ' + formatoMoneda(Number(it.precio) || 0, it.moneda || 'MXN');
       }
 
+      // Productos del inventario (📦 Productos) que también se pueden
+      // elegir en la OC. Un artículo puede estar solo en el catálogo del
+      // proveedor, solo en el inventario o en ambos: si está en ambos (mismo
+      // número de parte) se muestra una sola vez, la del proveedor.
+      var inventarioOCCache = [];
+      function inventarioParaOC(listaProveedor) {
+        var partes = {};
+        (listaProveedor || []).forEach(function(it) { if (it.numero_parte) partes[String(it.numero_parte).trim().toUpperCase()] = true; });
+        return (inventarioOCCache || []).filter(function(p) {
+          var parte = String(p.numero_parte || '').trim().toUpperCase();
+          return !(parte && partes[parte]);
+        });
+      }
+      function etiquetaInventarioOC(p) {
+        var marcaModelo = [p.marca, p.modelo].filter(Boolean).join(' ');
+        return '🏭 ' + (p.numero_parte ? p.numero_parte + ' — ' : '') + (p.descripcion || '') +
+          (marcaModelo ? ' (' + marcaModelo + ')' : '') + ' · ' + (p.udm || 'PZA') +
+          ' · ref. ' + formatoMoneda(Number(p.precio_referencia) || 0, p.moneda || 'MXN') + ' · existencia ' + (Number(p.cantidad) || 0);
+      }
+
       window.actualizarSelectorProductosProveedor = function() {
         var select = document.getElementById('selectorProductoCatalogo');
         if (!select) return;
@@ -23705,20 +23776,27 @@
           return;
         }
         var lista = prodServDelProveedor(prov);
-        if (!lista.length) {
+        var inv = inventarioParaOC(lista);
+        if (!lista.length && !inv.length) {
           select.innerHTML = '<option value="">-- ' + escapeHTML(prov.nombre) + ' no tiene productos/servicios dados de alta --</option>';
           return;
         }
-        select.innerHTML = '<option value="">-- Selecciona un producto o servicio de ' + escapeHTML(prov.nombre) + ' --</option>' +
-          lista.map(function(it) { return '<option value="' + it.id + '">' + escapeHTML(etiquetaProdServ(it)) + '</option>'; }).join('');
+        var previo = select.value;
+        select.innerHTML = '<option value="">-- Selecciona un producto o servicio (busca por descripción, marca o número de parte) --</option>' +
+          (lista.length ? '<optgroup label="🧾 Productos y servicios de ' + escapeHTML(prov.nombre) + '">' +
+            lista.map(function(it) { return '<option value="' + it.id + '">' + escapeHTML(etiquetaProdServ(it)) + '</option>'; }).join('') + '</optgroup>' : '') +
+          (inv.length ? '<optgroup label="📦 Del inventario (📦 Productos)">' +
+            inv.map(function(p) { return '<option value="inv:' + p.id + '">' + escapeHTML(etiquetaInventarioOC(p)) + '</option>'; }).join('') + '</optgroup>' : '');
+        if (previo && Array.prototype.some.call(select.options, function(o) { return o.value === previo; })) select.value = previo;
       };
 
       window.cargarSelectorProductosCatalogo = async function() {
         try {
           // El catálogo de inventario se sigue cargando (códigos PROD-xxxxx).
-          var { data, error } = await supabase.from('productos').select('*').eq('activo', true).order('descripcion');
+          var { data, error } = await supabase.from('productos').select('*').order('descripcion');
           if (error) throw error;
-          productosCatalogoCache = data || [];
+          inventarioOCCache = (data || []).filter(function(p) { return p.activo !== false; });
+          productosCatalogoCache = inventarioOCCache.slice();
         } catch (e) {
           console.error('Error cargando catálogo de productos:', e);
         }
@@ -23740,9 +23818,36 @@
           alert('⚠️ Selecciona un producto o servicio de la lista.');
           return;
         }
-        var it = (prodServCache || []).find(function(x) { return String(x.id) === String(select.value); });
+        var valorSel = String(select.value);
+        if (valorSel.indexOf('inv:') === 0) {
+          // Producto del inventario: la partida usa su mismo código PROD-xxxxx
+          // (al pagarse la OC suma la existencia a ese producto).
+          var p = (inventarioOCCache || []).find(function(x) { return 'inv:' + x.id === valorSel; });
+          if (!p) return;
+          var itemInv = { id: 'inv:' + p.id, tipo: 'PRODUCTO', proveedor: prov.nombre, proveedor_id: String(prov.id), marca: p.marca || '', modelo: p.modelo || '', desdeInventario: true };
+          window.agregarFilaProducto(p.codigo || '', p.numero_parte || '', p.descripcion || '', p.udm || 'PZA', 1, Number(p.precio_referencia) || 0, 0, 16, itemInv);
+          select.value = '';
+          return;
+        }
+        var it = (prodServCache || []).find(function(x) { return String(x.id) === valorSel; });
         if (!it) return;
-        window.agregarFilaProducto(it.codigo || '', it.numero_parte || '', it.descripcion || '', it.udm || 'PZA', 1, Number(it.precio) || 0, 0, Number(it.impuesto_pct) || 0, it);
+        // El código de la partida es el del INVENTARIO (PROD-xxxxx): si el
+        // número de parte ya existe en 📦 Productos se usa ese; si no, el
+        // siguiente consecutivo (y al pagarse la OC se da de alta). Antes
+        // se usaba el código del catálogo (PS-xxxxx) y el inventario quedaba
+        // con códigos PS. Los servicios no llevan código (no entran al almacén).
+        var codigoInv = '';
+        if (it.tipo !== 'SERVICIO') {
+          var enInv = it.numero_parte ? buscarProductoCatalogoPorParte(it.numero_parte) : null;
+          codigoInv = enInv ? (enInv.codigo || '') : '';
+        }
+        window.agregarFilaProducto(codigoInv, it.numero_parte || '', it.descripcion || '', it.udm || 'PZA', 1, Number(it.precio) || 0, 0, Number(it.impuesto_pct) || 0, it);
+        if (it.tipo === 'SERVICIO') {
+          var filasSrv = document.querySelectorAll('#cuerpoProductos tr');
+          var ultimaSrv = filasSrv[filasSrv.length - 1];
+          var codSrv = ultimaSrv ? ultimaSrv.querySelector('.codigo') : null;
+          if (codSrv) { codSrv.value = ''; codSrv.placeholder = 'Servicio'; }
+        }
         select.value = '';
       };
 
@@ -28975,9 +29080,10 @@
           }
           var permitidos = {};
           prodServDelProveedor(provOC).forEach(function(it) { permitidos[String(it.id)] = true; });
+          (inventarioOCCache || []).forEach(function(p) { permitidos['inv:' + p.id] = true; });
           var filaFuera = Array.prototype.some.call(filas, function(f) { return !f.dataset.catalogoId || !permitidos[f.dataset.catalogoId]; });
           if (filaFuera) {
-            mostrarError('Solo se pueden incluir productos/servicios dados de alta para el proveedor "' + provOC.nombre + '". Quita las partidas de otro proveedor o pide al Administrador que las registre.');
+            mostrarError('Solo se pueden incluir productos/servicios dados de alta para el proveedor "' + provOC.nombre + '" o productos del inventario. Quita las partidas de otro proveedor o pide al Administrador que las registre.');
             return null;
           }
         }
