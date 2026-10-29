@@ -964,8 +964,21 @@
   .productos-tabla input.importe { min-width: 200px; background: var(--gray-100); font-weight: bold; font-size: 23px; width: 210px; }
   .productos-tabla select.udm { min-width: 100px; width: 100px; }
   /* 📦 Productos (inventario): todo a lo ancho, sin barra horizontal en computadora */
+  /* Contenedor con barra horizontal SIEMPRE disponible (y visible al pie
+     de la tabla, porque la tabla tiene su propio alto con scroll vertical
+     y encabezado fijo). */
+  #panelProductos .table-wrapper {
+    overflow: auto !important; max-height: 70vh; border: 1px solid var(--gray-200); border-radius: 8px;
+    scrollbar-width: auto; scrollbar-color: #94a3b8 #e5e7eb;
+  }
+  #panelProductos .table-wrapper::-webkit-scrollbar { height: 14px; width: 12px; }
+  #panelProductos .table-wrapper::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 8px; }
+  #panelProductos .table-wrapper::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 2px solid #e5e7eb; }
+  #panelProductos .table-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  #tablaProductosCatalogo { max-width: none !important; width: max-content !important; min-width: 100% !important; }
+  #tablaProductosCatalogo thead th { position: sticky; top: 0; z-index: 2; }
   @media (min-width: 901px) {
-    #tablaProductosCatalogo { table-layout: auto; width: 100%; min-width: 0 !important; }
+    #tablaProductosCatalogo { table-layout: auto; }
     #tablaProductosCatalogo th, #tablaProductosCatalogo td { white-space: normal !important; font-size: 12.5px; padding: 7px 8px; vertical-align: top; word-break: normal; overflow-wrap: anywhere; }
     #tablaProductosCatalogo td.inv-desc { min-width: 220px; }
     #tablaProductosCatalogo td small { font-size: 11px; color: var(--gray-600); }
@@ -23746,19 +23759,28 @@
       // proveedor, solo en el inventario o en ambos: si está en ambos (mismo
       // número de parte) se muestra una sola vez, la del proveedor.
       var inventarioOCCache = [];
-      function inventarioParaOC(listaProveedor) {
+      // Solo productos del inventario que son DE ESE PROVEEDOR: su marca es
+      // el proveedor (ej. marca STEREN -> proveedor STEREN) o entraron al
+      // inventario por una OC de ese proveedor. Los que ya están en el
+      // catálogo del proveedor (mismo número de parte) no se repiten.
+      function inventarioDelProveedorOC(prov, listaProveedor) {
+        if (!prov) return [];
+        var nomProv = normalizar(prov.nombre);
         var partes = {};
         (listaProveedor || []).forEach(function(it) { if (it.numero_parte) partes[String(it.numero_parte).trim().toUpperCase()] = true; });
+        var ocsDelProveedor = {};
+        (ordenes || []).forEach(function(o) { if (o.codigo && normalizar(o.proveedor) === nomProv) ocsDelProveedor[o.codigo] = true; });
         return (inventarioOCCache || []).filter(function(p) {
           var parte = String(p.numero_parte || '').trim().toUpperCase();
-          return !(parte && partes[parte]);
+          if (parte && partes[parte]) return false;
+          return (p.marca && normalizar(p.marca) === nomProv) || (p.origen_oc && ocsDelProveedor[p.origen_oc]);
         });
       }
       function etiquetaInventarioOC(p) {
         var marcaModelo = [p.marca, p.modelo].filter(Boolean).join(' ');
-        return '🏭 ' + (p.numero_parte ? p.numero_parte + ' — ' : '') + (p.descripcion || '') +
+        return '📦 ' + (p.numero_parte ? p.numero_parte + ' — ' : '') + (p.descripcion || '') +
           (marcaModelo ? ' (' + marcaModelo + ')' : '') + ' · ' + (p.udm || 'PZA') +
-          ' · ref. ' + formatoMoneda(Number(p.precio_referencia) || 0, p.moneda || 'MXN') + ' · existencia ' + (Number(p.cantidad) || 0);
+          ' · ' + formatoMoneda(Number(p.precio_referencia) || 0, p.moneda || 'MXN') + ' · en almacén: ' + (Number(p.cantidad) || 0);
       }
 
       window.actualizarSelectorProductosProveedor = function() {
@@ -23776,17 +23798,15 @@
           return;
         }
         var lista = prodServDelProveedor(prov);
-        var inv = inventarioParaOC(lista);
+        var inv = inventarioDelProveedorOC(prov, lista);
         if (!lista.length && !inv.length) {
           select.innerHTML = '<option value="">-- ' + escapeHTML(prov.nombre) + ' no tiene productos/servicios dados de alta --</option>';
           return;
         }
         var previo = select.value;
-        select.innerHTML = '<option value="">-- Selecciona un producto o servicio (busca por descripción, marca o número de parte) --</option>' +
-          (lista.length ? '<optgroup label="🧾 Productos y servicios de ' + escapeHTML(prov.nombre) + '">' +
-            lista.map(function(it) { return '<option value="' + it.id + '">' + escapeHTML(etiquetaProdServ(it)) + '</option>'; }).join('') + '</optgroup>' : '') +
-          (inv.length ? '<optgroup label="📦 Del inventario (📦 Productos)">' +
-            inv.map(function(p) { return '<option value="inv:' + p.id + '">' + escapeHTML(etiquetaInventarioOC(p)) + '</option>'; }).join('') + '</optgroup>' : '');
+        select.innerHTML = '<option value="">-- Selecciona un producto o servicio de ' + escapeHTML(prov.nombre) + ' (busca por descripción, marca o número de parte) --</option>' +
+          lista.map(function(it) { return '<option value="' + it.id + '">' + escapeHTML(etiquetaProdServ(it)) + '</option>'; }).join('') +
+          inv.map(function(p) { return '<option value="inv:' + p.id + '">' + escapeHTML(etiquetaInventarioOC(p)) + '</option>'; }).join('');
         if (previo && Array.prototype.some.call(select.options, function(o) { return o.value === previo; })) select.value = previo;
       };
 
@@ -29080,10 +29100,10 @@
           }
           var permitidos = {};
           prodServDelProveedor(provOC).forEach(function(it) { permitidos[String(it.id)] = true; });
-          (inventarioOCCache || []).forEach(function(p) { permitidos['inv:' + p.id] = true; });
+          inventarioDelProveedorOC(provOC, prodServDelProveedor(provOC)).forEach(function(p) { permitidos['inv:' + p.id] = true; });
           var filaFuera = Array.prototype.some.call(filas, function(f) { return !f.dataset.catalogoId || !permitidos[f.dataset.catalogoId]; });
           if (filaFuera) {
-            mostrarError('Solo se pueden incluir productos/servicios dados de alta para el proveedor "' + provOC.nombre + '" o productos del inventario. Quita las partidas de otro proveedor o pide al Administrador que las registre.');
+            mostrarError('Solo se pueden incluir productos/servicios dados de alta para el proveedor "' + provOC.nombre + '". Quita las partidas de otro proveedor o pide al Administrador que las registre.');
             return null;
           }
         }
