@@ -18753,7 +18753,7 @@
       async function ajustarInventarioPorCodigo(codigo, delta, lineaOrigen, causaMotivo, ocCodigo) {
         if (!codigo || !delta) return;
         try {
-          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id').eq('codigo', codigo).maybeSingle();
+          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id, marca, modelo').eq('codigo', codigo).maybeSingle();
           if (errGet) return;
           if (!prod) {
             // La partida trae un código (p. ej. "PROD-00016") que el
@@ -18797,7 +18797,10 @@
           }
           var nuevaCantidad = (prod.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
-          await supabase.from('productos').update({ cantidad: nuevaCantidad }).eq('id', prod.id);
+          var cambiosProd = { cantidad: nuevaCantidad };
+          if (lineaOrigen && lineaOrigen.marca && !prod.marca) cambiosProd.marca = String(lineaOrigen.marca).toUpperCase();
+          if (lineaOrigen && lineaOrigen.modelo && !prod.modelo) cambiosProd.modelo = String(lineaOrigen.modelo).toUpperCase();
+          await supabase.from('productos').update(cambiosProd).eq('id', prod.id);
           // El motivo siempre indica la causa del movimiento y, si viene de
           // una OC, el código de esa OC al final separado por un guion —
           // así el módulo de Inventario permite rastrear de qué OC vino
@@ -23673,6 +23676,13 @@
           return normalizar(it.proveedor) === normalizar(prov.nombre);
         });
       }
+      // Texto "MARCA: X · MODELO: Y" de una partida (vacío si no tiene).
+      function textoMarcaModelo(marca, modelo) {
+        var partes = [];
+        if (marca && String(marca).trim()) partes.push('MARCA: ' + String(marca).trim().toUpperCase());
+        if (modelo && String(modelo).trim()) partes.push('MODELO: ' + String(modelo).trim().toUpperCase());
+        return partes.join(' · ');
+      }
       function etiquetaProdServ(it) {
         var marcaModelo = [it.marca, it.modelo].filter(Boolean).join(' ');
         return (it.tipo === 'SERVICIO' ? '🛠️ ' : '📦 ') + (it.numero_parte ? it.numero_parte + ' — ' : '') + it.descripcion +
@@ -24075,6 +24085,11 @@
           fila.dataset.catalogoProveedorId = itemCatalogo.proveedor_id || '';
           fila.dataset.marca = itemCatalogo.marca || '';
           fila.dataset.modelo = itemCatalogo.modelo || '';
+          var txtMM = textoMarcaModelo(itemCatalogo.marca, itemCatalogo.modelo);
+          if (txtMM) {
+            var celdaDesc = fila.querySelector('.desc') ? fila.querySelector('.desc').parentNode : null;
+            if (celdaDesc) { var mm = document.createElement('div'); mm.className = 'partida-marca-modelo'; mm.style.cssText = 'font-size:11px;color:var(--gray-600);margin-top:3px;'; mm.textContent = txtMM; celdaDesc.appendChild(mm); }
+          }
           ['.part', '.desc'].forEach(function(sel) {
             var el = fila.querySelector(sel);
             if (el) { el.readOnly = true; el.style.background = 'var(--gray-100)'; el.title = 'Dato del catálogo (solo el Administrador lo modifica)'; }
@@ -25124,7 +25139,7 @@
           window.agregarFilaEditarProductosOC();
         } else {
           productosOC.forEach(function(p) {
-            window.agregarFilaEditarProductosOC(p.codigo, p.parte, p.descripcion, p.udm, p.cantidad, p.precioUnitario, p.descuento, p.impuesto);
+            window.agregarFilaEditarProductosOC(p.codigo, p.parte, p.descripcion, p.udm, p.cantidad, p.precioUnitario, p.descuento, p.impuesto, p.marca, p.modelo);
           });
         }
 
@@ -25133,7 +25148,7 @@
         document.getElementById('editarProductosOCModal').classList.add('active');
       };
 
-      window.agregarFilaEditarProductosOC = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto) {
+      window.agregarFilaEditarProductosOC = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto, marca, modelo) {
         codigo = codigo || '';
         parte = parte || '';
         descripcion = descripcion || '';
@@ -25157,6 +25172,13 @@
           '<td><input class="impuesto" type="number" value="' + impuesto + '" min="0" max="100" step="1" placeholder="0" onchange="window.recalcularFilaEditarOC(this)" oninput="window.recalcularFilaEditarOC(this)"></td>' +
           '<td><input class="importe" type="text" value="0.00" placeholder="0.00" readonly></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaEditarProductosOC(this)">🗑️</button></td>';
+        fila.dataset.marca = marca || '';
+        fila.dataset.modelo = modelo || '';
+        var txtMMEd = textoMarcaModelo(marca, modelo);
+        if (txtMMEd) {
+          var celdaDescEd = fila.querySelector('.desc') ? fila.querySelector('.desc').parentNode : null;
+          if (celdaDescEd) { var mmEd = document.createElement('div'); mmEd.style.cssText = 'font-size:11px;color:var(--gray-600);margin-top:3px;'; mmEd.textContent = txtMMEd; celdaDescEd.appendChild(mmEd); }
+        }
         tbody.appendChild(fila);
         window.recalcularFilaEditarOC(fila);
         window.recalcularTotalEditarOC();
@@ -25277,7 +25299,9 @@
             descuento: parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0,
             impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0,
             importe: importe,
-            proyecto: proyectoPrevioDe(codigoFila, parteFila, descripcion)
+            proyecto: proyectoPrevioDe(codigoFila, parteFila, descripcion),
+            marca: fila.dataset.marca || null,
+            modelo: fila.dataset.modelo || null
           });
         });
         if (invalido) {
@@ -30001,7 +30025,7 @@
         var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         var rows = datos.productos.map(function(p, i) {
           return [
-            i + 1, p.parte || '', p.descripcion, formatearNumeroMexico(p.cantidad, false, true), p.udm || 'PZA',
+            i + 1, p.parte || '', p.descripcion + (textoMarcaModelo(p.marca, p.modelo) ? '\n' + textoMarcaModelo(p.marca, p.modelo) : ''), formatearNumeroMexico(p.cantidad, false, true), p.udm || 'PZA',
             formatoMoneda(p.precioUnitario, datos.moneda),
             (p.descuento || 0).toFixed(2) + '%',
             (p.impuesto || 0).toFixed(2) + '%',
