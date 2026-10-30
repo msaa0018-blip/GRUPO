@@ -3552,7 +3552,7 @@
         </div>
         <!-- Módulo INVENTARIO - visible solo para el rol Administrador -->
         <div class="modulo-item" id="menuInventarioBtn" data-modulo="inventario" style="display:none;">
-          <div class="modulo-cuadro funcional">📦</div>
+          <div class="modulo-cuadro funcional"><img src="https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/INVENT.png" alt="Inventario" style="width:64px;height:64px;object-fit:contain;" onerror="this.replaceWith(document.createTextNode('📦'))"></div>
           <span class="modulo-leyenda">INVENTARIO</span>
           <div class="modulo-total" style="background:var(--gray-600);border-color:var(--gray-400);color:var(--gray-300);">Próximamente</div>
         </div>
@@ -3907,7 +3907,7 @@
 
       <!-- ===== ALTA DE REGISTROS: PRODUCTOS ===== -->
       <div id="panelProductos" class="card hidden">
-        <h2>📦 Productos</h2>
+        <h2>📦 Agregar al inventario</h2>
         <div style="margin-bottom:10px;">
           <button class="success" onclick="window.abrirModalNuevoProducto()">➕ Agregar producto</button>
         </div>
@@ -8861,7 +8861,11 @@
           // NOTA SEGURIDAD: ya no se solicita la columna "password". El login real
           // se valida en el servidor vía RPC (login_verificar); esta carga solo
           // necesita usuario/rol/permisos para pintar la UI y calcular accesos.
-          var { data, error } = await supabase.from('usuarios').select('usuario,rol,permisos,telefono,email');
+          var { data, error } = await supabase.from('usuarios').select('usuario,nombre_completo,rol,permisos,telefono,email');
+          if (error && /nombre_completo/.test(error.message || '')) {
+            var r2 = await supabase.from('usuarios').select('usuario,rol,permisos,telefono,email');
+            data = r2.data; error = r2.error;
+          }
           if (error) throw error;
           usuariosDB = (data || []).map(function(u) {
             return Object.assign({}, u, { rol: rolConPrioridadJefe(u.rol) });
@@ -9402,7 +9406,7 @@
           }
           if (usuarioPuedeAltaRegistros(actual)) {
             modulos.push({ id: 'proveedores', icono: '🏢', nombre: 'Proveedores' });
-            modulos.push({ id: 'productos', icono: '📦', nombre: 'Productos' });
+            modulos.push({ id: 'productos', icono: '📦', nombre: 'Agregar al inventario' });
           }
           if (actual && actual.rol === 'Administrador') {
             modulos.push({ id: 'clientes', icono: '🧑\u200d💼', nombre: 'Clientes' });
@@ -18224,7 +18228,17 @@
         var headerUsuarioRol = document.getElementById('headerUsuarioRol');
 
         if (headerUsuarioRol) {
-          headerUsuarioRol.textContent = actual ? (actual.usuario + ' - ' + actual.rol) : '';
+          // "Bienvenido NOMBRE - Rol - EMPRESA" (nombre completo de
+          // Colaboradores; si no lo tiene capturado, el usuario).
+          if (actual) {
+            var regUsuario = (usuariosDB || []).find(function(u) { return String(u.usuario || '').toUpperCase() === String(actual.usuario || '').toUpperCase(); });
+            var nombreMostrar = (regUsuario && regUsuario.nombre_completo && String(regUsuario.nombre_completo).trim()) || actual.usuario;
+            var empresaMostrar = ((document.getElementById('headerEmpresaNombreFull') || {}).textContent || '').trim();
+            headerUsuarioRol.textContent = 'Bienvenido ' + nombreMostrar + ' - ' + actual.rol + (empresaMostrar ? ' - ' + empresaMostrar : '');
+            headerUsuarioRol.title = actual.usuario + ' · ' + actual.rol + (empresaMostrar ? ' · ' + empresaMostrar : '');
+          } else {
+            headerUsuarioRol.textContent = '';
+          }
         }
 
         if (!headerLogo) return;
