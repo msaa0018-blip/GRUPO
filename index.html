@@ -5886,6 +5886,7 @@
           <div class="flex" style="align-items:center;gap:12px;">
             <select id="selectProyecto" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
             <select id="empresaDeptoSinProyectoOC" class="hidden" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
+            <input id="nombreProyectoSinProyOC" class="hidden" placeholder="Nombre del proyecto de esta OC * (ej. EQUIPO_COMPUTO_TI)" style="flex:1;" title="Nombre con el que se identifica esta OC (va en su folio). En MAYÚSCULAS, sin espacios (usa guion bajo), sin Ñ, acentos ni puntos, y que no inicie con número.">
           </div>
           <div id="avisoSinProyectoOC" class="hidden" style="font-size:12px;margin-top:6px;color:var(--gray-700);">⚠️ OC sin proyecto: no se aplica la regla del 60/40. Después de la aprobación del Jefe pasa siempre al Director General para autorizar el pago. Al pagarse se registra como proyecto del departamento.</div>
         </div>
@@ -8406,7 +8407,12 @@
         if (['Director General', 'Administrador', 'Finanzas', 'Contabilidad'].indexOf(usuario.rol) !== -1) {
           ocFiltradas = ordenes.slice();
         } else {
+          var yoOC = String(usuario.usuario || usuario.u || '').trim().toUpperCase();
           ocFiltradas = ordenes.filter(function(o) {
+            // Las OC que el usuario elaboró o de las que es responsable
+            // SIEMPRE las ve (aunque sean "sin proyecto" o su empresa /
+            // departamento no coincida con sus permisos).
+            if (String(o.elaborador || '').trim().toUpperCase() === yoOC || String(o.responsable || '').trim().toUpperCase() === yoOC) return true;
             var p = proyectoDeOC(o);
             if (!p) return false;
             return usuarioPuedeAcceder(usuario, p.empresa, p.departamento);
@@ -8642,7 +8648,10 @@
 
         var proveedorClean = (proveedor || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
         var proyectoClean = (proyecto || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-        var clienteClean = (cliente || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+        var clienteBase = (cliente && String(cliente).trim()) ? cliente : empresa;
+        var clienteClean = (normalizar(clienteBase) === normalizar(empresa) && getAbreviaturaEmpresa(empresa))
+          ? getAbreviaturaEmpresa(empresa)
+          : (clienteBase || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
         var elaboradorClean = (elaborador || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
 
         var letra = seq || 'A';
@@ -18452,7 +18461,7 @@
             proyectonombre: oc.proyecto,
             empresa: proyecto.empresa,
             departamento: proyecto.departamento,
-            cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            cliente: oc.cliente || proyecto.cliente || proyecto.empresa || 'No especificado',
             proveedor: oc.proveedor,
             rfc: oc.rfc || 'No especificado',
             responsable: oc.responsable,
@@ -18788,7 +18797,7 @@
             proyectonombre: oc.proyecto,
             empresa: proyecto.empresa,
             departamento: proyecto.departamento,
-            cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            cliente: oc.cliente || proyecto.cliente || proyecto.empresa || 'No especificado',
             proveedor: oc.proveedor,
             rfc: oc.rfc || 'No especificado',
             responsable: oc.responsable,
@@ -19377,14 +19386,26 @@
       async function registrarOCSinProyectoComoProyecto(oc) {
         try {
           if (!oc || !oc.sin_proyecto) return null;
-          var nombre = String(oc.codigo || ('OC-' + oc.id)).toUpperCase();
+          // Nombre del proyecto: el que se capturó en la OC sin proyecto; las
+          // OC anteriores (que dicen "SIN PROYECTO") usan su folio.
+          var nombreCapturado = String(oc.proyecto || '').trim();
+          var nombre = (nombreCapturado && normalizar(nombreCapturado) !== normalizar(NOMBRE_OC_SIN_PROYECTO)
+            ? nombreCapturado : String(oc.codigo || ('OC-' + oc.id))).toUpperCase();
           var existente = proyectos.find(function(p) { return normalizar(p.nombre) === normalizar(nombre); });
+          if (existente && existente.centro_trabajo === 'OC SIN PROYECTO' && existente.origen_oc !== oc.codigo) {
+            // Otra OC sin proyecto con el mismo nombre ya se pagó: se suma su
+            // monto al presupuesto de ese proyecto.
+            var sumar = Number(oc.montototal) || 0;
+            var nuevoPres = (Number(existente.presupuesto) || 0) + sumar;
+            await supabase.from('proyectos').update({ presupuesto: nuevoPres, limite: nuevoPres }).eq('id', existente.id);
+            existente.presupuesto = nuevoPres; existente.limite = nuevoPres;
+          }
           if (!existente) {
             var hoy = new Date().toISOString().slice(0, 10);
             var total = Number(oc.montototal) || 0;
             var nuevo = {
               empresa: oc.empresa, departamento: oc.departamento, nombre: nombre,
-              centro_trabajo: 'OC SIN PROYECTO', cliente: oc.cliente || 'SIN CLIENTE',
+              centro_trabajo: 'OC SIN PROYECTO', cliente: oc.cliente || oc.empresa || 'SIN CLIENTE',
               presupuesto: total, moneda: oc.moneda || 'MXN', utilidad_pct: 0, limite: total,
               fecha_inicio: hoy, fecha_termino: hoy, es_suministro: true, es_servicios: false,
               direccion: null, colaboradores_requeridos: null, origen_oc: oc.codigo || null
@@ -28061,6 +28082,8 @@
         var aviso = document.getElementById('avisoSinProyectoOC');
         if (selProy) selProy.classList.toggle('hidden', sinProyecto);
         if (aviso) aviso.classList.toggle('hidden', !sinProyecto);
+        var inpNomSP = document.getElementById('nombreProyectoSinProyOC');
+        if (inpNomSP) inpNomSP.classList.toggle('hidden', !sinProyecto);
         if (selED) {
           selED.classList.toggle('hidden', !sinProyecto);
           if (sinProyecto) {
@@ -28916,7 +28939,7 @@
             condicionpago: oc.condicionpago || '',
             motivo: oc.motivo || null,
             productos: productos,
-            cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            cliente: oc.cliente || proyecto.cliente || proyecto.empresa || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
             banco: oc.banco || 'No especificado',
             cuenta: oc.cuenta || 'N/A',
@@ -29070,7 +29093,16 @@
         if (sinProyectoOC) {
           var edSP = empresaDeptoSinProyectoOC();
           if (!edSP) { mostrarError('Selecciona la empresa y el departamento de la OC sin proyecto.'); return null; }
-          proyecto = { id: null, nombre: NOMBRE_OC_SIN_PROYECTO, empresa: edSP.empresa, departamento: edSP.depto, cliente: '', moneda: 'MXN', sin_proyecto: true };
+          // Nombre del proyecto de la OC sin proyecto: obligatorio. Va en el
+          // folio (en lugar de "SINPROYECT") y será el nombre del proyecto
+          // que se registra al pagarse la OC.
+          var nombreSP = ((document.getElementById('nombreProyectoSinProyOC') || {}).value || '').trim().toUpperCase();
+          if (!nombreSP) { mostrarError('Escribe el nombre del proyecto de esta OC sin proyecto (ej. EQUIPO_COMPUTO_TI).'); return null; }
+          if (normalizar(nombreSP) === normalizar(NOMBRE_OC_SIN_PROYECTO) || proyectos.some(function(p) { return normalizar(p.nombre) === normalizar(nombreSP); })) {
+            mostrarError('Ya existe un proyecto llamado "' + nombreSP + '". Si la OC es de ese proyecto, márcala como ligada a proyecto y elígelo; si no, usa otro nombre.');
+            return null;
+          }
+          proyecto = { id: null, nombre: nombreSP, empresa: edSP.empresa, departamento: edSP.depto, cliente: '', moneda: 'MXN', sin_proyecto: true };
         } else {
           var selectProyecto = document.getElementById('selectProyecto');
           var selectedId = parseInt(selectProyecto ? selectProyecto.value : '');
@@ -29242,7 +29274,9 @@
           empresa: proyecto.empresa,
           departamento: proyecto.departamento,
           proyectonombre: proyecto.nombre,
-          cliente: proyecto.cliente,
+          // Compras internas: si la OC no tiene cliente, el cliente es la
+          // propia empresa de la OC.
+          cliente: (proyecto.cliente && String(proyecto.cliente).trim()) ? proyecto.cliente : proyecto.empresa,
           proveedor: proveedor,
           provTelefono: provTelefono,
           provEmail: provEmail,
@@ -29411,7 +29445,7 @@
         document.getElementById('mensajeOC').innerHTML = '<div class="success-msg">✅ OC CREADA. CÓDIGO: ' + codigo + '</div>';
 
         try {
-          document.getElementById('cuerpoProductos').innerHTML = '';
+          document.getElementById('cuerpoProductos').innerHTML = ''; var inpNomSPReset = document.getElementById('nombreProyectoSinProyOC'); if (inpNomSPReset) inpNomSPReset.value = '';
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
           if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
@@ -29516,6 +29550,15 @@
           proveedor_email: datos.provEmail || null
         };
 
+        // OC sin proyecto: se guardan la marca y su empresa/departamento
+        // (antes solo se hacía en "Previsualizar → Confirmar"; desde el
+        // botón ✅ Confirmar quedaban sin empresa ni departamento y la OC
+        // no se veía ni seguía su flujo).
+        if (datos.sin_proyecto) {
+          nuevaOC.sin_proyecto = true;
+          nuevaOC.empresa = datos.empresa;
+          nuevaOC.departamento = datos.departamento;
+        }
         var { data, error } = await insertarOCConRespaldo(nuevaOC);
         if (error) {
           console.error('❌ Error de Supabase:', error);
@@ -29563,7 +29606,7 @@
         ['proveedor', 'sucursal', 'rfc', 'direccion', 'direccionEntrega', 'cp',
           'fechaPago', 'fechaPago2OC', 'fechaEntrega', 'notasOC', 'conceptoOC', 'banco', 'cuenta', 'clabe',
           'swift', 'cie', 'referencia', 'paridadInicial',
-          'solicitanteTelefonoOC', 'solicitanteEmailOC', 'responsableEntregaOC', 'sucursalEntregaOC'].forEach(function(id) {
+          'solicitanteTelefonoOC', 'solicitanteEmailOC', 'responsableEntregaOC', 'sucursalEntregaOC', 'nombreProyectoSinProyOC'].forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.value = '';
         });
@@ -29605,7 +29648,7 @@
           el.classList.add('hidden');
         });
 
-        document.getElementById('cuerpoProductos').innerHTML = '';
+        document.getElementById('cuerpoProductos').innerHTML = ''; var inpNomSPReset = document.getElementById('nombreProyectoSinProyOC'); if (inpNomSPReset) inpNomSPReset.value = '';
         window.agregarFilaProducto();
         document.getElementById('totalProductos').textContent = '$0.00';
         document.getElementById('mensajeOC').innerHTML = '';
@@ -29643,7 +29686,7 @@
             condicionpago: oc.condicionpago || '',
             motivo: oc.motivo || null,
             productos: productos,
-            cliente: oc.cliente || proyecto.cliente || 'No especificado',
+            cliente: oc.cliente || proyecto.cliente || proyecto.empresa || 'No especificado',
             elaborador: oc.elaborador || 'Desconocido',
             banco: oc.banco || 'No especificado',
             cuenta: oc.cuenta || 'N/A',
@@ -31833,7 +31876,7 @@
           add([p + 'Ubicacion'], 'clave', 'Ubicación');
         });
         // Proyectos
-        add(['nombreProyecto'], 'clave', 'Nombre del proyecto');
+        add(['nombreProyecto', 'nombreProyectoSinProyOC'], 'clave', 'Nombre del proyecto');
         add(['direccionProyecto', 'edProyectoDireccion'], 'domicilio', 'Dirección del servicio');
         add(['edProyectoCliente'], 'texto', 'Cliente');
         add(['edProyectoCentroTrabajo'], 'texto', 'Centro de trabajo');
