@@ -30167,6 +30167,10 @@
         // a 1.5cm del borde inferior de la hoja. Ningún otro contenido debe
         // invadir esa franja: "limiteContenidoY" es la Y máxima hasta donde
         // se puede dibujar contenido normal antes de forzar una hoja nueva.
+        // Formato compacto (para que una OC de hasta 4 partidas quepa en
+        // una sola hoja junto con las firmas): letra 8.5 en los datos,
+        // interlineado de 9 pt y 2 pt entre renglones.
+        var FUENTE_CAMPO_OC = 8.5, INTERLINEA_OC = 9, SEPARACION_CAMPOS_OC = 2;
         var CM_A_PT_OC = 28.3464567;
         var alturaPiePaginaOC = 1.5 * CM_A_PT_OC;
         var pieYOC = pageHeight - alturaPiePaginaOC;
@@ -30239,7 +30243,7 @@
         }
 
         // ---------- 1. ENCABEZADO DE LA ORDEN ----------
-        var headerH = 58;
+        var headerH = 46;
         doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.setLineWidth(0.75);
@@ -30248,37 +30252,37 @@
         doc.roundedRect(margin, y, 7, headerH, 2, 2, 'F');
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(17);
+        doc.setFontSize(15);
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('ORDEN DE COMPRA', margin + 24, y + 20);
+        doc.text('ORDEN DE COMPRA', margin + 22, y + 16);
 
         // Debajo de la leyenda "ORDEN DE COMPRA": primero el folio de la
         // OC, y debajo de éste, las iniciales del SOLICITANTE (no del
         // usuario que elaboró/creó la OC) junto con su teléfono y
         // email, separados por "|".
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
+        doc.setFontSize(9);
         doc.setTextColor(200, 0, 0);
-        doc.text('FOLIO: ', margin + 24, y + 35);
+        doc.text('FOLIO: ', margin + 22, y + 28);
         var anchoLeyendaFolio = doc.getTextWidth('FOLIO: ');
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(String(codigoFinalHeader), margin + 24 + anchoLeyendaFolio, y + 35);
-        doc.setFontSize(9);
-        doc.text(((datos.solicitante || 'Desconocido') + ' | ' + (datos.solicitantetelefono || 'N/A') + ' | ' + (datos.solicitanteemail || 'N/A')), margin + 24, y + 47);
+        doc.text(String(codigoFinalHeader), margin + 22 + anchoLeyendaFolio, y + 28);
+        doc.setFontSize(8.5);
+        doc.text(((datos.solicitante || 'Desconocido') + ' | ' + (datos.solicitantetelefono || 'N/A') + ' | ' + (datos.solicitanteemail || 'N/A')), margin + 22, y + 38.5);
 
         var xDerecha = pageWidth - margin - 18;
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
+        doc.setFontSize(8.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var momentoElaboracion = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion) : new Date();
         var fechaElaboracionHeader = momentoElaboracion.toLocaleDateString();
-        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader + '.', xDerecha, y + 20, { align: 'right' });
+        doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader + '.', xDerecha, y + 16, { align: 'right' });
         // Debajo de la fecha: hora de elaboración (24 h, hh:mm:ss).
         var dosDigitos = function(n) { return (n < 10 ? '0' : '') + n; };
         var horaElaboracionHeader = dosDigitos(momentoElaboracion.getHours()) + ':' + dosDigitos(momentoElaboracion.getMinutes()) + ':' + dosDigitos(momentoElaboracion.getSeconds());
-        doc.text('Hora: ' + horaElaboracionHeader, xDerecha, y + 32, { align: 'right' });
+        doc.text('Hora: ' + horaElaboracionHeader, xDerecha, y + 26, { align: 'right' });
 
-        y += headerH + 5;
+        y += headerH + 4;
 
         // ---------- 2. INFORMACIÓN GENERAL (dos tarjetas) ----------
         // saltoLinea=true dibuja el valor en la línea SIGUIENTE a la del
@@ -30290,14 +30294,14 @@
         // dentro de "Uso CFDI" en FACTURAR A.
         function dibujarCampoLinea(x, yPos, label, value, maxWidth, saltoLinea, sufijo) {
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
+          doc.setFontSize(FUENTE_CAMPO_OC);
           doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
           doc.text(label, x, yPos);
           doc.setFont('helvetica', 'normal');
           if (saltoLinea) {
             var lineasSalto = doc.splitTextToSize(' ' + agregarPuntoFinal(value), maxWidth);
-            doc.text(lineasSalto, x, yPos + 11);
-            return 11 + lineasSalto.length * 9;
+            doc.text(lineasSalto, x, yPos + INTERLINEA_OC);
+            return INTERLINEA_OC + lineasSalto.length * INTERLINEA_OC;
           }
           var labelWidth = doc.getTextWidth(label) + 6;
           var lineas = doc.splitTextToSize(' ' + agregarPuntoFinal(value), Math.max(maxWidth - labelWidth, 20));
@@ -30310,13 +30314,13 @@
             doc.setFont('helvetica', 'normal');
             doc.text(' ' + agregarPuntoFinal(sufijo.value), sufijoX + sufijoLabelWidth, yPos);
           }
-          return lineas.length * 9;
+          return lineas.length * INTERLINEA_OC;
         }
 
-        var cardGap = 14;
+        var cardGap = 12;
         var cardW = (pageWidth - 2 * margin - cardGap) / 2;
-        var cardHeaderH = 20;
-        var cardPaddingX = 14;
+        var cardHeaderH = 16;
+        var cardPaddingX = 12;
         var anchoContenidoCard = cardW - cardPaddingX * 2;
 
         var proveedorMatchEmail = proveedoresCatalogoCache.find(function(p) {
@@ -30354,23 +30358,23 @@
           var total = 0;
           campos.forEach(function(c) {
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
+            doc.setFontSize(FUENTE_CAMPO_OC);
             var labelWidth = doc.getTextWidth(c.label) + 6;
             doc.setFont('helvetica', 'normal');
             if (c.saltoLinea) {
               var lineasSalto = doc.splitTextToSize(' ' + agregarPuntoFinal(c.value), maxWidth);
-              total += 11 + lineasSalto.length * 9 + 4;
+              total += INTERLINEA_OC + lineasSalto.length * INTERLINEA_OC + SEPARACION_CAMPOS_OC;
               return;
             }
             var lineas = doc.splitTextToSize(' ' + agregarPuntoFinal(c.value), Math.max(maxWidth - labelWidth, 20));
-            total += lineas.length * 9 + 4;
+            total += lineas.length * INTERLINEA_OC + SEPARACION_CAMPOS_OC;
           });
           return total;
         }
 
         var altoCuerpo1 = alturaCampos(camposProveedor, anchoContenidoCard);
         var altoCuerpo2 = alturaCampos(camposEntrega, anchoContenidoCard);
-        var cardBodyPadding = 10;
+        var cardBodyPadding = 4;
         var cardH = cardHeaderH + Math.max(altoCuerpo1, altoCuerpo2) + cardBodyPadding;
 
         function dibujarTarjeta(x, titulo, campos) {
@@ -30386,14 +30390,14 @@
           doc.line(x, y + cardHeaderH, x + cardW, y + cardHeaderH);
 
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-          doc.text(titulo, x + cardPaddingX, y + cardHeaderH / 2 + 4);
+          doc.text(titulo, x + cardPaddingX, y + cardHeaderH / 2 + 3.2);
 
-          var yCampo = y + cardHeaderH + 12;
+          var yCampo = y + cardHeaderH + 9;
           campos.forEach(function(c) {
             var alto = dibujarCampoLinea(x + cardPaddingX, yCampo, c.label, c.value, anchoContenidoCard, c.saltoLinea, c.sufijo);
-            yCampo += alto + 4;
+            yCampo += alto + SEPARACION_CAMPOS_OC;
           });
         }
 
@@ -30401,7 +30405,7 @@
         dibujarTarjeta(margin, 'DATOS DEL PROVEEDOR', camposProveedor);
         dibujarTarjeta(margin + cardW + cardGap, 'FACTURAR A:', camposEntrega);
 
-        y += cardH + 8;
+        y += cardH + 5;
 
         // ---------- DATOS DE "PARTE INFERIOR" CALCULADOS DE ANTEMANO ----------
         // bottomW/camposCondicionesExtra/camposBancarios/camposEntregaCondiciones
@@ -30414,16 +30418,17 @@
         // tabla deja lugar para esta fila (y para AUTORIZACIONES) en la
         // MISMA página que su última partida — nunca quedan solas en una
         // hoja aparte sin ningún producto.
-        var bottomGap = 14;
+        var bottomGap = 12;
         var bottomW = (pageWidth - 2 * margin - bottomGap) / 2;
         var bottomX1 = margin;
         var bottomX2 = margin + bottomW + bottomGap;
-        var bottomHeaderH = 22;
+        var bottomHeaderH = 16;
 
         var textoCondiciones = datos.condicionpago
           ? String(datos.condicionpago)
           : 'Sin condiciones comerciales especificadas.';
-        var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 28);
+        doc.setFontSize(FUENTE_CAMPO_OC);
+        var lineasCondiciones = doc.splitTextToSize(textoCondiciones, bottomW - 24);
 
         var camposCondicionesExtra = [
           { label: 'Fecha de Pago:', value: datos.fechapago ? fechaSoloDia(datos.fechapago).toLocaleDateString() : 'N/A', sufijo: { label: 'Moneda:', value: datos.moneda || 'N/A' } },
@@ -30449,7 +30454,7 @@
             camposCondicionesExtra.push({ label: 'Tipo de Cambio:', value: 'N/A (Pago en Dólares)' });
           }
         }
-        var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 28);
+        var altoCamposCondiciones = alturaCampos(camposCondicionesExtra, bottomW - 24);
 
         // Datos bancarios del proveedor (antes formaban parte de la misma
         // tarjeta de "CONDICIONES COMERCIALES"; ahora van en su propia
@@ -30471,24 +30476,24 @@
           camposEntregaCondiciones.push({ label: 'Paquetería:', value: datos.paqueteria });
         }
 
-        var bottomBodyPadding = 12;
-        var altoTerminos = bottomHeaderH + lineasCondiciones.length * 9 + 12 + altoCamposCondiciones + bottomBodyPadding;
-        var altoFinanciero = bottomHeaderH + 3 * 17 + bottomBodyPadding;
-        var bottomH = Math.max(altoTerminos, altoFinanciero, 90);
+        var bottomBodyPadding = 4;
+        var altoTerminos = bottomHeaderH + 9 + lineasCondiciones.length * INTERLINEA_OC + 3 + altoCamposCondiciones + bottomBodyPadding;
+        var altoFinanciero = bottomHeaderH + 3 * 14 + bottomBodyPadding;
+        var bottomH = Math.max(altoTerminos, altoFinanciero, 64);
 
-        var altoBancarios = alturaCampos(camposBancarios, bottomW - 28);
-        var altoEntregaCondiciones = alturaCampos(camposEntregaCondiciones, bottomW - 28);
-        var bottomH2 = Math.max(bottomHeaderH + 12 + altoBancarios + bottomBodyPadding, bottomHeaderH + 12 + altoEntregaCondiciones + bottomBodyPadding, 70);
+        var altoBancarios = alturaCampos(camposBancarios, bottomW - 24);
+        var altoEntregaCondiciones = alturaCampos(camposEntregaCondiciones, bottomW - 24);
+        var bottomH2 = Math.max(bottomHeaderH + 9 + altoBancarios + bottomBodyPadding, bottomHeaderH + 9 + altoEntregaCondiciones + bottomBodyPadding, 46);
 
         // Estimado fijo del bloque de firmas (título "AUTORIZACIONES" +
-        // recuadros + fecha de cada una).
-        var alturaAutorizacionesOC = 90;
+        // nombre, línea de firma y fecha de cada una).
+        var alturaAutorizacionesOC = 62;
 
         // Alto total de TODO lo que va después de la tabla: CONDICIONES
         // COMERCIALES/RESUMEN FINANCIERO + DATOS BANCARIOS/INSTRUCCIONES DE
         // ENTREGA + AUTORIZACIONES (mismos incrementos que se usan más abajo
         // al dibujarlos: "y += bottomH + 8" y "y += bottomH2 + 9 + 11").
-        var alturaColaCompletaOC = bottomH + 8 + bottomH2 + 9 + 11 + alturaAutorizacionesOC;
+        var alturaColaCompletaOC = bottomH + 5 + bottomH2 + 5 + 9 + alturaAutorizacionesOC;
 
         // ---------- 3. TABLA DE PRODUCTOS ----------
         var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
@@ -30520,18 +30525,18 @@
         // tabla en "filasPrevias"/"filaUltima". Así se garantiza que con
         // pocas partidas el pie SIEMPRE aparezca en la primera hoja junto
         // con todas ellas — nunca solo, nunca en una hoja aparte.
-        var footerSiempreConTodasLasPartidasOC = rows.length > 0 && rows.length <= 3;
+        var footerSiempreConTodasLasPartidasOC = rows.length > 0 && rows.length <= 4;
         var hayMasDeUnaPartida = rows.length > 1 && !footerSiempreConTodasLasPartidasOC;
         var filasPrevias = hayMasDeUnaPartida ? rows.slice(0, -1) : [];
         var filaUltima = hayMasDeUnaPartida ? rows.slice(-1) : rows;
 
         var estilosComunesTablaOC = {
-          fontSize: 8, cellPadding: 5, font: 'helvetica',
+          fontSize: 7.5, cellPadding: { top: 2.5, right: 4, bottom: 2.5, left: 4 }, font: 'helvetica',
           lineColor: colorBorde, lineWidth: { top: 0, left: 0, right: 0, bottom: 0.5 },
           textColor: colorTexto
         };
         var headStylesComunesTablaOC = {
-          fillColor: azulCorp, textColor: [255, 255, 255], fontSize: 8,
+          fillColor: azulCorp, textColor: [255, 255, 255], fontSize: 7.5, cellPadding: { top: 3.5, right: 4, bottom: 3.5, left: 4 },
           font: 'helvetica', fontStyle: 'bold', lineWidth: { top: 0, left: 0, right: 0, bottom: 0 }
         };
         var columnStylesComunesTablaOC = {
@@ -30597,13 +30602,13 @@
         // "cellPaddingFilaUltimaOC": lo mismo pero para la última partida
         // (que se dibuja en su propio autoTable aparte).
         var mapaPaddingExtraFilasPreviasOC = {};
-        var cellPaddingFilaUltimaOC = 5;
+        var cellPaddingFilaUltimaOC = { top: 2.5, right: 4, bottom: 2.5, left: 4 };
         function construirDidParseCellFilasPreviasOC(mapa) {
           return function(data) {
             if (data.section !== 'body') return;
             var extra = mapa[data.row.index];
             if (extra) {
-              data.cell.styles.cellPadding = { top: 5 + extra / 2, right: 5, bottom: 5 + extra / 2, left: 5 };
+              data.cell.styles.cellPadding = { top: 2.5 + extra / 2, right: 4, bottom: 2.5 + extra / 2, left: 4 };
             }
           };
         }
@@ -30683,7 +30688,7 @@
               // "+7" hace que el pie ya no quepa, saltando SOLO el pie
               // (sin esta partida) a una hoja nueva — exactamente lo que
               // no debe pasar.
-              margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
+              margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 5 + alturaColaCompletaOC },
               theme: 'plain',
               styles: estilosComunesTablaOC,
               headStyles: headStylesComunesTablaOC,
@@ -30737,7 +30742,7 @@
             if (filaUltimaCambiaDeHojaOC) {
               var inicioPagFUOC = franjas.yInicio + 6.25;
               var naturalFUOC = finalYFilaUltimaMedicionOC - inicioPagFUOC;
-              var contentBottomFUOC = limiteContenidoY - 7 - alturaColaCompletaOC;
+              var contentBottomFUOC = limiteContenidoY - 5 - alturaColaCompletaOC;
               var huecoFUOC = contentBottomFUOC - naturalFUOC;
               if (huecoFUOC > 30) {
                 candidatoExtraBloqueBFilaUltimaOC = Math.min(huecoFUOC / filaUltima.length, 25);
@@ -30745,7 +30750,7 @@
             } else if (paginasFilasPreviasMedicionOC > 1) {
               var inicioPagCompOC = franjas.yInicio + 6.25;
               var naturalCompOC = finalYFilaUltimaMedicionOC - inicioPagCompOC;
-              var contentBottomCompOC = limiteContenidoY - 7 - alturaColaCompletaOC;
+              var contentBottomCompOC = limiteContenidoY - 5 - alturaColaCompletaOC;
               var huecoCompOC = contentBottomCompOC - naturalCompOC;
               var filasCompartidasCountOC = filasEnUltimaPaginaFPOC.length + filaUltima.length;
               if (huecoCompOC > 30 && filasCompartidasCountOC > 0) {
@@ -30781,7 +30786,7 @@
                   Object.keys(candidatoMapaBloqueBFilasPreviasOC).forEach(function(k) { mapaProbarOC[k] = candidatoMapaBloqueBFilasPreviasOC[k] * factorOC; });
                 }
                 var extraFilaUltimaProbarOC = candidatoExtraBloqueBFilaUltimaOC * factorOC;
-                var cellPaddingFilaUltimaProbarOC = { top: 5 + extraFilaUltimaProbarOC / 2, right: 5, bottom: 5 + extraFilaUltimaProbarOC / 2, left: 5 };
+                var cellPaddingFilaUltimaProbarOC = { top: 2.5 + extraFilaUltimaProbarOC / 2, right: 4, bottom: 2.5 + extraFilaUltimaProbarOC / 2, left: 4 };
                 try {
                   var docVerifOC = new jsPDF('p', 'pt', 'a4');
                   docVerifOC.autoTable({
@@ -30807,7 +30812,7 @@
                     showHead: 'never',
                     body: filaUltima,
                     startY: yTrasFPVerifOC,
-                    margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
+                    margin: { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 5 + alturaColaCompletaOC },
                     theme: 'plain',
                     styles: estilosComunesTablaOC,
                     headStyles: headStylesComunesTablaOC,
@@ -30907,7 +30912,7 @@
             // condición sobre "asegurarEspacioOC" junto a "y += 7").
             margin: footerSiempreConTodasLasPartidasOC
               ? { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: pageHeight - limiteContenidoY }
-              : { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 7 + alturaColaCompletaOC },
+              : { left: margin, right: margin, top: franjas.yInicio + 6.25, bottom: (pageHeight - limiteContenidoY) + 5 + alturaColaCompletaOC },
             theme: 'plain',
             styles: estilosComunesTablaOC,
             headStyles: headStylesComunesTablaOC,
@@ -30944,7 +30949,7 @@
         // camposBancarios/camposEntregaCondiciones/bottomH/bottomH2 ya se
         // calcularon ANTES de la tabla de productos (ver más arriba), para
         // poder reservarles espacio en el margin.bottom del autoTable.
-        y += 7;
+        y += 5;
 
         // TODO el pie (CONDICIONES COMERCIALES/RESUMEN FINANCIERO + DATOS
         // BANCARIOS/INSTRUCCIONES DE ENTREGA + AUTORIZACIONES) se trata
@@ -30987,18 +30992,18 @@
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.line(bottomX1, y + bottomHeaderH, bottomX1 + bottomW, y + bottomHeaderH);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('CONDICIONES COMERCIALES', bottomX1 + 14, y + bottomHeaderH / 2 + 4);
-        doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('CONDICIONES COMERCIALES', bottomX1 + 12, y + bottomHeaderH / 2 + 3.2);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(FUENTE_CAMPO_OC);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text(lineasCondiciones, bottomX1 + 14, y + bottomHeaderH + 12);
+        doc.text(lineasCondiciones, bottomX1 + 12, y + bottomHeaderH + 9);
 
-        var yCampoCondiciones = y + bottomHeaderH + 12 + lineasCondiciones.length * 9 + 8;
+        var yCampoCondiciones = y + bottomHeaderH + 9 + lineasCondiciones.length * INTERLINEA_OC + 3;
         camposCondicionesExtra.forEach(function(c) {
-          var altoCampo = dibujarCampoLinea(bottomX1 + 14, yCampoCondiciones, c.label, c.value, bottomW - 28, c.saltoLinea, c.sufijo);
-          yCampoCondiciones += altoCampo + 4;
+          var altoCampo = dibujarCampoLinea(bottomX1 + 12, yCampoCondiciones, c.label, c.value, bottomW - 24, c.saltoLinea, c.sufijo);
+          yCampoCondiciones += altoCampo + SEPARACION_CAMPOS_OC;
         });
 
         // Tarjeta derecha: resumen financiero
@@ -31012,34 +31017,34 @@
         doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
         doc.line(bottomX2, y + bottomHeaderH, bottomX2 + bottomW, y + bottomHeaderH);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('RESUMEN FINANCIERO', bottomX2 + 14, y + bottomHeaderH / 2 + 4);
-
-        var yResumen = y + bottomHeaderH + 15;
-        doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
+        doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
+        doc.text('RESUMEN FINANCIERO', bottomX2 + 12, y + bottomHeaderH / 2 + 3.2);
+
+        var yResumen = y + bottomHeaderH + 11;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(FUENTE_CAMPO_OC);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        doc.text('Subtotal:', bottomX2 + 14, yResumen);
-        doc.text(formatoMoneda(subtotal, datos.moneda), bottomX2 + bottomW - 14, yResumen, { align: 'right' });
-        yResumen += 15;
-        doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', bottomX2 + 14, yResumen);
-        doc.text(formatoMoneda(iva, datos.moneda), bottomX2 + bottomW - 14, yResumen, { align: 'right' });
-        yResumen += 13;
+        doc.text('Subtotal:', bottomX2 + 12, yResumen);
+        doc.text(formatoMoneda(subtotal, datos.moneda), bottomX2 + bottomW - 12, yResumen, { align: 'right' });
+        yResumen += 11;
+        doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', bottomX2 + 12, yResumen);
+        doc.text(formatoMoneda(iva, datos.moneda), bottomX2 + bottomW - 12, yResumen, { align: 'right' });
+        yResumen += 8;
 
         var totalBoxY = yResumen - 2;
-        var totalBoxH = bottomH - (totalBoxY - y) - 8;
-        if (totalBoxH > 20) {
+        var totalBoxH = bottomH - (totalBoxY - y) - 5;
+        if (totalBoxH > 14) {
           doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
           doc.roundedRect(bottomX2 + 8, totalBoxY, bottomW - 16, totalBoxH, 2, 2, 'F');
         }
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-        doc.text('TOTAL:', bottomX2 + 16, totalBoxY + totalBoxH / 2 + 5);
-        doc.text(formatoMoneda(datos.montototal, datos.moneda), bottomX2 + bottomW - 16, totalBoxY + totalBoxH / 2 + 5, { align: 'right' });
+        doc.text('TOTAL:', bottomX2 + 14, totalBoxY + totalBoxH / 2 + 4.5);
+        doc.text(formatoMoneda(datos.montototal, datos.moneda), bottomX2 + bottomW - 14, totalBoxY + totalBoxH / 2 + 4.5, { align: 'right' });
 
-        y += bottomH + 8;
+        y += bottomH + 5;
 
         // ---------- 4b. FILA 2: DATOS BANCARIOS PROVEEDOR | INSTRUCCIONES DE ENTREGA ----------
         function dibujarCajaSimple(x, yPos, w, h, titulo, campos) {
@@ -31053,13 +31058,13 @@
           doc.setDrawColor(colorBorde[0], colorBorde[1], colorBorde[2]);
           doc.line(x, yPos + bottomHeaderH, x + w, yPos + bottomHeaderH);
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           doc.setTextColor(azulCorp[0], azulCorp[1], azulCorp[2]);
-          doc.text(titulo, x + 14, yPos + bottomHeaderH / 2 + 4);
-          var yCampo = yPos + bottomHeaderH + 12;
+          doc.text(titulo, x + 12, yPos + bottomHeaderH / 2 + 3.2);
+          var yCampo = yPos + bottomHeaderH + 9;
           campos.forEach(function(c) {
-            var alto = dibujarCampoLinea(x + 14, yCampo, c.label, c.value, w - 28, c.saltoLinea, c.sufijo);
-            yCampo += alto + 4;
+            var alto = dibujarCampoLinea(x + 12, yCampo, c.label, c.value, w - 24, c.saltoLinea, c.sufijo);
+            yCampo += alto + SEPARACION_CAMPOS_OC;
           });
         }
 
@@ -31074,13 +31079,13 @@
         dibujarCajaSimple(bottomX1, y, bottomW, bottomH2, 'DATOS BANCARIOS PROVEEDOR', camposBancarios);
         dibujarCajaSimple(bottomX2, y, bottomW, bottomH2, 'INSTRUCCIONES DE ENTREGA', camposEntregaCondiciones);
 
-        y += bottomH2 + 9 + 11;
+        y += bottomH2 + 5 + 9;
 
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text('AUTORIZACIONES', margin, y);
-        y += 9;
+        y += 12;
 
         var solicitante = datos.solicitante || 'No definido';
         var jefe = getJefeDepto(datos.empresa, datos.departamento);
@@ -31123,16 +31128,17 @@
 
         function dibujarAutorizacionPDF(doc, x, y, nombre, titulo, fecha) {
           var lineWidth = colWidth - 20;
-          doc.setFontSize(9);
+          doc.setFontSize(8.5);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
           doc.text(titulo + ':', x + (lineWidth / 2), y, { align: 'center' });
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'bold');
           var fechaStr = (fecha && fecha !== 'Pendiente') ? '' : ' (Pendiente)';
-          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 14, { align: 'center' });
-          var lineY = y + 14 + 20 + 10;
+          doc.text(nombre + fechaStr, x + (lineWidth / 2), y + 11, { align: 'center' });
+          // Espacio para la firma entre el nombre y la línea.
+          var lineY = y + 11 + 24;
           doc.setDrawColor(80, 80, 80);
           doc.setLineWidth(0.8);
           doc.line(x + 10, lineY, x + lineWidth - 10, lineY);
@@ -31140,7 +31146,7 @@
           doc.setTextColor(150, 150, 150);
           doc.setFont('helvetica', 'normal');
           var fechaDisplay = (fecha && fecha !== 'Pendiente') ? fecha : 'Pendiente';
-          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10 + 10, { align: 'center' });
+          doc.text('Fecha: ' + fechaDisplay, x + (lineWidth / 2), lineY + 10, { align: 'center' });
         }
 
         var x1 = margin,
@@ -31149,7 +31155,7 @@
         dibujarAutorizacionPDF(doc, x1, y, solicitanteNombre, 'Solicitante', fechaSolicitante);
         dibujarAutorizacionPDF(doc, x2, y, jefeNombre, 'Jefe de Departamento', fechaJefe);
         dibujarAutorizacionPDF(doc, x3, y, directorNombre, 'Director General', fechaDirector);
-        y += 70;
+        y += 50;
 
         // Las notas ya no se repiten aquí: solo se muestran debajo de
         // "Método de pago" en la tarjeta "CONDICIONES COMERCIALES".
