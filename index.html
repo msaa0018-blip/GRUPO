@@ -3727,8 +3727,9 @@
       <div id="panelProdServ" class="card hidden">
         <h2>🧾 Productos y servicios por proveedor</h2>
         <p class="text-muted" style="margin-bottom:12px;">Solo el Administrador da de alta los productos y servicios de cada proveedor. Al crear una OC, el usuario solo puede elegir partidas de esta lista y únicamente las del proveedor seleccionado.</p>
-        <div style="margin-bottom:10px;">
-          <button class="success" onclick="window.abrirModalProdServ()">➕ Agregar producto / servicio</button>
+        <div style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:8px;">
+          <button class="success" onclick="window.abrirModalProdServ()" style="flex:2 1 260px;">➕ Agregar producto / servicio</button>
+          <button class="btn-editar" onclick="window.actualizarMarcaModeloEnOC()" style="flex:1 1 240px;" title="Pone en las OC ya creadas la marca y el modelo vigentes de cada producto (catálogo del proveedor o inventario)">🔄 Actualizar marca y modelo en las OC</button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
           <select id="psFiltroProveedor" onchange="window.renderProdServ()" style="flex:1 1 220px;"><option value="">Todos los proveedores</option></select>
@@ -16229,10 +16230,21 @@
           productoEditandoId = null;
           edProdFotoArchivo = null;
           document.getElementById('editarProductoModal').classList.remove('active');
+          // Marca / modelo modificados por el Administrador: se actualizan
+          // también en las OC ya creadas con este mismo código.
+          var resMarcaModelo = null;
+          if (actual && actual.rol === 'Administrador' && pOriginal) {
+            try { resMarcaModelo = await sincronizarMarcaModeloInventarioEnOC(pOriginal, datos); }
+            catch (eMM) { console.error('Error actualizando marca/modelo en las OC:', eMM); resMarcaModelo = { ok: 0, partidas: 0, fallos: [eMM && eMM.message ? eMM.message : String(eMM)] }; }
+          }
           window.cargarProductosCatalogo();
           if (typeof window.cargarMovimientosInventario === 'function') window.cargarMovimientosInventario();
           var msgProductos = document.getElementById('msgProductos');
-          if (msgProductos) msgProductos.innerHTML = '<div class="success-msg">✅ Producto actualizado.</div>';
+          if (msgProductos) {
+            msgProductos.innerHTML = '<div class="success-msg">✅ Producto actualizado' +
+              (resMarcaModelo && resMarcaModelo.ok ? ' y su marca / modelo también en ' + resMarcaModelo.ok + ' OC (' + resMarcaModelo.partidas + ' partida' + (resMarcaModelo.partidas === 1 ? '' : 's') + ')' : '') + '.</div>' +
+              (resMarcaModelo && resMarcaModelo.fallos && resMarcaModelo.fallos.length ? '<div class="alert">⚠️ No se pudieron actualizar: ' + escapeHTML(resMarcaModelo.fallos.join(' · ')) + '</div>' : '');
+          }
         } catch (e) {
           console.error('Error actualizando producto:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
@@ -24418,8 +24430,9 @@
         });
         return { exactas: exactas, posibles: posibles };
       }
-      async function aplicarCatalogoEnOC(regs, nuevo) {
-        var fijos = datosFijosDeCatalogo(nuevo);
+      // Aplica cambios a partidas de OC ya creadas y deja el registro en la
+      // bitácora de cada OC. regs: [{ oc, indice, campos: {...}, cambios: [...] }]
+      async function aplicarCambiosPartidasOC(regs, origenBitacora) {
         var porOC = {}, orden = [];
         regs.forEach(function(r) {
           if (!porOC[r.oc.id]) { porOC[r.oc.id] = { oc: r.oc, regs: [] }; orden.push(r.oc.id); }
@@ -24434,12 +24447,7 @@
             var p = productos[r.indice];
             if (!p) return;
             cambiosTxt.push('PARTIDA ' + (r.indice + 1) + ': ' + r.cambios.join('; '));
-            p.descripcion = fijos.descripcion;
-            p.parte = fijos.parte;
-            p.udm = fijos.udm;
-            p.marca = fijos.marca;
-            p.modelo = fijos.modelo;
-            p.catalogo_id = String(nuevo.id);
+            Object.assign(p, r.campos);
             partidas++;
           });
           try {
@@ -24453,7 +24461,7 @@
           g.oc.productos = productos;
           var local = (ordenes || []).find(function(o) { return String(o.id) === String(g.oc.id); });
           if (local && local !== g.oc) local.productos = productos;
-          var just = 'CATALOGO DEL PROVEEDOR ACTUALIZADO (' + (nuevo.codigo || ('PS-' + String(nuevo.id).padStart(5, '0'))) + '): ' + cambiosTxt.join(' | ');
+          var just = origenBitacora + ': ' + cambiosTxt.join(' | ');
           bitacora.push({
             oc_id: g.oc.id, oc_codigo: g.oc.codigo || ('OC-' + g.oc.id), accion: 'MODIFICADA',
             monto_anterior: Number(g.oc.montototal) || 0, monto_final: Number(g.oc.montototal) || 0,
@@ -24466,22 +24474,154 @@
             var rb = await supabase.from('bitacora_oc').insert(bitacora);
             if (rb && rb.error) throw rb.error;
           } catch (eB) {
-            console.error('No se pudo registrar la bitácora del cambio de catálogo:', eB);
+            console.error('No se pudo registrar la bitácora del cambio en las partidas:', eB);
             fallos.push('bitácora: ' + (eB && eB.message ? eB.message : eB));
           }
         }
+        if (ok && typeof render === 'function') { try { render(); } catch (eR) { console.error(eR); } }
         return { ok: ok, partidas: partidas, fallos: fallos };
       }
-      async function sincronizarOCConCatalogo(anterior, nuevo) {
-        var listaOC;
+      async function aplicarCatalogoEnOC(regs, nuevo) {
+        var fijos = datosFijosDeCatalogo(nuevo);
+        var regsCampos = regs.map(function(r) {
+          return { oc: r.oc, indice: r.indice, cambios: r.cambios, campos: {
+            descripcion: fijos.descripcion, parte: fijos.parte, udm: fijos.udm,
+            marca: fijos.marca, modelo: fijos.modelo, catalogo_id: String(nuevo.id)
+          } };
+        });
+        return await aplicarCambiosPartidasOC(regsCampos, 'CATALOGO DEL PROVEEDOR ACTUALIZADO (' + (nuevo.codigo || ('PS-' + String(nuevo.id).padStart(5, '0'))) + ')');
+      }
+      // OC ya creadas (directo de la base de datos; si falla, las cargadas).
+      async function leerOCParaSincronizar() {
         try {
           var r = await supabase.from('ordenes').select('id,codigo,proveedor,estado,productos,montototal,moneda');
           if (r.error) throw r.error;
-          listaOC = r.data || [];
+          return r.data || [];
         } catch (e) {
-          console.error('No se pudieron leer las OC para actualizar el catálogo; se usan las ya cargadas:', e);
-          listaOC = ordenes || [];
+          console.error('No se pudieron leer las OC; se usan las ya cargadas:', e);
+          return ordenes || [];
         }
+      }
+      function foliosDePartidas(regs) {
+        var f = [];
+        regs.forEach(function(x) { if (f.indexOf(x.oc.codigo) === -1) f.push(x.oc.codigo); });
+        return f;
+      }
+      function textoFolios(f) {
+        return f.slice(0, 10).join('\n') + (f.length > 10 ? '\n... y ' + (f.length - 10) + ' más' : '');
+      }
+      function mayusONulo(v) { return (v === null || v === undefined || String(v).trim() === '') ? null : String(v).trim().toUpperCase(); }
+
+      // 📦 Productos (inventario): si el Administrador cambia la marca o el
+      // modelo de un producto, se actualizan en las partidas de las OC que
+      // tienen ese mismo código (PROD-xxxxx). Solo marca y modelo: la
+      // descripción de la partida puede venir del catálogo del proveedor.
+      // Si la marca/modelo se borró, solo se quita de las partidas que
+      // tenían exactamente la anterior.
+      async function sincronizarMarcaModeloInventarioEnOC(pOriginal, datos) {
+        var codigo = normalizar(pOriginal && pOriginal.codigo);
+        if (!codigo) return null;
+        var nuevos = { marca: mayusONulo(datos.marca), modelo: mayusONulo(datos.modelo) };
+        var previos = { marca: mayusONulo(pOriginal.marca), modelo: mayusONulo(pOriginal.modelo) };
+        var listaOC = await leerOCParaSincronizar();
+        var regs = [];
+        listaOC.forEach(function(oc) {
+          if (!oc || oc.estado === 'CANCELADA') return;
+          parsearProductosOC(oc).forEach(function(p, i) {
+            if (!p || normalizar(p.codigo) !== codigo) return;
+            var campos = {}, cambios = [];
+            [['marca', 'MARCA'], ['modelo', 'MODELO']].forEach(function(c) {
+              var enOC = mayusONulo(p[c[0]]), nvo = nuevos[c[0]];
+              if (enOC === nvo) return;
+              if (!nvo && enOC !== previos[c[0]]) return;
+              campos[c[0]] = nvo;
+              cambios.push(c[1] + ': ' + (enOC || '—') + ' -> ' + (nvo || '—'));
+            });
+            if (cambios.length) regs.push({ oc: oc, indice: i, campos: campos, cambios: cambios });
+          });
+        });
+        if (!regs.length) return { ok: 0, partidas: 0, fallos: [], encontradas: 0 };
+        var f = foliosDePartidas(regs);
+        if (!confirm('🔄 La marca / modelo de ' + codigo + ' (' + (datos.descripcion || '') + ') es distinta en ' + regs.length + ' partida(s) de ' + f.length + ' OC ya creada(s):\n\n' +
+            textoFolios(f) + '\n\n¿Actualizar la marca y el modelo en esas OC?\n(La cantidad, el precio y los importes no cambian. Las OC canceladas no se tocan.)')) {
+          return { ok: 0, partidas: 0, fallos: [], encontradas: regs.length };
+        }
+        var res = await aplicarCambiosPartidasOC(regs, 'MARCA / MODELO ACTUALIZADOS EN INVENTARIO (' + codigo + ')');
+        res.encontradas = regs.length;
+        return res;
+      }
+
+      // Botón "🔄 Actualizar marca y modelo en las OC" (🧾 Productos y
+      // servicios, solo Administrador): revisa TODAS las OC ya creadas y
+      // les pone la marca y el modelo vigentes de su producto. La fuente de
+      // cada partida es su producto del catálogo del proveedor (ligado, por
+      // núm. de parte o por descripción) o, si no está en el catálogo, el
+      // producto de inventario con el mismo código. Nunca borra una marca o
+      // modelo: solo los pone o los corrige.
+      window.actualizarMarcaModeloEnOC = async function() {
+        if (!actual || actual.rol !== 'Administrador') return alert('⚠️ Solo el Administrador puede actualizar las OC.');
+        var msg = document.getElementById('msgProdServ');
+        if (msg) msg.innerHTML = '<div class="text-muted">🔄 Revisando la marca y el modelo de las partidas de todas las OC…</div>';
+        try {
+          try { await cargarProdServ(); } catch (eC) { console.error(eC); }
+          var inventario = [];
+          try {
+            var ri = await supabase.from('productos').select('id,codigo,marca,modelo');
+            if (!ri.error) inventario = ri.data || [];
+          } catch (eI) { console.error(eI); }
+          var listaOC = await leerOCParaSincronizar();
+          var catPorId = {}, catPorProv = {}, invPorCodigo = {};
+          (prodServCache || []).forEach(function(x) {
+            catPorId[String(x.id)] = x;
+            var kp = normTextoPartida(x.proveedor);
+            (catPorProv[kp] = catPorProv[kp] || []).push(x);
+          });
+          inventario.forEach(function(p) { if (p.codigo) invPorCodigo[normalizar(p.codigo)] = p; });
+          var regs = [];
+          listaOC.forEach(function(oc) {
+            if (!oc || oc.estado === 'CANCELADA') return;
+            var catProv = catPorProv[normTextoPartida(oc.proveedor)] || [];
+            parsearProductosOC(oc).forEach(function(p, i) {
+              if (!p) return;
+              var fuente = null;
+              if (p.catalogo_id !== undefined && p.catalogo_id !== null && p.catalogo_id !== '') fuente = catPorId[String(p.catalogo_id)] || null;
+              if (!fuente) {
+                var parteP = normTextoPartida(p.parte), descP = normTextoPartida(p.descripcion);
+                if (parteP) fuente = catProv.find(function(x) { return normTextoPartida(x.numero_parte) === parteP; }) || null;
+                if (!fuente && descP) fuente = catProv.find(function(x) { return normTextoPartida(x.descripcion) === descP && (!parteP || !x.numero_parte); }) || null;
+              }
+              if (!fuente && p.codigo) fuente = invPorCodigo[normalizar(p.codigo)] || null;
+              if (!fuente) return;
+              var campos = {}, cambios = [];
+              [['marca', 'MARCA'], ['modelo', 'MODELO']].forEach(function(c) {
+                var v = mayusONulo(fuente[c[0]]), enOC = mayusONulo(p[c[0]]);
+                if (v && v !== enOC) { campos[c[0]] = v; cambios.push(c[1] + ': ' + (enOC || '—') + ' -> ' + v); }
+              });
+              if (cambios.length) regs.push({ oc: oc, indice: i, campos: campos, cambios: cambios });
+            });
+          });
+          if (!regs.length) {
+            if (msg) msg.innerHTML = '<div class="text-muted">ℹ️ Todas las OC ya tienen la marca y el modelo vigentes de sus productos.</div>';
+            return;
+          }
+          var f = foliosDePartidas(regs);
+          if (!confirm('🔄 Hay ' + regs.length + ' partida(s) en ' + f.length + ' OC con marca o modelo distintos a los de su producto (catálogo del proveedor o inventario):\n\n' +
+              textoFolios(f) + '\n\n¿Actualizar la marca y el modelo en esas OC?\n(Solo cambian marca y modelo; la cantidad, el precio y los importes no cambian. Las OC canceladas no se tocan.)')) {
+            if (msg) msg.innerHTML = '<div class="text-muted">ℹ️ No se modificó ninguna OC.</div>';
+            return;
+          }
+          var res = await aplicarCambiosPartidasOC(regs, 'MARCA / MODELO ACTUALIZADOS DESDE EL CATALOGO O INVENTARIO');
+          if (msg) {
+            msg.innerHTML = '<div style="padding:8px 10px;border-radius:8px;background:#e8f6ee;color:#1e7a46;">✅ Marca y modelo actualizados en ' + res.ok + ' OC (' + res.partidas + ' partida' + (res.partidas === 1 ? '' : 's') + '). El cambio quedó en la bitácora de cada OC.</div>' +
+              (res.fallos.length ? '<div class="alert">⚠️ No se pudieron actualizar: ' + escapeHTML(res.fallos.join(' · ')) + '</div>' : '');
+          }
+        } catch (e) {
+          console.error('Error actualizando marca y modelo en las OC:', e);
+          if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(e && e.message ? e.message : String(e)) + '</div>';
+        }
+      };
+      async function sincronizarOCConCatalogo(anterior, nuevo) {
+        var listaOC = await leerOCParaSincronizar();
         var catalogoProv = (prodServCache || []).filter(function(x) {
           return (x.proveedor_id && String(x.proveedor_id) === String(nuevo.proveedor_id)) || normTextoPartida(x.proveedor) === normTextoPartida(nuevo.proveedor);
         });
@@ -24507,7 +24647,6 @@
         if (!aplicar.length) return { ok: 0, partidas: 0, fallos: [], encontradas: res.exactas.length + res.posibles.length };
         var resultado = await aplicarCatalogoEnOC(aplicar, nuevo);
         resultado.encontradas = res.exactas.length + res.posibles.length;
-        if (resultado.ok && typeof render === 'function') { try { render(); } catch (eR) { console.error(eR); } }
         return resultado;
       }
 
