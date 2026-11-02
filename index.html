@@ -29656,11 +29656,15 @@
           var pdf = await window.pdfjsLib.getDocument({ data: doc.output('arraybuffer') }).promise;
           var imagenes = [];
           var horizontal = false;
+          // Documentos largos (p. ej. "Imprimir OC del periodo"): menos
+          // resolución y JPEG para no agotar la memoria del navegador.
+          var largo = pdf.numPages > 20;
+          var escalaImpresion = pdf.numPages > 60 ? 1.6 : (largo ? 2.2 : 3);
           for (var n = 1; n <= pdf.numPages; n++) {
             var pagina = await pdf.getPage(n);
             var base = pagina.getViewport({ scale: 1 });
             if (n === 1) horizontal = base.width > base.height;
-            var vp = pagina.getViewport({ scale: 3 });
+            var vp = pagina.getViewport({ scale: escalaImpresion });
             var canvas = document.createElement('canvas');
             canvas.width = Math.round(vp.width);
             canvas.height = Math.round(vp.height);
@@ -29668,7 +29672,8 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
-            imagenes.push(canvas.toDataURL('image/png'));
+            imagenes.push(largo ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png'));
+            canvas.width = 0; canvas.height = 0;
           }
           var titulo = String(nombreArchivo || doc._nombreArchivoReporte || 'documento').replace(/\.pdf$/i, '');
           // Hoja apenas 0.5 mm más chica que A4 para que el navegador
@@ -32665,6 +32670,115 @@
           }
         };
       }
+      // Membrete del listado: el mismo de las OC del departamento (membrete
+      // fijo de su empresa; si son de varias empresas, el más usado en esas
+      // OC; si no, el de la empresa del usuario o el Dálmata).
+      function formatoMembreteListadoOC(lista) {
+        var empresas = {}, formatos = {};
+        (lista || []).forEach(function(o) {
+          var e = normalizar(grupoDeptoOC(o).empresa);
+          if (e) empresas[e] = true;
+          if (o.formatomembrete) formatos[o.formatomembrete] = (formatos[o.formatomembrete] || 0) + 1;
+        });
+        var emps = Object.keys(empresas);
+        if (emps.length === 1 && membreteFijoEmpresa(emps[0])) return membreteFijoEmpresa(emps[0]);
+        var masUsado = Object.keys(formatos).sort(function(a, b) { return formatos[b] - formatos[a]; })[0];
+        if (masUsado && FORMATOS_MEMBRETE_OC[masUsado]) return masUsado;
+        var def = actual ? obtenerEmpresaDeptoDefault(actual) : null;
+        return (def && membreteFijoEmpresa(def.empresa)) || '9';
+      }
+
+      // Listado de OC del periodo con la misma configuración que los
+      // documentos del sistema: hoja A4 vertical, membrete en TODAS las
+      // hojas, márgenes de 1.5 cm, encabezado y tabla con los colores de la
+      // OC y pie de página (fecha y hora | nombre del archivo | Pág. N de N).
+      async function generarListadoOCPeriodoPDF(lista, res, textoPeriodo, nombre) {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF('p', 'pt', 'a4');
+        doc.setLineHeightFactor(1.05);
+        var pageWidth = doc.internal.pageSize.getWidth();
+        var pageHeight = doc.internal.pageSize.getHeight();
+        var margin = MARGEN_REPORTE_PT;
+        var azul = [23, 63, 115], texto = [31, 41, 55];
+
+        var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, formatoMembreteListadoOC(lista));
+        function repetirMembrete() {
+          (franjas.instrucciones || []).forEach(function(ins) {
+            try { doc.addImage(ins.dataUrl, ins.tipo, ins.x, ins.y, ins.w, ins.h); } catch (e) { console.warn('No se pudo repetir el membrete:', e); }
+          });
+        }
+        // Zona de contenido: debajo del membrete y arriba del pie de página.
+        var yTop = Math.max(margin, (franjas.yInicio || 0) + 2);
+        var yLimite = Math.min(pageHeight - MARGEN_INFERIOR_REPORTE, (franjas.yFin || pageHeight) - 8);
+
+        // Encabezado (mismo estilo que el de la OC).
+        var y = yTop, anchoUtil = pageWidth - 2 * margin, headerH = 40;
+        doc.setFillColor(245, 247, 250);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(margin, y, anchoUtil, headerH, 4, 4, 'FD');
+        doc.setFillColor(azul[0], azul[1], azul[2]);
+        doc.rect(margin, y, 5, headerH, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(azul[0], azul[1], azul[2]);
+        doc.text('ÓRDENES DE COMPRA DEL PERIODO', margin + 14, y + 16);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(texto[0], texto[1], texto[2]);
+        var lineaDepto = doc.splitTextToSize((res.textoDepto || '') + '  |  Periodo: ' + textoPeriodo, anchoUtil - 120)[0];
+        doc.text(lineaDepto, margin + 14, y + 30);
+        var ahora = new Date();
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generó: ' + ((actual && actual.usuario) || '') + ' · ' + ahora.toLocaleDateString('es-MX') + ' ' + ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }), margin + anchoUtil - 10, y + 15, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(azul[0], azul[1], azul[2]);
+        doc.text(lista.length + ' OC', margin + anchoUtil - 10, y + 30, { align: 'right' });
+        y += headerH + 6;
+
+        var totMXN = 0, totUSD = 0, totEq = 0;
+        var rows = lista.map(function(o, i) {
+          var monto = Number(o.montototal) || 0;
+          if (o.estado !== 'CANCELADA') { if (o.moneda === 'USD') totUSD += monto; else totMXN += monto; totEq += Number(o.montomxn) || (o.moneda === 'USD' ? 0 : monto); }
+          return [i + 1, o.codigo || '', o.proyecto || '—', String(o.proveedor || ''), String(o.concepto || '—'),
+            String(o.estado || '').replace(/_/g, ' ') + (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' ? ' / PAGADA' : ''),
+            o.fechacreacion ? fechaSoloDia(o.fechacreacion).toLocaleDateString('es-MX') : '—',
+            o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString('es-MX') : '—',
+            o.moneda || 'MXN', formatearNumeroMexico(monto, true)];
+        });
+        var paginaDecorada = doc.internal.getNumberOfPages();
+        doc.autoTable({
+          head: [['#', 'Código', 'Proyecto', 'Proveedor', 'Concepto', 'Estado', 'F. creación', 'F. pago', 'Mon.', 'Total']],
+          body: rows,
+          foot: [[
+            { content: 'Totales (sin canceladas):  MXN ' + formatearNumeroMexico(totMXN, true) + '   |   USD ' + formatearNumeroMexico(totUSD, true) + '   |   Equivalente MXN ' + formatearNumeroMexico(totEq, true), colSpan: 10, styles: { halign: 'right' } }
+          ]],
+          startY: y,
+          margin: { top: yTop, left: margin, right: margin, bottom: pageHeight - yLimite },
+          rowPageBreak: 'avoid', theme: 'grid', showHead: 'everyPage', showFoot: 'lastPage',
+          styles: { fontSize: 6.5, cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 3 }, font: 'helvetica', textColor: texto, lineColor: [210, 215, 222], lineWidth: 0.5, valign: 'middle', overflow: 'linebreak' },
+          alternateRowStyles: { fillColor: [245, 247, 250] },
+          headStyles: { fillColor: azul, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+          footStyles: { fillColor: azul, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+          columnStyles: {
+            0: { cellWidth: 16, halign: 'center' }, 1: { cellWidth: 100 }, 2: { cellWidth: 54 }, 3: { cellWidth: 62 },
+            5: { cellWidth: 48 }, 6: { cellWidth: 40, halign: 'center' }, 7: { cellWidth: 40, halign: 'center' },
+            8: { cellWidth: 24, halign: 'center' }, 9: { cellWidth: 56, halign: 'right' }
+          },
+          willDrawPage: function() {
+            var n = doc.internal.getNumberOfPages();
+            if (n > paginaDecorada) { repetirMembrete(); paginaDecorada = n; }
+          },
+          didParseCell: function(data) {
+            if (data.section === 'body' && lista[data.row.index] && lista[data.row.index].estado === 'CANCELADA') data.cell.styles.textColor = [150, 150, 150];
+          }
+        });
+        agregarPiePaginaReporte(doc, nombre);
+        return doc;
+      }
+
       window.generarImpresionOCPeriodo = async function() {
         var msg = document.getElementById('msgImprimirOCPeriodo');
         var res = ocDelPeriodoParaImprimir();
@@ -32677,45 +32791,10 @@
         try {
           if (tipo === 'listado') {
             msg.innerHTML = '<div class="success-msg">⏳ Generando listado de ' + lista.length + ' OC...</div>';
-            var { jsPDF } = window.jspdf;
-            var doc = new jsPDF('l', 'pt', 'a4');
-            var margin = MARGEN_REPORTE_PT;
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(23, 63, 115);
-            doc.text('Ordenes de Compra - ' + res.textoDepto, margin, margin + 14);
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
-            doc.text('Periodo: ' + textoPeriodo + '   |   ' + lista.length + ' OC   |   Generado por ' + (actual.usuario || '') + ' el ' + new Date().toLocaleString('es-MX'), margin, margin + 28);
-            var totMXN = 0, totUSD = 0, totEq = 0;
-            var rows = lista.map(function(o, i) {
-              var monto = Number(o.montototal) || 0;
-              if (o.estado !== 'CANCELADA') { if (o.moneda === 'USD') totUSD += monto; else totMXN += monto; totEq += Number(o.montomxn) || (o.moneda === 'USD' ? 0 : monto); }
-              return [i + 1, o.codigo || '', o.proyecto || '—', String(o.proveedor || '').slice(0, 28), String(o.concepto || '—').slice(0, 60),
-                String(o.estado || '').replace(/_/g, ' ') + (o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' ? ' / PAGADA' : ''),
-                o.fechacreacion ? fechaSoloDia(o.fechacreacion).toLocaleDateString('es-MX') : '—',
-                o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString('es-MX') : '—',
-                o.moneda || 'MXN', formatearNumeroMexico(monto, true)];
-            });
-            doc.autoTable({
-              head: [['#', 'Codigo', 'Proyecto', 'Proveedor', 'Concepto', 'Estado', 'F. creacion', 'F. pago', 'Moneda', 'Total']],
-              body: rows,
-              foot: [[
-                { content: 'Totales (sin canceladas):  MXN ' + formatearNumeroMexico(totMXN, true) + '   |   USD ' + formatearNumeroMexico(totUSD, true) + '   |   Equivalente MXN ' + formatearNumeroMexico(totEq, true), colSpan: 10, styles: { halign: 'right' } }
-              ]],
-              startY: margin + 40,
-              margin: { top: margin, left: margin, right: margin, bottom: MARGEN_INFERIOR_REPORTE },
-              rowPageBreak: 'avoid', theme: 'grid', showFoot: 'lastPage',
-              styles: { fontSize: 7, cellPadding: 3, font: 'helvetica', textColor: [0, 0, 0], lineColor: [70, 70, 70], lineWidth: 0.5 },
-              alternateRowStyles: { fillColor: [235, 238, 242] },
-              headStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontStyle: 'bold' },
-              footStyles: { fillColor: [23, 63, 115], textColor: [255, 255, 255], fontStyle: 'bold' },
-              columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 150 }, 6: { cellWidth: 52 }, 7: { cellWidth: 52 }, 8: { cellWidth: 38 }, 9: { cellWidth: 70, halign: 'right' } },
-              didParseCell: function(data) {
-                if (data.section === 'body' && lista[data.row.index] && lista[data.row.index].estado === 'CANCELADA') data.cell.styles.textColor = [150, 150, 150];
-              }
-            });
-            agregarPiePaginaReporte(doc, nombre);
+            var doc = await generarListadoOCPeriodoPDF(lista, res, textoPeriodo, nombre);
             msg.innerHTML = '';
             window.cerrarImprimirOCPeriodo();
-            imprimirPDFSeguro(doc, doc._nombreArchivoReporte || nombre);
+            imprimirPDFSeguro(doc, doc._nombreArchivoReporte || nombre, function() { doc.save(nombre + '.pdf'); });
             return;
           }
           // Cada OC completa, en un solo PDF
@@ -32740,9 +32819,9 @@
           var docUnido = docPDFDesdeBytes(bytes, nombre);
           msg.innerHTML = omitidas.length ? '<div class="alert">⚠️ No se pudieron incluir: ' + escapeHTML(omitidas.join(', ')) + '</div>' : '';
           if (!omitidas.length) window.cerrarImprimirOCPeriodo();
-          if (final.getPageCount() <= 20) await imprimirPDFSeguro(docUnido, nombre, function() { docUnido.save(nombre + '.pdf'); });
-          else if (esDispositivoMovilImpresion()) docUnido.save(nombre + '.pdf');
-          else imprimirPDFBlobDirecto(docUnido, nombre);
+          // Siempre por la impresión que respeta la hoja A4 y sus márgenes
+          // (en celular se descarga el PDF con su nombre).
+          await imprimirPDFSeguro(docUnido, nombre, function() { docUnido.save(nombre + '.pdf'); });
         } catch (e) {
           console.error('Error al imprimir OC del periodo:', e);
           msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(e.message || String(e)) + '</div>';
