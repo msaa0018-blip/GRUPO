@@ -29593,14 +29593,54 @@
         return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
       }
 
-      function imprimirPDFBlobDirecto(doc) {
+      // Chrome y Edge proponen como nombre del archivo, al "Guardar como
+      // PDF", el título de la PESTAÑA ("ALLIN-USUARIO-DEPTO") y no el del
+      // documento que se imprime. Por eso, mientras está abierto el diálogo
+      // de impresión, la pestaña toma el nombre del documento (p. ej. el
+      // código de la OC) y al cerrarlo regresa a su título normal.
+      function nombrarPestanaParaImprimir(titulo, ventanaImpresion) {
+        var limpio = String(titulo || '').replace(/\.pdf$/i, '').trim();
+        if (!limpio) return function() {};
+        var original = document.title;
+        var restaurado = false;
+        function restaurar() {
+          if (restaurado) return;
+          restaurado = true;
+          if (document.title === limpio) document.title = original;
+        }
+        document.title = limpio;
+        [window, ventanaImpresion].forEach(function(w) {
+          try { if (w) w.addEventListener('afterprint', function() { setTimeout(restaurar, 300); }); } catch (e) {}
+        });
+        setTimeout(restaurar, 90000);
+        return restaurar;
+      }
+      // Manda a imprimir: si el navegador detiene la página mientras el
+      // diálogo está abierto (Chrome, Edge, Firefox), al regresar ya se
+      // cerró y se restaura el título; si no (Safari), se restaura con
+      // "afterprint".
+      function imprimirVentanaConNombre(w, titulo) {
+        var restaurar = nombrarPestanaParaImprimir(titulo, w);
+        var inicio = Date.now();
+        try {
+          w.focus();
+          w.print();
+        } catch (e) {
+          restaurar();
+          throw e;
+        }
+        if (Date.now() - inicio > 400) restaurar();
+      }
+
+      function imprimirPDFBlobDirecto(doc, nombreArchivo) {
+        var tituloDoc = nombreArchivo || doc._nombreArchivoReporte || '';
         var blobUrl = doc.output('bloburl');
         var frame = document.createElement('iframe');
         frame.style.position = 'fixed'; frame.style.right = '0'; frame.style.bottom = '0';
         frame.style.width = '0'; frame.style.height = '0'; frame.style.border = '0';
         frame.src = blobUrl;
         frame.onload = function() {
-          try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.open(blobUrl, '_blank'); }
+          try { imprimirVentanaConNombre(frame.contentWindow, tituloDoc); } catch (e) { window.open(blobUrl, '_blank'); }
         };
         document.body.appendChild(frame);
         setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); URL.revokeObjectURL(blobUrl); }, 60000);
@@ -29609,7 +29649,7 @@
       async function imprimirPDFSeguro(doc, nombreArchivo, alternativa) {
         var usarAlternativa = function() {
           if (typeof alternativa === 'function') return alternativa();
-          return imprimirPDFBlobDirecto(doc);
+          return imprimirPDFBlobDirecto(doc, nombreArchivo);
         };
         if (esDispositivoMovilImpresion() || !window.pdfjsLib) return usarAlternativa();
         try {
@@ -29666,7 +29706,7 @@
             Promise.all(imgs.map(function(im) {
               return im.decode ? im.decode().catch(function() {}) : Promise.resolve();
             })).then(function() {
-              try { w.focus(); w.print(); } catch (e) { usarAlternativa(); }
+              try { imprimirVentanaConNombre(w, titulo); } catch (e) { usarAlternativa(); }
             });
           };
           frame.srcdoc = html;
@@ -32702,7 +32742,7 @@
           if (!omitidas.length) window.cerrarImprimirOCPeriodo();
           if (final.getPageCount() <= 20) await imprimirPDFSeguro(docUnido, nombre, function() { docUnido.save(nombre + '.pdf'); });
           else if (esDispositivoMovilImpresion()) docUnido.save(nombre + '.pdf');
-          else imprimirPDFBlobDirecto(docUnido);
+          else imprimirPDFBlobDirecto(docUnido, nombre);
         } catch (e) {
           console.error('Error al imprimir OC del periodo:', e);
           msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(e.message || String(e)) + '</div>';
