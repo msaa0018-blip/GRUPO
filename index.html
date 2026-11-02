@@ -1543,7 +1543,13 @@
   .rastreo-edo-tit { display:flex; align-items:center; gap:7px; font-size:13px; }
   .rastreo-punto { width:10px; height:10px; border-radius:50%; background:#2E9E5B; flex:0 0 auto; }
   .rastreo-num { margin-left:auto; background:#1B2A4A; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:1px 8px; }
-  .rastreo-veh { font-size:12px; margin-top:5px; padding-left:17px; }
+  .rastreo-veh { font-size:12px; margin-top:5px; padding:3px 4px 3px 17px; border-radius:6px; }
+  .rastreo-dep { cursor:default; }
+  .rastreo-dep .rastreo-veh { cursor:pointer; }
+  .rastreo-dep .rastreo-veh:hover, .rastreo-veh.activo { background:rgba(27,42,74,.07); }
+  .rastreo-veh.sin-ubicacion { color:#6b7280; }
+  .rastreo-lugar { color:#1D5234; }
+  .rastreo-dep-emp { font-size:10px; color:#6b7280; border:1px solid #d5dbe5; border-radius:4px; padding:0 4px; }
   .rastreo-veh small { display:block; color:#6b7280; }
   .rastreo-leyenda { margin-top:10px; padding-top:8px; border-top:1px solid #eef1f6; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; }
   .rastreo-leyenda span { display:inline-flex; align-items:center; gap:6px; }
@@ -4283,7 +4289,7 @@
             <div id="rastreoInfo" class="rastreo-info hidden"></div>
           </div>
           <div class="rastreo-lateral">
-            <h4>Estados con vehículos</h4>
+            <h4>Vehículos por departamento</h4>
             <div id="rastreoListaEstados"></div>
             <div class="rastreo-leyenda" id="rastreoLeyenda">
               <span><i class="rastreo-sw" style="background:#2E9E5B;"></i>Con vehículo</span>
@@ -32136,39 +32142,61 @@
 
       // Vista del Administrador: cada estado se pinta del color del
       // departamento de los vehículos que están ahí (rayas si hay vehículos
-      // de varios departamentos). Paleta: azul, amarillo, verde, naranja,
-      // lila y salmón; se asigna en orden alfabético a los departamentos
-      // que tienen vehículos. Del 7.º departamento en adelante se usan los
-      // mismos colores en tono oscuro, para que ningún color se repita.
-      var RASTREO_COLORES_DEPTO = [
-        { nombre: 'Azul', color: '#4A7BD0' },
-        { nombre: 'Amarillo', color: '#F2C94C' },
-        { nombre: 'Verde', color: '#3BAA6A' },
-        { nombre: 'Naranja', color: '#F2994A' },
-        { nombre: 'Lila', color: '#B39DDB' },
-        { nombre: 'Salmón', color: '#F7A58F' },
-        { nombre: 'Azul oscuro', color: '#2F5597' },
-        { nombre: 'Amarillo oscuro', color: '#C9A227' },
-        { nombre: 'Verde oscuro', color: '#237A4A' },
-        { nombre: 'Naranja oscuro', color: '#C8702A' },
-        { nombre: 'Lila oscuro', color: '#8467C2' },
-        { nombre: 'Salmón oscuro', color: '#E07A63' }
+      // de varios grupos de color). Colores fijos:
+      //   DIRECCIÓN (GIE) ............ salmón
+      //   SERVICIOS y TALLER (GIE) ... naranja
+      //   demás deptos. de GIE ....... verde claro (GRUPO INDUSTRIAL EXTINGUE)
+      //   VEXPAR ..................... azul
+      //   SUMINISERVICES ............. gris
+      //   ISCI ....................... rojo
+      //   INMOBIENES u otra empresa .. lila (no tiene color asignado)
+      var RASTREO_GRUPOS_COLOR = [
+        { clave: 'GIE-DIR', etiqueta: 'DIRECCIÓN', color: '#F4A28C' },
+        { clave: 'GIE-SERV-TLLR', etiqueta: 'SERVICIOS y TALLER', color: '#F2994A' },
+        { clave: 'GIE', etiqueta: 'GRUPO INDUSTRIAL EXTINGUE', color: '#8FD19E' },
+        { clave: 'VOP', etiqueta: 'VEXPAR', color: '#4A7BD0' },
+        { clave: 'SMV', etiqueta: 'SUMINISERVICES', color: '#9AA3AE' },
+        { clave: 'ISCI', etiqueta: 'ISCI', color: '#D64545' },
+        { clave: 'OTRO', etiqueta: 'Otra empresa', color: '#B39DDB' }
       ];
+      function rastreoSinAcentos(t) { return normalizar(t).normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+      function rastreoGrupoColor(r) {
+        function grupo(c) { for (var i = 0; i < RASTREO_GRUPOS_COLOR.length; i++) if (RASTREO_GRUPOS_COLOR[i].clave === c) return RASTREO_GRUPOS_COLOR[i]; return RASTREO_GRUPOS_COLOR[RASTREO_GRUPOS_COLOR.length - 1]; }
+        var emp = (typeof getEmpresaCatalogoPorNombre === 'function') ? getEmpresaCatalogoPorNombre(r.empresa) : null;
+        var abrev = emp && emp.abreviatura ? normalizar(emp.abreviatura) : rastreoSinAcentos(r.empresa);
+        if (abrev === 'VOP' || abrev.indexOf('VEXPAR') !== -1) return grupo('VOP');
+        if (abrev === 'SMV' || abrev.indexOf('SUMINISERVICES') !== -1) return grupo('SMV');
+        if (abrev === 'ISCI' || abrev.indexOf('SISTEMAS CONTRA INCENDIO') !== -1) return grupo('ISCI');
+        if (abrev === 'GIE' || abrev.indexOf('EXTINGUE') !== -1) {
+          var dep = (typeof getDepartamentoCatalogo === 'function') ? getDepartamentoCatalogo(r.empresa, r.departamento) : null;
+          var id = dep && dep.id ? dep.id : '';
+          var nom = rastreoSinAcentos(dep ? dep.nombre : r.departamento);
+          if (id === 'GIE-DIR' || nom === 'DIRECCION') return grupo('GIE-DIR');
+          if (id === 'GIE-SERV' || id === 'GIE-TLLR' || nom === 'SERVICIOS' || nom === 'TALLER') return grupo('GIE-SERV-TLLR');
+          return grupo('GIE');
+        }
+        return grupo('OTRO');
+      }
       function rastreoModoDepto() { return !!actual && usuarioTieneRol(actual, 'Administrador'); }
       function rastreoClaveDepto(r) { return normalizar(r.empresa) + '|' + normalizar(r.departamento); }
       function rastreoEtiquetaDepto(r) {
         var d = String(r.departamento || '').trim();
-        if (d && normalizar(d) !== normalizar(r.empresa)) return d.toUpperCase();
+        var sinDeptos = (typeof getDepartamentosPorEmpresa === 'function') && r.empresa && getDepartamentosPorEmpresa(r.empresa).length === 0;
+        if (d && !sinDeptos && normalizar(d) !== normalizar(r.empresa)) return d.toUpperCase();
         return String(r.empresa || 'SIN EMPRESA').toUpperCase();
       }
-      // { clave: { etiqueta, color } } para todos los departamentos con vehículos.
+      // { clave de departamento: { etiqueta, color, grupo } } para todos los
+      // departamentos con vehículos.
       function rastreoMapaColoresDepto() {
-        var vistos = {};
-        (vehiculosCache || []).forEach(function(v) { if (v.activo !== false) vistos[rastreoClaveDepto(v)] = rastreoEtiquetaDepto(v); });
-        (rastreoCache || []).forEach(function(r) { vistos[rastreoClaveDepto(r)] = vistos[rastreoClaveDepto(r)] || rastreoEtiquetaDepto(r); });
-        var claves = Object.keys(vistos).sort(function(a, b) { return vistos[a].localeCompare(vistos[b]) || a.localeCompare(b); });
         var mapa = {};
-        claves.forEach(function(k, i) { mapa[k] = { etiqueta: vistos[k], color: RASTREO_COLORES_DEPTO[i % RASTREO_COLORES_DEPTO.length].color }; });
+        function agrega(r) {
+          var k = rastreoClaveDepto(r);
+          if (mapa[k]) return;
+          var g = rastreoGrupoColor(r);
+          mapa[k] = { etiqueta: rastreoEtiquetaDepto(r), color: g.color, grupo: g.clave };
+        }
+        (vehiculosCache || []).forEach(function(v) { if (v.activo !== false) agrega(v); });
+        (rastreoCache || []).forEach(agrega);
         return mapa;
       }
       // Relleno de un estado: un color, o rayas con los colores de cada departamento.
@@ -32397,32 +32425,64 @@
             ' al ' + rastreoFechaCorta(fecha) + (programados ? ' · ' + programados + (programados === 1 ? ' programado' : ' programados') : '');
         }
 
-        // Lista lateral: estados con vehículos.
+        // Lista lateral: vehículos agrupados por DEPARTAMENTO, con dónde
+        // está cada unidad en la fecha consultada (o "sin ubicación").
         var lat = document.getElementById('rastreoListaEstados');
         if (lat) {
-          var ids = Object.keys(porEstado).sort(function(a, b) { return rastreoEstadoPorId(a)[1].localeCompare(rastreoEstadoPorId(b)[1]); });
-          lat.innerHTML = ids.length ? ids.map(function(id) {
-            var e = rastreoEstadoPorId(id);
-            return '<div class="rastreo-edo-item' + (id === rastreoEstadoSeleccionado ? ' activo' : '') + '" onclick="window.seleccionarEstadoRastreo(\'' + id + '\')">' +
-              '<div class="rastreo-edo-tit">' + (modoDepto
-                ? coloresDeLista(porEstado[id]).map(function(c) { return '<span class="rastreo-punto-depto" style="background:' + c + '"></span>'; }).join('')
-                : '<span class="rastreo-punto"></span>') + '<b>' + escapeHTML(e[1]) + '</b><span class="rastreo-num">' + porEstado[id].length + '</span></div>' +
-              porEstado[id].map(function(r) {
-                var punto = modoDepto ? '<span class="rastreo-punto-depto" style="background:' + ((coloresDepto[rastreoClaveDepto(r)] || {}).color || '#2E9E5B') + '"></span>' : '';
-                return '<div class="rastreo-veh">' + punto + '🚚 ' + escapeHTML(r.vehiculo) + (r.placas ? ' · ' + escapeHTML(r.placas) : '') + (modoDepto ? ' · ' + escapeHTML(rastreoEtiquetaDepto(r)) : '') +
-                  '<small>' + escapeHTML(r.uso) + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + ' · hasta ' + rastreoFechaCorta(r.fecha_fin) + '</small></div>';
+          var empFiltro = (document.getElementById('rastreoFiltroEmpresa') || {}).value || '';
+          var unidades = {};
+          rastreoVehiculosVisibles().forEach(function(v) {
+            if (empFiltro && normalizar(v.empresa) !== normalizar(empFiltro)) return;
+            unidades[String(v.id)] = { id: String(v.id), vehiculo: v.nombre, placas: v.placas, empresa: v.empresa, departamento: v.departamento, actual: null, proximo: null };
+          });
+          visibles.forEach(function(r) {
+            var k = String(r.vehiculo_id);
+            if (!unidades[k]) unidades[k] = { id: k, vehiculo: r.vehiculo, placas: r.placas, empresa: r.empresa, departamento: r.departamento, actual: null, proximo: null };
+            var sit = rastreoSituacion(r, fecha);
+            if (sit === 'EN CURSO') unidades[k].actual = r;
+            else if (sit === 'PROGRAMADO' && (!unidades[k].proximo || rastreoDia(r.fecha_inicio) < rastreoDia(unidades[k].proximo.fecha_inicio))) unidades[k].proximo = r;
+          });
+          var deptos = {};
+          Object.keys(unidades).forEach(function(k) {
+            var u = unidades[k], clave = rastreoClaveDepto(u);
+            (deptos[clave] = deptos[clave] || { etiqueta: rastreoEtiquetaDepto(u), empresa: u.empresa, lista: [] }).lista.push(u);
+          });
+          var clavesDep = Object.keys(deptos).sort(function(a, b) { return deptos[a].etiqueta.localeCompare(deptos[b].etiqueta) || a.localeCompare(b); });
+          lat.innerHTML = clavesDep.length ? clavesDep.map(function(k) {
+            var d = deptos[k];
+            d.lista.sort(function(a, b) { return (a.actual ? 0 : 1) - (b.actual ? 0 : 1) || String(a.vehiculo).localeCompare(String(b.vehiculo)); });
+            var ubicados = d.lista.filter(function(u) { return u.actual; }).length;
+            var color = modoDepto ? ((coloresDepto[k] || {}).color || '#2E9E5B') : null;
+            var abrev = (typeof getAbreviaturaEmpresa === 'function' && d.empresa) ? getAbreviaturaEmpresa(d.empresa) : (d.empresa || '');
+            return '<div class="rastreo-edo-item rastreo-dep"' + (color ? ' style="border-left:5px solid ' + color + ';"' : '') + '>' +
+              '<div class="rastreo-edo-tit">' + (color ? '<span class="rastreo-punto-depto" style="background:' + color + '"></span>' : '<span class="rastreo-punto"></span>') +
+                '<b>' + escapeHTML(d.etiqueta) + '</b>' + (abrev && normalizar(abrev) !== normalizar(d.etiqueta) ? '<span class="rastreo-dep-emp">' + escapeHTML(abrev) + '</span>' : '') +
+                '<span class="rastreo-num" title="Ubicados / total de unidades">' + ubicados + '/' + d.lista.length + '</span></div>' +
+              d.lista.map(function(u) {
+                var r = u.actual;
+                if (r) {
+                  var e = rastreoEstadoPorId(r.estado);
+                  return '<div class="rastreo-veh' + (r.estado === rastreoEstadoSeleccionado ? ' activo' : '') + '" onclick="window.seleccionarEstadoRastreo(\'' + r.estado + '\')">🚚 <b>' + escapeHTML(u.vehiculo) + '</b>' + (u.placas ? ' · ' + escapeHTML(u.placas) : '') +
+                    '<small><b class="rastreo-lugar">📍 ' + escapeHTML(e ? e[1] : r.estado_nombre) + '</b>' + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + ' · ' + escapeHTML(r.uso) + ' · hasta ' + rastreoFechaCorta(r.fecha_fin) + '</small></div>';
+                }
+                var p = u.proximo;
+                return '<div class="rastreo-veh sin-ubicacion"' + (p ? ' onclick="window.seleccionarEstadoRastreo(\'' + p.estado + '\')"' : '') + '>🚚 <b>' + escapeHTML(u.vehiculo) + '</b>' + (u.placas ? ' · ' + escapeHTML(u.placas) : '') +
+                  '<small>Sin ubicación al ' + rastreoFechaCorta(fecha) + (p ? ' · próx.: ' + escapeHTML(p.estado_nombre) + ' desde ' + rastreoFechaCorta(p.fecha_inicio) : '') + '</small></div>';
               }).join('') + '</div>';
-          }).join('') : '<p class="text-muted" style="margin:0;font-size:13px;">Ningún vehículo ubicado al ' + rastreoFechaCorta(fecha) + '.</p>';
+          }).join('') : '<p class="text-muted" style="margin:0;font-size:13px;">No hay vehículos de tu empresa/departamento.</p>';
         }
 
         var ley = document.getElementById('rastreoLeyenda');
         if (ley) {
           if (modoDepto) {
-            var claves = Object.keys(coloresDepto);
-            ley.innerHTML = '<span class="rastreo-leyenda-tit">Departamentos</span>' + (claves.length ? claves.map(function(k) {
-              return '<span><i class="rastreo-sw" style="background:' + coloresDepto[k].color + ';"></i>' + escapeHTML(coloresDepto[k].etiqueta) + '</span>';
-            }).join('') : '<span class="text-muted">Sin vehículos</span>') +
-              '<span><i class="rastreo-sw" style="background:repeating-linear-gradient(45deg,#4A7BD0 0 4px,#F2C94C 4px 8px);"></i>Varios departamentos</span>' +
+            var gruposUsados = {};
+            Object.keys(coloresDepto).forEach(function(k) { gruposUsados[coloresDepto[k].grupo] = true; });
+            ley.innerHTML = '<span class="rastreo-leyenda-tit">Departamentos</span>' + RASTREO_GRUPOS_COLOR.filter(function(g) {
+              return g.clave !== 'OTRO' || gruposUsados.OTRO;
+            }).map(function(g) {
+              return '<span><i class="rastreo-sw" style="background:' + g.color + ';"></i>' + escapeHTML(g.etiqueta) + '</span>';
+            }).join('') +
+              '<span><i class="rastreo-sw" style="background:repeating-linear-gradient(45deg,#F2994A 0 4px,#4A7BD0 4px 8px);"></i>Varios</span>' +
               '<span><i class="rastreo-sw" style="background:#E3E8EF;border:1px solid #c9ced6;"></i>Sin vehículo</span>' +
               '<span><i class="rastreo-sw rastreo-sw-marca"></i>Número de vehículos</span>';
           } else {
