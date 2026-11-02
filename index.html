@@ -1499,8 +1499,9 @@
   #panelRastreo .rastreo-barra select { width:auto; min-width:190px; flex:0 1 auto; margin:0; }
   #panelRastreo .rastreo-barra button { width:auto; white-space:nowrap; margin:0; }
   #rastreoResumen { flex:1 1 220px; font-size:13px; }
-  .rastreo-layout { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:14px; align-items:start; }
-  @media (max-width: 860px) { .rastreo-layout { grid-template-columns:1fr; } }
+  /* El mapa ocupa 4/5 del ancho que tenía antes; el espacio liberado se
+     lo lleva el panel "Estados con vehículos". */
+  .rastreo-layout { display:grid; grid-template-columns:calc((100% - 304px) * 0.8) minmax(290px, 1fr); gap:14px; align-items:stretch; }
   .rastreo-mapa-wrap { position:relative; background:#F4F7FB; border:1px solid #d5dbe5; border-radius:12px; overflow:hidden; }
   #rastreoMapa { display:block; width:100%; height:auto; aspect-ratio:793 / 498; user-select:none; -webkit-user-select:none; }
   #rastreoMapa.con-zoom { cursor:grab; }
@@ -1508,6 +1509,9 @@
   #rastreoMapa .rastreo-edo:hover { fill:#C9D2DF; }
   #rastreoMapa .rastreo-edo.con-vehiculo { fill:#2E9E5B; }
   #rastreoMapa .rastreo-edo.con-vehiculo:hover { fill:#23824A; }
+  #rastreoMapa .rastreo-edo.con-color:hover { filter:brightness(.88); }
+  .rastreo-punto-depto { width:10px; height:10px; border-radius:50%; display:inline-block; flex:0 0 auto; margin-right:4px; vertical-align:middle; border:1px solid rgba(0,0,0,.15); }
+  .rastreo-leyenda-tit { width:100%; font-weight:700; color:#1B2A4A; }
   #rastreoMapa .rastreo-edo.seleccionado { stroke:#1B2A4A; stroke-width:2; }
   #rastreoMapa .rastreo-marcador { cursor:pointer; }
   #rastreoMapa .rastreo-marcador circle { fill:#1B2A4A; stroke:#ffffff; stroke-width:1.6; }
@@ -1521,8 +1525,19 @@
   .rastreo-info-tit { display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .rastreo-info-x { width:28px; height:28px; min-width:0; padding:0; margin:0; }
   .rastreo-info-sub { margin-top:6px; font-size:11px; font-weight:700; color:#23824A; text-transform:uppercase; letter-spacing:.3px; }
-  .rastreo-lateral { background:#ffffff; color:#1f2937; border:1px solid #d5dbe5; border-radius:12px; padding:12px; max-height:520px; overflow:auto; }
-  .rastreo-lateral h4 { margin:0 0 8px; }
+  /* Panel lateral: mismo alto que el mapa (contain:size hace que no
+     estire la fila); la lista se desplaza por dentro y la leyenda queda
+     siempre visible al pie. */
+  .rastreo-lateral { background:#ffffff; color:#1f2937; border:1px solid #d5dbe5; border-radius:12px; padding:12px; display:flex; flex-direction:column; overflow:hidden; contain:size; min-height:0; }
+  .rastreo-lateral h4 { margin:0 0 8px; flex:0 0 auto; }
+  #rastreoListaEstados { flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:4px; }
+  .rastreo-lateral .rastreo-leyenda { flex:0 0 auto; }
+  @media (max-width: 860px) {
+    .rastreo-layout { grid-template-columns:1fr; }
+    .rastreo-mapa-wrap { width:80%; justify-self:center; }
+    .rastreo-lateral { contain:none; height:auto; max-height:420px; }
+  }
+  @media (max-width: 600px) { .rastreo-mapa-wrap { width:100%; } }
   .rastreo-edo-item { border:1px solid #d5e9dc; background:#F3FAF5; border-radius:8px; padding:7px 9px; margin-bottom:8px; cursor:pointer; }
   .rastreo-edo-item.activo { border-color:#2E9E5B; box-shadow:0 0 0 2px rgba(46,158,91,.18); }
   .rastreo-edo-tit { display:flex; align-items:center; gap:7px; font-size:13px; }
@@ -4248,7 +4263,7 @@
       <!-- ===== MÓDULO INVENTARIO (exclusivo Administrador) ===== -->
       <div id="panelRastreo" class="card hidden">
         <h2>🗺️ Rastreo de vehículos</h2>
-        <p class="text-muted" style="margin-bottom:12px;">Ubicación de los vehículos por estado de la República. El Jefe de Departamento indica el estado, el uso y de cuándo a cuándo estará ahí cada vehículo; los estados en <b style="color:#23824A;">verde</b> tienen al menos un vehículo en la fecha consultada.</p>
+        <p class="text-muted" id="rastreoAyuda" style="margin-bottom:12px;">Ubicación de los vehículos por estado de la República. El Jefe de Departamento indica el estado, el uso y de cuándo a cuándo estará ahí cada vehículo; los estados en <b style="color:#23824A;">verde</b> tienen al menos un vehículo en la fecha consultada.</p>
         <div class="rastreo-barra">
           <label for="rastreoFecha">📅 Ver al día <input type="date" id="rastreoFecha" onchange="window.renderRastreo()"></label>
           <select id="rastreoFiltroEmpresa" onchange="window.renderRastreo()" title="Filtrar por empresa">
@@ -4270,7 +4285,7 @@
           <div class="rastreo-lateral">
             <h4>Estados con vehículos</h4>
             <div id="rastreoListaEstados"></div>
-            <div class="rastreo-leyenda">
+            <div class="rastreo-leyenda" id="rastreoLeyenda">
               <span><i class="rastreo-sw" style="background:#2E9E5B;"></i>Con vehículo</span>
               <span><i class="rastreo-sw" style="background:#E3E8EF;border:1px solid #c9ced6;"></i>Sin vehículo</span>
               <span><i class="rastreo-sw rastreo-sw-marca"></i>Número de vehículos</span>
@@ -32119,6 +32134,69 @@
       var rastreoArrastro = false;
       var rastreoRefrescoPendiente = null;
 
+      // Vista del Administrador: cada estado se pinta del color del
+      // departamento de los vehículos que están ahí (rayas si hay vehículos
+      // de varios departamentos). Paleta: azul, amarillo, verde, naranja,
+      // lila y salmón; se asigna en orden alfabético a los departamentos
+      // que tienen vehículos. Del 7.º departamento en adelante se usan los
+      // mismos colores en tono oscuro, para que ningún color se repita.
+      var RASTREO_COLORES_DEPTO = [
+        { nombre: 'Azul', color: '#4A7BD0' },
+        { nombre: 'Amarillo', color: '#F2C94C' },
+        { nombre: 'Verde', color: '#3BAA6A' },
+        { nombre: 'Naranja', color: '#F2994A' },
+        { nombre: 'Lila', color: '#B39DDB' },
+        { nombre: 'Salmón', color: '#F7A58F' },
+        { nombre: 'Azul oscuro', color: '#2F5597' },
+        { nombre: 'Amarillo oscuro', color: '#C9A227' },
+        { nombre: 'Verde oscuro', color: '#237A4A' },
+        { nombre: 'Naranja oscuro', color: '#C8702A' },
+        { nombre: 'Lila oscuro', color: '#8467C2' },
+        { nombre: 'Salmón oscuro', color: '#E07A63' }
+      ];
+      function rastreoModoDepto() { return !!actual && usuarioTieneRol(actual, 'Administrador'); }
+      function rastreoClaveDepto(r) { return normalizar(r.empresa) + '|' + normalizar(r.departamento); }
+      function rastreoEtiquetaDepto(r) {
+        var d = String(r.departamento || '').trim();
+        if (d && normalizar(d) !== normalizar(r.empresa)) return d.toUpperCase();
+        return String(r.empresa || 'SIN EMPRESA').toUpperCase();
+      }
+      // { clave: { etiqueta, color } } para todos los departamentos con vehículos.
+      function rastreoMapaColoresDepto() {
+        var vistos = {};
+        (vehiculosCache || []).forEach(function(v) { if (v.activo !== false) vistos[rastreoClaveDepto(v)] = rastreoEtiquetaDepto(v); });
+        (rastreoCache || []).forEach(function(r) { vistos[rastreoClaveDepto(r)] = vistos[rastreoClaveDepto(r)] || rastreoEtiquetaDepto(r); });
+        var claves = Object.keys(vistos).sort(function(a, b) { return vistos[a].localeCompare(vistos[b]) || a.localeCompare(b); });
+        var mapa = {};
+        claves.forEach(function(k, i) { mapa[k] = { etiqueta: vistos[k], color: RASTREO_COLORES_DEPTO[i % RASTREO_COLORES_DEPTO.length].color }; });
+        return mapa;
+      }
+      // Relleno de un estado: un color, o rayas con los colores de cada departamento.
+      function rastreoRellenoEstado(svg, colores) {
+        if (colores.length === 1) return colores[0];
+        var NS = 'http://www.w3.org/2000/svg';
+        var defs = svg.querySelector('defs#rastreoDefs');
+        if (!defs) { defs = document.createElementNS(NS, 'defs'); defs.setAttribute('id', 'rastreoDefs'); svg.insertBefore(defs, svg.firstChild); }
+        var id = 'rastreoRayas_' + colores.join('_').replace(/#/g, '');
+        if (!document.getElementById(id)) {
+          var ancho = 4, pat = document.createElementNS(NS, 'pattern');
+          pat.setAttribute('id', id);
+          pat.setAttribute('patternUnits', 'userSpaceOnUse');
+          pat.setAttribute('width', String(ancho * colores.length));
+          pat.setAttribute('height', '10');
+          pat.setAttribute('patternTransform', 'rotate(45)');
+          colores.forEach(function(c, i) {
+            var r = document.createElementNS(NS, 'rect');
+            r.setAttribute('x', String(i * ancho)); r.setAttribute('y', '0');
+            r.setAttribute('width', String(ancho)); r.setAttribute('height', '10');
+            r.setAttribute('fill', c);
+            pat.appendChild(r);
+          });
+          defs.appendChild(pat);
+        }
+        return 'url(#' + id + ')';
+      }
+
       function usuarioPuedeVerRastreo(u) {
         return !!u && usuarioTieneAlgunRol(u, ['Administrador', 'Director General', 'Finanzas', 'Contabilidad', 'Jefe Departamento']);
       }
@@ -32256,11 +32334,25 @@
         });
         var NS = 'http://www.w3.org/2000/svg';
 
-        // Estados: verde si hay al menos un vehículo en la fecha consultada.
+        // Estados: verde si hay al menos un vehículo en la fecha consultada;
+        // para el Administrador, del color del departamento de sus vehículos.
+        var modoDepto = rastreoModoDepto();
+        var coloresDepto = modoDepto ? rastreoMapaColoresDepto() : {};
+        var svgMapa = document.getElementById('rastreoMapa');
+        function coloresDeLista(lista) {
+          var cs = [];
+          lista.forEach(function(r) {
+            var c = (coloresDepto[rastreoClaveDepto(r)] || {}).color || '#2E9E5B';
+            if (cs.indexOf(c) === -1) cs.push(c);
+          });
+          return cs;
+        }
         Array.prototype.forEach.call(document.querySelectorAll('#rastreoMapa .rastreo-edo'), function(p) {
           var id = p.getAttribute('data-edo');
           var lista = porEstado[id];
-          p.classList.toggle('con-vehiculo', !!lista);
+          p.classList.toggle('con-vehiculo', !!lista && !modoDepto);
+          p.classList.toggle('con-color', !!lista && modoDepto);
+          p.style.fill = (lista && modoDepto) ? rastreoRellenoEstado(svgMapa, coloresDeLista(lista)) : '';
           p.classList.toggle('seleccionado', id === rastreoEstadoSeleccionado);
           var e = rastreoEstadoPorId(id);
           var t = p.querySelector('title');
@@ -32312,12 +32404,39 @@
           lat.innerHTML = ids.length ? ids.map(function(id) {
             var e = rastreoEstadoPorId(id);
             return '<div class="rastreo-edo-item' + (id === rastreoEstadoSeleccionado ? ' activo' : '') + '" onclick="window.seleccionarEstadoRastreo(\'' + id + '\')">' +
-              '<div class="rastreo-edo-tit"><span class="rastreo-punto"></span><b>' + escapeHTML(e[1]) + '</b><span class="rastreo-num">' + porEstado[id].length + '</span></div>' +
+              '<div class="rastreo-edo-tit">' + (modoDepto
+                ? coloresDeLista(porEstado[id]).map(function(c) { return '<span class="rastreo-punto-depto" style="background:' + c + '"></span>'; }).join('')
+                : '<span class="rastreo-punto"></span>') + '<b>' + escapeHTML(e[1]) + '</b><span class="rastreo-num">' + porEstado[id].length + '</span></div>' +
               porEstado[id].map(function(r) {
-                return '<div class="rastreo-veh">🚚 ' + escapeHTML(r.vehiculo) + (r.placas ? ' · ' + escapeHTML(r.placas) : '') +
+                var punto = modoDepto ? '<span class="rastreo-punto-depto" style="background:' + ((coloresDepto[rastreoClaveDepto(r)] || {}).color || '#2E9E5B') + '"></span>' : '';
+                return '<div class="rastreo-veh">' + punto + '🚚 ' + escapeHTML(r.vehiculo) + (r.placas ? ' · ' + escapeHTML(r.placas) : '') + (modoDepto ? ' · ' + escapeHTML(rastreoEtiquetaDepto(r)) : '') +
                   '<small>' + escapeHTML(r.uso) + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + ' · hasta ' + rastreoFechaCorta(r.fecha_fin) + '</small></div>';
               }).join('') + '</div>';
           }).join('') : '<p class="text-muted" style="margin:0;font-size:13px;">Ningún vehículo ubicado al ' + rastreoFechaCorta(fecha) + '.</p>';
+        }
+
+        var ley = document.getElementById('rastreoLeyenda');
+        if (ley) {
+          if (modoDepto) {
+            var claves = Object.keys(coloresDepto);
+            ley.innerHTML = '<span class="rastreo-leyenda-tit">Departamentos</span>' + (claves.length ? claves.map(function(k) {
+              return '<span><i class="rastreo-sw" style="background:' + coloresDepto[k].color + ';"></i>' + escapeHTML(coloresDepto[k].etiqueta) + '</span>';
+            }).join('') : '<span class="text-muted">Sin vehículos</span>') +
+              '<span><i class="rastreo-sw" style="background:repeating-linear-gradient(45deg,#4A7BD0 0 4px,#F2C94C 4px 8px);"></i>Varios departamentos</span>' +
+              '<span><i class="rastreo-sw" style="background:#E3E8EF;border:1px solid #c9ced6;"></i>Sin vehículo</span>' +
+              '<span><i class="rastreo-sw rastreo-sw-marca"></i>Número de vehículos</span>';
+          } else {
+            ley.innerHTML = '<span><i class="rastreo-sw" style="background:#2E9E5B;"></i>Con vehículo</span>' +
+              '<span><i class="rastreo-sw" style="background:#E3E8EF;border:1px solid #c9ced6;"></i>Sin vehículo</span>' +
+              '<span><i class="rastreo-sw rastreo-sw-marca"></i>Número de vehículos</span>';
+          }
+        }
+        var ayuda = document.getElementById('rastreoAyuda');
+        if (ayuda) {
+          ayuda.innerHTML = 'Ubicación de los vehículos por estado de la República. El Jefe de Departamento indica el estado, el uso y de cuándo a cuándo estará ahí cada vehículo; ' +
+            (modoDepto
+              ? 'cada estado se pinta del <b>color del departamento</b> de los vehículos que están ahí en la fecha consultada (rayas si hay de varios departamentos).'
+              : 'los estados en <b style="color:#23824A;">verde</b> tienen al menos un vehículo en la fecha consultada.');
         }
 
         rastreoRenderTabla(visibles, fecha);
@@ -32373,8 +32492,10 @@
           else if (sit === 'PROGRAMADO') proximos.push(r);
         });
         proximos.sort(function(a, b) { return rastreoDia(a.fecha_inicio).localeCompare(rastreoDia(b.fecha_inicio)); });
+        var coloresInfo = rastreoModoDepto() ? rastreoMapaColoresDepto() : null;
         function linea(r) {
-          return '<li>🚚 <b>' + escapeHTML(r.vehiculo) + '</b>' + (r.placas ? ' · ' + escapeHTML(r.placas) : '') +
+          var punto = coloresInfo ? '<span class="rastreo-punto-depto" style="background:' + ((coloresInfo[rastreoClaveDepto(r)] || {}).color || '#2E9E5B') + '"></span>' : '';
+          return '<li>' + punto + '🚚 <b>' + escapeHTML(r.vehiculo) + '</b>' + (r.placas ? ' · ' + escapeHTML(r.placas) : '') + (coloresInfo ? ' · ' + escapeHTML(rastreoEtiquetaDepto(r)) : '') +
             '<br><span>' + escapeHTML(r.uso) + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + '</span>' +
             '<br><small>' + rastreoFechaCorta(r.fecha_inicio) + ' al ' + rastreoFechaCorta(r.fecha_fin) + ' · registró ' + escapeHTML(r.registrado_por || '—') + '</small></li>';
         }
