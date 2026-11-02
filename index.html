@@ -976,6 +976,29 @@
   #panelProductos .table-wrapper::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 2px solid #e5e7eb; }
   #panelProductos .table-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
   #tablaProductosCatalogo { max-width: none !important; width: max-content !important; min-width: 100% !important; }
+  /* 🧾 Productos y servicios por proveedor: la tabla es más ancha que la
+     ventana, así que tiene alto propio (encabezado fijo y barra inferior
+     siempre a la vista) y una barra deslizadora horizontal arriba. */
+  #panelProdServ .table-wrapper {
+    overflow: auto !important; max-height: 65vh; margin-top: 4px; border: 1px solid var(--gray-200); border-radius: 8px;
+    scrollbar-width: auto; scrollbar-color: #94a3b8 #e5e7eb;
+  }
+  #panelProdServ .table-wrapper::-webkit-scrollbar { height: 14px; width: 12px; }
+  #panelProdServ .table-wrapper::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 8px; }
+  #panelProdServ .table-wrapper::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 2px solid #e5e7eb; }
+  #panelProdServ .table-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  #panelProdServ .table-wrapper table { max-width: none !important; width: max-content !important; min-width: 100% !important; }
+  #panelProdServ td button { min-width: 0 !important; width: auto !important; max-width: none !important; }
+  .barra-h-cont { display: flex; align-items: center; gap: 6px; margin: 4px 0 2px; }
+  .barra-h-cont .barra-h-btn {
+    flex: 0 0 auto; width: 34px !important; min-width: 34px !important; max-width: 34px !important; min-height: 26px !important; height: 26px;
+    padding: 0 !important; border-radius: 8px; background: #e5e7eb; color: #334155; font-size: 12px; line-height: 1;
+  }
+  .barra-h-cont .barra-h-btn:hover { background: #cbd5e1; }
+  .barra-h { position: relative; flex: 1 1 auto; height: 16px; background: #e5e7eb; border-radius: 8px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .barra-h-pulgar { position: absolute; top: 2px; bottom: 2px; left: 0; min-width: 40px; background: #94a3b8; border-radius: 6px; cursor: grab; touch-action: none; }
+  .barra-h-pulgar:hover, .barra-h.arrastrando .barra-h-pulgar { background: #64748b; }
+  .barra-h.arrastrando .barra-h-pulgar { cursor: grabbing; }
   #tablaProductosCatalogo thead th { position: sticky; top: 0; z-index: 2; }
   @media (min-width: 901px) {
     #tablaProductosCatalogo { table-layout: auto; }
@@ -3711,7 +3734,14 @@
           <select id="psFiltroProveedor" onchange="window.renderProdServ()" style="flex:1 1 220px;"><option value="">Todos los proveedores</option></select>
           <input id="psBuscar" placeholder="🔍 Buscar descripción, código o núm. de parte" oninput="window.renderProdServ()" style="flex:2 1 260px;">
         </div>
-        <div class="table-wrapper productos-tabla">
+        <!-- Barra deslizadora horizontal: mueve la tabla a los lados para ver
+             todas las columnas (se oculta sola si la tabla cabe completa). -->
+        <div id="psBarraHCont" class="barra-h-cont hidden" title="Desliza para ver todas las columnas">
+          <button type="button" class="barra-h-btn" data-paso="-1" aria-label="Ver columnas a la izquierda">◀</button>
+          <div class="barra-h" role="scrollbar" aria-orientation="horizontal" aria-controls="tablaProdServ"><div class="barra-h-pulgar"></div></div>
+          <button type="button" class="barra-h-btn" data-paso="1" aria-label="Ver columnas a la derecha">▶</button>
+        </div>
+        <div class="table-wrapper productos-tabla" id="tablaProdServ">
           <table>
             <thead>
               <tr>
@@ -3942,6 +3972,7 @@
             <button id="ocAccionPausarBtn" class="warning" onclick="window.ejecutarAccionOC('pausar')">⏸️ Pausar</button>
             <button class="danger" onclick="window.ejecutarAccionOC('cancelar')">❌ Cancelar OC</button>
             <button class="btn-editar" onclick="window.ejecutarAccionOC('editar')">✏️ Editar OC</button>
+            <button class="btn-editar" onclick="window.ejecutarAccionOC('notas')">📝 Notas de la OC</button>
             <button class="danger" onclick="window.ejecutarAccionOC('eliminar')">🗑️ Eliminar</button>
           </div>
         </div>
@@ -6892,7 +6923,7 @@
   <div id="editarProductosOCModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>✏️ Editar OC: productos, proyecto, fecha de pago y formato — <span id="editarProductosOCCodigo"></span></h3>
+        <h3>✏️ Editar OC: productos, proyecto, fecha de pago, formato y notas — <span id="editarProductosOCCodigo"></span></h3>
         <div class="pdfPreview-btn-group">
           <button onclick="window.cerrarEditarProductosOC()">✕</button>
           <button class="success" onclick="window.guardarEdicionProductosOC()">✔️</button>
@@ -6960,6 +6991,15 @@
             <label style="font-weight:500;flex:0.3;min-width:100px;" class="campo-obligatorio">Fecha del 2do. pago (50/50):</label>
             <input id="editarFechaPago2OC" type="date" style="flex:1.5;">
           </div>
+        </div>
+        <div class="grupo-formulario" id="grupoEditarNotasOC">
+          <div class="flex">
+            <label style="font-weight:500;flex:0.3;min-width:100px;">Notas:</label>
+            <textarea id="editarNotasOC" data-regla-si-cambia="1" placeholder="Notas de la OC (opcional)" style="flex:1.5;min-height:60px;"></textarea>
+          </div>
+          <p style="margin:4px 0 0;font-size:12px;color:var(--gray-600);">
+            ℹ️ Solo el Administrador puede agregar o cambiar las notas de una OC ya creada, sin importar qué usuario la haya generado. Se imprimen en el PDF en "Condiciones comerciales" y el cambio queda en la bitácora.
+          </p>
         </div>
         <div class="table-wrapper">
           <table class="productos-tabla" id="tablaEditarProductosOC">
@@ -20932,6 +20972,8 @@
           window.cancelarOCAdmin(index);
         } else if (accion === 'editar') {
           window.editarOC(index);
+        } else if (accion === 'notas') {
+          window.editarOC(index, true);
         } else if (accion === 'eliminar') {
           window.eliminarOC(index);
         }
@@ -24165,9 +24207,68 @@
         }
       };
 
+      // Barra deslizadora horizontal propia (visible en computadora y en
+      // celular, donde la barra del navegador suele ocultarse). Va ligada al
+      // contenedor de la tabla: arrastrar el control, tocar la barra o usar
+      // ◀ ▶ mueve la tabla, y al deslizar la tabla se mueve el control.
+      function instalarBarraHorizontal(wrap, cont) {
+        if (!wrap || !cont) return null;
+        if (cont._actualizarBarraH) return cont._actualizarBarraH;
+        var barra = cont.querySelector('.barra-h'), pulgar = cont.querySelector('.barra-h-pulgar');
+        function actualizar() {
+          var vis = wrap.clientWidth, total = wrap.scrollWidth;
+          if (!vis || total <= vis + 1) { cont.classList.add('hidden'); return; }
+          cont.classList.remove('hidden');
+          var anchoBarra = barra.clientWidth;
+          var anchoP = Math.max(40, Math.round(anchoBarra * vis / total));
+          var maxL = Math.max(0, anchoBarra - anchoP);
+          pulgar.style.width = anchoP + 'px';
+          pulgar.style.left = Math.round(maxL * wrap.scrollLeft / (total - vis)) + 'px';
+        }
+        wrap.addEventListener('scroll', actualizar, { passive: true });
+        window.addEventListener('resize', actualizar);
+        if (window.ResizeObserver) {
+          var ro = new ResizeObserver(actualizar);
+          ro.observe(wrap);
+          var tabla = wrap.querySelector('table');
+          if (tabla) ro.observe(tabla);
+        }
+        var arrastre = null;
+        pulgar.addEventListener('pointerdown', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          arrastre = { x: e.clientX, sl: wrap.scrollLeft };
+          barra.classList.add('arrastrando');
+          try { pulgar.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        pulgar.addEventListener('pointermove', function(e) {
+          if (!arrastre) return;
+          var maxL = barra.clientWidth - pulgar.offsetWidth;
+          if (maxL <= 0) return;
+          wrap.scrollLeft = arrastre.sl + (e.clientX - arrastre.x) * (wrap.scrollWidth - wrap.clientWidth) / maxL;
+        });
+        function soltar() { arrastre = null; barra.classList.remove('arrastrando'); }
+        pulgar.addEventListener('pointerup', soltar);
+        pulgar.addEventListener('pointercancel', soltar);
+        barra.addEventListener('pointerdown', function(e) {
+          if (e.target === pulgar) return;
+          var r = barra.getBoundingClientRect(), anchoP = pulgar.offsetWidth;
+          var frac = (e.clientX - r.left - anchoP / 2) / Math.max(1, r.width - anchoP);
+          wrap.scrollTo({ left: Math.max(0, Math.min(1, frac)) * (wrap.scrollWidth - wrap.clientWidth), behavior: 'smooth' });
+        });
+        cont.querySelectorAll('[data-paso]').forEach(function(b) {
+          b.addEventListener('click', function() {
+            wrap.scrollBy({ left: Number(b.getAttribute('data-paso')) * Math.max(120, wrap.clientWidth * 0.6), behavior: 'smooth' });
+          });
+        });
+        cont._actualizarBarraH = actualizar;
+        return actualizar;
+      }
+
       window.renderProdServ = function() {
         var cuerpo = document.getElementById('cuerpoProdServ');
         if (!cuerpo) return;
+        var actualizarBarraPS = instalarBarraHorizontal(document.getElementById('tablaProdServ'), document.getElementById('psBarraHCont'));
+        if (actualizarBarraPS) setTimeout(actualizarBarraPS, 0);
         var filtroProv = (document.getElementById('psFiltroProveedor') || {}).value || '';
         var q = normalizar((document.getElementById('psBuscar') || {}).value || '');
         var lista = (prodServCache || []).filter(function(it) {
@@ -25493,7 +25594,9 @@
       // ============================================================
       var editandoOCIndex = null;
 
-      window.editarOC = function(index) {
+      // enfocarNotas: se abrió desde "📝 Notas de la OC" (menú de opciones);
+      // se lleva al campo de notas y se propone la justificación.
+      window.editarOC = function(index, enfocarNotas) {
         if (!actual || actual.rol !== 'Administrador') {
           return alert('⚠️ Solo el Administrador puede editar los productos de una OC.');
         }
@@ -25528,6 +25631,20 @@
         var inputFechaPago2EditarOC = document.getElementById('editarFechaPago2OC');
         if (inputFechaPago2EditarOC) inputFechaPago2EditarOC.value = oc.fechapago2 ? String(oc.fechapago2).slice(0, 10) : '';
         window.actualizarVisibilidadFechaPago2EditarOC();
+        // Notas de la OC (columna "motivo"; se imprimen en el PDF debajo de
+        // "Método de pago").
+        var txtNotasEditarOC = document.getElementById('editarNotasOC');
+        if (txtNotasEditarOC) {
+          txtNotasEditarOC.value = oc.motivo || '';
+          // Las notas que ya tenía la OC no se revisan contra las reglas de
+          // captura mientras no se cambien (OC anteriores a las reglas).
+          txtNotasEditarOC.setAttribute('data-valor-original', oc.motivo || '');
+          txtNotasEditarOC.style.borderColor = ''; txtNotasEditarOC.style.boxShadow = '';
+          txtNotasEditarOC.removeAttribute('aria-invalid');
+          var avisoNotasOC = document.getElementById('editarNotasOC__regla');
+          if (avisoNotasOC) avisoNotasOC.remove();
+        }
+        if (enfocarNotas && txtJustificacionOC) txtJustificacionOC.value = 'SE AGREGAN O ACTUALIZAN LAS NOTAS DE LA OC';
 
         var productosOC = parsearProductosOC(oc);
         var cuerpo = document.getElementById('cuerpoEditarProductosOC');
@@ -25542,7 +25659,16 @@
 
         var msg = document.getElementById('msgEditarProductosOC');
         if (msg) msg.innerHTML = '';
+        if (txtJustificacionOC) txtJustificacionOC.dispatchEvent(new Event('input', { bubbles: true }));
         document.getElementById('editarProductosOCModal').classList.add('active');
+        if (enfocarNotas && txtNotasEditarOC) {
+          setTimeout(function() {
+            try { txtNotasEditarOC.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+            txtNotasEditarOC.focus();
+            var largo = txtNotasEditarOC.value.length;
+            try { txtNotasEditarOC.setSelectionRange(largo, largo); } catch (e) {}
+          }, 150);
+        }
       };
 
       window.agregarFilaEditarProductosOC = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto, marca, modelo) {
@@ -25770,6 +25896,13 @@
           return;
         }
         var montoAntesEdicionOC = Number(oc.montototal) || 0;
+        // Notas (solo Administrador): se guardan en "motivo".
+        var txtNotasGuardarOC = document.getElementById('editarNotasOC');
+        var notasAnterioresOC = String(oc.motivo || '').trim();
+        var textoNotasOC = txtNotasGuardarOC ? txtNotasGuardarOC.value.trim() : notasAnterioresOC;
+        var cambioNotasOC = textoNotasOC !== notasAnterioresOC;
+        var nuevasNotasOC = cambioNotasOC ? textoNotasOC.toUpperCase() : notasAnterioresOC;
+        function recortarNotaBitacora(t) { t = t || 'SIN NOTAS'; return t.length > 80 ? t.slice(0, 77) + '...' : t; }
 
         try {
           var updates = {
@@ -25781,6 +25914,7 @@
             fechapago2: nuevaCondicionPagoOC === '50/50 FINIQUITO Y ANTICIPO' ? nuevaFechaPago2OC : null
           };
           if (cambioFechaPagoOC) updates.fechapago = nuevaFechaPagoOC;
+          if (cambioNotasOC) updates.motivo = nuevasNotasOC || null;
           if (nuevoNombreProyOC) {
             updates.proyecto = nuevoNombreProyOC;
             if (nuevoCodigoOC && nuevoCodigoOC !== oc.codigo) updates.codigo = nuevoCodigoOC;
@@ -25790,6 +25924,7 @@
           var textoFechaBitacora = cambioFechaPagoOC
             ? ' [FECHA DE PAGO: ' + (fechaPagoAnteriorOC ? fechaSoloDia(fechaPagoAnteriorOC).toLocaleDateString('es-MX') : 'SIN FECHA') + ' -> ' + fechaSoloDia(nuevaFechaPagoOC).toLocaleDateString('es-MX') + ']'
             : '';
+          if (cambioNotasOC) textoFechaBitacora += ' [NOTAS: ' + recortarNotaBitacora(notasAnterioresOC) + ' -> ' + recortarNotaBitacora(nuevasNotasOC) + ']';
           if (nuevoNombreProyOC) {
             textoFechaBitacora += ' [PROYECTO: ' + (oc.proyecto || NOMBRE_OC_SIN_PROYECTO) + ' -> ' + nuevoNombreProyOC + (updates.codigo ? '; FOLIO: ' + codigoAnteriorOC + ' -> ' + updates.codigo : '') + ']';
             if (updates.codigo) {
@@ -25822,10 +25957,11 @@
           oc.condicionpago = updates.condicionpago;
           oc.fechapago2 = updates.fechapago2;
           if (cambioFechaPagoOC) oc.fechapago = nuevaFechaPagoOC;
+          if (cambioNotasOC) oc.motivo = nuevasNotasOC || null;
 
           window.cerrarEditarProductosOC();
           render();
-          alert('✅ OC actualizada' + (cambioFechaPagoOC ? ' (nueva fecha de pago: ' + fechaSoloDia(nuevaFechaPagoOC).toLocaleDateString('es-MX') + ')' : '') + (inventarioAjustado ? ' e inventario ajustado automáticamente.' : '.'));
+          alert('✅ OC actualizada' + (cambioFechaPagoOC ? ' (nueva fecha de pago: ' + fechaSoloDia(nuevaFechaPagoOC).toLocaleDateString('es-MX') + ')' : '') + (cambioNotasOC ? (nuevasNotasOC ? ' — notas guardadas' : ' — notas eliminadas') : '') + (inventarioAjustado ? ' e inventario ajustado automáticamente.' : '.'));
         } catch (e) {
           console.error('Error guardando edición de productos de la OC:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
@@ -32654,7 +32790,7 @@
         if (rastreoLeaflet) {
           if (dir > 0) rastreoLeaflet.map.zoomIn();
           else if (dir < 0) rastreoLeaflet.map.zoomOut();
-          else rastreoLeaflet.map.flyToBounds(rastreoLeaflet.limites, { padding: [8, 8], duration: 0.6 });
+          else rastreoLeaflet.map.flyToBounds(rastreoLeaflet.limites, { padding: [14, 14], duration: 0.6 });
           return;
         }
         if (!dir) {
@@ -32829,6 +32965,10 @@
       var rastreoGeoCola = [];
       var rastreoGeoEnCurso = false;
 
+      // Contorno de la República (unión de los estados, [lat, lng]). Se usa
+      // para tapar con un fondo liso todo lo que queda fuera de México.
+      var RASTREO_CONTORNO_MX = [[[32.532,-117.125],[32.713,-114.724],[32.594,-114.803],[32.499,-114.819],[31.475,-111.506],[31.334,-111.067],[31.327,-111.006],[31.327,-108.215],[31.778,-108.215],[31.774,-106.517],[31.758,-106.429],[31.718,-106.358],[31.58,-106.286],[31.477,-106.209],[31.448,-106.164],[31.397,-106.005],[31.288,-105.862],[31.18,-105.768],[31.071,-105.591],[31.003,-105.556],[30.902,-105.416],[30.85,-105.364],[30.81,-105.229],[30.758,-105.134],[30.71,-105.087],[30.677,-105.008],[30.552,-104.887],[30.439,-104.852],[30.264,-104.749],[30.193,-104.682],[30.031,-104.699],[29.942,-104.68],[29.833,-104.62],[29.788,-104.57],[29.668,-104.531],[29.589,-104.444],[29.538,-104.349],[29.527,-104.267],[29.449,-104.195],[29.339,-104.057],[29.293,-103.928],[29.278,-103.794],[29.235,-103.778],[29.174,-103.673],[29.149,-103.542],[29.082,-103.479],[29.024,-103.372],[29.026,-103.312],[28.985,-103.148],[29.058,-103.105],[29.127,-103.016],[29.177,-102.988],[29.22,-102.897],[29.344,-102.883],[29.366,-102.838],[29.438,-102.841],[29.592,-102.78],[29.744,-102.683],[29.785,-102.515],[29.777,-102.406],[29.848,-102.375],[29.889,-102.302],[29.802,-102.109],[29.818,-101.972],[29.776,-101.632],[29.797,-101.554],[29.766,-101.409],[29.677,-101.364],[29.61,-101.219],[29.554,-101.226],[29.501,-101.164],[29.46,-101.038],[29.39,-101.016],[29.271,-100.816],[29.174,-100.763],[29.116,-100.669],[28.925,-100.624],[28.805,-100.519],[28.708,-100.494],[28.593,-100.397],[28.497,-100.352],[28.297,-100.284],[28.207,-100.198],[28.154,-100.075],[28.02,-100.001],[27.902,-99.879],[27.805,-99.863],[27.771,-99.807],[27.67,-99.711],[27.633,-99.645],[27.646,-99.6],[27.574,-99.507],[27.5,-99.51],[27.427,-99.473],[27.339,-99.498],[27.208,-99.432],[27.057,-99.462],[27.013,-99.399],[26.954,-99.377],[26.827,-99.248],[26.63,-99.181],[26.54,-99.165],[26.526,-99.115],[26.408,-99.085],[26.4,-98.963],[26.368,-98.893],[26.368,-98.796],[26.303,-98.74],[26.242,-98.641],[26.262,-98.582],[26.194,-98.369],[26.111,-98.3],[26.075,-98.223],[26.057,-97.942],[26.064,-97.802],[26.035,-97.68],[25.913,-97.52],[25.892,-97.448],[25.855,-97.425],[25.852,-97.346],[25.913,-97.355],[25.963,-97.253],[25.966,-97.139],[25.829,-97.167],[25.723,-97.165],[25.499,-97.262],[25.39,-97.319],[25.179,-97.459],[24.516,-97.651],[24.008,-97.717],[23.739,-97.722],[23.44,-97.758],[23.26,-97.769],[22.972,-97.742],[22.808,-97.795],[22.761,-97.836],[22.625,-97.889],[22.433,-97.82],[22.273,-97.782],[22.096,-97.761],[21.836,-97.61],[21.723,-97.508],[21.603,-97.342],[21.561,-97.316],[21.418,-97.348],[21.342,-97.398],[21.342,-97.432],[21.438,-97.472],[21.504,-97.374],[21.554,-97.379],[21.636,-97.487],[21.794,-97.625],[21.884,-97.648],[21.951,-97.72],[21.827,-97.708],[21.637,-97.658],[21.501,-97.578],[21.481,-97.489],[21.401,-97.497],[21.205,-97.398],[21.055,-97.338],[20.81,-97.197],[20.739,-97.198],[20.647,-97.151],[20.515,-97.034],[20.449,-96.94],[20.41,-96.926],[20.29,-96.815],[20.158,-96.676],[19.93,-96.51],[19.869,-96.456],[19.742,-96.405],[19.537,-96.36],[19.482,-96.315],[19.439,-96.321],[19.315,-96.278],[19.225,-96.157],[19.236,-96.132],[19.115,-96.088],[19.066,-96.041],[19.058,-95.977],[18.939,-95.942],[18.882,-95.904],[18.717,-95.852],[18.757,-95.728],[18.707,-95.495],[18.709,-95.208],[18.612,-95.051],[18.555,-95.003],[18.524,-94.808],[18.483,-94.769],[18.375,-94.718],[18.285,-94.628],[18.19,-94.581],[18.144,-94.467],[18.207,-94.137],[18.307,-93.861],[18.257,-93.877],[18.281,-93.767],[18.324,-93.763],[18.355,-93.684],[18.345,-93.593],[18.416,-93.58],[18.442,-93.445],[18.446,-92.94],[18.466,-92.856],[18.537,-92.759],[18.623,-92.681],[18.622,-92.611],[18.648,-92.486],[18.671,-92.405],[18.702,-92.06],[18.691,-91.948],[18.628,-91.867],[18.594,-91.905],[18.616,-91.994],[18.567,-92.045],[18.539,-91.991],[18.538,-91.878],[18.477,-91.829],[18.451,-91.682],[18.449,-91.544],[18.512,-91.504],[18.573,-91.333],[18.637,-91.285],[18.736,-91.266],[18.781,-91.302],[18.771,-91.367],[18.88,-91.431],[18.966,-91.282],[19.016,-91.162],[19.087,-91.08],[19.163,-90.936],[19.258,-90.857],[19.283,-90.803],[19.376,-90.73],[19.687,-90.709],[19.782,-90.665],[19.882,-90.517],[19.922,-90.478],[20.013,-90.467],[20.067,-90.497],[20.312,-90.488],[20.409,-90.474],[20.534,-90.49],[20.742,-90.449],[20.823,-90.382],[20.82,-90.422],[21.0,-90.36],[21.032,-90.332],[21.164,-90.099],[21.199,-89.982],[21.241,-89.922],[21.285,-89.786],[21.302,-89.598],[21.325,-89.459],[21.363,-89.123],[21.413,-88.879],[21.459,-88.703],[21.534,-88.605],[21.575,-88.448],[21.557,-88.283],[21.616,-88.129],[21.6,-87.962],[21.564,-87.858],[21.553,-87.77],[21.511,-87.778],[21.52,-87.619],[21.499,-87.54],[21.467,-87.474],[21.443,-87.238],[21.473,-87.166],[21.519,-87.13],[21.568,-87.153],[21.528,-87.257],[21.541,-87.324],[21.619,-87.134],[21.602,-87.043],[21.566,-86.998],[21.446,-86.925],[21.433,-86.828],[21.205,-86.815],[21.164,-86.742],[21.02,-86.823],[20.855,-86.875],[20.762,-86.943],[20.619,-87.067],[20.547,-87.18],[20.493,-87.235],[20.327,-87.354],[20.267,-87.379],[20.191,-87.444],[20.069,-87.471],[19.885,-87.472],[19.83,-87.497],[19.771,-87.6],[19.709,-87.629],[19.684,-87.735],[19.601,-87.732],[19.552,-87.666],[19.568,-87.565],[19.548,-87.516],[19.558,-87.423],[19.492,-87.433],[19.406,-87.526],[19.428,-87.572],[19.373,-87.656],[19.242,-87.688],[19.221,-87.639],[19.317,-87.567],[19.328,-87.496],[19.133,-87.549],[19.02,-87.606],[18.889,-87.626],[18.767,-87.662],[18.681,-87.723],[18.536,-87.739],[18.406,-87.771],[18.339,-87.819],[18.262,-87.845],[18.443,-87.935],[18.499,-88.078],[18.536,-88.077],[18.69,-88.002],[18.787,-88.005],[18.875,-88.036],[18.803,-88.104],[18.491,-88.283],[18.485,-88.489],[18.443,-88.533],[18.352,-88.555],[18.283,-88.608],[18.235,-88.617],[18.178,-88.697],[18.052,-88.736],[17.888,-88.88],[17.999,-89.049],[17.951,-89.146],[17.814,-89.16],[17.816,-90.962],[17.802,-90.991],[17.252,-90.992],[17.254,-91.432],[17.19,-91.365],[17.189,-91.29],[17.028,-91.171],[17.018,-91.121],[16.918,-91.067],[16.826,-90.901],[16.805,-90.832],[16.747,-90.735],[16.592,-90.634],[16.53,-90.648],[16.48,-90.585],[16.49,-90.544],[16.431,-90.476],[16.419,-90.395],[16.348,-90.399],[16.259,-90.459],[16.173,-90.433],[16.071,-90.486],[16.069,-91.724],[16.046,-91.752],[15.29,-92.205],[15.237,-92.203],[15.074,-92.074],[15.018,-92.104],[14.996,-92.154],[14.901,-92.155],[14.814,-92.191],[14.702,-92.162],[14.571,-92.208],[14.546,-92.246],[14.615,-92.306],[14.807,-92.508],[14.999,-92.7],[15.136,-92.825],[15.173,-92.824],[15.266,-92.983],[15.349,-93.078],[15.502,-93.229],[15.701,-93.471],[15.839,-93.656],[16.011,-93.943],[16.025,-93.854],[16.089,-93.898],[16.125,-94.043],[16.149,-94.084],[16.221,-94.128],[16.204,-94.224],[16.238,-94.307],[16.287,-94.364],[16.234,-94.414],[16.163,-94.345],[16.141,-94.293],[16.163,-94.23],[16.12,-94.184],[16.099,-94.094],[16.057,-94.115],[16.187,-94.44],[16.196,-94.701],[16.23,-94.712],[16.282,-94.587],[16.326,-94.581],[16.364,-94.654],[16.294,-94.763],[16.395,-94.807],[16.429,-94.852],[16.395,-94.921],[16.326,-94.975],[16.326,-95.033],[16.269,-95.064],[16.247,-94.901],[16.212,-94.896],[16.184,-95.065],[16.187,-95.149],[16.158,-95.233],[16.094,-95.305],[16.079,-95.353],[16.027,-95.373],[15.975,-95.434],[15.957,-95.572],[15.912,-95.662],[15.899,-95.755],[15.871,-95.801],[15.828,-95.96],[15.753,-96.128],[15.683,-96.237],[15.696,-96.431],[15.661,-96.486],[15.659,-96.556],[15.709,-96.681],[15.733,-96.845],[15.783,-96.931],[15.807,-97.022],[15.904,-97.161],[15.936,-97.266],[15.945,-97.459],[15.968,-97.53],[15.979,-97.773],[16.087,-97.944],[16.165,-98.085],[16.209,-98.124],[16.278,-98.445],[16.318,-98.555],[16.361,-98.582],[16.462,-98.698],[16.555,-98.777],[16.528,-98.857],[16.611,-99.144],[16.668,-99.374],[16.686,-99.495],[16.683,-99.605],[16.731,-99.741],[16.91,-99.992],[17.023,-100.32],[17.152,-100.713],[17.253,-101.008],[17.413,-101.182],[17.456,-101.263],[17.526,-101.456],[17.557,-101.441],[17.614,-101.496],[17.635,-101.595],[17.668,-101.644],[17.74,-101.672],[17.792,-101.746],[17.89,-101.811],[17.991,-102.037],[17.982,-102.1],[17.921,-102.169],[17.962,-102.289],[18.049,-102.597],[18.067,-102.742],[18.186,-103.024],[18.192,-103.113],[18.234,-103.221],[18.267,-103.362],[18.333,-103.498],[18.492,-103.575],[18.601,-103.71],[18.629,-103.686],[18.69,-103.742],[18.741,-103.794],[18.875,-103.98],[18.971,-104.181],[19.022,-104.332],[19.082,-104.304],[19.112,-104.354],[19.104,-104.452],[19.183,-104.684],[19.228,-104.734],[19.229,-104.807],[19.3,-104.816],[19.279,-104.881],[19.368,-105.017],[19.448,-105.07],[19.561,-105.088],[19.584,-105.152],[19.666,-105.251],[19.804,-105.352],[19.889,-105.429],[20.032,-105.526],[20.201,-105.553],[20.313,-105.656],[20.407,-105.699],[20.488,-105.576],[20.514,-105.329],[20.584,-105.244],[20.636,-105.234],[20.685,-105.291],[20.763,-105.362],[20.734,-105.411],[20.77,-105.514],[20.929,-105.404],[20.958,-105.358],[21.031,-105.31],[21.061,-105.234],[21.183,-105.233],[21.204,-105.216],[21.342,-105.243],[21.443,-105.185],[21.493,-105.2],[21.513,-105.264],[21.601,-105.414],[21.83,-105.549],[21.956,-105.632],[22.047,-105.657],[22.256,-105.655],[22.51,-105.724],[22.535,-105.758],[22.638,-105.8],[22.782,-105.943],[22.83,-106.032],[23.052,-106.22],[23.084,-106.277],[23.23,-106.43],[23.408,-106.523],[23.469,-106.612],[23.619,-106.751],[23.632,-106.793],[23.7,-106.813],[23.755,-106.861],[23.847,-106.902],[23.981,-107.036],[24.076,-107.17],[24.207,-107.378],[24.253,-107.404],[24.347,-107.543],[24.4,-107.478],[24.511,-107.519],[24.458,-107.624],[24.502,-107.677],[24.507,-107.739],[24.595,-107.821],[24.648,-107.995],[24.785,-108.036],[24.883,-108.156],[24.987,-108.186],[24.984,-108.128],[25.027,-108.106],[25.032,-108.005],[25.117,-108.107],[25.114,-108.173],[25.173,-108.218],[25.161,-108.334],[25.229,-108.317],[25.214,-108.396],[25.269,-108.451],[25.308,-108.554],[25.392,-108.657],[25.406,-108.73],[25.536,-108.793],[25.563,-108.89],[25.49,-108.888],[25.5,-109.002],[25.465,-109.035],[25.536,-109.116],[25.58,-109.07],[25.58,-108.972],[25.639,-108.907],[25.701,-108.901],[25.663,-108.989],[25.605,-109.042],[25.584,-109.114],[25.649,-109.171],[25.669,-109.224],[25.659,-109.301],[25.717,-109.288],[25.793,-109.441],[25.896,-109.419],[26.022,-109.433],[26.135,-109.342],[26.237,-109.293],[26.263,-109.231],[26.334,-109.225],[26.308,-109.156],[26.263,-109.177],[26.226,-109.094],[26.332,-109.139],[26.364,-109.157],[26.349,-109.253],[26.42,-109.239],[26.498,-109.256],[26.569,-109.314],[26.672,-109.429],[26.715,-109.441],[26.728,-109.55],[26.678,-109.694],[26.707,-109.768],[26.801,-109.856],[26.952,-109.911],[27.06,-109.917],[27.115,-109.982],[27.103,-110.091],[27.148,-110.288],[27.172,-110.337],[27.245,-110.404],[27.302,-110.426],[27.393,-110.5],[27.385,-110.555],[27.609,-110.627],[27.722,-110.589],[27.837,-110.587],[27.898,-110.671],[27.928,-110.808],[27.876,-110.863],[27.964,-110.999],[27.937,-111.059],[27.99,-111.172],[28.052,-111.251],[28.308,-111.439],[28.381,-111.473],[28.46,-111.708],[28.584,-111.761],[28.72,-111.92],[28.781,-111.894],[28.841,-111.967],[28.861,-112.03],[28.957,-112.106],[28.963,-112.151],[29.084,-112.184],[29.11,-112.165],[29.188,-112.227],[29.253,-112.211],[29.33,-112.263],[29.319,-112.357],[29.376,-112.42],[29.486,-112.378],[29.561,-112.432],[29.617,-112.506],[29.688,-112.536],[29.908,-112.686],[29.924,-112.751],[30.013,-112.73],[30.059,-112.759],[30.186,-112.753],[30.289,-112.849],[30.429,-112.871],[30.532,-112.987],[30.67,-113.08],[30.812,-113.129],[30.907,-113.1],[30.979,-113.1],[31.031,-113.056],[31.157,-113.049],[31.218,-113.117],[31.296,-113.549],[31.353,-113.609],[31.498,-113.66],[31.563,-113.775],[31.597,-113.876],[31.563,-113.963],[31.492,-114.029],[31.495,-114.159],[31.552,-114.288],[31.595,-114.327],[31.677,-114.494],[31.761,-114.585],[31.764,-114.677],[31.817,-114.794],[31.907,-114.932],[31.79,-114.828],[31.656,-114.781],[31.527,-114.853],[31.389,-114.852],[31.329,-114.875],[31.163,-114.889],[31.09,-114.864],[31.05,-114.813],[31.007,-114.832],[30.941,-114.72],[30.745,-114.687],[30.637,-114.698],[30.555,-114.65],[30.425,-114.63],[30.183,-114.66],[30.073,-114.58],[29.968,-114.533],[29.907,-114.428],[29.783,-114.392],[29.745,-114.34],[29.772,-114.271],[29.596,-114.046],[29.568,-113.981],[29.435,-113.833],[29.408,-113.771],[29.253,-113.623],[29.218,-113.657],[29.051,-113.536],[29.024,-113.562],[28.893,-113.525],[28.946,-113.479],[28.9,-113.379],[28.8,-113.354],[28.84,-113.26],[28.792,-113.196],[28.744,-113.194],[28.605,-113.132],[28.505,-113.103],[28.456,-113.002],[28.475,-112.902],[28.382,-112.85],[28.284,-112.872],[28.19,-112.794],[28.121,-112.812],[27.999,-112.764],[27.864,-112.773],[27.819,-112.719],[27.755,-112.704],[27.654,-112.598],[27.62,-112.485],[27.564,-112.373],[27.517,-112.333],[27.366,-112.287],[27.25,-112.196],[27.21,-112.213],[27.162,-112.155],[27.117,-112.011],[27.068,-111.97],[26.979,-112.017],[26.892,-111.952],[26.828,-111.871],[26.784,-111.861],[26.734,-111.905],[26.54,-111.736],[26.582,-111.677],[26.69,-111.794],[26.88,-111.851],[26.896,-111.818],[26.844,-111.745],[26.746,-111.648],[26.696,-111.56],[26.576,-111.569],[26.549,-111.549],[26.518,-111.442],[26.466,-111.468],[26.4,-111.462],[26.33,-111.394],[26.252,-111.397],[26.074,-111.318],[25.964,-111.36],[25.779,-111.307],[25.724,-111.225],[25.615,-111.192],[25.526,-111.114],[25.515,-111.019],[25.459,-111.026],[25.143,-110.904],[25.033,-110.814],[25.012,-110.758],[24.807,-110.657],[24.7,-110.694],[24.681,-110.724],[24.555,-110.739],[24.466,-110.687],[24.361,-110.682],[24.254,-110.61],[24.213,-110.562],[24.176,-110.402],[24.109,-110.417],[24.114,-110.35],[24.217,-110.301],[24.256,-110.336],[24.329,-110.332],[24.343,-110.233],[24.253,-110.173],[24.169,-110.018],[24.046,-109.988],[24.029,-109.931],[24.063,-109.828],[24.022,-109.803],[23.952,-109.839],[23.798,-109.698],[23.749,-109.711],[23.648,-109.68],[23.56,-109.476],[23.504,-109.468],[23.459,-109.426],[23.297,-109.426],[23.195,-109.463],[23.108,-109.532],[23.031,-109.713],[22.988,-109.732],[22.874,-109.895],[22.872,-109.954],[22.951,-110.06],[23.018,-110.098],[23.321,-110.167],[23.541,-110.307],[23.609,-110.404],[23.682,-110.577],[23.734,-110.648],[23.909,-110.816],[24.104,-111.04],[24.217,-111.227],[24.324,-111.444],[24.405,-111.523],[24.473,-111.619],[24.586,-111.679],[24.506,-111.813],[24.57,-111.815],[24.654,-111.849],[24.778,-111.967],[24.739,-112.012],[24.773,-112.088],[24.874,-112.124],[24.94,-112.104],[25.086,-112.143],[25.172,-112.131],[25.259,-112.078],[25.625,-112.063],[25.713,-112.076],[25.817,-112.131],[25.995,-112.198],[26.041,-112.239],[26.05,-112.293],[26.178,-112.343],[26.261,-112.443],[26.235,-112.498],[26.316,-112.613],[26.323,-112.689],[26.37,-112.728],[26.599,-113.061],[26.65,-113.057],[26.758,-113.143],[26.792,-113.213],[26.858,-113.137],[26.938,-113.126],[26.945,-113.193],[26.853,-113.204],[26.811,-113.264],[26.75,-113.286],[26.795,-113.364],[26.793,-113.504],[26.719,-113.543],[26.726,-113.637],[26.8,-113.725],[26.949,-113.816],[26.998,-113.96],[26.977,-114.005],[27.105,-114.114],[27.153,-114.237],[27.147,-114.29],[27.183,-114.395],[27.238,-114.488],[27.324,-114.484],[27.406,-114.506],[27.477,-114.597],[27.521,-114.734],[27.603,-114.782],[27.641,-114.849],[27.695,-114.887],[27.716,-115.002],[27.822,-115.053],[27.836,-114.923],[27.774,-114.604],[27.774,-114.499],[27.8,-114.433],[27.875,-114.325],[27.833,-114.291],[27.78,-114.312],[27.736,-114.282],[27.67,-114.151],[27.621,-114.103],[27.68,-114.043],[27.656,-113.953],[27.719,-113.919],[27.75,-113.994],[27.708,-114.105],[27.731,-114.141],[27.827,-114.173],[27.877,-114.134],[27.931,-114.182],[27.944,-114.262],[28.0,-114.207],[28.0,-114.063],[28.12,-114.113],[28.206,-114.057],[28.256,-114.125],[28.458,-114.043],[28.562,-114.11],[28.566,-114.16],[28.647,-114.166],[28.659,-114.272],[28.696,-114.275],[28.764,-114.348],[28.86,-114.402],[28.929,-114.477],[28.926,-114.53],[29.094,-114.631],[29.118,-114.722],[29.188,-114.744],[29.194,-114.785],[29.378,-114.972],[29.419,-115.104],[29.429,-115.187],[29.53,-115.286],[29.557,-115.371],[29.62,-115.452],[29.611,-115.499],[29.692,-115.594],[29.756,-115.698],[29.831,-115.686],[29.935,-115.729],[29.968,-115.811],[30.093,-115.783],[30.24,-115.798],[30.346,-115.837],[30.4,-115.933],[30.359,-116.005],[30.48,-116.049],[30.627,-116.031],[30.73,-116.037],[30.813,-116.068],[30.86,-116.176],[30.957,-116.25],[30.956,-116.335],[31.149,-116.309],[31.22,-116.342],[31.339,-116.454],[31.44,-116.53],[31.553,-116.676],[31.659,-116.648],[31.697,-116.669],[31.772,-116.62],[31.858,-116.62],[31.91,-116.755],[31.978,-116.77],[31.987,-116.842],[32.034,-116.875],[32.132,-116.887],[32.247,-116.948],[32.277,-117.025],[32.455,-117.118],[32.532,-117.125]],[[20.332,-87.019],[20.436,-87.008],[20.547,-86.937],[20.549,-86.846],[20.592,-86.749],[20.477,-86.797],[20.437,-86.844],[20.314,-86.927],[20.261,-86.995],[20.332,-87.019]],[[18.692,-91.66],[18.704,-91.74],[18.772,-91.6],[18.692,-91.66]],[[21.697,-106.642],[21.658,-106.534],[21.597,-106.512],[21.562,-106.545],[21.601,-106.631],[21.697,-106.642]],[[24.325,-109.937],[24.225,-109.836],[24.155,-109.798],[24.147,-109.862],[24.199,-109.9],[24.325,-109.937]],[[24.57,-110.416],[24.587,-110.386],[24.47,-110.288],[24.401,-110.327],[24.474,-110.385],[24.57,-110.416]],[[25.029,-110.713],[25.095,-110.711],[25.053,-110.669],[25.034,-110.593],[24.887,-110.574],[24.946,-110.655],[25.029,-110.713]],[[18.769,-111.067],[18.868,-111.001],[18.8,-110.946],[18.727,-110.924],[18.717,-110.979],[18.769,-111.067]],[[25.929,-111.211],[25.988,-111.169],[26.043,-111.176],[26.054,-111.071],[25.999,-111.081],[25.903,-111.181],[25.929,-111.211]],[[24.519,-111.972],[24.52,-111.864],[24.468,-111.818],[24.447,-111.753],[24.374,-111.692],[24.318,-111.71],[24.519,-111.972]],[[24.84,-112.275],[25.018,-112.206],[24.89,-112.191],[24.848,-112.214],[24.689,-112.116],[24.617,-112.103],[24.671,-112.166],[24.732,-112.146],[24.84,-112.275]],[[28.875,-112.583],[28.909,-112.526],[28.972,-112.486],[29.076,-112.5],[29.155,-112.48],[29.202,-112.439],[29.225,-112.282],[29.138,-112.273],[29.021,-112.196],[28.768,-112.275],[28.774,-112.382],[28.875,-112.583]],[[29.41,-113.589],[29.533,-113.549],[29.532,-113.477],[29.459,-113.395],[29.384,-113.35],[29.31,-113.37],[29.285,-113.256],[29.29,-113.183],[29.129,-113.174],[29.065,-113.138],[28.984,-113.115],[29.06,-113.229],[29.145,-113.301],[29.171,-113.354],[29.41,-113.589]],[[31.757,-114.798],[31.803,-114.786],[31.721,-114.67],[31.695,-114.716],[31.757,-114.798]],[[28.125,-115.334],[28.234,-115.24],[28.299,-115.262],[28.341,-115.195],[28.261,-115.163],[28.171,-115.155],[28.038,-115.206],[28.125,-115.334]],[[29.149,-118.357],[29.186,-118.296],[29.089,-118.251],[29.015,-118.221],[28.915,-118.226],[28.893,-118.284],[28.998,-118.304],[29.067,-118.356],[29.149,-118.357]]];
+
       function rastreoCargarLeaflet() {
         if (window.L && window.L.map) return Promise.resolve(true);
         if (rastreoCargarLeaflet._p) return rastreoCargarLeaflet._p;
@@ -32863,10 +33003,21 @@
         var svg = document.getElementById('rastreoMapa');
         cont.classList.remove('hidden');
         if (svg) svg.classList.add('hidden');
-        var map = L.map(cont, { zoomControl: false, zoomSnap: 0.25, minZoom: 4, maxZoom: 18, scrollWheelZoom: false, attributionControl: true });
+        var map = L.map(cont, { zoomControl: false, zoomSnap: 0.25, minZoom: 4, maxZoom: 18, scrollWheelZoom: false, attributionControl: true, maxBoundsViscosity: 1.0, worldCopyJump: false });
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+        }).addTo(map);
+        // Solo se ve México: una máscara (todo el mundo menos el contorno de
+        // la República) cubre con fondo liso los países vecinos y el mar.
+        // Va entre el mapa base y los estados, y no recibe clics.
+        map.createPane('rastreoMascara');
+        map.getPane('rastreoMascara').style.zIndex = 350;
+        map.getPane('rastreoMascara').style.pointerEvents = 'none';
+        L.polygon([[[85, -180], [85, 180], [-85, 180], [-85, -180]]].concat(RASTREO_CONTORNO_MX), {
+          pane: 'rastreoMascara', interactive: false, smoothFactor: 0.5,
+          stroke: true, color: '#1B2A4A', weight: 1.4, opacity: 0.85,
+          fillColor: '#e8eef5', fillOpacity: 1, fillRule: 'evenodd'
         }).addTo(map);
         var capas = {};
         var capaEstados = L.geoJSON(RASTREO_GEO_MX, {
@@ -32881,7 +33032,17 @@
         }).addTo(map);
         var marcadores = L.layerGroup().addTo(map);
         var limites = capaEstados.getBounds();
-        map.fitBounds(limites, { padding: [8, 8] });
+        // No se puede alejar más allá de la República ni arrastrar el mapa
+        // fuera de ella.
+        function rastreoLimitarVistaLeaflet() {
+          map.setMinZoom(0);
+          var zMin = Math.floor(map.getBoundsZoom(limites, false, L.point(28, 28)) * 4) / 4;
+          map.setMaxBounds(limites.pad(0.04));
+          map.setMinZoom(zMin);
+        }
+        rastreoLimitarVistaLeaflet();
+        map.fitBounds(limites, { padding: [14, 14] });
+        map.on('resize', rastreoLimitarVistaLeaflet);
         // La rueda del mouse acerca el mapa solo después de hacer clic en él,
         // para no "atrapar" el desplazamiento de la página.
         map.on('click', function() { map.scrollWheelZoom.enable(); });
@@ -32889,7 +33050,7 @@
         // Al acercar, el color de los estados se aclara para ver calles y ciudades.
         map.on('zoomend', function() { if (panelVisible('panelRastreo')) window.renderRastreo(); });
         rastreoLeaflet = { map: map, capas: capas, marcadores: marcadores, limites: limites };
-        setTimeout(function() { map.invalidateSize(); map.fitBounds(limites, { padding: [8, 8] }); }, 60);
+        setTimeout(function() { map.invalidateSize(); rastreoLimitarVistaLeaflet(); map.fitBounds(limites, { padding: [14, 14] }); }, 60);
         return true;
       }
 
@@ -33045,12 +33206,14 @@
         // Productos y servicios por proveedor
         add(['psDescripcion'], 'descripcion', 'Descripción');
         add(['psNumeroParte'], 'parte', 'Número de parte');
-        add(['psMarca', 'psModelo'], 'texto', 'Marca / modelo');
+        add(['psMarca'], 'texto', 'Marca');
+        add(['psModelo'], 'modelo', 'Modelo');
         // Productos de inventario (alta y edición)
         ['nvoProd', 'edProd'].forEach(function(p) {
           add([p + 'Descripcion'], 'descripcion', 'Descripción');
           add([p + 'NumeroParte'], 'parte', 'Número de parte');
-          add([p + 'Marca', p + 'Modelo'], 'texto', 'Marca / modelo');
+          add([p + 'Marca'], 'texto', 'Marca');
+          add([p + 'Modelo'], 'modelo', 'Modelo');
           add([p + 'Ubicacion'], 'clave', 'Ubicación');
         });
         // Proyectos
@@ -33078,7 +33241,7 @@
         // OC
         add(['direccionEntrega'], 'domicilio', 'Dirección de entrega');
         add(['conceptoOC'], 'texto', 'Concepto');
-        add(['notasOC'], 'texto', 'Notas');
+        add(['notasOC', 'editarNotasOC'], 'texto', 'Notas');
         add(['cp'], 'cp', 'Código postal');
         add(['sucursal', 'responsableEntregaOC', 'sucursalEntregaOC'], 'texto', 'Sucursal / responsable de entrega');
         add(['referencia'], 'texto', 'Referencia de pago');
@@ -33118,15 +33281,18 @@
         var v = String(valor == null ? '' : valor).trim();
         if (!v) return [];
         var e = [];
-        if (tipo === 'texto' || tipo === 'razon' || tipo === 'clave' || tipo === 'parte' || tipo === 'domicilio' || tipo === 'descripcion') {
+        // Modelo: igual que texto, pero SÍ admite la diagonal "/" (p. ej.
+        // 2X1/2, 110/220V, A/C).
+        if (tipo === 'texto' || tipo === 'modelo' || tipo === 'razon' || tipo === 'clave' || tipo === 'parte' || tipo === 'domicilio' || tipo === 'descripcion') {
           if (/[Ññ]/.test(v)) e.push('no se admite la letra Ñ (escribe N)');
           if (/[ÁÉÍÓÚÜáéíóúü´`¨]/.test(v)) e.push('no se admiten acentos');
           // Domicilios y descripciones aceptan punto y coma ("," y ".").
           if (tipo !== 'domicilio' && tipo !== 'descripcion' && tipo !== 'parte' && /\./.test(v)) e.push('no se admiten puntos');
           // Domicilios aceptan # (número exterior/interior); las
           // descripciones aceptan caracteres especiales.
-          var especiales = tipo === 'descripcion' ? null : tipo === 'parte' ? /[#&%$"']/ : (tipo === 'domicilio' ? /[\/&%$"']/ : /[#\/&%$"']/);
-          if (especiales && especiales.test(v)) e.push(tipo === 'domicilio' ? 'no se admiten caracteres especiales (/ & % $ " \'); el # sí se admite' : 'no se admiten caracteres especiales (# / & % $ " \')');
+          var especiales = tipo === 'descripcion' ? null : (tipo === 'parte' || tipo === 'modelo') ? /[#&%$"']/ : (tipo === 'domicilio' ? /[\/&%$"']/ : /[#\/&%$"']/);
+          if (especiales && especiales.test(v)) e.push(tipo === 'domicilio' ? 'no se admiten caracteres especiales (/ & % $ " \'); el # sí se admite' :
+            tipo === 'modelo' ? 'no se admiten caracteres especiales (# & % $ " \'); la / sí se admite' : 'no se admiten caracteres especiales (# / & % $ " \')');
           if (/[a-z]/.test(v)) e.push('debe ir en MAYÚSCULAS');
         }
         // Número de parte (excepción): es el código del fabricante o del
@@ -33155,6 +33321,12 @@
         if (tipo === 'uuid' && !/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/.test(v)) e.push('UUID inválido: 36 caracteres en grupos 8-4-4-4-12');
         return e;
       }
+      // Campo con data-regla-si-cambia: su valor guardado anteriormente se
+      // respeta tal cual; las reglas solo se aplican si el usuario lo cambia.
+      function sinCambioRegla(el) {
+        return !!(el && el.hasAttribute && el.hasAttribute('data-regla-si-cambia') &&
+          String(el.value || '').trim() === String(el.getAttribute('data-valor-original') || '').trim());
+      }
       function marcarCampoRegla(el, errores) {
         if (!el) return;
         var idMsg = el.id + '__regla';
@@ -33177,6 +33349,7 @@
           if (contenedor && !contenedor.contains(el)) return;
           if (!contenedor && el.offsetParent === null) return;
           var regla = REGLAS_CAMPOS[id];
+          if (sinCambioRegla(el)) { marcarCampoRegla(el, []); return; }
           var errs = erroresReglaValor(el.value, regla.tipo);
           marcarCampoRegla(el, errs);
           if (errs.length) lista.push('• ' + regla.etiqueta + ' ("' + el.value.trim() + '"): ' + errs.join('; '));
@@ -33203,7 +33376,8 @@
         if (!esPartida && (!el.id || !REGLAS_CAMPOS[el.id])) return;
         var tipo = esPartida ? 'descripcion' : REGLAS_CAMPOS[el.id].tipo;
         if (esPartida && !el.id) el.id = 'partidaDesc_' + Date.now();
-        if (['texto', 'razon', 'clave', 'parte', 'rfc', 'uuid', 'domicilio', 'descripcion', 'codigo', 'swift'].indexOf(tipo) !== -1 && el.value !== el.value.toUpperCase()) {
+        if (sinCambioRegla(el)) { marcarCampoRegla(el, []); return; }
+        if (['texto', 'modelo', 'razon', 'clave', 'parte', 'rfc', 'uuid', 'domicilio', 'descripcion', 'codigo', 'swift'].indexOf(tipo) !== -1 && el.value !== el.value.toUpperCase()) {
           var pos = el.selectionStart; el.value = el.value.toUpperCase();
           try { el.setSelectionRange(pos, pos); } catch (e) {}
         }
