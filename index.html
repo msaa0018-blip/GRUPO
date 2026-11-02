@@ -32689,12 +32689,12 @@
       }
 
       // Listado de OC del periodo con la misma configuración que los
-      // documentos del sistema: hoja A4 vertical, membrete en TODAS las
+      // documentos del sistema: hoja A4 HORIZONTAL, membrete en TODAS las
       // hojas, márgenes de 1.5 cm, encabezado y tabla con los colores de la
       // OC y pie de página (fecha y hora | nombre del archivo | Pág. N de N).
       async function generarListadoOCPeriodoPDF(lista, res, textoPeriodo, nombre) {
         var { jsPDF } = window.jspdf;
-        var doc = new jsPDF('p', 'pt', 'a4');
+        var doc = new jsPDF('l', 'pt', 'a4');
         doc.setLineHeightFactor(1.05);
         var pageWidth = doc.internal.pageSize.getWidth();
         var pageHeight = doc.internal.pageSize.getHeight();
@@ -32758,14 +32758,14 @@
           startY: y,
           margin: { top: yTop, left: margin, right: margin, bottom: pageHeight - yLimite },
           rowPageBreak: 'avoid', theme: 'grid', showHead: 'everyPage', showFoot: 'lastPage',
-          styles: { fontSize: 6.5, cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 3 }, font: 'helvetica', textColor: texto, lineColor: [210, 215, 222], lineWidth: 0.5, valign: 'middle', overflow: 'linebreak' },
+          styles: { fontSize: 7, cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 3 }, font: 'helvetica', textColor: texto, lineColor: [210, 215, 222], lineWidth: 0.5, valign: 'middle', overflow: 'linebreak' },
           alternateRowStyles: { fillColor: [245, 247, 250] },
-          headStyles: { fillColor: azul, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-          footStyles: { fillColor: azul, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+          headStyles: { fillColor: azul, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+          footStyles: { fillColor: azul, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
           columnStyles: {
-            0: { cellWidth: 16, halign: 'center' }, 1: { cellWidth: 100 }, 2: { cellWidth: 54 }, 3: { cellWidth: 62 },
-            5: { cellWidth: 48 }, 6: { cellWidth: 40, halign: 'center' }, 7: { cellWidth: 40, halign: 'center' },
-            8: { cellWidth: 24, halign: 'center' }, 9: { cellWidth: 56, halign: 'right' }
+            0: { cellWidth: 20, halign: 'center' }, 1: { cellWidth: 158 }, 2: { cellWidth: 78 }, 3: { cellWidth: 112 },
+            5: { cellWidth: 64 }, 6: { cellWidth: 54, halign: 'center' }, 7: { cellWidth: 54, halign: 'center' },
+            8: { cellWidth: 32, halign: 'center' }, 9: { cellWidth: 70, halign: 'right' }
           },
           willDrawPage: function() {
             var n = doc.internal.getNumberOfPages();
