@@ -32206,27 +32206,29 @@
         return mapa;
       }
       // Relleno de un estado: un color, o rayas con los colores de cada departamento.
+      // Estado con unidades de varios departamentos: se secciona en franjas
+      // verticales iguales (máximo 3), una por cada departamento con más
+      // unidades en ese estado, de mayor a menor (de izquierda a derecha).
       function rastreoRellenoEstado(svg, colores, prefijo) {
         if (colores.length === 1) return colores[0];
         var NS = 'http://www.w3.org/2000/svg';
         var defs = svg.querySelector('defs#rastreoDefs');
         if (!defs) { defs = document.createElementNS(NS, 'defs'); defs.setAttribute('id', 'rastreoDefs'); svg.insertBefore(defs, svg.firstChild); }
-        var id = (prefijo || 'rastreoRayas_') + colores.join('_').replace(/#/g, '');
+        var id = (prefijo || 'rastreoSecc_') + colores.join('_').replace(/#/g, '');
         if (!svg.querySelector('#' + id)) {
-          var ancho = 4, pat = document.createElementNS(NS, 'pattern');
-          pat.setAttribute('id', id);
-          pat.setAttribute('patternUnits', 'userSpaceOnUse');
-          pat.setAttribute('width', String(ancho * colores.length));
-          pat.setAttribute('height', '10');
-          pat.setAttribute('patternTransform', 'rotate(45)');
+          var grad = document.createElementNS(NS, 'linearGradient');
+          grad.setAttribute('id', id);
+          grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
+          grad.setAttribute('x2', '1'); grad.setAttribute('y2', '0');
           colores.forEach(function(c, i) {
-            var r = document.createElementNS(NS, 'rect');
-            r.setAttribute('x', String(i * ancho)); r.setAttribute('y', '0');
-            r.setAttribute('width', String(ancho)); r.setAttribute('height', '10');
-            r.setAttribute('fill', c);
-            pat.appendChild(r);
+            [i / colores.length, (i + 1) / colores.length].forEach(function(o) {
+              var st = document.createElementNS(NS, 'stop');
+              st.setAttribute('offset', (o * 100).toFixed(3) + '%');
+              st.setAttribute('stop-color', c);
+              grad.appendChild(st);
+            });
           });
-          defs.appendChild(pat);
+          defs.appendChild(grad);
         }
         return 'url(#' + id + ')';
       }
@@ -32390,13 +32392,30 @@
         var modoDepto = rastreoModoDepto();
         var coloresDepto = modoDepto ? rastreoMapaColoresDepto() : {};
         var svgMapa = document.getElementById('rastreoMapa');
-        function coloresDeLista(lista) {
-          var cs = [];
+        // Departamentos (por color) con unidades en la lista, de mayor a menor.
+        function gruposDeLista(lista) {
+          var cuenta = {};
           lista.forEach(function(r) {
-            var c = (coloresDepto[rastreoClaveDepto(r)] || {}).color || '#2E9E5B';
-            if (cs.indexOf(c) === -1) cs.push(c);
+            var info = coloresDepto[rastreoClaveDepto(r)] || {};
+            var g = info.grupo || 'OTRO';
+            (cuenta[g] = cuenta[g] || { n: 0, color: info.color || '#2E9E5B', etiqueta: g }).n++;
           });
-          return cs;
+          var orden = RASTREO_GRUPOS_COLOR.map(function(x) { return x.clave; });
+          return Object.keys(cuenta).map(function(g) {
+            var def = RASTREO_GRUPOS_COLOR.filter(function(x) { return x.clave === g; })[0];
+            cuenta[g].etiqueta = def ? def.etiqueta : g;
+            cuenta[g].clave = g;
+            return cuenta[g];
+          }).sort(function(a, b) { return b.n - a.n || orden.indexOf(a.clave) - orden.indexOf(b.clave); });
+        }
+        // Colores de los 3 departamentos con más unidades.
+        function coloresDeLista(lista) {
+          return gruposDeLista(lista).slice(0, 3).map(function(g) { return g.color; });
+        }
+        function resumenDeLista(lista) {
+          if (!modoDepto) return '';
+          var gs = gruposDeLista(lista);
+          return gs.length > 1 ? ': ' + gs.map(function(g) { return g.etiqueta + ' ' + g.n; }).join(' · ') : '';
         }
         Array.prototype.forEach.call(document.querySelectorAll('#rastreoMapa .rastreo-edo'), function(p) {
           var id = p.getAttribute('data-edo');
@@ -32407,7 +32426,7 @@
           p.classList.toggle('seleccionado', id === rastreoEstadoSeleccionado);
           var e = rastreoEstadoPorId(id);
           var t = p.querySelector('title');
-          if (t && e) t.textContent = e[1] + (lista ? ' — ' + lista.length + (lista.length === 1 ? ' vehículo' : ' vehículos') : '');
+          if (t && e) t.textContent = e[1] + (lista ? ' — ' + lista.length + (lista.length === 1 ? ' vehículo' : ' vehículos') + resumenDeLista(lista) : '');
         });
 
         // Marcadores: uno por estado con el número de vehículos.
@@ -32437,7 +32456,7 @@
           });
         }
         rastreoAplicarVista();
-        if (rastreoLeaflet) rastreoRenderLeaflet(porEstado, modoDepto, coloresDeLista);
+        if (rastreoLeaflet) rastreoRenderLeaflet(porEstado, modoDepto, coloresDeLista, resumenDeLista);
 
         // Resumen
         var totalVeh = 0;
@@ -32506,7 +32525,6 @@
             }).map(function(g) {
               return '<span><i class="rastreo-sw" style="background:' + g.color + ';"></i>' + escapeHTML(g.etiqueta) + '</span>';
             }).join('') +
-              '<span><i class="rastreo-sw" style="background:repeating-linear-gradient(45deg,#F2994A 0 4px,#4A7BD0 4px 8px);"></i>Varios</span>' +
               '<span><i class="rastreo-sw" style="background:#E3E8EF;border:1px solid #c9ced6;"></i>Sin vehículo</span>' +
               '<span><i class="rastreo-sw rastreo-sw-marca"></i>Número de vehículos</span>';
           } else {
@@ -32519,7 +32537,7 @@
         if (ayuda) {
           ayuda.innerHTML = 'Ubicación de los vehículos por estado de la República. El Jefe de Departamento indica el estado, el uso y de cuándo a cuándo estará ahí cada vehículo; ' +
             (modoDepto
-              ? 'cada estado se pinta del <b>color del departamento</b> de los vehículos que están ahí en la fecha consultada (rayas si hay de varios departamentos).'
+              ? 'cada estado se pinta del <b>color del departamento</b> de los vehículos que están ahí en la fecha consultada (si hay unidades de varios departamentos, el estado se divide en secciones con los 3 departamentos con más unidades).'
               : 'los estados en <b style="color:#23824A;">verde</b> tienen al menos un vehículo en la fecha consultada.');
         }
 
@@ -32924,10 +32942,10 @@
       function rastreoRellenoLeaflet(layer, colores) {
         var svg = layer._path && layer._path.ownerSVGElement;
         if (!svg) return colores[0];
-        return rastreoRellenoEstado(svg, colores, 'rastreoRayasL_');
+        return rastreoRellenoEstado(svg, colores, 'rastreoSeccL_');
       }
 
-      function rastreoRenderLeaflet(porEstado, modoDepto, colorDe) {
+      function rastreoRenderLeaflet(porEstado, modoDepto, colorDe, resumenDe) {
         if (!rastreoLeaflet) return;
         var capas = rastreoLeaflet.capas;
         var z = rastreoLeaflet.map.getZoom();
@@ -32944,7 +32962,7 @@
             layer.setStyle({ color: sel ? '#1B2A4A' : '#5b6b85', weight: sel ? 3 : 0.8, opacity: sel ? 0.9 : 0.6, fillOpacity: sel ? 0.08 : 0, fillColor: '#1B2A4A' });
           }
           var e = rastreoEstadoPorId(id);
-          layer.setTooltipContent((e ? e[1] : id) + (lista ? ' — ' + lista.length + (lista.length === 1 ? ' vehículo' : ' vehículos') : ''));
+          layer.setTooltipContent((e ? e[1] : id) + (lista ? ' — ' + lista.length + (lista.length === 1 ? ' vehículo' : ' vehículos') + (resumenDe ? resumenDe(lista) : '') : ''));
         });
         // Marcadores: uno por ciudad (o por estado si no hay ciudad).
         var grupos = {};
