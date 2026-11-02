@@ -24333,6 +24333,184 @@
         document.getElementById('prodServModal').classList.remove('active');
       };
 
+      // ============================================================
+      // CATÁLOGO -> OC: al corregir un producto/servicio se actualizan las
+      // OC ya creadas que lo tienen. En la OC son datos fijos del catálogo
+      // la descripción, el núm. de parte, la UDM, la marca y el modelo; la
+      // cantidad, el precio, el descuento, el impuesto y los importes los
+      // captura cada OC y NO se tocan. Las partidas nuevas quedan ligadas
+      // con catalogo_id; las OC anteriores se reconocen por el núm. de parte
+      // o por la descripción que tenía el producto. No se tocan las OC
+      // CANCELADAS.
+      // ============================================================
+      function normTextoPartida(t) {
+        return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+      }
+      function datosFijosDeCatalogo(it) {
+        return {
+          descripcion: String(it.descripcion || '').trim().toUpperCase(),
+          parte: String(it.numero_parte || '').trim().toUpperCase(),
+          udm: it.udm || 'PZA',
+          marca: it.marca ? String(it.marca).trim().toUpperCase() : null,
+          modelo: it.modelo ? String(it.modelo).trim().toUpperCase() : null
+        };
+      }
+      function cambiosPartidaVsCatalogo(p, fijos) {
+        var c = [];
+        function txt(v) { return v ? String(v).trim().toUpperCase() : ''; }
+        if (txt(p.descripcion) !== fijos.descripcion) c.push('DESCRIPCION: ' + (txt(p.descripcion) || '—') + ' -> ' + fijos.descripcion);
+        if (txt(p.parte) !== fijos.parte) c.push('NUM. PARTE: ' + (txt(p.parte) || '—') + ' -> ' + (fijos.parte || '—'));
+        if ((p.udm || 'PZA') !== fijos.udm) c.push('UDM: ' + (p.udm || 'PZA') + ' -> ' + fijos.udm);
+        if (txt(p.marca) !== txt(fijos.marca)) c.push('MARCA: ' + (txt(p.marca) || '—') + ' -> ' + (fijos.marca || '—'));
+        if (txt(p.modelo) !== txt(fijos.modelo)) c.push('MODELO: ' + (txt(p.modelo) || '—') + ' -> ' + (fijos.modelo || '—'));
+        return c;
+      }
+      function similitudPalabras(a, b) {
+        var A = normTextoPartida(a).split(' ').filter(Boolean), B = normTextoPartida(b).split(' ').filter(Boolean);
+        if (!A.length || !B.length) return 0;
+        var enB = {}, union = {}, inter = 0, vistos = {};
+        B.forEach(function(w) { enB[w] = true; union[w] = true; });
+        A.forEach(function(w) { union[w] = true; if (enB[w] && !vistos[w]) { inter++; vistos[w] = true; } });
+        return inter / Object.keys(union).length;
+      }
+      // exactas: partidas de este producto (por catalogo_id, núm. de parte o
+      // descripción). posibles: partidas de OC anteriores del mismo
+      // proveedor cuya descripción ya no existe en el catálogo y se parecen
+      // a este producto (se confirman aparte, una por una en la lista).
+      function buscarPartidasCatalogoEnOC(listaOC, anterior, nuevo, catalogoProveedor) {
+        var provNvo = normTextoPartida(nuevo.proveedor), provAnt = normTextoPartida(anterior.proveedor);
+        var parteAnt = normTextoPartida(anterior.numero_parte), parteNva = normTextoPartida(nuevo.numero_parte);
+        var descAnt = normTextoPartida(anterior.descripcion), descNva = normTextoPartida(nuevo.descripcion);
+        var fijos = datosFijosDeCatalogo(nuevo);
+        var descOtros = {}, partesOtros = {};
+        (catalogoProveedor || []).forEach(function(x) {
+          if (String(x.id) === String(nuevo.id)) return;
+          descOtros[normTextoPartida(x.descripcion)] = true;
+          if (x.numero_parte) partesOtros[normTextoPartida(x.numero_parte)] = true;
+        });
+        var exactas = [], posibles = [];
+        (listaOC || []).forEach(function(oc) {
+          if (!oc || oc.estado === 'CANCELADA') return;
+          var provOC = normTextoPartida(oc.proveedor);
+          if (provOC !== provNvo && provOC !== provAnt) return;
+          parsearProductosOC(oc).forEach(function(p, i) {
+            if (!p) return;
+            var parteP = normTextoPartida(p.parte), descP = normTextoPartida(p.descripcion);
+            var ligada = p.catalogo_id !== undefined && p.catalogo_id !== null && p.catalogo_id !== '';
+            var tipo = null;
+            if (ligada) {
+              if (String(p.catalogo_id) === String(nuevo.id)) tipo = 'exacta';
+            } else if (parteP && ((parteAnt && parteP === parteAnt) || (parteNva && parteP === parteNva))) {
+              tipo = 'exacta';
+            } else if (!(parteP && (parteAnt || parteNva))) {
+              if (descP && (descP === descAnt || descP === descNva)) tipo = 'exacta';
+              else if (descP && !descOtros[descP] && !(parteP && partesOtros[parteP])) {
+                var sim = Math.max(similitudPalabras(p.descripcion, nuevo.descripcion), similitudPalabras(p.descripcion, anterior.descripcion));
+                var mismaMarcaModelo = !!(fijos.marca && fijos.modelo && normTextoPartida(p.marca) === normTextoPartida(fijos.marca) && normTextoPartida(p.modelo) === normTextoPartida(fijos.modelo));
+                if (sim >= 0.5 || (mismaMarcaModelo && sim >= 0.3)) tipo = 'posible';
+              }
+            }
+            if (!tipo) return;
+            var cambios = cambiosPartidaVsCatalogo(p, fijos);
+            if (!cambios.length) return;
+            (tipo === 'exacta' ? exactas : posibles).push({ oc: oc, indice: i, partida: p, cambios: cambios });
+          });
+        });
+        return { exactas: exactas, posibles: posibles };
+      }
+      async function aplicarCatalogoEnOC(regs, nuevo) {
+        var fijos = datosFijosDeCatalogo(nuevo);
+        var porOC = {}, orden = [];
+        regs.forEach(function(r) {
+          if (!porOC[r.oc.id]) { porOC[r.oc.id] = { oc: r.oc, regs: [] }; orden.push(r.oc.id); }
+          porOC[r.oc.id].regs.push(r);
+        });
+        var ok = 0, partidas = 0, fallos = [], bitacora = [];
+        for (var k = 0; k < orden.length; k++) {
+          var g = porOC[orden[k]];
+          var productos = parsearProductosOC(g.oc).map(function(p) { return Object.assign({}, p); });
+          var cambiosTxt = [];
+          g.regs.forEach(function(r) {
+            var p = productos[r.indice];
+            if (!p) return;
+            cambiosTxt.push('PARTIDA ' + (r.indice + 1) + ': ' + r.cambios.join('; '));
+            p.descripcion = fijos.descripcion;
+            p.parte = fijos.parte;
+            p.udm = fijos.udm;
+            p.marca = fijos.marca;
+            p.modelo = fijos.modelo;
+            p.catalogo_id = String(nuevo.id);
+            partidas++;
+          });
+          try {
+            var { error } = await supabase.from('ordenes').update({ productos: productos }).eq('id', g.oc.id);
+            if (error) throw error;
+          } catch (e) {
+            fallos.push((g.oc.codigo || ('OC ' + g.oc.id)) + ': ' + (e && e.message ? e.message : e));
+            continue;
+          }
+          ok++;
+          g.oc.productos = productos;
+          var local = (ordenes || []).find(function(o) { return String(o.id) === String(g.oc.id); });
+          if (local && local !== g.oc) local.productos = productos;
+          var just = 'CATALOGO DEL PROVEEDOR ACTUALIZADO (' + (nuevo.codigo || ('PS-' + String(nuevo.id).padStart(5, '0'))) + '): ' + cambiosTxt.join(' | ');
+          bitacora.push({
+            oc_id: g.oc.id, oc_codigo: g.oc.codigo || ('OC-' + g.oc.id), accion: 'MODIFICADA',
+            monto_anterior: Number(g.oc.montototal) || 0, monto_final: Number(g.oc.montototal) || 0,
+            moneda: g.oc.moneda || 'MXN', justificacion: just.length > 900 ? just.slice(0, 897) + '...' : just,
+            usuario: (actual && (actual.usuario || actual.u)) || '', fecha: new Date().toISOString()
+          });
+        }
+        if (bitacora.length) {
+          try {
+            var rb = await supabase.from('bitacora_oc').insert(bitacora);
+            if (rb && rb.error) throw rb.error;
+          } catch (eB) {
+            console.error('No se pudo registrar la bitácora del cambio de catálogo:', eB);
+            fallos.push('bitácora: ' + (eB && eB.message ? eB.message : eB));
+          }
+        }
+        return { ok: ok, partidas: partidas, fallos: fallos };
+      }
+      async function sincronizarOCConCatalogo(anterior, nuevo) {
+        var listaOC;
+        try {
+          var r = await supabase.from('ordenes').select('id,codigo,proveedor,estado,productos,montototal,moneda');
+          if (r.error) throw r.error;
+          listaOC = r.data || [];
+        } catch (e) {
+          console.error('No se pudieron leer las OC para actualizar el catálogo; se usan las ya cargadas:', e);
+          listaOC = ordenes || [];
+        }
+        var catalogoProv = (prodServCache || []).filter(function(x) {
+          return (x.proveedor_id && String(x.proveedor_id) === String(nuevo.proveedor_id)) || normTextoPartida(x.proveedor) === normTextoPartida(nuevo.proveedor);
+        });
+        var res = buscarPartidasCatalogoEnOC(listaOC, anterior, nuevo, catalogoProv);
+        function folios(regs) { var f = []; regs.forEach(function(x) { if (f.indexOf(x.oc.codigo) === -1) f.push(x.oc.codigo); }); return f; }
+        var aplicar = [];
+        if (res.exactas.length) {
+          var fe = folios(res.exactas);
+          if (confirm('🔄 "' + nuevo.descripcion + '" está en ' + res.exactas.length + ' partida(s) de ' + fe.length + ' OC ya creada(s):\n\n' +
+              fe.slice(0, 10).join('\n') + (fe.length > 10 ? '\n... y ' + (fe.length - 10) + ' más' : '') +
+              '\n\n¿Actualizar en esas OC la descripción, núm. de parte, UDM, marca y modelo?\n(La cantidad, el precio y los importes de cada OC no cambian. Las OC canceladas no se tocan.)')) {
+            aplicar = aplicar.concat(res.exactas);
+          }
+        }
+        if (res.posibles.length) {
+          var lineas = res.posibles.slice(0, 8).map(function(x) { return '• ' + x.oc.codigo + ' — ' + (x.partida.descripcion || ''); });
+          if (confirm('🔎 También hay ' + res.posibles.length + ' partida(s) en OC anteriores de ' + nuevo.proveedor + ' con una descripción que ya no existe en el catálogo y que se parece a este producto:\n\n' +
+              lineas.join('\n') + (res.posibles.length > 8 ? '\n... y ' + (res.posibles.length - 8) + ' más' : '') +
+              '\n\n¿Cambiarlas también a "' + nuevo.descripcion + '"?')) {
+            aplicar = aplicar.concat(res.posibles);
+          }
+        }
+        if (!aplicar.length) return { ok: 0, partidas: 0, fallos: [], encontradas: res.exactas.length + res.posibles.length };
+        var resultado = await aplicarCatalogoEnOC(aplicar, nuevo);
+        resultado.encontradas = res.exactas.length + res.posibles.length;
+        if (resultado.ok && typeof render === 'function') { try { render(); } catch (eR) { console.error(eR); } }
+        return resultado;
+      }
+
       window.guardarProdServ = async function() {
         var msg = document.getElementById('msgProdServModal');
         if (!actual || actual.rol !== 'Administrador') { msg.innerHTML = '<div class="alert">⚠️ Solo el Administrador puede guardar.</div>'; return; }
@@ -24357,11 +24535,24 @@
           impuesto_pct: Number(document.getElementById('psImpuesto').value) || 0,
           activo: document.getElementById('psActivo').checked
         };
+        var idEditadoPS = prodServEditandoId;
+        var anteriorPS = idEditadoPS ? Object.assign({}, (prodServCache || []).find(function(x) { return x.id === idEditadoPS; }) || {}) : null;
+        var resultadoSyncPS = null;
         try {
           if (prodServEditandoId) {
             registro.actualizado = new Date().toISOString();
             var { error } = await supabase.from('productos_servicios').update(registro).eq('id', prodServEditandoId);
             if (error) throw error;
+            // Actualiza las OC ya creadas que tienen este producto/servicio.
+            if (anteriorPS && anteriorPS.id !== undefined) {
+              msg.innerHTML = '<div class="text-muted">🔄 Buscando las OC que tienen este producto…</div>';
+              try {
+                resultadoSyncPS = await sincronizarOCConCatalogo(anteriorPS, Object.assign({}, anteriorPS, registro, { id: idEditadoPS }));
+              } catch (eSync) {
+                console.error('Error actualizando las OC con el catálogo:', eSync);
+                resultadoSyncPS = { ok: 0, partidas: 0, fallos: [eSync && eSync.message ? eSync.message : String(eSync)] };
+              }
+            }
           } else {
             registro.creado_por = actual.usuario;
             var { data, error: errIns } = await supabase.from('productos_servicios').insert([registro]).select().single();
@@ -24373,6 +24564,18 @@
           }
           window.cerrarModalProdServ();
           await window.cargarPanelProdServ();
+          var msgPanelPS = document.getElementById('msgProdServ');
+          if (msgPanelPS && resultadoSyncPS) {
+            if (resultadoSyncPS.ok) {
+              msgPanelPS.innerHTML = '<div class="success-msg" style="padding:8px 10px;border-radius:8px;background:#e8f6ee;color:#1e7a46;">✅ Producto actualizado también en ' +
+                resultadoSyncPS.ok + ' OC (' + resultadoSyncPS.partidas + ' partida' + (resultadoSyncPS.partidas === 1 ? '' : 's') + '). El cambio quedó en la bitácora de cada OC.</div>';
+            } else if (resultadoSyncPS.encontradas) {
+              msgPanelPS.innerHTML = '<div class="text-muted">ℹ️ Producto actualizado solo en el catálogo; las OC ya creadas se dejaron como estaban.</div>';
+            }
+            if (resultadoSyncPS.fallos && resultadoSyncPS.fallos.length) {
+              msgPanelPS.innerHTML += '<div class="alert">⚠️ No se pudieron actualizar: ' + escapeHTML(resultadoSyncPS.fallos.join(' · ')) + '</div>';
+            }
+          }
         } catch (e) {
           console.error('Error guardando producto/servicio:', e);
           var texto = /duplicate|unique/i.test(e.message || '') ? 'Ese producto/servicio ya está dado de alta para este proveedor.' : (e.message || String(e));
@@ -25653,7 +25856,7 @@
           window.agregarFilaEditarProductosOC();
         } else {
           productosOC.forEach(function(p) {
-            window.agregarFilaEditarProductosOC(p.codigo, p.parte, p.descripcion, p.udm, p.cantidad, p.precioUnitario, p.descuento, p.impuesto, p.marca, p.modelo);
+            window.agregarFilaEditarProductosOC(p.codigo, p.parte, p.descripcion, p.udm, p.cantidad, p.precioUnitario, p.descuento, p.impuesto, p.marca, p.modelo, p.catalogo_id);
           });
         }
 
@@ -25671,7 +25874,7 @@
         }
       };
 
-      window.agregarFilaEditarProductosOC = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto, marca, modelo) {
+      window.agregarFilaEditarProductosOC = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto, marca, modelo, catalogoId) {
         codigo = codigo || '';
         parte = parte || '';
         descripcion = descripcion || '';
@@ -25697,6 +25900,7 @@
           '<td><button class="danger" onclick="window.eliminarFilaEditarProductosOC(this)">🗑️</button></td>';
         fila.dataset.marca = marca || '';
         fila.dataset.modelo = modelo || '';
+        fila.dataset.catalogoId = (catalogoId !== undefined && catalogoId !== null) ? String(catalogoId) : '';
         var txtMMEd = textoMarcaModelo(marca, modelo);
         if (txtMMEd) {
           var celdaDescEd = fila.querySelector('.desc') ? fila.querySelector('.desc').parentNode : null;
@@ -25824,7 +26028,8 @@
             importe: importe,
             proyecto: proyectoPrevioDe(codigoFila, parteFila, descripcion),
             marca: fila.dataset.marca || null,
-            modelo: fila.dataset.modelo || null
+            modelo: fila.dataset.modelo || null,
+            catalogo_id: fila.dataset.catalogoId || null
           });
         });
         if (invalido) {
@@ -29621,7 +29826,10 @@
             importe: importe,
             proyecto: proyectoPartida,
             marca: fila.dataset.marca || null,
-            modelo: fila.dataset.modelo || null
+            modelo: fila.dataset.modelo || null,
+            // Liga la partida con su producto/servicio del catálogo del
+            // proveedor: si después se corrige el catálogo, la OC se actualiza.
+            catalogo_id: (fila.dataset.catalogoId && fila.dataset.catalogoId.indexOf('inv:') !== 0) ? fila.dataset.catalogoId : null
           });
         });
         if (productoInvalido) {
