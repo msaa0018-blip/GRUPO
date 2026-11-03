@@ -7420,10 +7420,14 @@
       // El token del bot de Telegram YA NO está en el navegador: vive en
       // Supabase (tabla privada config_privada) y todos los envíos pasan
       // por la función RPC telegram_api (ver telegramAPI más abajo).
-      // Respaldo SOLO si ningún Director General tiene Chat ID guardado en
-      // usuarios.telegram_chat_id (la fuente principal es la base de datos,
-      // ver obtenerChatIdDirectorTelegram).
-      var TELEGRAM_CHAT_ID = '8680103835';
+      // Las solicitudes de autorización de pago del Director (OC que rebasan
+      // el límite del proyecto u OC sin proyecto) van al Director General
+      // LJGR. Su Chat ID se lee de usuarios.telegram_chat_id (ver
+      // obtenerChatIdDirectorTelegram); este valor es solo el respaldo si no
+      // se puede leer de la base de datos (Chat ID de LJGR). Antes el
+      // respaldo era el chat de AIPZ, por eso esos avisos le llegaban a él.
+      var USUARIO_DIRECTOR_GENERAL = 'LJGR';
+      var TELEGRAM_CHAT_ID = '1810912969';
 
       var SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
       var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
@@ -21041,19 +21045,23 @@
       // Devuelve el message_id del mensaje enviado en Telegram (para poder
       // reaccionarle después con ✅/❌ cuando el Director apruebe o cancele
       // la OC — ver reaccionarMensajeTelegramOC), o null si falló el envío.
-      // Chat del Director General: se toma de la base de datos
-      // (usuarios.telegram_chat_id del/los usuario(s) con rol "Director
-      // General", vía RPC obtener_telegram_chat_id). Si ninguno lo tiene
-      // registrado, se usa TELEGRAM_CHAT_ID como respaldo.
+      // Chat del Director General: primero el de LJGR
+      // (USUARIO_DIRECTOR_GENERAL); si no lo tiene, el de otro usuario con
+      // rol "Director General" (usuarios.telegram_chat_id, vía RPC
+      // obtener_telegram_chat_id). Si no se puede leer, TELEGRAM_CHAT_ID.
       var chatIdDirectorCache = null;
       async function obtenerChatIdDirectorTelegram() {
         if (chatIdDirectorCache) return chatIdDirectorCache;
-        var directores = (usuariosDB || []).filter(function(u) { return usuarioTieneAlgunRol(u, ['Director General']); });
+        var chatIdLJGR = await obtenerTelegramChatIdUsuario(USUARIO_DIRECTOR_GENERAL);
+        if (chatIdLJGR) { chatIdDirectorCache = chatIdLJGR; return chatIdLJGR; }
+        var directores = (usuariosDB || []).filter(function(u) {
+          return usuarioTieneAlgunRol(u, ['Director General']) && String(u.usuario || '').toUpperCase() !== USUARIO_DIRECTOR_GENERAL;
+        });
         for (var i = 0; i < directores.length; i++) {
           var chatId = await obtenerTelegramChatIdUsuario(directores[i].usuario);
           if (chatId) { chatIdDirectorCache = chatId; return chatId; }
         }
-        console.warn('Ningún Director General tiene Chat ID de Telegram en la base de datos; se usa el Chat ID de respaldo.');
+        console.warn('No se pudo leer el Chat ID de Telegram de ' + USUARIO_DIRECTOR_GENERAL + '; se usa el Chat ID de respaldo del Director General.');
         return TELEGRAM_CHAT_ID;
       }
 
