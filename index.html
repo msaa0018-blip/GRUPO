@@ -1016,6 +1016,8 @@
   .barra-h-pulgar { position: absolute; top: 2px; bottom: 2px; left: 0; min-width: 40px; background: #94a3b8; border-radius: 6px; cursor: grab; touch-action: none; }
   .barra-h-pulgar:hover, .barra-h.arrastrando .barra-h-pulgar { background: #64748b; }
   .barra-h.arrastrando .barra-h-pulgar { cursor: grabbing; }
+  /* Impresiones siempre en blanco y negro (también Ctrl+P de la pantalla). */
+  @media print { html { filter: grayscale(100%) !important; } }
   #tablaProductosCatalogo thead th { position: sticky; top: 0; z-index: 2; }
   @media (min-width: 901px) {
     #tablaProductosCatalogo { table-layout: auto; }
@@ -20098,27 +20100,46 @@
         var urls = ocConclusionPendiente.facturas.map(function(f) { return f.factura_url; }).filter(Boolean);
         if (!urls.length && ocConclusionPendiente.oc.factura_url) urls = [ocConclusionPendiente.oc.factura_url];
         if (!urls.length) return alert('⚠️ No hay PDF de factura para imprimir.');
+        var codigoOC = (ocConclusionPendiente.oc && ocConclusionPendiente.oc.codigo) || 'OC';
+        var accion = await elegirImprimirOGuardar('FACTURA-' + codigoOC + (urls.length > 1 ? ' (' + urls.length + ' facturas)' : ''));
+        if (!accion) return;
+        if (accion === 'guardar') {
+          // Guardar: el PDF original de la factura, a color.
+          for (var g = 0; g < urls.length; g++) {
+            var nombreGuardar = 'FACTURA-' + codigoOC + (urls.length > 1 ? '-' + (g + 1) : '') + '.pdf';
+            try {
+              var respG = await fetch(urls[g]);
+              if (!respG.ok) throw new Error('HTTP ' + respG.status);
+              var blobG = new Blob([await respG.blob()], { type: 'application/pdf' });
+              var urlG = URL.createObjectURL(blobG);
+              var enlace = document.createElement('a');
+              enlace.href = urlG; enlace.download = nombreGuardar;
+              document.body.appendChild(enlace); enlace.click(); enlace.remove();
+              setTimeout(function(u) { return function() { URL.revokeObjectURL(u); }; }(urlG), 60000);
+            } catch (eG) {
+              console.warn('No se pudo descargar la factura, se abre en otra pestaña:', eG);
+              window.open(urls[g], '_blank');
+            }
+          }
+          return;
+        }
+        var movil = esDispositivoMovilImpresion();
         for (var i = 0; i < urls.length; i++) {
+          var tituloFactura = 'FACTURA-' + codigoOC + (urls.length > 1 ? '-' + (i + 1) : '');
           try {
+            // La factura se descarga y se convierte a blanco y negro antes de
+            // imprimirla (siempre en escala de grises, como todo el sistema).
             var resp = await fetch(urls[i]);
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            var blob = await resp.blob();
-            var blobUrl = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-            await new Promise(function(resolve) {
-              var frame = document.createElement('iframe');
-              frame.style.position = 'fixed'; frame.style.right = '0'; frame.style.bottom = '0';
-              frame.style.width = '0'; frame.style.height = '0'; frame.style.border = '0';
-              frame.src = blobUrl;
-              frame.onload = function() {
-                try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.open(blobUrl, '_blank'); }
-                resolve();
-              };
-              document.body.appendChild(frame);
-              setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); URL.revokeObjectURL(blobUrl); }, 60000);
-            });
+            var paginas = await paginasPDFEnGris(await resp.arrayBuffer(), movil);
+            if (movil) {
+              pdfEnGrisDesdePaginas(paginas).save(tituloFactura + '.pdf');
+            } else {
+              await imprimirPaginasEnIframe(paginas, tituloFactura, function() { imprimirPDFBlobDirecto(pdfEnGrisDesdePaginas(paginas), tituloFactura); });
+            }
           } catch (e) {
-            console.warn('No se pudo imprimir la factura desde la app, se abre en otra pestaña:', e);
-            window.open(urls[i], '_blank');
+            console.warn('No se pudo preparar la factura para imprimir en blanco y negro:', e);
+            alert('⚠️ No se pudo preparar la factura ' + (urls.length > 1 ? (i + 1) + ' ' : '') + 'para imprimir en blanco y negro. Recarga la página e inténtalo de nuevo.');
           }
         }
       };
@@ -29687,36 +29708,69 @@
         setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); URL.revokeObjectURL(blobUrl); }, 60000);
       }
 
-      async function imprimirPDFSeguro(doc, nombreArchivo, alternativa) {
-        var usarAlternativa = function() {
-          if (typeof alternativa === 'function') return alternativa();
-          return imprimirPDFBlobDirecto(doc, nombreArchivo);
-        };
-        if (esDispositivoMovilImpresion() || !window.pdfjsLib) return usarAlternativa();
-        try {
-          var pdf = await window.pdfjsLib.getDocument({ data: doc.output('arraybuffer') }).promise;
-          var imagenes = [];
-          var horizontal = false;
-          // Documentos largos (p. ej. "Imprimir OC del periodo"): menos
-          // resolución y JPEG para no agotar la memoria del navegador.
-          var largo = pdf.numPages > 20;
-          var escalaImpresion = pdf.numPages > 60 ? 1.6 : (largo ? 2.2 : 3);
-          for (var n = 1; n <= pdf.numPages; n++) {
-            var pagina = await pdf.getPage(n);
-            var base = pagina.getViewport({ scale: 1 });
-            if (n === 1) horizontal = base.width > base.height;
-            var vp = pagina.getViewport({ scale: escalaImpresion });
-            var canvas = document.createElement('canvas');
-            canvas.width = Math.round(vp.width);
-            canvas.height = Math.round(vp.height);
-            var ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
-            imagenes.push(largo ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png'));
-            canvas.width = 0; canvas.height = 0;
-          }
-          var titulo = String(nombreArchivo || doc._nombreArchivoReporte || 'documento').replace(/\.pdf$/i, '');
+      // ===== IMPRESIÓN SIEMPRE EN BLANCO Y NEGRO =====
+      // Todo lo que el sistema manda a imprimir se convierte antes a escala
+      // de grises: cada hoja del PDF se dibuja como imagen y se le quita el
+      // color. Así, aunque en el diálogo de impresión se elija "Color", la
+      // hoja sale en blanco y negro (el navegador no permite fijar esa
+      // opción desde la página, pero ya no hay color que imprimir).
+      function canvasAGris(ctx, ancho, alto) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, ancho, alto);
+        ctx.restore();
+      }
+
+      // Convierte cada hoja de un PDF (bytes) en una imagen en blanco y negro.
+      // Documentos largos (p. ej. "Imprimir OC del periodo") y celular: menos
+      // resolución y JPEG para no agotar la memoria del navegador.
+      async function paginasPDFEnGris(datosPDF, ligero) {
+        if (!window.pdfjsLib) throw new Error('pdf.js no está disponible');
+        var pdf = await window.pdfjsLib.getDocument({ data: datosPDF }).promise;
+        var largo = ligero || pdf.numPages > 20;
+        var escalaImpresion = pdf.numPages > 60 ? 1.6 : (largo ? 2.2 : 3);
+        var paginas = [];
+        for (var n = 1; n <= pdf.numPages; n++) {
+          var pagina = await pdf.getPage(n);
+          var base = pagina.getViewport({ scale: 1 });
+          var vp = pagina.getViewport({ scale: escalaImpresion });
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(vp.width);
+          canvas.height = Math.round(vp.height);
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
+          canvasAGris(ctx, canvas.width, canvas.height);
+          paginas.push({
+            src: largo ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png'),
+            anchoPt: base.width, altoPt: base.height
+          });
+          canvas.width = 0; canvas.height = 0;
+        }
+        return paginas;
+      }
+
+      // Arma un PDF (jsPDF) con las hojas ya en blanco y negro (para celular
+      // o para el método de impresión de respaldo).
+      function pdfEnGrisDesdePaginas(paginas) {
+        var jsPDF = window.jspdf.jsPDF;
+        var d = null;
+        paginas.forEach(function(pg) {
+          var orientacion = pg.anchoPt > pg.altoPt ? 'l' : 'p';
+          if (!d) d = new jsPDF({ orientation: orientacion, unit: 'pt', format: [pg.anchoPt, pg.altoPt] });
+          else d.addPage([pg.anchoPt, pg.altoPt], orientacion);
+          d.addImage(pg.src, pg.src.indexOf('data:image/png') === 0 ? 'PNG' : 'JPEG', 0, 0, pg.anchoPt, pg.altoPt);
+        });
+        return d;
+      }
+
+      // Imprime las hojas (imágenes en blanco y negro) desde un iframe oculto.
+      // Devuelve una promesa que se cumple al mandar a imprimir.
+      function imprimirPaginasEnIframe(paginas, titulo, alFallar) {
+        return new Promise(function(resolve) {
+          var horizontal = paginas.length && paginas[0].anchoPt > paginas[0].altoPt;
           // Hoja apenas 0.5 mm más chica que A4 para que el navegador
           // nunca genere una hoja en blanco extra por redondeo.
           // Margen de impresión de 1 cm por lado: la hoja del PDF se
@@ -29724,7 +29778,6 @@
           // nunca queda en el límite del papel ni en la zona que la
           // impresora no alcanza a imprimir.
           var MARGEN_IMPRESION_MM = 10;
-          var anchoHoja = ((horizontal ? 297 : 210) - 2 * MARGEN_IMPRESION_MM) + 'mm';
           var altoHoja = ((horizontal ? 210 : 297) - 2 * MARGEN_IMPRESION_MM - 0.5) + 'mm';
           var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + escapeHTML(titulo) + '</title>' +
             '<style>' +
@@ -29737,9 +29790,10 @@
             '.hoja { width: 100%; height: 100vh; max-height: ' + altoHoja + '; display: flex; align-items: center; justify-content: center; overflow: hidden; page-break-after: always; break-after: page; }' +
             '@media print { .hoja { max-height: none; } }' +
             '.hoja:last-child { page-break-after: auto; break-after: auto; }' +
-            '.hoja img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; }' +
+            // Las imágenes ya vienen en gris; el filtro es un respaldo.
+            '.hoja img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; filter: grayscale(100%); }' +
             '</style></head><body>' +
-            imagenes.map(function(src) { return '<div class="hoja"><img src="' + src + '"></div>'; }).join('') +
+            paginas.map(function(pg) { return '<div class="hoja"><img src="' + pg.src + '"></div>'; }).join('') +
             '</body></html>';
 
           var frame = document.createElement('iframe');
@@ -29752,16 +29806,88 @@
             Promise.all(imgs.map(function(im) {
               return im.decode ? im.decode().catch(function() {}) : Promise.resolve();
             })).then(function() {
-              try { imprimirVentanaConNombre(w, titulo); } catch (e) { usarAlternativa(); }
+              try { imprimirVentanaConNombre(w, titulo); } catch (e) { if (typeof alFallar === 'function') alFallar(); }
+              resolve();
             });
           };
           frame.srcdoc = html;
           document.body.appendChild(frame);
           setTimeout(function() { if (frame.parentNode) frame.parentNode.removeChild(frame); }, 120000);
-        } catch (errorImpresion) {
-          console.error('❌ Impresión segura falló, se usa el método anterior:', errorImpresion);
-          usarAlternativa();
+        });
+      }
+
+      // Al dar "Imprimir" en cualquier parte del sistema se pregunta qué
+      // hacer: imprimir (siempre en blanco y negro) o guardar el PDF a color.
+      // El navegador no avisa si en su diálogo se eligió una impresora o
+      // "Guardar como PDF", por eso la elección se hace aquí antes.
+      // Devuelve 'imprimir', 'guardar' o null (cancelado).
+      function elegirImprimirOGuardar(titulo) {
+        return new Promise(function(resolve) {
+          var fondo = document.createElement('div');
+          fondo.id = 'elegirImpresionModal';
+          fondo.setAttribute('role', 'dialog');
+          fondo.setAttribute('aria-modal', 'true');
+          fondo.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+          fondo.innerHTML =
+            '<div style="background:#fff;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.25);width:100%;max-width:380px;padding:18px 18px 16px;position:relative;">' +
+              '<button type="button" data-elegir="cancelar" class="btn-modal-x" aria-label="Cancelar" style="position:absolute;top:10px;right:10px;">✕</button>' +
+              '<h3 style="margin:0 40px 4px 0;font-size:17px;">🖨️ Imprimir</h3>' +
+              '<div style="font-size:12px;color:#64748b;margin:0 40px 14px 0;word-break:break-all;">' + escapeHTML(titulo || '') + '</div>' +
+              '<div style="display:flex;flex-direction:column;gap:10px;">' +
+                '<button type="button" data-elegir="imprimir" style="width:100%;">🖨️ Imprimir (blanco y negro)</button>' +
+                '<button type="button" data-elegir="guardar" style="width:100%;background:#ffffff;color:#1f2937;border:1px solid #cbd5e1;">💾 Guardar PDF a color</button>' +
+              '</div>' +
+            '</div>';
+          function cerrar(valor) {
+            document.removeEventListener('keydown', alTeclado, true);
+            if (fondo.parentNode) fondo.parentNode.removeChild(fondo);
+            resolve(valor);
+          }
+          function alTeclado(e) { if (e.key === 'Escape') { e.stopPropagation(); cerrar(null); } }
+          fondo.addEventListener('click', function(e) {
+            if (e.target === fondo) return cerrar(null);
+            var b = e.target.closest ? e.target.closest('[data-elegir]') : null;
+            if (!b) return;
+            var v = b.getAttribute('data-elegir');
+            cerrar(v === 'cancelar' ? null : v);
+          });
+          document.addEventListener('keydown', alTeclado, true);
+          document.body.appendChild(fondo);
+          var primero = fondo.querySelector('[data-elegir="imprimir"]');
+          if (primero) try { primero.focus(); } catch (e) {}
+        });
+      }
+
+      async function imprimirPDFSeguro(doc, nombreArchivo, alternativa) {
+        var titulo = String(nombreArchivo || doc._nombreArchivoReporte || 'documento').replace(/\.pdf$/i, '');
+        var accion = await elegirImprimirOGuardar(titulo);
+        if (!accion) return;
+        // Guardar: el PDF tal cual, a color.
+        if (accion === 'guardar') { doc.save(titulo + '.pdf'); return; }
+        // Imprimir: siempre en blanco y negro.
+        var movil = esDispositivoMovilImpresion();
+        var paginas;
+        try {
+          paginas = await paginasPDFEnGris(doc.output('arraybuffer'), movil);
+        } catch (errorGris) {
+          // Sin la versión en blanco y negro NO se imprime a color.
+          console.error('❌ No se pudo preparar la impresión en blanco y negro:', errorGris);
+          alert('⚠️ No se pudo preparar la impresión en blanco y negro. Recarga la página (Ctrl+F5) e inténtalo de nuevo.');
+          return;
         }
+        var respaldoGris = function() {
+          var docGris = pdfEnGrisDesdePaginas(paginas);
+          docGris._nombreArchivoReporte = titulo;
+          return docGris;
+        };
+        // En celular (donde imprimir desde un iframe no es fiable) se
+        // conserva el comportamiento anterior: si el módulo descargaba el
+        // PDF para imprimirlo, ahora descarga la versión en blanco y negro.
+        if (movil) {
+          if (typeof alternativa === 'function') return respaldoGris().save(titulo + '.pdf');
+          return imprimirPDFBlobDirecto(respaldoGris(), titulo);
+        }
+        await imprimirPaginasEnIframe(paginas, titulo, function() { imprimirPDFBlobDirecto(respaldoGris(), titulo); });
       }
       window.imprimirPDFSeguro = imprimirPDFSeguro;
 
