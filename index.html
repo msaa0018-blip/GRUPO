@@ -31830,7 +31830,7 @@
         // "Método de pago" en la tarjeta "CONDICIONES COMERCIALES".
 
         // ---------- PIE DE PÁGINA (en TODAS las hojas) ----------
-        // Izquierda: fecha corta DD/MM/AA + hora HH:MM a.m./p.m.
+        // Izquierda: fecha corta DD/MM/AA + hora HH:MM a.m./p.m. de elaboración.
         // Centro: nombre del archivo (idéntico al que se usa al guardar/
         // descargar la OC, ver window.descargarOC / doc.save).
         // Derecha: paginado "Pág. N de N".
@@ -31838,7 +31838,10 @@
         // del borde inferior (pieYOC), la misma franja que ya se respetó
         // en todo el contenido vía limiteContenidoY/asegurarEspacioOC.
         var totalPaginasOC = doc.internal.getNumberOfPages();
-        var ahoraPieOC = new Date();
+        // Fecha y hora de ELABORACIÓN de la OC: el mismo momento que se
+        // muestra arriba a la derecha ("Fecha de Elaboración" / "Hora"),
+        // no la hora en que se genera o imprime el PDF.
+        var ahoraPieOC = (momentoElaboracion instanceof Date && !isNaN(momentoElaboracion.getTime())) ? momentoElaboracion : new Date();
         var diaPieOC = String(ahoraPieOC.getDate()).padStart(2, '0');
         var mesPieOC = String(ahoraPieOC.getMonth() + 1).padStart(2, '0');
         var anioPieOC = String(ahoraPieOC.getFullYear()).slice(-2);
