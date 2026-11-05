@@ -30309,6 +30309,8 @@
       };
 
       window.confirmarDesdePreview = async function() {
+        // Hora de elaboración = el momento exacto del click en Confirmar.
+        var momentoConfirmacion = new Date();
         if (!ocPreviewData) { alert('No hay datos para confirmar.'); return; }
         var datos = ocPreviewData;
         var codigoBase = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, '');
@@ -30334,7 +30336,7 @@
           montototal: datos.montototal,
           montomxn: datos.montomxn,
           estado: datos.estado,
-          fechacreacion: new Date().toISOString(),
+          fechacreacion: momentoConfirmacion.toISOString(),
           fechapago: datos.fechapago,
           fechaentrega: datos.fechaentrega,
           responsable: datos.responsable,
@@ -30414,6 +30416,7 @@
           // del encabezado y el nombre en el pie de página coincidan
           // exactamente con el nombre del archivo que se guarda.
           datos.codigo = codigo;
+          datos.fechacreacion = nuevaOC.fechacreacion;
           var docFinal = await generarPDFParaPreview(datos);
           docFinal.save(codigo + '.pdf');
         } catch (err) {
@@ -30426,6 +30429,8 @@
       };
 
       window.confirmarOC = async function() {
+        // Hora de elaboración = el momento exacto del click en Confirmar.
+        var momentoConfirmacion = new Date();
         var datos = recopilarDatosOC();
         if (!datos) { console.log('❌ Datos inválidos, no se creará OC'); return; }
 
@@ -30457,7 +30462,7 @@
           montototal: datos.montototal,
           montomxn: datos.montomxn,
           estado: datos.estado,
-          fechacreacion: new Date().toISOString(),
+          fechacreacion: momentoConfirmacion.toISOString(),
           fechapago: datos.fechapago,
           fechaentrega: datos.fechaentrega,
           responsable: datos.responsable,
@@ -30532,6 +30537,7 @@
           // encabezado y el nombre en el pie de página coincidan exactamente
           // con el nombre del archivo que se guarda.
           datos.codigo = codigo;
+          datos.fechacreacion = nuevaOC.fechacreacion;
           var doc = await generarPDFParaPreview(datos);
           doc.save(codigo + '.pdf');
         } catch (err) {
@@ -30941,7 +30947,8 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
-        var momentoElaboracion = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion) : new Date();
+        var momentoElaboracion = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion)
+          : (datos.fechacreacion ? new Date(datos.fechacreacion) : new Date());
         if (isNaN(momentoElaboracion.getTime())) momentoElaboracion = new Date();
         // Fecha D/M/AAAA fija (no depende del idioma del navegador); el pie
         // de página usa exactamente este mismo texto y la misma hora.
