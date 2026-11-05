@@ -989,6 +989,18 @@
   #panelProdServ .table-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
   #panelProdServ .table-wrapper table { max-width: none !important; width: max-content !important; min-width: 100% !important; }
   #panelProdServ td button { min-width: 0 !important; width: auto !important; max-width: none !important; }
+  /* 🏢 Proveedores: la tabla es más ancha que la ventana, así que tiene
+     alto propio (encabezado fijo y barra inferior siempre a la vista) y
+     una barra deslizadora horizontal arriba, igual que Productos y servicios. */
+  #panelProveedores .table-wrapper {
+    overflow: auto !important; max-height: 65vh; margin-top: 4px; border: 1px solid var(--gray-200); border-radius: 8px;
+    scrollbar-width: auto; scrollbar-color: #94a3b8 #e5e7eb;
+  }
+  #panelProveedores .table-wrapper::-webkit-scrollbar { height: 14px; width: 12px; }
+  #panelProveedores .table-wrapper::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 8px; }
+  #panelProveedores .table-wrapper::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 2px solid #e5e7eb; }
+  #panelProveedores .table-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  #panelProveedores .table-wrapper table { max-width: none !important; width: max-content !important; min-width: 100% !important; }
   .barra-h-cont { display: flex; align-items: center; gap: 6px; margin: 4px 0 2px; }
   .barra-h-cont .barra-h-btn {
     flex: 0 0 auto; width: 34px !important; min-width: 34px !important; max-width: 34px !important; min-height: 26px !important; height: 26px;
@@ -3799,7 +3811,14 @@
         <div style="margin-bottom:12px;">
           <button onclick="window.imprimirListaProveedores()">🖨️ Imprimir Lista</button>
         </div>
-        <div class="table-wrapper productos-tabla">
+        <!-- Barra deslizadora horizontal: mueve la tabla a los lados para ver
+             todas las columnas (se oculta sola si la tabla cabe completa). -->
+        <div id="provBarraHCont" class="barra-h-cont hidden" title="Desliza para ver todas las columnas">
+          <button type="button" class="barra-h-btn" data-paso="-1" aria-label="Ver columnas a la izquierda">◀</button>
+          <div class="barra-h" role="scrollbar" aria-orientation="horizontal" aria-controls="tablaProveedoresWrap"><div class="barra-h-pulgar"></div></div>
+          <button type="button" class="barra-h-btn" data-paso="1" aria-label="Ver columnas a la derecha">▶</button>
+        </div>
+        <div class="table-wrapper productos-tabla" id="tablaProveedoresWrap">
           <table id="tablaProveedoresCatalogo">
             <thead>
               <tr>
@@ -4738,7 +4757,7 @@
               <input id="colabEmail" type="email" placeholder="Email">
             </div>
             <div class="cxc-form-row">
-              <input id="colabTelegram" inputmode="numeric" placeholder="Chat ID de Telegram (avisos de pago)">
+              <input id="colabTelegram" inputmode="numeric" placeholder="Chat ID de Telegram del bot ExtiNet (solo números)" title="La persona primero le escribe al bot ExtiNet (@extingue_notificaciones_bot) y toca Iniciar">
             </div>
             <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Salario semanal<input id="colabSalario" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
@@ -7428,6 +7447,9 @@
       // respaldo era el chat de AIPZ, por eso esos avisos le llegaban a él.
       var USUARIO_DIRECTOR_GENERAL = 'LJGR';
       var TELEGRAM_CHAT_ID = '1810912969';
+      // Bot de Telegram del sistema (nombre actualizado en Telegram con setMyName).
+      var NOMBRE_BOT_TELEGRAM = 'ExtiNet';
+      var USUARIO_BOT_TELEGRAM = '@extingue_notificaciones_bot';
 
       var SB_URL = 'https://xhnydthskuzqddtqrpmx.supabase.co';
       var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnlkdGhza3V6cWRkdHFycG14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MjM0NjcsImV4cCI6MjA5Nzk5OTQ2N30.tCDVNKE6LWTJWaVeA9U5jJpKuDXA04yQbq3qULy5kTI';
@@ -10249,6 +10271,10 @@
       window.cargarProveedoresCatalogo = async function() {
         var cuerpo = document.getElementById('cuerpoProveedoresCatalogo');
         if (!cuerpo) return;
+        // Barra deslizadora horizontal de la tabla (misma que Productos y servicios).
+        var actualizarBarraProv = typeof instalarBarraHorizontal === 'function'
+          ? instalarBarraHorizontal(document.getElementById('tablaProveedoresWrap'), document.getElementById('provBarraHCont'))
+          : null;
         try {
           var { data, error } = await supabase.from('proveedores').select('*').order('nombre');
           if (error) throw error;
@@ -10292,6 +10318,7 @@
               '</td>';
             cuerpo.appendChild(fila);
           });
+          if (actualizarBarraProv) setTimeout(actualizarBarraProv, 0);
         } catch (e) {
           console.error('Error cargando proveedores:', e);
           var msg = document.getElementById('msgProveedores');
@@ -19732,7 +19759,8 @@
       // Se envía al chat personal de cada jefe: el Chat ID se captura en
       // 👥 Colaboradores (columna usuarios.telegram_chat_id, leída con la
       // RPC obtener_telegram_chat_id — ver migracion_telegram_avisos_pago.sql).
-      // Cada jefe debe haberle escrito antes al bot (/start); el que no
+      // Cada jefe debe haberle escrito antes al bot ExtiNet
+      // (@extingue_notificaciones_bot, /start); el que no
       // tenga Chat ID registrado no recibe nada (solo se avisa en consola)
       // y el pago queda registrado igual. A quien registró el pago no se
       // le envía aviso.
@@ -19898,7 +19926,7 @@
         var partes = [];
         if (r.enviados.length) partes.push('📨 Aviso por Telegram enviado a: ' + r.enviados.join(', ') + '.');
         if (r.sinChatId.length) partes.push('⚠️ Sin Chat ID de Telegram (no se les avisó): ' + r.sinChatId.join(', ') + '.');
-        if (r.fallidos.length) partes.push('⚠️ Telegram rechazó el envío a: ' + r.fallidos.join(', ') + ' (¿inició el bot?).');
+        if (r.fallidos.length) partes.push('⚠️ Telegram rechazó el envío a: ' + r.fallidos.join(', ') + ' (¿le escribió al bot ' + NOMBRE_BOT_TELEGRAM + ' ' + USUARIO_BOT_TELEGRAM + ' y tocó Iniciar?).');
         if (r.motivo) partes.push('⚠️ Aviso por Telegram no enviado: ' + r.motivo);
         return partes.length ? partes.join('\n') : '⚠️ Aviso por Telegram: no se envió a nadie.';
       }
