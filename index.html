@@ -30942,7 +30942,10 @@
         doc.setFontSize(8.5);
         doc.setTextColor(colorTexto[0], colorTexto[1], colorTexto[2]);
         var momentoElaboracion = (ocExistente && ocExistente.fechacreacion) ? new Date(ocExistente.fechacreacion) : new Date();
-        var fechaElaboracionHeader = momentoElaboracion.toLocaleDateString();
+        if (isNaN(momentoElaboracion.getTime())) momentoElaboracion = new Date();
+        // Fecha D/M/AAAA fija (no depende del idioma del navegador); el pie
+        // de página usa exactamente este mismo texto y la misma hora.
+        var fechaElaboracionHeader = momentoElaboracion.getDate() + '/' + (momentoElaboracion.getMonth() + 1) + '/' + momentoElaboracion.getFullYear();
         doc.text('Fecha de Elaboración: ' + fechaElaboracionHeader + '.', xDerecha, y + 16, { align: 'right' });
         // Debajo de la fecha: hora de elaboración (24 h, hh:mm:ss).
         var dosDigitos = function(n) { return (n < 10 ? '0' : '') + n; };
@@ -31830,7 +31833,8 @@
         // "Método de pago" en la tarjeta "CONDICIONES COMERCIALES".
 
         // ---------- PIE DE PÁGINA (en TODAS las hojas) ----------
-        // Izquierda: fecha corta DD/MM/AA + hora HH:MM a.m./p.m. de elaboración.
+        // Izquierda: fecha y hora de elaboración, con el MISMO texto que
+        // "Fecha de Elaboración" y "Hora" de arriba a la derecha.
         // Centro: nombre del archivo (idéntico al que se usa al guardar/
         // descargar la OC, ver window.descargarOC / doc.save).
         // Derecha: paginado "Pág. N de N".
@@ -31838,20 +31842,10 @@
         // del borde inferior (pieYOC), la misma franja que ya se respetó
         // en todo el contenido vía limiteContenidoY/asegurarEspacioOC.
         var totalPaginasOC = doc.internal.getNumberOfPages();
-        // Fecha y hora de ELABORACIÓN de la OC: el mismo momento que se
-        // muestra arriba a la derecha ("Fecha de Elaboración" / "Hora"),
-        // no la hora en que se genera o imprime el PDF.
-        var ahoraPieOC = (momentoElaboracion instanceof Date && !isNaN(momentoElaboracion.getTime())) ? momentoElaboracion : new Date();
-        var diaPieOC = String(ahoraPieOC.getDate()).padStart(2, '0');
-        var mesPieOC = String(ahoraPieOC.getMonth() + 1).padStart(2, '0');
-        var anioPieOC = String(ahoraPieOC.getFullYear()).slice(-2);
-        var fechaCortaPieOC = diaPieOC + '/' + mesPieOC + '/' + anioPieOC;
-        var horas24PieOC = ahoraPieOC.getHours();
-        var ampmPieOC = horas24PieOC >= 12 ? 'p.m.' : 'a.m.';
-        var horas12PieOC = horas24PieOC % 12;
-        if (horas12PieOC === 0) horas12PieOC = 12;
-        var minutosPieOC = String(ahoraPieOC.getMinutes()).padStart(2, '0');
-        var horaCortaPieOC = String(horas12PieOC).padStart(2, '0') + ':' + minutosPieOC + ' ' + ampmPieOC;
+        // Fecha y hora de ELABORACIÓN de la OC: exactamente los mismos textos
+        // que arriba a la derecha ("Fecha de Elaboración" / "Hora"), no la
+        // hora en que se genera o imprime el PDF.
+        var fechaHoraPieOC = fechaElaboracionHeader + '  ' + horaElaboracionHeader;
         var nombreArchivoPieOC = codigoParaTitulo + '.pdf';
 
         for (var nPagOC = 1; nPagOC <= totalPaginasOC; nPagOC++) {
@@ -31859,7 +31853,7 @@
           doc.setFontSize(8);
           doc.setTextColor(100, 100, 100);
           doc.setFont('helvetica', 'normal');
-          doc.text(fechaCortaPieOC + '  ' + horaCortaPieOC, margin, pieYOC, { align: 'left' });
+          doc.text(fechaHoraPieOC, margin, pieYOC, { align: 'left' });
           doc.text(nombreArchivoPieOC, pageWidth / 2, pieYOC, { align: 'center' });
           doc.text('Pág. ' + nPagOC + ' de ' + totalPaginasOC, pageWidth - margin, pieYOC, { align: 'right' });
         }
