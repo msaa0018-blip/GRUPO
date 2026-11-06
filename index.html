@@ -7362,7 +7362,7 @@
           <h4>💵 PMVDC CASH — Presupuesto Mes Vale de Caja en Cash</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMVDCCash">
-              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
+              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto (XXXX = usuario al que se destina)</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
               <tbody id="cuerpoPMVDCCash"></tbody>
               <tbody>
                 <tr><td>VDC-2</td><td>PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL</td><td id="spmCashComision" style="font-weight:bold;">$0.00</td><td></td></tr>
@@ -7379,7 +7379,7 @@
           <h4>⛽ PMVDG — Presupuesto Mes Vale de Gasolina</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMVDG">
-              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
+              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto (XXXX = usuario al que se destina)</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
               <tbody id="cuerpoPMVDG"></tbody>
               <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDG Total:</td><td id="spmVDGTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
@@ -23451,20 +23451,21 @@
       //   VDC-1 IAVE     -> limita sus Vales de IAVE (VI)
       //   VDC-2 VIÁTICOS -> limita sus Vales de Caja (VC)
       //   VDC-3 COMPRAS  -> limita sus OC sin proyecto
-      // En III, IV y V las X se capturan como texto libre.
+      // En III (PMVDC Cash) y IV (PMVDG) también se elige el usuario en
+      // lugar de XXXX; en V (PMACR) las X se capturan como texto libre.
       // El detalle se guarda en documentos_cxp.presupuesto_detalle (jsonb);
       // las columnas pmvdc_1, pmvdc_2, ... siguen guardando los totales.
       var SPM_PPTO_DEF = {
-        tkc: { cuerpo: 'cuerpoPMVDCTkc', usuario: true, recalcular: 'recalcularPMVDC', tipos: {
+        tkc: { cuerpo: 'cuerpoPMVDCTkc', usuario: true, titulo: 'PMVDC Toka Connect', recalcular: 'recalcularPMVDC', tipos: {
           IAVE: { cod: 'VDC-1', nombre: 'IAVE', partes: ['PM-06-VDC-', 'U', '-IAVE-TOKA CONNECT'] },
           VIATICOS: { cod: 'VDC-2', nombre: 'VIÁTICOS', partes: ['PM-06-VDC-', 'U', '-VIATICOS-TOKA CONNECT'] },
           COMPRAS: { cod: 'VDC-3', nombre: 'COMPRAS', partes: ['PM-06-VDC-', 'U', '-COMPRAS-TOKA CONNECT'] }
         } },
-        cash: { cuerpo: 'cuerpoPMVDCCash', recalcular: 'recalcularPMVDCCash', tipos: {
-          VIATICOS_EFECTIVO: { cod: 'VDC-1', nombre: 'VIÁTICOS EFECTIVO', partes: ['PM-06-VDC-', 'X1', '-VIATICOS-EFECTIVO'] }
+        cash: { cuerpo: 'cuerpoPMVDCCash', usuario: true, titulo: 'PMVDC Cash', recalcular: 'recalcularPMVDCCash', tipos: {
+          VIATICOS_EFECTIVO: { cod: 'VDC-1', nombre: 'VIÁTICOS EFECTIVO', partes: ['PM-06-VDC-', 'U', '-VIATICOS-EFECTIVO'] }
         } },
-        vdg: { cuerpo: 'cuerpoPMVDG', recalcular: 'recalcularPMVDG', tipos: {
-          GASOLINA: { cod: 'VDG-1', nombre: 'GASOLINA', partes: ['PM-06-VDG-', 'X1', '-000'] }
+        vdg: { cuerpo: 'cuerpoPMVDG', usuario: true, titulo: 'PMVDG', recalcular: 'recalcularPMVDG', tipos: {
+          GASOLINA: { cod: 'VDG-1', nombre: 'GASOLINA', partes: ['PM-06-VDG-', 'U', '-000'] }
         } },
         acr: { cuerpo: 'cuerpoPMACR', recalcular: 'recalcularPMACR', tipos: {
           TDC: { cod: 'ACR-1', nombre: 'TDC', partes: ['PM-06-ACR-', 'X1', '-TDC-', 'X2'], marcas: { X2: 'XXXXX' } },
@@ -23473,8 +23474,8 @@
       };
 
       function valorParteConceptoSPM(parte, valores) {
-        var clave = parte === 'U' ? 'usuario' : parte.toLowerCase();
-        return String((valores && valores[clave]) || '').trim().toUpperCase();
+        if (parte === 'U') return String((valores && (valores.usuario || valores.x1)) || '').trim().toUpperCase();
+        return String((valores && valores[parte.toLowerCase()]) || '').trim().toUpperCase();
       }
 
       // Concepto del renglón con el usuario / texto capturado en lugar de
@@ -23554,7 +23555,7 @@
         var concepto = def.partes.map(function(p) {
           if (p === 'U') {
             return '<select class="ppto-usuario" title="Usuario al que se destina el recurso" style="display:inline-block; width:auto; min-width:96px; padding:4px 6px; margin:0 2px;">' +
-              opcionesUsuariosPresupuestoSPM(valores.usuario || '') + '</select>';
+              opcionesUsuariosPresupuestoSPM(valorParteConceptoSPM('U', valores)) + '</select>';
           }
           if (p === 'X1' || p === 'X2') {
             var marca = (def.marcas && def.marcas[p]) || 'XXXX';
@@ -23647,7 +23648,7 @@
             if (!error && monto < 0) error = 'El monto del renglón ' + def.cod + ' (' + def.nombre + ') no puede ser negativo.';
             if (!monto && !fila.usuario && !fila.x1 && !fila.x2) return;
             if (!error && sec.usuario && monto > 0 && !fila.usuario) {
-              error = 'Elige el usuario del renglón ' + def.cod + ' (' + def.nombre + ') de PMVDC Toka Connect: es a quien se destina ese presupuesto.';
+              error = 'Elige el usuario del renglón ' + def.cod + ' (' + def.nombre + ') de ' + sec.titulo + ': es a quien se destina ese presupuesto.';
             }
             fila.concepto = conceptoPresupuestoSPM(seccion, tipo, fila);
             datos[seccion].push(fila);
