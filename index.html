@@ -12943,9 +12943,12 @@
       };
 
       // Genera el PDF de reporte de una SPM (Solicitud de Presupuesto
-      // Mensual): datos generales, tabla de personal PMSYS y el resumen
-      // de totales (PMSYS + comisión + PMVDC TKC). Sigue el mismo estilo
-      // de reporte que la Orden de Facturación (generarPDFOF).
+      // Mensual): datos generales, tabla de personal PMSYS, bloques II a V
+      // y el resumen de totales (PMSYS + comisión + PMVDC TKC).
+      // Lleva el membrete de la empresa (el mismo membrete fijo de sus OC),
+      // sin logo aparte, y TODO cabe en UNA sola hoja: el contenido se
+      // ensaya primero en una hoja de prueba y la letra y el espaciado se
+      // reducen solo lo necesario para que quepa completo.
       window.imprimirPDFSPM = async function(id, soloPreview) {
         var d = documentosCXPCache.find(function(x) { return x.id === id; });
         if (!d) return;
@@ -12955,93 +12958,32 @@
           var { jsPDF } = window.jspdf;
           var doc = new jsPDF('p', 'pt', 'a4');
           var pageWidth = doc.internal.pageSize.getWidth();
-          var margin = 40;
-          var y = margin;
-
-          var nombreEmpresa = getNombreMembrete(d.empresa);
+          var pageHeight = doc.internal.pageSize.getHeight();
+          var margin = MARGEN_REPORTE_PT;
+          var anchoUtil = pageWidth - 2 * margin;
           var leyendaPie = getLeyendaPie(d.empresa);
 
-          var logoInfo = getLogoPorDepartamento(d.empresa, d.departamento);
-          var logoUrl = logoInfo ? logoInfo.url : null;
-          var logoTipo = logoInfo ? logoInfo.tipo : 'PNG';
-          if (!logoUrl) {
-            logoUrl = 'https://raw.githubusercontent.com/msaa0018-blip/GRUPO/main/LOGO%20EXTINGUE%20TRANSPARENTE.png';
-            logoTipo = 'PNG';
-          }
-
-          try {
-            var response = await fetch(logoUrl);
-            if (response.ok) {
-              var blob = await response.blob();
-              var imgData = await new Promise(function(resolve) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result); };
-                reader.readAsDataURL(blob);
-              });
-              var img = new Image();
-              img.src = imgData;
-              await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = reject; });
-              var imgWidth = 140;
-              var imgHeight = (img.height / img.width) * imgWidth;
-              doc.addImage(imgData, logoTipo, pageWidth - margin - imgWidth - 10, y - 5, imgWidth, imgHeight);
-              y += imgHeight + 25;
-            } else {
-              doc.setFontSize(18);
-              doc.setTextColor(11, 26, 51);
-              doc.setFont('helvetica', 'bold');
-              doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-              y += 60;
-            }
-          } catch (eLogo) {
-            doc.setFontSize(18);
-            doc.setTextColor(11, 26, 51);
-            doc.setFont('helvetica', 'bold');
-            doc.text(nombreEmpresa, pageWidth - margin - 10, y, { align: 'right' });
-            y += 60;
-          }
-
-          doc.setFontSize(16);
-          doc.setTextColor(0, 0, 0);
-          doc.setFont('helvetica', 'bold');
-          doc.text('SOLICITUD DE PRESUPUESTO MENSUAL', margin, y);
-          y += 12;
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.5);
-          doc.line(margin, y, pageWidth - margin, y);
-          y += 10;
-
-          doc.setFontSize(9);
-          doc.setTextColor(0, 0, 0);
-          doc.setFont('helvetica', 'normal');
+          // Membrete (sin logo): el membrete fijo de la empresa de la SPM,
+          // igual que en sus OC; si la empresa no tiene uno fijo, el Dálmata.
+          var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, membreteFijoEmpresa(d.empresa) || '9');
+          var repetirMembrete = function(dd) {
+            (franjas.instrucciones || []).forEach(function(ins) {
+              try { dd.addImage(ins.dataUrl, ins.tipo, ins.x, ins.y, ins.w, ins.h); } catch (e) { console.warn('No se pudo repetir el membrete:', e); }
+            });
+          };
+          // Zona de contenido: debajo del membrete y arriba de la leyenda,
+          // que a su vez queda arriba del pie de página estándar (1.5 cm).
+          var yTop = Math.max(margin, (franjas.yInicio || 0) + 2);
+          var pieY = pageHeight - MARGEN_REPORTE_PT - 40;
+          var yLimite = pieY - 8;
 
           var periodo = (d.fecha_inicio_semanas ? new Date(d.fecha_inicio_semanas + 'T00:00:00').toLocaleDateString() : '—') +
             ' al ' + (d.fecha_fin_semanas ? new Date(d.fecha_fin_semanas + 'T00:00:00').toLocaleDateString() : '—');
 
-          var datosLista = [
-            { label: 'Folio:', value: d.folio || d.codigo },
-            { label: 'Fecha de creación:', value: d.fecha_registro ? new Date(d.fecha_registro).toLocaleDateString() : '' },
-            { label: 'Empresa:', value: d.empresa },
-            { label: 'N.º de semanas:', value: d.num_semanas },
-            { label: 'Periodo:', value: periodo }
-          ];
-
-          datosLista.forEach(function(item) {
-            doc.setFont('helvetica', 'bold');
-            doc.text(item.label, margin, y);
-            doc.setFont('helvetica', 'normal');
-            var labelWidth = doc.getTextWidth(item.label) + 8;
-            var maxWidth = pageWidth - margin - labelWidth - 20;
-            var textLines = doc.splitTextToSize(String(item.value == null ? '' : item.value), maxWidth);
-            doc.text(textLines, margin + labelWidth, y);
-            y += textLines.length * 9 + 2;
-          });
-          y += 5;
-
           var empleados = [];
           try { empleados = d.pmsys_empleados ? JSON.parse(d.pmsys_empleados) : []; } catch (eParse) { empleados = Array.isArray(d.pmsys_empleados) ? d.pmsys_empleados : []; }
 
-          var headers = ['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo'];
-          var rows = empleados.map(function(emp, i) {
+          var rowsPMSYS = empleados.map(function(emp, i) {
             return [
               i + 1,
               emp.usuario || '',
@@ -13052,28 +12994,6 @@
               formatoMoneda(emp.efectivo || 0, 'MXN')
             ];
           });
-
-          doc.autoTable({
-            head: [headers],
-            body: rows,
-            startY: y,
-            margin: { left: margin, right: margin },
-            styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-            columnStyles: {
-              0: { cellWidth: 20 },
-              1: { cellWidth: 'auto' },
-              2: { cellWidth: 70 },
-              3: { cellWidth: 45 },
-              4: { cellWidth: 70 },
-              5: { cellWidth: 70 },
-              6: { cellWidth: 70 }
-            },
-            didDrawPage: function(data) { window._tableFinalYSPM = data.cursor.y; }
-          });
-
-          y = window._tableFinalYSPM || doc.lastAutoTable.finalY + 10;
-          y += 15;
 
           // Los totales por bloque se recalculan aquí con respaldo (por si
           // el documento se guardó antes de estas columnas): usan las
@@ -13105,90 +13025,219 @@
 
           var granTotal = Number(d.monto) || (pmsysTotal + pmsysComision + tkcTotal + cashTotal + vdgTotal + acrTotal);
 
-          var tablaCodigoConcepto = function(titulo, filas, totalLabel, totalValor) {
-            if (y > doc.internal.pageSize.height - 130) { doc.addPage(); y = margin; }
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(0, 0, 0);
-            doc.text(titulo, margin, y);
-            y += 6;
-            doc.autoTable({
-              head: [['Cód.', 'Concepto', 'Monto']],
-              body: filas.map(function(f) { return [f.cod, f.concepto, formatoMoneda(f.monto, 'MXN')]; }),
-              foot: [['', totalLabel, formatoMoneda(totalValor, 'MXN')]],
+          var fmtCelda = function(v) { return (v === null || v === undefined) ? '—' : formatoMoneda(v, 'MXN'); };
+
+          // Dibuja todo el contenido con la escala "s" (1 = tamaño normal).
+          // Regresa la Y donde terminó. Con permitirSaltos = false (ensayo)
+          // una tabla que no cabe crea otra hoja, y eso indica "no cabe".
+          var dibujarCuerpo = function(dd, s, permitirSaltos) {
+            var fs = 8 * s, pad = Math.max(1, 3 * s), gap = 10 * s;
+            var y = yTop;
+            var estilos = { fontSize: fs, cellPadding: pad, font: 'helvetica', lineColor: [220, 220, 220] };
+            var estiloHead = { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: fs, font: 'helvetica', fontStyle: 'bold' };
+            var estiloFoot = { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: fs };
+            var margenTabla = function(x, w) { return { top: yTop, bottom: pageHeight - yLimite, left: x, right: pageWidth - x - w }; };
+            var alNuevaHoja = function(data) { if (permitirSaltos && data.pageNumber > 1) repetirMembrete(dd); };
+
+            // Título
+            dd.setTextColor(0, 0, 0);
+            dd.setFont('helvetica', 'bold');
+            dd.setFontSize(Math.max(11, 15 * s));
+            dd.text('SOLICITUD DE PRESUPUESTO MENSUAL', margin, y + 12 * s);
+            y += 17 * s;
+            dd.setDrawColor(200, 200, 200);
+            dd.setLineWidth(0.5);
+            dd.line(margin, y, pageWidth - margin, y);
+            y += 11 * s;
+
+            // Datos generales en dos columnas
+            var tamDatos = Math.max(6.5, 9 * s), altoLinea = tamDatos * 1.25;
+            dd.setFontSize(tamDatos);
+            var columnaDatos = function(x, ancho, lista, yIni) {
+              var yy = yIni;
+              lista.forEach(function(item) {
+                dd.setFont('helvetica', 'bold');
+                dd.text(item.label, x, yy);
+                var anchoEtiqueta = dd.getTextWidth(item.label) + 4;
+                dd.setFont('helvetica', 'normal');
+                var lineas = dd.splitTextToSize(String(item.value == null ? '' : item.value), ancho - anchoEtiqueta);
+                dd.text(lineas, x + anchoEtiqueta, yy);
+                yy += lineas.length * altoLinea;
+              });
+              return yy;
+            };
+            var anchoColDatos = (anchoUtil - 16) / 2;
+            var yIzq = columnaDatos(margin, anchoColDatos, [
+              { label: 'Folio:', value: d.folio || d.codigo },
+              { label: 'Empresa:', value: d.empresa },
+              { label: 'Periodo:', value: periodo }
+            ], y);
+            var yDer = columnaDatos(margin + anchoColDatos + 16, anchoColDatos, [
+              { label: 'Fecha de creación:', value: d.fecha_registro ? new Date(d.fecha_registro).toLocaleDateString() : '' },
+              { label: 'N.º de semanas:', value: d.num_semanas }
+            ], y);
+            y = Math.max(yIzq, yDer) + 2 * s;
+
+            // I.- PMSYS: personal
+            dd.autoTable({
+              head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo']],
+              body: rowsPMSYS,
               startY: y,
-              margin: { left: margin, right: margin },
-              styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-              headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-              footStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
-              columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 90 } }
+              margin: margenTabla(margin, anchoUtil),
+              tableWidth: anchoUtil,
+              styles: estilos,
+              headStyles: estiloHead,
+              columnStyles: {
+                0: { cellWidth: 20 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 70 },
+                3: { cellWidth: 45 },
+                4: { cellWidth: 70 },
+                5: { cellWidth: 70 },
+                6: { cellWidth: 70 }
+              },
+              didDrawPage: alNuevaHoja
             });
-            y = doc.lastAutoTable.finalY + 14;
+            y = dd.lastAutoTable.finalY + gap;
+
+            // II a V: tablas de código / concepto en dos columnas
+            var sep = 12, anchoMitad = (anchoUtil - sep) / 2;
+            // El concepto (p. ej. PM-06-VDC-COMISION-VIATICOS-EFECTIVO) se
+            // parte en renglones solo después de un guion o de un espacio,
+            // nunca a media palabra.
+            var partirConcepto = function(texto, ancho, tam) {
+              dd.setFont('helvetica', 'normal');
+              var medir = function(t) { return dd.getStringUnitWidth(t) * tam / dd.internal.scaleFactor; };
+              var piezas = String(texto).match(/[^-\s]+-?|\s+/g) || [String(texto)];
+              var lineas = [], actualLinea = '';
+              piezas.forEach(function(pz) {
+                if (actualLinea && medir((actualLinea + pz).replace(/\s+$/, '')) > ancho) {
+                  lineas.push(actualLinea.replace(/\s+$/, ''));
+                  actualLinea = pz.replace(/^\s+/, '');
+                } else {
+                  actualLinea += pz;
+                }
+              });
+              if (actualLinea.trim()) lineas.push(actualLinea.replace(/\s+$/, ''));
+              return lineas;
+            };
+            var tablaCodigoConcepto = function(x, yIni, titulo, filas, totalLabel, totalValor) {
+              dd.setFontSize(Math.max(6.5, 9 * s));
+              dd.setFont('helvetica', 'bold');
+              dd.setTextColor(0, 0, 0);
+              var lineasTitulo = dd.splitTextToSize(titulo, anchoMitad);
+              dd.text(lineasTitulo, x, yIni + 7 * s);
+              var yTabla = yIni + 7 * s + (lineasTitulo.length - 1) * Math.max(6.5, 9 * s) * 1.15 + 4 * s;
+              dd.autoTable({
+                head: [['Cód.', 'Concepto', 'Monto']],
+                body: filas.map(function(f) { return [f.cod, f.concepto, formatoMoneda(f.monto, 'MXN')]; }),
+                foot: [['', totalLabel, formatoMoneda(totalValor, 'MXN')]],
+                startY: yTabla,
+                margin: margenTabla(x, anchoMitad),
+                tableWidth: anchoMitad,
+                styles: estilos,
+                headStyles: estiloHead,
+                footStyles: estiloFoot,
+                columnStyles: { 0: { cellWidth: 34 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 64 } },
+                didParseCell: function(data) {
+                  if (data.section === 'body' && data.column.index === 1) {
+                    data.cell.text = partirConcepto(data.cell.raw, anchoMitad - 34 - 64 - 2 * pad - 1, data.cell.styles.fontSize);
+                  }
+                },
+                didDrawPage: alNuevaHoja
+              });
+              return dd.lastAutoTable.finalY;
+            };
+            var paginaFila = dd.internal.getCurrentPageInfo().pageNumber;
+            var fila = function(izq, der) {
+              var yIni = y;
+              dd.setPage(paginaFila);
+              var yA = tablaCodigoConcepto(margin, yIni, izq[0], izq[1], izq[2], izq[3]);
+              var paginaA = dd.internal.getCurrentPageInfo().pageNumber;
+              dd.setPage(paginaFila);
+              var yB = tablaCodigoConcepto(margin + anchoMitad + sep, yIni, der[0], der[1], der[2], der[3]);
+              var paginaB = dd.internal.getCurrentPageInfo().pageNumber;
+              var paginaFin = Math.max(paginaA, paginaB);
+              dd.setPage(paginaFin);
+              paginaFila = paginaFin;
+              y = (paginaA === paginaB ? Math.max(yA, yB) : (paginaA > paginaB ? yA : yB)) + gap;
+            };
+            fila(
+              ['II.- PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect', [
+                { cod: 'VDC-1', concepto: 'PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT', monto: Number(d.pmvdc_1) || 0 },
+                { cod: 'VDC-2', concepto: 'PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT', monto: Number(d.pmvdc_2) || 0 },
+                { cod: 'VDC-3', concepto: 'PM-06-VDC-XXXX-COMPRAS-TOKA CONNECT', monto: Number(d.pmvdc_3) || 0 },
+                { cod: 'VDC', concepto: 'PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL', monto: tkcComision }
+              ], 'PMVDC Total:', tkcTotal],
+              ['III.- PMVDC CASH — Presupuesto Mes Vale de Caja en Cash', [
+                { cod: 'VDC-1', concepto: 'PM-06-VDC-XXXX-VIATICOS-EFECTIVO', monto: cashBase },
+                { cod: 'VDC-2', concepto: 'PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL', monto: cashComision }
+              ], 'PMVDC Total:', cashTotal]
+            );
+            fila(
+              ['IV.- PMVDG — Presupuesto Mes Vale de Gasolina', [
+                { cod: 'VDG-1', concepto: 'PM-06-VDG-XXXX-000', monto: vdgTotal }
+              ], 'PMVDG Total:', vdgTotal],
+              ['V.- PMACR — Presupuesto Mes Acreedores Diversos', [
+                { cod: 'ACR-1', concepto: 'PM-06-ACR-XXXX-TDC-XXXXX', monto: Number(d.pmacr_1) || 0 },
+                { cod: 'ACR-2', concepto: 'PM-06-ACR-XXXX-LDC-XXXX', monto: Number(d.pmacr_2) || 0 }
+              ], 'PMACR Total:', acrTotal]
+            );
+
+            // Resumen GIE VC
+            dd.setFontSize(Math.max(6.5, 9 * s));
+            dd.setFont('helvetica', 'bold');
+            dd.setTextColor(0, 0, 0);
+            dd.text('Resumen GIE VC', margin, y + 7 * s);
+            dd.autoTable({
+              head: [['Concepto', 'GIE Bancos', 'Toka Connect', 'Cash']],
+              body: [
+                ['I.- PMSYS Presupuesto Mes Sueldos y Salarios', fmtCelda(totalTDD), '—', fmtCelda(totalEfectivo)],
+                ['II.- PMVDC Presupuesto Mes Vale de Caja Toka Connect', '—', fmtCelda(tkcTotal), '—'],
+                ['III.- PMVDC Presupuesto Mes Vale de Caja Cash', '—', '—', fmtCelda(cashTotal)],
+                ['IV.- PMVDG Presupuesto Mes Vale de Gasolina', fmtCelda(vdgTotal), '—', '—'],
+                ['V.- PMACR Presupuesto Mes Acreedores Diversos', fmtCelda(acrTotal), '—', '—']
+              ],
+              foot: [['Subtotales', formatoMoneda(presupuestoBancos, 'MXN'), formatoMoneda(presupuestoToka, 'MXN'), formatoMoneda(presupuestoCash, 'MXN')]],
+              startY: y + 11 * s,
+              margin: margenTabla(margin, anchoUtil),
+              tableWidth: anchoUtil,
+              styles: estilos,
+              headStyles: estiloHead,
+              footStyles: estiloFoot,
+              columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 80 }, 2: { cellWidth: 80 }, 3: { cellWidth: 80 } },
+              didDrawPage: alNuevaHoja
+            });
+            y = dd.lastAutoTable.finalY + Math.max(10, 16 * s);
+
+            // Presupuesto Mensual y TOTAL SPM
+            if (y + 28 * s > yLimite && permitirSaltos) { dd.addPage(); repetirMembrete(dd); y = yTop + 10; }
+            dd.setTextColor(0, 0, 0);
+            dd.setFont('helvetica', 'bold');
+            dd.setFontSize(Math.max(8, 11 * s));
+            dd.text('Presupuesto Mensual:', pageWidth - margin - 200, y);
+            dd.text(formatoMoneda(presupuestoMensual, 'MXN'), pageWidth - margin, y, { align: 'right' });
+            y += Math.max(12, 18 * s);
+            dd.setFontSize(Math.max(9, 12 * s));
+            dd.text('TOTAL SPM:', pageWidth - margin - 200, y);
+            dd.text(formatoMoneda(granTotal, 'MXN'), pageWidth - margin, y, { align: 'right' });
+            return y + 4;
           };
 
-          tablaCodigoConcepto('II.- PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect', [
-            { cod: 'VDC-1', concepto: 'PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT', monto: Number(d.pmvdc_1) || 0 },
-            { cod: 'VDC-2', concepto: 'PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT', monto: Number(d.pmvdc_2) || 0 },
-            { cod: 'VDC-3', concepto: 'PM-06-VDC-XXXX-COMPRAS-TOKA CONNECT', monto: Number(d.pmvdc_3) || 0 },
-            { cod: 'VDC', concepto: 'PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL', monto: tkcComision }
-          ], 'PMVDC Total:', tkcTotal);
+          // Ensayo: la escala más grande con la que todo queda en una hoja.
+          var escala = null;
+          for (var paso = 0; paso <= 8; paso++) {
+            var s = 1 - paso * 0.05;
+            var prueba = new jsPDF('p', 'pt', 'a4');
+            var yFinPrueba = dibujarCuerpo(prueba, s, false);
+            if (prueba.internal.getNumberOfPages() === 1 && yFinPrueba <= yLimite) { escala = s; break; }
+          }
+          // Caso extremo (demasiados colaboradores para una hoja aun con la
+          // letra mínima): se usa la letra mínima y el membrete se repite en
+          // las hojas que se agreguen.
+          dibujarCuerpo(doc, escala || 0.6, escala === null);
 
-          tablaCodigoConcepto('III.- PMVDC CASH — Presupuesto Mes Vale de Caja en Cash', [
-            { cod: 'VDC-1', concepto: 'PM-06-VDC-XXXX-VIATICOS-EFECTIVO', monto: cashBase },
-            { cod: 'VDC-2', concepto: 'PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL', monto: cashComision }
-          ], 'PMVDC Total:', cashTotal);
-
-          tablaCodigoConcepto('IV.- PMVDG — Presupuesto Mes Vale de Gasolina', [
-            { cod: 'VDG-1', concepto: 'PM-06-VDG-XXXX-000', monto: vdgTotal }
-          ], 'PMVDG Total:', vdgTotal);
-
-          tablaCodigoConcepto('V.- PMACR — Presupuesto Mes Acreedores Diversos', [
-            { cod: 'ACR-1', concepto: 'PM-06-ACR-XXXX-TDC-XXXXX', monto: Number(d.pmacr_1) || 0 },
-            { cod: 'ACR-2', concepto: 'PM-06-ACR-XXXX-LDC-XXXX', monto: Number(d.pmacr_2) || 0 }
-          ], 'PMACR Total:', acrTotal);
-
-          if (y > doc.internal.pageSize.height - 170) { doc.addPage(); y = margin; }
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(0, 0, 0);
-          doc.text('Resumen GIE VC', margin, y);
-          y += 6;
-
-          var fmtCelda = function(v) { return (v === null || v === undefined) ? '—' : formatoMoneda(v, 'MXN'); };
-          doc.autoTable({
-            head: [['Concepto', 'GIE Bancos', 'Toka Connect', 'Cash']],
-            body: [
-              ['I.- PMSYS Presupuesto Mes Sueldos y Salarios', fmtCelda(totalTDD), '—', fmtCelda(totalEfectivo)],
-              ['II.- PMVDC Presupuesto Mes Vale de Caja Toka Connect', '—', fmtCelda(tkcTotal), '—'],
-              ['III.- PMVDC Presupuesto Mes Vale de Caja Cash', '—', '—', fmtCelda(cashTotal)],
-              ['IV.- PMVDG Presupuesto Mes Vale de Gasolina', fmtCelda(vdgTotal), '—', '—'],
-              ['V.- PMACR Presupuesto Mes Acreedores Diversos', fmtCelda(acrTotal), '—', '—']
-            ],
-            foot: [['Subtotales', formatoMoneda(presupuestoBancos, 'MXN'), formatoMoneda(presupuestoToka, 'MXN'), formatoMoneda(presupuestoCash, 'MXN')]],
-            startY: y,
-            margin: { left: margin, right: margin },
-            styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-            headStyles: { fillColor: [30, 40, 60], textColor: [255, 255, 255], fontSize: 8, font: 'helvetica', fontStyle: 'bold' },
-            footStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
-            columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 80 }, 2: { cellWidth: 80 }, 3: { cellWidth: 80 } }
-          });
-          y = doc.lastAutoTable.finalY + 20;
-
-          if (y > doc.internal.pageSize.height - 100) { doc.addPage(); y = margin; }
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Presupuesto Mensual:', pageWidth - margin - 200, y);
-          doc.text(formatoMoneda(presupuestoMensual, 'MXN'), pageWidth - margin, y, { align: 'right' });
-          y += 22;
-
-          doc.setFontSize(12);
-          doc.text('TOTAL SPM:', pageWidth - margin - 200, y);
-          doc.text(formatoMoneda(granTotal, 'MXN'), pageWidth - margin, y, { align: 'right' });
-          y += 40;
-
-          // La leyenda se sube para dejar libre la franja del pie de
-          // página estándar (a 1.5 cm del borde, ver agregarPiePaginaReporte).
-          var pieY = doc.internal.pageSize.height - MARGEN_REPORTE_PT - 40;
+          // Leyenda (arriba del pie de página estándar, ver agregarPiePaginaReporte).
           doc.setDrawColor(200, 200, 200);
           doc.setLineWidth(0.5);
           doc.line(margin, pieY, pageWidth - margin, pieY);
@@ -27340,7 +27389,29 @@
                   return;
                 }
 
-                window.mostrarModulo('vsc');
+                // El candado (sistema restringido) se guarda en cada
+                // dispositivo y en uno nuevo empieza cerrado, lo que
+                // bloquea el módulo VSC. El QR es un acceso directo a ESTE
+                // vale para comprobarlo: si el módulo está bloqueado en este
+                // dispositivo, se abre solo la ventana del vale (encima del
+                // menú principal), sin mostrar el aviso de módulo bloqueado.
+                if (moduloPermitidoPorBloqueo('vsc')) {
+                  window.mostrarModulo('vsc');
+                } else {
+                  window.mostrarMenuMaestroPrincipal();
+                  // Las ventanas del vale están dentro del contenido de la
+                  // app, que se oculta mientras se ve el menú principal: se
+                  // pasan al <body> para que se vean encima del menú.
+                  ['valeVisualizarModal', 'valeComprobarModal', 'fotoProductoModal'].forEach(function(idModal) {
+                    var modalVale = document.getElementById(idModal);
+                    if (modalVale && modalVale.parentElement !== document.body) document.body.appendChild(modalVale);
+                  });
+                }
+                // Vehículos para mostrar el del vale (y no "Vehículo eliminado").
+                if (!vehiculosCache.length) {
+                  var rVehQR = await supabase.from('vehiculos').select('*').order('nombre');
+                  if (!rVehQR.error) vehiculosCache = rVehQR.data || [];
+                }
                 window.visualizarVale(valeIdAAbrir);
                 // Si el vale ya fue impreso y está pendiente de comprobar,
                 // se abre directamente el modal de "Comprobar" (que es lo
