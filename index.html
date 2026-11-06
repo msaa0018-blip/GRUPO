@@ -12368,6 +12368,10 @@
       function dibujarValeCompleto(doc, ctx, yTop) {
         var v = ctx.v, vehiculo = ctx.vehiculo;
         var margen = ctx.margen, anchoUtil = ctx.anchoUtil;
+        // Factor vertical: cada copia ocupa su mitad de hoja completa; las
+        // cajas, separaciones y la tabla crecen en la misma proporción para
+        // repartir el contenido sin dejar espacio vacío abajo.
+        var kv = Math.max(1, (ctx.altoTarjeta - 72) / 266);
 
         // Marco de la tarjeta
         doc.setDrawColor(30, 30, 30);
@@ -12405,19 +12409,19 @@
         var mitad = (anchoUtil - 14) / 2;
 
         // ===== Fila 1: Razón Social Proveedor / Num. Cliente Extingue =====
-        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32, 'Razón Social Proveedor', v.proveedor);
-        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32, 'Num. Cliente Extingue', v.cliente);
-        y += 40;
+        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32 * kv, 'Razón Social Proveedor', v.proveedor);
+        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32 * kv, 'Num. Cliente Extingue', v.cliente);
+        y += 40 * kv;
 
         // ===== Fila 2: Folio / Fecha de carga =====
-        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 11.5 });
-        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
-        y += 40;
+        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32 * kv, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 11.5 });
+        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32 * kv, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
+        y += 40 * kv;
 
         // ===== Fila 3: Proceso / Firma Chofer / QR =====
         var col3 = (anchoUtil - 28) / 3;
         var yFila3 = y;
-        var altoFila3 = 76;
+        var altoFila3 = 76 * kv;
         var radioFila3 = 3.5;
 
         doc.setDrawColor(120, 120, 120);
@@ -12437,7 +12441,7 @@
           { etiqueta: 'Autorizado (impreso)', hecho: !!v.fecha_impresion },
           { etiqueta: 'Comprobado', hecho: v.estado === 'COMPROBADA' || v.estado === 'CERRADA' }
         ];
-        var yPaso = yFila3 + 26;
+        var yPaso = yFila3 + 14 + 12 * kv;
         doc.setFont(undefined, 'normal');
         doc.setFontSize(8);
         pasosProceso.forEach(function(paso) {
@@ -12445,7 +12449,7 @@
           doc.setTextColor(paso.hecho ? 20 : 150, paso.hecho ? 20 : 150, paso.hecho ? 20 : 150);
           doc.setFont(undefined, 'normal');
           doc.text(paso.etiqueta, margen + 20, yPaso);
-          yPaso += 13.5;
+          yPaso += 13.5 * kv;
         });
         doc.setTextColor(20, 20, 20);
 
@@ -12468,19 +12472,19 @@
           doc.addImage(ctx.qrDataUrl, 'PNG', xQR + (col3 - qrLado) / 2, yFila3 + 2, qrLado, qrLado);
         }
 
-        y = yFila3 + altoFila3 + 8;
+        y = yFila3 + altoFila3 + 8 * kv;
 
         // ===== Usuario solicitante / Chofer =====
         var usuarioChofer = (v.departamento ? v.departamento + ' / ' : '') + (v.responsable || '');
-        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28, 'Usuario solicitante / Chofer', usuarioChofer);
-        y += 34;
+        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28 * kv, 'Usuario solicitante / Chofer', usuarioChofer);
+        y += 34 * kv;
 
         // ===== Vehículo - Placas =====
         var vehiculoTexto = vehiculo
           ? (vehiculo.nombre + ' - ' + (vehiculo.placas || 'N/A') + ' - ' + (v.centro_negocio || '—'))
           : ('Bidón - N/A - ' + (v.centro_negocio || '—'));
-        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28, 'Vehículo - Placas', vehiculoTexto);
-        y += 36;
+        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28 * kv, 'Vehículo - Placas', vehiculoTexto);
+        y += 36 * kv;
 
         // ===== Tabla de conceptos =====
         var filaDatos = [
@@ -12492,11 +12496,13 @@
         ];
         doc.autoTable({
           startY: y,
-          margin: { left: margen, right: margen },
+          // Margen inferior mínimo: la copia de abajo termina cerca del
+          // borde y la tabla no debe saltar a otra hoja.
+          margin: { left: margen, right: margen, bottom: 8 },
           head: [['Concepto', 'Lts. Autorizados', 'Lts. Cargados', 'P.Unit', 'Importe']],
           body: [filaDatos],
           theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 3.5, halign: 'center', lineColor: [120, 120, 120], lineWidth: 0.6 },
+          styles: { fontSize: 8, cellPadding: 3.5 * kv, halign: 'center', lineColor: [120, 120, 120], lineWidth: 0.6 },
           headStyles: { fillColor: [140, 140, 140], textColor: [255, 255, 255], fontStyle: 'bold' },
           tableWidth: anchoUtil
         });
@@ -12510,6 +12516,27 @@
       // mismo vale en su ventana modal para comprobarlo. La misma
       // información se imprime DOS VECES en la misma hoja (dos copias
       // del folio, una arriba y otra abajo).
+      // Línea de corte a la MITAD exacta de la hoja (vales: una copia
+      // arriba y otra abajo). El texto lleva fondo blanco para que la
+      // línea punteada no lo tache.
+      var MITAD_HOJA_VALE = 841.89 / 2;
+      function dibujarLineaCorteVale(doc, margen, anchoUtil, texto) {
+        var yCorte = MITAD_HOJA_VALE;
+        doc.setDrawColor(140, 140, 140);
+        doc.setLineWidth(0.8);
+        doc.setLineDashPattern([4, 3], 0);
+        doc.line(margen - 10, yCorte, margen - 10 + anchoUtil + 20, yCorte);
+        doc.setLineDashPattern([], 0);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(7.5);
+        var anchoTexto = doc.getTextWidth(texto) + 14;
+        doc.setFillColor(255, 255, 255);
+        doc.rect(297.64 - anchoTexto / 2, yCorte - 5, anchoTexto, 10, 'F');
+        doc.setTextColor(120, 120, 120);
+        doc.text(texto, 297.64, yCorte + 2.6, { align: 'center' });
+        doc.setTextColor(20, 20, 20);
+      }
+
       window.imprimirPDFVale = async function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
@@ -12577,7 +12604,8 @@
             vehiculo: vehiculo,
             margen: margen,
             anchoUtil: anchoUtil,
-            altoTarjeta: 388,
+            // Cada copia ocupa su mitad de hoja (20 pt al borde, 12 pt a la línea de corte).
+            altoTarjeta: MITAD_HOJA_VALE - 20 - 12,
             logoExtingueDataUrl: logoExtingueDataUrl,
             logoEmpresaDataUrl: logoEmpresaDataUrl,
             logoExtingueTam: logoExtingueTam,
@@ -12588,21 +12616,9 @@
           // Dos copias del mismo vale en la misma hoja (una para la
           // gasolinera, otra para el expediente interno), separadas por
           // una línea punteada de corte para poder recortarlas.
-          dibujarValeCompleto(doc, ctx, 18);
-
-          var yCorte = 18 + ctx.altoTarjeta + 8;
-          doc.setDrawColor(140, 140, 140);
-          doc.setLineWidth(0.8);
-          doc.setLineDashPattern([4, 3], 0);
-          doc.line(margen - 10, yCorte, margen - 10 + anchoUtil + 20, yCorte);
-          doc.setLineDashPattern([], 0);
-          doc.setFont(undefined, 'normal');
-          doc.setFontSize(7.5);
-          doc.setTextColor(120, 120, 120);
-          doc.text('- - - - - - - - - - - -  CORTE AQUÍ (gasolinera / archivo interno)  - - - - - - - - - - - -', 297.64, yCorte + 3, { align: 'center' });
-          doc.setTextColor(20, 20, 20);
-
-          dibujarValeCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
+          dibujarValeCompleto(doc, ctx, 20);
+          dibujarLineaCorteVale(doc, margen, anchoUtil, 'CORTE AQUÍ (gasolinera / archivo interno)');
+          dibujarValeCompleto(doc, ctx, MITAD_HOJA_VALE + 12);
 
           await imprimirPDFSeguro(doc, v.codigo || 'vale', function() { doc.save((v.codigo || 'vale') + '.pdf'); });
 
@@ -12815,36 +12831,11 @@
         doc.setLineWidth(1);
         doc.rect(margen - 10, yTop, anchoUtil + 20, ctx.altoTarjeta);
 
-        var y = yTop + 8;
-
-        // Fila A: Documento / Folio / Prioridad / Fecha de elaboración
-        var wDoc = anchoUtil * 0.26, wFolio = anchoUtil * 0.16, wPrio = anchoUtil * 0.28;
-        var wFecha = anchoUtil - wDoc - wFolio - wPrio;
-        var altoA = 46;
-        var infoTipo = DOC_CXP_INFO[tipo] || { nombre: tipo };
-        dibujarCeldaDocumentoValeCXP(doc, margen, y, wDoc, altoA, tipo, String(infoTipo.nombre).toUpperCase(), ctx.logoDataUrl, ctx.logoTam);
-        dibujarCajaEtiquetaVale(doc, margen + wDoc, y, wFolio, altoA, 'FOLIO.', d.folio || d.codigo, { headerColor: COLOR_HEADER_VALE_CXP, valorBold: true, valorSize: 11 });
-        dibujarCeldaPrioridadValeCXP(doc, margen + wDoc + wFolio, y, wPrio, altoA, d.prioridad || 'NORMAL');
-        dibujarCajaEtiquetaVale(doc, margen + wDoc + wFolio + wPrio, y, wFecha, altoA, 'FECHA DE ELABORACIÓN.', formatearFechaLargaEsMX(d.fecha_registro), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7 });
-        y += altoA + 6;
-
-        // Fila B: Solicitante / Depto / Importe / Fecha solicitada de pago
-        var cuartoB = anchoUtil / 4;
-        var altoB = 30;
-        dibujarCajaEtiquetaVale(doc, margen, y, cuartoB, altoB, 'SOLICITANTE.', d.solicitante || d.responsable, { headerColor: COLOR_HEADER_VALE_CXP });
-        dibujarCajaEtiquetaVale(doc, margen + cuartoB, y, cuartoB, altoB, 'DEPTO.', mostrarDepto(getAbreviaturaDepartamento(d.departamento, d.empresa) || d.departamento), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7.5 });
-        dibujarCajaEtiquetaVale(doc, margen + cuartoB * 2, y, cuartoB, altoB, 'IMPORTE.', formatoMoneda(d.monto, d.moneda), { headerColor: COLOR_HEADER_VALE_CXP, valorFillColor: COLOR_IMPORTE_VALE_CXP, valorBold: true, valorSize: 11 });
-        dibujarCajaEtiquetaVale(doc, margen + cuartoB * 3, y, cuartoB, altoB, 'FECHA SOLICITADA DE PAGO.', formatearFechaLargaEsMX(d.fecha), { headerColor: COLOR_HEADER_VALE_CXP, valorColor: [190, 30, 30], valorSize: 6.5 });
-        y += altoB + 6;
-
-        // Fila C: Cliente / Proyecto
-        var mitadC = anchoUtil / 2;
-        dibujarCajaEtiquetaVale(doc, margen, y, mitadC, altoB, 'CLIENTE.', d.cliente, { headerColor: COLOR_HEADER_VALE_CXP });
-        dibujarCajaEtiquetaVale(doc, margen + mitadC, y, mitadC, altoB, 'PROYECTO.', d.proyecto, { headerColor: COLOR_HEADER_VALE_CXP });
-        y += altoB + 6;
-
-        // Fila D: Concepto (para VI se antepone el vehículo, como en el
-        // formato original: "CARGA DE IAVE PARA VEHICULO ...")
+        // Concepto (para VI se antepone el vehículo, como en el formato
+        // original: "CARGA DE IAVE PARA VEHICULO ..."). Se calcula antes
+        // de dibujar para conocer el alto total de la copia.
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
         var lineasConcepto;
         if (tipo === 'VI' && d.vehiculo) {
           var conceptoVI = 'CARGA DE IAVE PARA VEHÍCULO ' + String(d.vehiculo).toUpperCase();
@@ -12855,9 +12846,45 @@
         } else {
           lineasConcepto = doc.splitTextToSize(String(d.concepto || '—').toUpperCase(), anchoUtil * 0.6);
         }
-        var altoD = Math.max(40, 14 + lineasConcepto.length * 10 + 8);
+        var altoDBase = Math.max(40, 14 + lineasConcepto.length * 10 + 8);
+        // Factor vertical: cada copia ocupa su mitad de hoja completa; las
+        // filas y separaciones crecen en la misma proporción para repartir
+        // el contenido sin dejar espacio vacío abajo.
+        var altoNatural = 8 + (46 + 6) + (30 + 6) * 2 + (altoDBase + 6) + (58 + 8);
+        var kv = Math.max(1, (ctx.altoTarjeta - 16) / (altoNatural - 16));
+
+        var y = yTop + 8;
+
+        // Fila A: Documento / Folio / Prioridad / Fecha de elaboración
+        var wDoc = anchoUtil * 0.26, wFolio = anchoUtil * 0.16, wPrio = anchoUtil * 0.28;
+        var wFecha = anchoUtil - wDoc - wFolio - wPrio;
+        var altoA = 46 * kv;
+        var infoTipo = DOC_CXP_INFO[tipo] || { nombre: tipo };
+        dibujarCeldaDocumentoValeCXP(doc, margen, y, wDoc, altoA, tipo, String(infoTipo.nombre).toUpperCase(), ctx.logoDataUrl, ctx.logoTam);
+        dibujarCajaEtiquetaVale(doc, margen + wDoc, y, wFolio, altoA, 'FOLIO.', d.folio || d.codigo, { headerColor: COLOR_HEADER_VALE_CXP, valorBold: true, valorSize: 11 });
+        dibujarCeldaPrioridadValeCXP(doc, margen + wDoc + wFolio, y, wPrio, altoA, d.prioridad || 'NORMAL');
+        dibujarCajaEtiquetaVale(doc, margen + wDoc + wFolio + wPrio, y, wFecha, altoA, 'FECHA DE ELABORACIÓN.', formatearFechaLargaEsMX(d.fecha_registro), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7 });
+        y += altoA + 6 * kv;
+
+        // Fila B: Solicitante / Depto / Importe / Fecha solicitada de pago
+        var cuartoB = anchoUtil / 4;
+        var altoB = 30 * kv;
+        dibujarCajaEtiquetaVale(doc, margen, y, cuartoB, altoB, 'SOLICITANTE.', d.solicitante || d.responsable, { headerColor: COLOR_HEADER_VALE_CXP });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB, y, cuartoB, altoB, 'DEPTO.', mostrarDepto(getAbreviaturaDepartamento(d.departamento, d.empresa) || d.departamento), { headerColor: COLOR_HEADER_VALE_CXP, valorSize: 7.5 });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB * 2, y, cuartoB, altoB, 'IMPORTE.', formatoMoneda(d.monto, d.moneda), { headerColor: COLOR_HEADER_VALE_CXP, valorFillColor: COLOR_IMPORTE_VALE_CXP, valorBold: true, valorSize: 11 });
+        dibujarCajaEtiquetaVale(doc, margen + cuartoB * 3, y, cuartoB, altoB, 'FECHA SOLICITADA DE PAGO.', formatearFechaLargaEsMX(d.fecha), { headerColor: COLOR_HEADER_VALE_CXP, valorColor: [190, 30, 30], valorSize: 6.5 });
+        y += altoB + 6 * kv;
+
+        // Fila C: Cliente / Proyecto
+        var mitadC = anchoUtil / 2;
+        dibujarCajaEtiquetaVale(doc, margen, y, mitadC, altoB, 'CLIENTE.', d.cliente, { headerColor: COLOR_HEADER_VALE_CXP });
+        dibujarCajaEtiquetaVale(doc, margen + mitadC, y, mitadC, altoB, 'PROYECTO.', d.proyecto, { headerColor: COLOR_HEADER_VALE_CXP });
+        y += altoB + 6 * kv;
+
+        // Fila D: Concepto (líneas calculadas al inicio)
+        var altoD = altoDBase * kv;
         dibujarCeldaConceptoValeCXP(doc, margen, y, anchoUtil, altoD, lineasConcepto, formatoMoneda(d.monto, d.moneda));
-        y += altoD + 6;
+        y += altoD + 6 * kv;
 
         // Fila E: Firmas — 5 columnas en VI, 3 en VC (igual a los
         // formatos originales)
@@ -12873,7 +12900,7 @@
           { numero: 3, titulo: 'RECIBE PAGO.', valor: d.beneficiario, pie: 'NOMBRE, FIRMA Y FECHA.' }
         ];
         var wFirma = anchoUtil / firmantes.length;
-        var altoE = 58;
+        var altoE = 58 * kv;
         firmantes.forEach(function(f, i) {
           dibujarCeldaFirmaValeCXP(doc, margen + wFirma * i, y, wFirma, altoE, f.numero, f.titulo, f.valor, f.pie);
         });
@@ -12915,26 +12942,15 @@
             d: d,
             margen: margen,
             anchoUtil: anchoUtil,
-            altoTarjeta: 280,
+            // Cada copia ocupa su mitad de hoja (20 pt al borde, 12 pt a la línea de corte).
+            altoTarjeta: MITAD_HOJA_VALE - 20 - 12,
             logoDataUrl: logoDataUrl,
             logoTam: logoTam
           };
 
-          dibujarDocumentoCXPCompleto(doc, ctx, 18);
-
-          var yCorte = 18 + ctx.altoTarjeta + 8;
-          doc.setDrawColor(140, 140, 140);
-          doc.setLineWidth(0.8);
-          doc.setLineDashPattern([4, 3], 0);
-          doc.line(margen - 10, yCorte, margen - 10 + anchoUtil + 20, yCorte);
-          doc.setLineDashPattern([], 0);
-          doc.setFont(undefined, 'normal');
-          doc.setFontSize(7.5);
-          doc.setTextColor(120, 120, 120);
-          doc.text('- - - - - - - - - - - -  CORTE AQUÍ  - - - - - - - - - - - -', 297.64, yCorte + 3, { align: 'center' });
-          doc.setTextColor(20, 20, 20);
-
-          dibujarDocumentoCXPCompleto(doc, ctx, 18 + ctx.altoTarjeta + 16);
+          dibujarDocumentoCXPCompleto(doc, ctx, 20);
+          dibujarLineaCorteVale(doc, margen, anchoUtil, 'CORTE AQUÍ');
+          dibujarDocumentoCXPCompleto(doc, ctx, MITAD_HOJA_VALE + 12);
 
           await imprimirPDFSeguro(doc, d.codigo || d.tipo, function() { doc.save((d.codigo || d.tipo) + '.pdf'); });
         } catch (e) {
