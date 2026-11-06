@@ -22469,11 +22469,18 @@
 
         var selSolicitante = document.getElementById('docCxpSolicitante');
         if (selSolicitante) {
-          var solicitantes = getSolicitantes().filter(function(u) {
+          // Mismo criterio que el solicitante de la OC: usuarios con rol
+          // Solicitante, Elaborador o Jefe de Departamento que tienen acceso
+          // a la empresa/departamento del vale. (Antes solo se listaba el rol
+          // "Solicitante"; como al Jefe de Departamento se le quita ese rol,
+          // en departamentos sin otro Solicitante la lista salía vacía.)
+          var solicitantes = getPosiblesResponsables().filter(function(u) {
             return !empresa || !departamento || usuarioPuedeAcceder(u, empresa, departamento);
           });
-          selSolicitante.innerHTML = '<option value="" disabled hidden>Selecciona solicitante</option>' +
-            solicitantes.map(function(u) { return '<option value="' + u.usuario + '">' + u.usuario + '</option>'; }).join('');
+          selSolicitante.innerHTML = solicitantes.length
+            ? '<option value="" disabled hidden>Selecciona solicitante</option>' +
+              solicitantes.map(function(u) { return '<option value="' + escapeHTML(u.usuario) + '">' + escapeHTML(u.usuario) + '</option>'; }).join('')
+            : '<option value="" disabled selected>No hay solicitantes disponibles</option>';
           if (actual && solicitantes.some(function(u) { return u.usuario === actual.usuario; })) selSolicitante.value = actual.usuario;
           else selSolicitante.value = '';
         }
