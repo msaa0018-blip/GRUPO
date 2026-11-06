@@ -4927,7 +4927,7 @@
       <div id="panelVSC" class="card hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h2 style="margin:0;">⛽ Vales de Gasolina (VSC)</h2>
-          <button class="success" onclick="window.abrirDashboardVSC()">📊 Dashboard de Consumo</button>
+          <button class="success" id="btnDashboardVSC" onclick="window.abrirDashboardVSC()">📊 Dashboard de Consumo</button>
         </div>
         <p class="text-muted" style="margin-bottom:12px;">Registro y control de vales de gasolina por vehículo y departamento.</p>
 
@@ -5022,7 +5022,7 @@
         <div class="modal-content" style="max-width:760px;">
           <div class="modal-header">
             <h3>⛽ <span id="valeVisualizarTitulo">Vale de Gasolina</span></h3>
-            <button class="btn-modal-x" onclick="window.cerrarVisualizarVale()">✕</button>
+            <button class="btn-modal-x" onclick="window.cerrarVisualizarValeX()">✕</button>
           </div>
           <div class="modal-body">
             <div id="valeVisualizarStepper" class="stepper-oc"></div>
@@ -5042,20 +5042,13 @@
           <div class="modal-header">
             <h3>✅ Comprobar Vale — <span id="valeComprobarTitulo"></span></h3>
             <div class="pdfPreview-btn-group">
-              <button onclick="window.cerrarComprobarVale()">✕</button>
+              <button onclick="window.cerrarComprobarValeX()">✕</button>
               <button class="success" onclick="window.guardarComprobacionVale()">✔️</button>
             </div>
           </div>
           <div class="modal-body">
-            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px;">
-              <div id="valeTicketDropzone" class="foto-dropzone" style="width:110px;height:110px;" onclick="document.getElementById('valeTicketInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropFotoTicket(event, this)">
-                <span id="valeTicketDropzoneTexto">📷 Arrastra o toma foto del ticket</span>
-                <img id="valeTicketPreview" class="hidden" alt="Ticket">
-              </div>
-              <input type="file" id="valeTicketInput" accept="image/*" capture="environment" class="hidden" onchange="window.manejarSeleccionFotoTicket(this)">
-              <div style="flex:1;min-width:200px;font-size:12px;color:var(--gray-600);align-self:center;">
-                Arrastra una foto del ticket de carga, o toca para tomarla con la cámara / elegirla del explorador.
-              </div>
+            <div class="cxc-form-row">
+              <input id="valeFolioTicket" type="text" maxlength="40" autocomplete="off" placeholder="Folio del ticket de carga *" style="text-transform:uppercase;" oninput="this.value = this.value.toUpperCase()">
             </div>
             <div class="cxc-form-row">
               <select id="valeComprobarCombustible">
@@ -7348,7 +7341,7 @@
               <thead><tr><th style="width:60px;">Cód.</th><th>Concepto (XXXX = usuario al que se destina)</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
               <tbody id="cuerpoPMVDCTkc"></tbody>
               <tbody>
-                <tr><td>VDC</td><td>PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL</td><td id="spmVDCComision" style="font-weight:bold;">$0.00</td><td></td></tr>
+                <tr><td>VDC</td><td>PM-<span class="ppto-mes">MM</span>-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL</td><td id="spmVDCComision" style="font-weight:bold;">$0.00</td><td></td></tr>
               </tbody>
               <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDC Total:</td><td id="spmVDCTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
@@ -7370,7 +7363,7 @@
               <thead><tr><th style="width:60px;">Cód.</th><th>Concepto (XXXX = usuario al que se destina)</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
               <tbody id="cuerpoPMVDCCash"></tbody>
               <tbody>
-                <tr><td>VDC-2</td><td>PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL</td><td id="spmCashComision" style="font-weight:bold;">$0.00</td><td></td></tr>
+                <tr><td>VDC-2</td><td>PM-<span class="ppto-mes">MM</span>-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL</td><td id="spmCashComision" style="font-weight:bold;">$0.00</td><td></td></tr>
               </tbody>
               <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDC Total:</td><td id="spmCashVDCTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
@@ -7512,6 +7505,11 @@
       var ocBannerVisible = false;
       var pendingOcId = null;
       var pendingValeId = null;
+      // Sesión iniciada desde un enlace directo: 'vale' (QR del VSC),
+      // 'oc' (Telegram del Director) o 'complemento' (Telegram del
+      // complemento de pago). En ese caso solo se permite esa acción y la
+      // "✕" de su ventana cierra la sesión.
+      var sesionPorEnlace = null;
       var ofDocPDF = null;
       var ofDocData = null;
       var reportePreviewPDF = null;
@@ -10145,6 +10143,7 @@
       // "Bandeja de OC" del menú), regresa a ese menú en vez de dejar
       // visible la pantalla de "Crear OC" de fondo.
       window.cerrarBandejaOC = function() {
+        if (sesionPorEnlace === 'oc') return cerrarSesionPorEnlace();
         window.cerrarModalCard('bandejaOCCard');
         if (moduloOrigenBandejaOC === 'egresos_menu') {
           // Se abrió como módulo propio del menú "📊 EGRESOS" (tarjeta
@@ -11261,7 +11260,18 @@
       var vehiculosCache = [];
       var valesGasolinaCache = [];
 
+      // Los dashboards de vales no los ve el Elaborador (si además tiene un
+      // rol con más alcance, sí los ve).
+      function usuarioPuedeVerDashboardVales(u) {
+        if (!u) return false;
+        if (!usuarioTieneAlgunRol(u, ['Elaborador'])) return true;
+        return usuarioTieneAlgunRol(u, ['Administrador', 'Director General', 'Jefe Departamento', 'Finanzas', 'Contabilidad']);
+      }
+
       window.cargarVSC = async function() {
+        var btnDashboardVSC = document.getElementById('btnDashboardVSC');
+        if (btnDashboardVSC) btnDashboardVSC.style.display = usuarioPuedeVerDashboardVales(actual) ? '' : 'none';
+
         // FINANZAS puede consultar/gestionar vales de gasolina, pero no
         // puede agregar (capturar) uno nuevo.
         var seccionNuevoVale = document.getElementById('seccionNuevoVale');
@@ -12254,12 +12264,13 @@
         if (v.precio_unitario != null) filas.push(['Precio unitario c/IVA', formatoMoneda(v.precio_unitario, 'MXN')]);
         if (v.importe != null) filas.push(['Importe', formatoMoneda(v.importe, 'MXN')]);
         if (v.kilometraje_actual != null) filas.push(['Kilometraje actual', v.kilometraje_actual]);
+        if (v.folio_ticket) filas.push(['Folio del ticket', v.folio_ticket]);
         if (v.resultado_comprobacion) filas.push(['Resultado de comprobación', v.resultado_comprobacion]);
         if (v.notas_comprobacion) filas.push(['Notas', v.notas_comprobacion]);
 
         document.getElementById('valeVisualizarDetalle').innerHTML = filas.map(function(f) {
           return '<tr><td style="font-weight:600;width:220px;">' + escapeHTML(f[0]) + '</td><td>' + escapeHTML(f[1] != null && f[1] !== '' ? String(f[1]) : '—') + '</td></tr>';
-        }).join('') + (v.foto_ticket_url ? '<tr><td style="font-weight:600;">Foto del ticket</td><td><img src="' + escapeHTML(v.foto_ticket_url) + '" class="foto-thumb" style="width:60px;height:60px;" onclick="window.verFotoProducto(\'' + escapeHTML(v.foto_ticket_url) + '\')"></td></tr>' : '');
+        }).join('');
 
         var acciones = document.getElementById('valeVisualizarAcciones');
         var botones = '';
@@ -13066,6 +13077,7 @@
           var fmtCelda = function(v) { return (v === null || v === undefined) ? '—' : formatoMoneda(v, 'MXN'); };
           // Ediciones hechas por ADMIN, con su justificación.
           var edicionesPDF = edicionesSPM(d);
+          var mesConceptoPDF = numeroMesSPM(d.mes);
 
           // Dibuja todo el contenido con la escala "s" (1 = tamaño normal).
           // Regresa la Y donde terminó. Con permitirSaltos = false (ensayo)
@@ -13142,7 +13154,7 @@
 
             // II a V: tablas de código / concepto en dos columnas
             var sep = 12, anchoMitad = (anchoUtil - sep) / 2;
-            // El concepto (p. ej. PM-06-VDC-COMISION-VIATICOS-EFECTIVO) se
+            // El concepto (p. ej. PM-11-VDC-COMISION-VIATICOS-EFECTIVO) se
             // parte en renglones solo después de un guion o de un espacio,
             // nunca a media palabra.
             var partirConcepto = function(texto, ancho, tam) {
@@ -13204,10 +13216,10 @@
             };
             fila(
               ['II.- PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect', filasPDFPresupuestoSPM(d, 'tkc').concat([
-                { cod: 'VDC', concepto: 'PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL', monto: tkcComision }
+                { cod: 'VDC', concepto: 'PM-' + mesConceptoPDF + '-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL', monto: tkcComision }
               ]), 'PMVDC Total:', tkcTotal],
               ['III.- PMVDC CASH — Presupuesto Mes Vale de Caja en Cash', filasPDFPresupuestoSPM(d, 'cash').concat([
-                { cod: 'VDC-2', concepto: 'PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL', monto: cashComision }
+                { cod: 'VDC-2', concepto: 'PM-' + mesConceptoPDF + '-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL', monto: cashComision }
               ]), 'PMVDC Total:', cashTotal]
             );
             fila(
@@ -13337,13 +13349,11 @@
 
       // ===== MODAL "COMPROBAR" (foto de ticket + datos de carga) =====
       var valeComprobarId = null;
-      var valeTicketFotoArchivo = null;
 
       window.abrirComprobarVale = function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
         valeComprobarId = id;
-        valeTicketFotoArchivo = null;
         document.getElementById('valeComprobarTitulo').textContent = v.codigo || '';
         document.getElementById('valeComprobarCombustible').value = v.combustible || '';
         document.getElementById('valeKmActualComprobar').value = v.kilometraje_actual != null ? v.kilometraje_actual : '';
@@ -13362,19 +13372,8 @@
         document.getElementById('valeNotasComprobacion').value = v.notas_comprobacion || '';
         window.mostrarNotasComprobacionVale();
 
-        var preview = document.getElementById('valeTicketPreview');
-        var texto = document.getElementById('valeTicketDropzoneTexto');
-        var input = document.getElementById('valeTicketInput');
-        if (input) input.value = '';
-        if (v.foto_ticket_url) {
-          preview.src = v.foto_ticket_url;
-          preview.classList.remove('hidden');
-          if (texto) texto.classList.add('hidden');
-        } else {
-          preview.src = '';
-          preview.classList.add('hidden');
-          if (texto) texto.classList.remove('hidden');
-        }
+        var campoFolioTicket = document.getElementById('valeFolioTicket');
+        if (campoFolioTicket) campoFolioTicket.value = v.folio_ticket || '';
 
         var msg = document.getElementById('msgComprobarVale');
         if (msg) msg.innerHTML = '';
@@ -13385,6 +13384,16 @@
       window.cerrarComprobarVale = function() {
         valeComprobarId = null;
         document.getElementById('valeComprobarModal').classList.remove('active');
+      };
+
+      // "✕" de las ventanas del vale: si se entró por el QR, cierra la sesión.
+      window.cerrarComprobarValeX = function() {
+        if (sesionPorEnlace === 'vale') { if (!guardandoComprobacionVale) cerrarSesionPorEnlace(); return; }
+        window.cerrarComprobarVale();
+      };
+      window.cerrarVisualizarValeX = function() {
+        if (sesionPorEnlace === 'vale') return cerrarSesionPorEnlace();
+        window.cerrarVisualizarVale();
       };
 
       window.calcularImporteVale = function() {
@@ -13401,53 +13410,14 @@
         fila.classList.toggle('hidden', resultado !== 'Otro');
       };
 
-      function mostrarPreviewFotoTicket(archivo) {
-        var texto = document.getElementById('valeTicketDropzoneTexto');
-        var preview = document.getElementById('valeTicketPreview');
-        var lector = new FileReader();
-        lector.onload = function(e) {
-          preview.src = e.target.result;
-          preview.classList.remove('hidden');
-          if (texto) texto.classList.add('hidden');
-        };
-        lector.readAsDataURL(archivo);
+      // Folio del ticket: se guarda sin espacios y en mayúsculas para que
+      // "a 12345" y "A12345" cuenten como el mismo folio.
+      function normalizarFolioTicket(valor) {
+        return String(valor || '').toUpperCase().replace(/\s+/g, '');
       }
+      var MENSAJE_FOLIO_TICKET_REPETIDO = 'Folio ya comprobado, checa que no este cargado antes.';
 
-      window.manejarSeleccionFotoTicket = function(input) {
-        if (!input.files || !input.files[0]) return;
-        if (!validarPesoArchivo(input.files[0])) { input.value = ''; return; }
-        valeTicketFotoArchivo = input.files[0];
-        mostrarPreviewFotoTicket(valeTicketFotoArchivo);
-      };
-
-      window.manejarDropFotoTicket = function(event, el) {
-        event.preventDefault();
-        el.classList.remove('arrastrando');
-        var archivos = event.dataTransfer.files;
-        if (!archivos || !archivos[0]) return;
-        if (archivos[0].type.indexOf('image/') !== 0) {
-          alert('⚠️ Solo se aceptan imágenes.');
-          return;
-        }
-        if (!validarPesoArchivo(archivos[0])) return;
-        valeTicketFotoArchivo = archivos[0];
-        mostrarPreviewFotoTicket(valeTicketFotoArchivo);
-      };
-
-      async function subirFotoTicketVale(archivo, codigoVale) {
-        if (!archivo) return null;
-        try {
-          var extension = (archivo.name.split('.').pop() || 'jpg').toLowerCase();
-          var ruta = codigoVale + '-' + Date.now() + '.' + extension;
-          var { error } = await supabase.storage.from('vsc-tickets').upload(ruta, archivo, { upsert: true });
-          if (error) throw error;
-          var { data } = supabase.storage.from('vsc-tickets').getPublicUrl(ruta);
-          return data ? data.publicUrl : null;
-        } catch (e) {
-          console.error('Error subiendo la foto del ticket:', e);
-          return null;
-        }
-      }
+      var guardandoComprobacionVale = false;
 
       window.guardarComprobacionVale = async function() {
         var msg = document.getElementById('msgComprobarVale');
@@ -13462,13 +13432,13 @@
           return;
         }
 
-        // La comprobación de un vale de gasolina no puede completarse sin
-        // foto del ticket: se acepta una foto ya guardada previamente en el
-        // vale, o una recién seleccionada/tomada en esta pantalla.
-        var valeAComprobarFoto = valesGasolinaCache.find(function(x) { return x.id === valeComprobarId; });
-        var tieneFotoExistente = !!(valeAComprobarFoto && valeAComprobarFoto.foto_ticket_url);
-        if (!valeTicketFotoArchivo && !tieneFotoExistente) {
-          if (msg) msg.innerHTML = '<div class="alert">❌ Debes adjuntar la foto del ticket para poder comprobar el vale.</div>';
+        // La comprobación requiere el folio del ticket de carga (ya no la
+        // foto). El folio no se puede repetir en otro vale.
+        var folioTicket = normalizarFolioTicket((document.getElementById('valeFolioTicket') || {}).value);
+        if (!folioTicket) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Escribe el folio del ticket de carga.</div>';
+          var campoFolioVacio = document.getElementById('valeFolioTicket');
+          if (campoFolioVacio) campoFolioVacio.focus();
           return;
         }
 
@@ -13478,6 +13448,15 @@
         var precioUnit = parseFloat(document.getElementById('valePrecioUnitario').value);
         var importe = parseFloat(document.getElementById('valeImporte').value);
 
+        if (guardandoComprobacionVale) return;
+        var btnGuardarComprobacion = document.querySelector('#valeComprobarModal .modal-header button.success');
+        var textoBtnGuardarComprobacion = btnGuardarComprobacion ? btnGuardarComprobacion.innerHTML : '';
+        var mostrarMsgComprobacion = function(html) {
+          if (!msg) return;
+          msg.innerHTML = html;
+          try { msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (eScroll) {}
+        };
+
         var datos = {
           combustible: document.getElementById('valeComprobarCombustible').value || null,
           kilometraje_actual: isNaN(kmActual) ? null : kmActual,
@@ -13485,36 +13464,69 @@
           litros_cargados: isNaN(litrosCarg) ? null : litrosCarg,
           precio_unitario: isNaN(precioUnit) ? null : precioUnit,
           importe: isNaN(importe) ? null : importe,
+          folio_ticket: folioTicket,
           resultado_comprobacion: resultado,
           notas_comprobacion: resultado === 'Otro' ? document.getElementById('valeNotasComprobacion').value.trim() : null,
           estado: 'COMPROBADA',
           fecha_comprobacion: new Date().toISOString()
         };
 
+        // Mientras se guarda: el botón ✔️ queda deshabilitado (evita dobles
+        // envíos) y se muestra el avance.
+        guardandoComprobacionVale = true;
+        if (btnGuardarComprobacion) { btnGuardarComprobacion.disabled = true; btnGuardarComprobacion.innerHTML = '⏳'; }
+        mostrarMsgComprobacion('<div style="padding:10px 12px; border-radius:8px; background:#eef4ff; color:#1e3a8a;">⏳ Guardando la comprobación… no cierres esta ventana.</div>');
+
+        var vOriginal = valesGasolinaCache.find(function(x) { return x.id === valeComprobarId; });
+        var codigoVale = (vOriginal && vOriginal.codigo) ? vOriginal.codigo : ('VSC-' + valeComprobarId);
         try {
-          if (valeTicketFotoArchivo) {
-            var vOriginal = valesGasolinaCache.find(function(x) { return x.id === valeComprobarId; });
-            var codigoParaFoto = (vOriginal && vOriginal.codigo) ? vOriginal.codigo : ('VSC-' + valeComprobarId);
-            var urlFoto = await subirFotoTicketVale(valeTicketFotoArchivo, codigoParaFoto);
-            if (urlFoto) datos.foto_ticket_url = urlFoto;
+          // ¿El folio ya está en otro vale?
+          var idComprobando = valeComprobarId;
+          var rFolio = await supabase.from('vales_gasolina').select('id,codigo').eq('folio_ticket', folioTicket).neq('id', idComprobando).limit(5);
+          if (rFolio.error) throw rFolio.error;
+          var repetido = (rFolio.data || []).find(function(x) { return x.id !== idComprobando; });
+          if (repetido) {
+            var errorRepetido = new Error(MENSAJE_FOLIO_TICKET_REPETIDO);
+            errorRepetido.valeRepetido = repetido.codigo || ('VSC-' + repetido.id);
+            throw errorRepetido;
           }
 
-          var { error } = await supabase.from('vales_gasolina').update(datos).eq('id', valeComprobarId);
+          var { error } = await supabase.from('vales_gasolina').update(datos).eq('id', idComprobando);
           if (error) throw error;
 
           var idGuardado = valeComprobarId;
+          guardandoComprobacionVale = false;
+          if (btnGuardarComprobacion) { btnGuardarComprobacion.disabled = false; btnGuardarComprobacion.innerHTML = textoBtnGuardarComprobacion; }
           window.cerrarComprobarVale();
+          // Entrada por el QR del vale: se termina la acción y se cierra la sesión.
+          if (sesionPorEnlace === 'vale') {
+            cerrarSesionPorEnlace('✅ Comprobación del vale ' + codigoVale + ' guardada. Gracias.\n\nSe cerrará la sesión.');
+            return;
+          }
           await window.cargarValesGasolina();
           window.visualizarVale(idGuardado);
           window.actualizarTotalesModulosVales();
         } catch (e) {
           console.error('Error guardando la comprobación del vale:', e);
-          if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
+          guardandoComprobacionVale = false;
+          if (btnGuardarComprobacion) { btnGuardarComprobacion.disabled = false; btnGuardarComprobacion.innerHTML = textoBtnGuardarComprobacion; }
+          var textoError = (e && e.message) || String(e);
+          // El índice único de la base también rechaza un folio repetido.
+          if (e && (e.code === '23505' || /folio_ticket/.test(textoError) && /duplicate|unique/i.test(textoError))) textoError = MENSAJE_FOLIO_TICKET_REPETIDO;
+          else if (/folio_ticket/.test(textoError)) textoError = 'Falta ejecutar en Supabase el SQL "folio_ticket_vales_gasolina.sql" (columna folio_ticket). ' + textoError;
+          var detalleRepetido = e && e.valeRepetido ? ' (registrado en el vale ' + e.valeRepetido + ')' : '';
+          mostrarMsgComprobacion('<div class="alert">❌ ' + escapeHTML(textoError + detalleRepetido) + '</div>');
+          alert('❌ ' + textoError + detalleRepetido);
+          if (textoError === MENSAJE_FOLIO_TICKET_REPETIDO) {
+            var campoFolioRep = document.getElementById('valeFolioTicket');
+            if (campoFolioRep) campoFolioRep.focus();
+          }
         }
       };
 
       // ===== Dashboard de Consumo de Gasolina =====
       window.abrirDashboardVSC = async function() {
+        if (!usuarioPuedeVerDashboardVales(actual)) return alert('❌ El dashboard de vales no está disponible para tu rol.');
         var modal = document.getElementById('valesGasolinaDashboardModal');
         var resumen = document.getElementById('vscDashboardResumen');
         var cuerpo = document.getElementById('vscDashboardCuerpo');
@@ -20652,6 +20664,17 @@
         document.getElementById('complementoPagoOCModal').classList.add('active');
       };
 
+      // Cierra la sesión de un acceso por enlace (QR / Telegram): limpia la
+      // URL para que no vuelva a apuntar al mismo documento y recarga en el
+      // login.
+      function cerrarSesionPorEnlace(mensaje) {
+        try { window.history.replaceState({}, '', window.location.origin + window.location.pathname); } catch (e) {}
+        if (mensaje) alert(mensaje);
+        actual = null;
+        sesionPorEnlace = null;
+        try { location.reload(); } catch (e2) { console.warn('No se pudo recargar automáticamente:', e2); }
+      }
+
       function cerrarSesionPorLinkComplemento(mensaje) {
         try { window.history.replaceState({}, '', window.location.origin + window.location.pathname); } catch (e) {}
         if (mensaje) alert(mensaje);
@@ -20685,11 +20708,13 @@
       }
 
       window.cancelarComplementoPagoOC = function() {
+        var cancelaEnlace = complementoViaLink || sesionPorEnlace === 'complemento';
         complementoFacturaPendiente = null;
         complementoViaLink = false;
         indexComplementoPagoOCPendiente = null;
         archivoComplementoPagoOCPendiente = null;
         document.getElementById('complementoPagoOCModal').classList.remove('active');
+        if (cancelaEnlace) cerrarSesionPorEnlace();
       };
 
       window.manejarSeleccionComplementoPagoOC = function(input) {
@@ -23277,6 +23302,7 @@
       // Folio: SPM-(MES)-(VERSIÓN)-EMPRESA-DEPARTAMENTO, usando las
       // abreviaturas del catálogo (igual convención que otros folios).
       window.actualizarFolioSPM = function() {
+        if (typeof window.actualizarMesConceptosSPM === 'function') window.actualizarMesConceptosSPM();
         var folioInput = document.getElementById('spmFolio');
         if (!folioInput) return;
         var mes = document.getElementById('spmMes').value;
@@ -23487,20 +23513,38 @@
       // las columnas pmvdc_1, pmvdc_2, ... siguen guardando los totales.
       var SPM_PPTO_DEF = {
         tkc: { cuerpo: 'cuerpoPMVDCTkc', usuario: true, titulo: 'PMVDC Toka Connect', recalcular: 'recalcularPMVDC', tipos: {
-          IAVE: { cod: 'VDC-1', nombre: 'IAVE', partes: ['PM-06-VDC-', 'U', '-IAVE-TOKA CONNECT'] },
-          VIATICOS: { cod: 'VDC-2', nombre: 'VIÁTICOS', partes: ['PM-06-VDC-', 'U', '-VIATICOS-TOKA CONNECT'] },
-          COMPRAS: { cod: 'VDC-3', nombre: 'COMPRAS', partes: ['PM-06-VDC-', 'U', '-COMPRAS-TOKA CONNECT'] }
+          IAVE: { cod: 'VDC-1', nombre: 'IAVE', partes: ['PM-', 'M', '-VDC-', 'U', '-IAVE-TOKA CONNECT'] },
+          VIATICOS: { cod: 'VDC-2', nombre: 'VIÁTICOS', partes: ['PM-', 'M', '-VDC-', 'U', '-VIATICOS-TOKA CONNECT'] },
+          COMPRAS: { cod: 'VDC-3', nombre: 'COMPRAS', partes: ['PM-', 'M', '-VDC-', 'U', '-COMPRAS-TOKA CONNECT'] }
         } },
         cash: { cuerpo: 'cuerpoPMVDCCash', usuario: true, titulo: 'PMVDC Cash', recalcular: 'recalcularPMVDCCash', tipos: {
-          VIATICOS_EFECTIVO: { cod: 'VDC-1', nombre: 'VIÁTICOS EFECTIVO', partes: ['PM-06-VDC-', 'U', '-VIATICOS-EFECTIVO'] }
+          VIATICOS_EFECTIVO: { cod: 'VDC-1', nombre: 'VIÁTICOS EFECTIVO', partes: ['PM-', 'M', '-VDC-', 'U', '-VIATICOS-EFECTIVO'] }
         } },
         vdg: { cuerpo: 'cuerpoPMVDG', usuario: true, titulo: 'PMVDG', recalcular: 'recalcularPMVDG', tipos: {
-          GASOLINA: { cod: 'VDG-1', nombre: 'GASOLINA', partes: ['PM-06-VDG-', 'U', '-000'] }
+          GASOLINA: { cod: 'VDG-1', nombre: 'GASOLINA', partes: ['PM-', 'M', '-VDG-', 'U', '-000'] }
         } },
         acr: { cuerpo: 'cuerpoPMACR', recalcular: 'recalcularPMACR', tipos: {
-          TDC: { cod: 'ACR-1', nombre: 'TDC', partes: ['PM-06-ACR-', 'X1', '-TDC-', 'X2'], marcas: { X2: 'XXXXX' } },
-          LDC: { cod: 'ACR-2', nombre: 'LDC', partes: ['PM-06-ACR-', 'X1', '-LDC-', 'X2'] }
+          TDC: { cod: 'ACR-1', nombre: 'TDC', partes: ['PM-', 'M', '-ACR-', 'X1', '-TDC-', 'X2'], marcas: { X2: 'XXXXX' } },
+          LDC: { cod: 'ACR-2', nombre: 'LDC', partes: ['PM-', 'M', '-ACR-', 'X1', '-LDC-', 'X2'] }
         } }
+      };
+
+      // "PM-MM-...": MM es el número del mes de la SPM (01 a 12). En la
+      // captura se toma del campo Mes; en el PDF, del mes guardado.
+      function numeroMesSPM(mes) {
+        var i = MESES_INDICADOR.map(function(m) { return String(m).toLowerCase(); }).indexOf(String(mes || '').toLowerCase());
+        if (i < 0) i = new Date().getMonth();
+        return String(i + 1).padStart(2, '0');
+      }
+
+      function mesCapturaSPM() {
+        var sel = document.getElementById('spmMes');
+        return numeroMesSPM(sel ? sel.value : '');
+      }
+
+      window.actualizarMesConceptosSPM = function() {
+        var mm = mesCapturaSPM();
+        document.querySelectorAll('#agregarSPMModal .ppto-mes').forEach(function(e) { e.textContent = mm; });
       };
 
       function valorParteConceptoSPM(parte, valores) {
@@ -23510,11 +23554,12 @@
 
       // Concepto del renglón con el usuario / texto capturado en lugar de
       // las X (o las X si todavía no se captura nada).
-      function conceptoPresupuestoSPM(seccion, tipo, valores) {
+      function conceptoPresupuestoSPM(seccion, tipo, valores, mesNumero) {
         var sec = SPM_PPTO_DEF[seccion];
         var def = sec && sec.tipos[tipo];
         if (!def) return '';
         return def.partes.map(function(p) {
+          if (p === 'M') return mesNumero || mesCapturaSPM();
           if (p === 'U' || p === 'X1' || p === 'X2') {
             return valorParteConceptoSPM(p, valores) || ((def.marcas && def.marcas[p]) || 'XXXX');
           }
@@ -23555,7 +23600,7 @@
         var filas = (det[seccion] || []).filter(function(f) { return sec.tipos[f.tipo]; });
         if (!filas.length) filas = Object.keys(sec.tipos).map(function(t) { return { tipo: t, monto: 0 }; });
         return filas.map(function(f) {
-          return { cod: sec.tipos[f.tipo].cod, concepto: conceptoPresupuestoSPM(seccion, f.tipo, f), monto: Number(f.monto) || 0 };
+          return { cod: sec.tipos[f.tipo].cod, concepto: conceptoPresupuestoSPM(seccion, f.tipo, f, numeroMesSPM(d.mes)), monto: Number(f.monto) || 0 };
         });
       }
 
@@ -23583,6 +23628,7 @@
         valores = valores || {};
 
         var concepto = def.partes.map(function(p) {
+          if (p === 'M') return '<span class="ppto-mes">' + mesCapturaSPM() + '</span>';
           if (p === 'U') {
             return '<select class="ppto-usuario" title="Usuario al que se destina el recurso" style="display:inline-block; width:auto; min-width:96px; padding:4px 6px; margin:0 2px;">' +
               opcionesUsuariosPresupuestoSPM(valorParteConceptoSPM('U', valores)) + '</select>';
@@ -23612,6 +23658,7 @@
           return false;
         });
         cuerpo.insertBefore(tr, antesDe);
+        window.actualizarMesConceptosSPM();
         if (typeof window[sec.recalcular] === 'function') window[sec.recalcular]();
       };
 
@@ -27446,6 +27493,13 @@
             return;
           }
 
+          // ¿Se entró por un enlace directo (QR del vale o Telegram)?
+          try {
+            var paramsEnlace = new URLSearchParams(window.location.search);
+            sesionPorEnlace = paramsEnlace.get('complemento') ? 'complemento'
+              : (paramsEnlace.get('oc') ? 'oc' : (paramsEnlace.get('vale') ? 'vale' : null));
+          } catch (eEnlace) { sesionPorEnlace = null; }
+
         } catch (e) {
           console.error('Error inesperado en login:', e);
           errorDiv.classList.remove('hidden');
@@ -27581,7 +27635,8 @@
             document.getElementById('menuMaestroPrincipal').classList.remove('visible');
             document.getElementById('contenidoApp').classList.remove('hidden');
             document.getElementById('contenidoApp').classList.add('visible');
-            document.getElementById('btnVolverMenu').classList.remove('hidden');
+            // Entrada por Telegram: solo la acción de la OC (sin volver al menú).
+            document.getElementById('btnVolverMenu').classList.toggle('hidden', sesionPorEnlace === 'oc');
 
             var esAdmin = actual && actual.rol === 'Administrador';
             var esFinanzas = actual && actual.rol === 'Finanzas';
@@ -27820,8 +27875,7 @@
                 window.history.replaceState({}, '', urlLimpia);
 
                 if (!v) {
-                  alert('⚠️ No se encontró el vale (' + valeIdAAbrir + '). Puede que ya no exista o que no tengas permiso para verlo.');
-                  window.mostrarMenuMaestroPrincipal();
+                  cerrarSesionPorEnlace('⚠️ No se encontró el vale (' + valeIdAAbrir + '). Puede que ya no exista o que no tengas permiso para verlo.');
                   return;
                 }
 
@@ -27870,7 +27924,9 @@
                 // vale para comprobarlo: si el módulo está bloqueado en este
                 // dispositivo, se abre solo la ventana del vale (encima del
                 // menú principal), sin mostrar el aviso de módulo bloqueado.
-                if (moduloPermitidoPorBloqueo('vsc')) {
+                // Entrada por QR: solo la acción del vale (nunca el módulo
+                // completo), aunque el candado esté abierto.
+                if (moduloPermitidoPorBloqueo('vsc') && sesionPorEnlace !== 'vale') {
                   window.mostrarModulo('vsc');
                 } else {
                   window.mostrarMenuMaestroPrincipal();
@@ -34706,9 +34762,9 @@
       });
       // Nombres de archivos adjuntos: sin Ñ, acentos, espacios, puntos
       // (salvo la extensión) ni caracteres especiales, y sin iniciar con
-      // número. Las fotos tomadas con la cámara (ticket de vale) se
-      // exceptúan porque el celular les pone el nombre.
-      var ARCHIVOS_EXENTOS = ['valeTicketInput'];
+      // número. (Ya no hay campos exentos: el ticket del vale de gasolina
+      // se comprueba con su folio, sin foto.)
+      var ARCHIVOS_EXENTOS = [];
       function erroresNombreArchivo(nombre) {
         var base = String(nombre || ''); var p = base.lastIndexOf('.');
         var sinExt = p > 0 ? base.slice(0, p) : base;
