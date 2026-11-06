@@ -7121,6 +7121,7 @@
       <div class="modal-body">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" id="btnAccionDocCxpPrevisualizar" class="btn-accion-producto" data-accion="previsualizar" onclick="window.seleccionarAccionDocumentoCXP('previsualizar')">👁️ Previsualizar</button>
+          <button type="button" id="btnAccionDocCxpImprimirByN" class="btn-accion-producto" data-accion="imprimir_byn" onclick="window.seleccionarAccionDocumentoCXP('imprimir_byn')">🖨️ Imprimir</button>
           <button type="button" id="btnAccionDocCxpImprimir" class="btn-accion-producto" data-accion="imprimir" onclick="window.seleccionarAccionDocumentoCXP('imprimir')">🖨️ Imprimir PDF</button>
           <button type="button" id="btnAccionDocCxpEditar" class="btn-accion-producto" data-accion="editar" onclick="window.seleccionarAccionDocumentoCXP('editar')">✏️ Editar</button>
           <button type="button" id="btnAccionDocCxpAutorizar" class="btn-accion-producto" data-accion="autorizar" onclick="window.seleccionarAccionDocumentoCXP('autorizar')">🖋️ Autorizar (Director)</button>
@@ -12949,6 +12950,8 @@
       // sin logo aparte, y TODO cabe en UNA sola hoja: el contenido se
       // ensaya primero en una hoja de prueba y la letra y el espaciado se
       // reducen solo lo necesario para que quepa completo.
+      // modo: true = Previsualizar; 'imprimir' = Imprimir (directo a la
+      // impresora, en blanco y negro); sin modo = Imprimir PDF (descarga).
       window.imprimirPDFSPM = async function(id, soloPreview) {
         var d = documentosCXPCache.find(function(x) { return x.id === id; });
         if (!d) return;
@@ -13253,7 +13256,7 @@
 
           agregarPiePaginaReporte(doc, d.folio || d.codigo || 'SPM');
 
-          if (soloPreview) {
+          if (soloPreview === true) {
             // Vista previa: se muestra en el modal genérico de PDF (el
             // mismo que usa "Previsualizar" en Crear OC) en vez de
             // descargar el archivo directamente.
@@ -13261,6 +13264,8 @@
             if (tituloPreviewSPM) tituloPreviewSPM.textContent = 'Previsualización de la SPM';
             document.getElementById('pdfPreviewModal').classList.add('active');
             await renderizarPDFEnContenedor('pdfPreviewFrame', doc);
+          } else if (soloPreview === 'imprimir') {
+            await imprimirPDFSeguro(doc, d.folio || d.codigo || 'SPM', null, 'imprimir');
           } else {
             doc.save((d.folio || d.codigo || 'SPM') + '.pdf');
           }
@@ -22722,6 +22727,12 @@
         var btnPrevisualizar = document.getElementById('btnAccionDocCxpPrevisualizar');
         if (btnPrevisualizar) btnPrevisualizar.style.display = esSPM ? '' : 'none';
 
+        // Imprimir (solo SPM): manda la SPM directo a la impresora, siempre
+        // en blanco y negro (sin la ventana de elegir). "Imprimir PDF"
+        // sigue descargando el PDF.
+        var btnImprimirByN = document.getElementById('btnAccionDocCxpImprimirByN');
+        if (btnImprimirByN) btnImprimirByN.style.display = esSPM ? '' : 'none';
+
         // Editar: las SPM no se pueden editar nunca, por nadie. VC/VI:
         // solo ADMIN y Jefe de Departamento.
         var btnEditar = document.getElementById('btnAccionDocCxpEditar');
@@ -22778,6 +22789,7 @@
         else if (accion === 'editar') window.editarDocumentoCXP(id);
         else if (accion === 'imprimir') window.imprimirPDFDocumentoCXP(id);
         else if (accion === 'previsualizar') window.imprimirPDFSPM(id, true);
+        else if (accion === 'imprimir_byn') window.imprimirPDFSPM(id, 'imprimir');
         else if (accion === 'autorizar') window.autorizarSPMDirector(id);
       };
 
@@ -29929,9 +29941,11 @@
         });
       }
 
-      async function imprimirPDFSeguro(doc, nombreArchivo, alternativa) {
+      async function imprimirPDFSeguro(doc, nombreArchivo, alternativa, accionDirecta) {
         var titulo = String(nombreArchivo || doc._nombreArchivoReporte || 'documento').replace(/\.pdf$/i, '');
-        var accion = await elegirImprimirOGuardar(titulo);
+        // accionDirecta ('imprimir'): el botón ya indica qué hacer (p. ej.
+        // Imprimir de la SPM), así que no se muestra la ventana de elegir.
+        var accion = accionDirecta || await elegirImprimirOGuardar(titulo);
         if (!accion) return;
         // Guardar: el PDF tal cual, a color.
         if (accion === 'guardar') { doc.save(titulo + '.pdf'); return; }
