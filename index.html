@@ -7340,15 +7340,21 @@
           <h4>🚚 PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMVDCTkc">
-              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th></tr></thead>
+              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto (XXXX = usuario al que se destina)</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
+              <tbody id="cuerpoPMVDCTkc"></tbody>
               <tbody>
-                <tr><td>VDC-1</td><td>PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT</td><td><input id="spmVDC1" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMVDC()" onchange="window.recalcularPMVDC()"></td></tr>
-                <tr><td>VDC-2</td><td>PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT</td><td><input id="spmVDC2" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMVDC()" onchange="window.recalcularPMVDC()"></td></tr>
-                <tr><td>VDC-3</td><td>PM-06-VDC-XXXX-COMPRAS-TOKA CONNECT</td><td><input id="spmVDC3" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMVDC()" onchange="window.recalcularPMVDC()"></td></tr>
-                <tr><td>VDC</td><td>PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL</td><td id="spmVDCComision" style="font-weight:bold;">$0.00</td></tr>
+                <tr><td>VDC</td><td>PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL</td><td id="spmVDCComision" style="font-weight:bold;">$0.00</td><td></td></tr>
               </tbody>
-              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDC Total:</td><td id="spmVDCTotal" style="font-weight:bold;">$0.00</td></tr></tfoot>
+              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDC Total:</td><td id="spmVDCTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <select id="spmTipoNuevo_tkc" style="flex:2;">
+              <option value="IAVE">VDC-1 — IAVE (limita los Vales de IAVE del usuario)</option>
+              <option value="VIATICOS">VDC-2 — VIÁTICOS (limita los Vales de Caja del usuario)</option>
+              <option value="COMPRAS">VDC-3 — COMPRAS (limita las OC sin proyecto del usuario)</option>
+            </select>
+            <button type="button" onclick="window.agregarFilaPresupuestoSPM('tkc')" class="success" title="Agregar renglón" style="flex:0 0 auto; width:auto; min-width:0; padding:10px 12px;">➕</button>
           </div>
         </div>
 
@@ -7356,13 +7362,16 @@
           <h4>💵 PMVDC CASH — Presupuesto Mes Vale de Caja en Cash</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMVDCCash">
-              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th></tr></thead>
+              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
+              <tbody id="cuerpoPMVDCCash"></tbody>
               <tbody>
-                <tr><td>VDC-1</td><td>PM-06-VDC-XXXX-VIATICOS-EFECTIVO</td><td><input id="spmCashVDC1" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMVDCCash()" onchange="window.recalcularPMVDCCash()"></td></tr>
-                <tr><td>VDC-2</td><td>PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL</td><td id="spmCashComision" style="font-weight:bold;">$0.00</td></tr>
+                <tr><td>VDC-2</td><td>PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL</td><td id="spmCashComision" style="font-weight:bold;">$0.00</td><td></td></tr>
               </tbody>
-              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDC Total:</td><td id="spmCashVDCTotal" style="font-weight:bold;">$0.00</td></tr></tfoot>
+              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDC Total:</td><td id="spmCashVDCTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" onclick="window.agregarFilaPresupuestoSPM('cash', 'VIATICOS_EFECTIVO')" class="success" title="Agregar renglón VDC-1" style="flex:0 0 auto; width:auto; min-width:0; padding:10px 12px;">➕ VDC-1</button>
           </div>
         </div>
 
@@ -7370,12 +7379,13 @@
           <h4>⛽ PMVDG — Presupuesto Mes Vale de Gasolina</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMVDG">
-              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th></tr></thead>
-              <tbody>
-                <tr><td>VDG-1</td><td>PM-06-VDG-XXXX-000</td><td><input id="spmVDG1" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMVDG()" onchange="window.recalcularPMVDG()"></td></tr>
-              </tbody>
-              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDG Total:</td><td id="spmVDGTotal" style="font-weight:bold;">$0.00</td></tr></tfoot>
+              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
+              <tbody id="cuerpoPMVDG"></tbody>
+              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMVDG Total:</td><td id="spmVDGTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" onclick="window.agregarFilaPresupuestoSPM('vdg', 'GASOLINA')" class="success" title="Agregar renglón VDG-1" style="flex:0 0 auto; width:auto; min-width:0; padding:10px 12px;">➕ VDG-1</button>
           </div>
         </div>
 
@@ -7383,13 +7393,17 @@
           <h4>🏦 PMACR — Presupuesto Mes Acreedores Diversos</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMACR">
-              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th></tr></thead>
-              <tbody>
-                <tr><td>ACR-1</td><td>PM-06-ACR-XXXX-TDC-XXXXX</td><td><input id="spmACR1" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMACR()" onchange="window.recalcularPMACR()"></td></tr>
-                <tr><td>ACR-2</td><td>PM-06-ACR-XXXX-LDC-XXXX</td><td><input id="spmACR2" type="number" step="0.01" value="0" style="width:100%;" oninput="window.recalcularPMACR()" onchange="window.recalcularPMACR()"></td></tr>
-              </tbody>
-              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMACR Total:</td><td id="spmACRTotal" style="font-weight:bold;">$0.00</td></tr></tfoot>
+              <thead><tr><th style="width:60px;">Cód.</th><th>Concepto</th><th style="width:140px;">Monto</th><th style="width:60px;">Acción</th></tr></thead>
+              <tbody id="cuerpoPMACR"></tbody>
+              <tfoot><tr><td colspan="2" style="text-align:right;font-weight:bold;">PMACR Total:</td><td id="spmACRTotal" style="font-weight:bold;">$0.00</td><td></td></tr></tfoot>
             </table>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <select id="spmTipoNuevo_acr" style="flex:2;">
+              <option value="TDC">ACR-1 — TDC</option>
+              <option value="LDC">ACR-2 — LDC</option>
+            </select>
+            <button type="button" onclick="window.agregarFilaPresupuestoSPM('acr')" class="success" title="Agregar renglón" style="flex:0 0 auto; width:auto; min-width:0; padding:10px 12px;">➕</button>
           </div>
         </div>
 
@@ -13182,25 +13196,16 @@
               y = (paginaA === paginaB ? Math.max(yA, yB) : (paginaA > paginaB ? yA : yB)) + gap;
             };
             fila(
-              ['II.- PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect', [
-                { cod: 'VDC-1', concepto: 'PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT', monto: Number(d.pmvdc_1) || 0 },
-                { cod: 'VDC-2', concepto: 'PM-06-VDC-XXXX-VIATICOS-TOKA CONNECT', monto: Number(d.pmvdc_2) || 0 },
-                { cod: 'VDC-3', concepto: 'PM-06-VDC-XXXX-COMPRAS-TOKA CONNECT', monto: Number(d.pmvdc_3) || 0 },
+              ['II.- PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect', filasPDFPresupuestoSPM(d, 'tkc').concat([
                 { cod: 'VDC', concepto: 'PM-06-SYS-COMIS-TRSNF-GIE-TOKA CONNECT % TOTAL', monto: tkcComision }
-              ], 'PMVDC Total:', tkcTotal],
-              ['III.- PMVDC CASH — Presupuesto Mes Vale de Caja en Cash', [
-                { cod: 'VDC-1', concepto: 'PM-06-VDC-XXXX-VIATICOS-EFECTIVO', monto: cashBase },
+              ]), 'PMVDC Total:', tkcTotal],
+              ['III.- PMVDC CASH — Presupuesto Mes Vale de Caja en Cash', filasPDFPresupuestoSPM(d, 'cash').concat([
                 { cod: 'VDC-2', concepto: 'PM-06-VDC-COMISION-VIATICOS-EFECTIVO % TOTAL', monto: cashComision }
-              ], 'PMVDC Total:', cashTotal]
+              ]), 'PMVDC Total:', cashTotal]
             );
             fila(
-              ['IV.- PMVDG — Presupuesto Mes Vale de Gasolina', [
-                { cod: 'VDG-1', concepto: 'PM-06-VDG-XXXX-000', monto: vdgTotal }
-              ], 'PMVDG Total:', vdgTotal],
-              ['V.- PMACR — Presupuesto Mes Acreedores Diversos', [
-                { cod: 'ACR-1', concepto: 'PM-06-ACR-XXXX-TDC-XXXXX', monto: Number(d.pmacr_1) || 0 },
-                { cod: 'ACR-2', concepto: 'PM-06-ACR-XXXX-LDC-XXXX', monto: Number(d.pmacr_2) || 0 }
-              ], 'PMACR Total:', acrTotal]
+              ['IV.- PMVDG — Presupuesto Mes Vale de Gasolina', filasPDFPresupuestoSPM(d, 'vdg'), 'PMVDG Total:', vdgTotal],
+              ['V.- PMACR — Presupuesto Mes Acreedores Diversos', filasPDFPresupuestoSPM(d, 'acr'), 'PMACR Total:', acrTotal]
             );
 
             // Resumen GIE VC
@@ -22658,6 +22663,29 @@
           }
         }
 
+        // Límite por usuario: el VC se descuenta del presupuesto de VIÁTICOS
+        // (VDC-2) y el VI del de IAVE (VDC-1) que la SPM pagada del mes le
+        // asigna al solicitante. Al editar, el propio documento no cuenta
+        // como usado.
+        if (tipoDocCXPActual === 'VC' || tipoDocCXPActual === 'VI') {
+          var revisionPpto = await revisarPresupuestoUsuarioSPM({
+            tipo: tipoDocCXPActual === 'VI' ? 'IAVE' : 'VIATICOS',
+            empresa: empresa,
+            departamento: document.getElementById('docCxpDepartamento').value || null,
+            usuario: document.getElementById('docCxpSolicitante').value,
+            monto: monto,
+            fecha: document.getElementById('docCxpFecha').value || null,
+            excluirId: docCxpEdicionId,
+            documento: 'Este vale'
+          });
+          // Al editar un vale de un mes sin SPM pagada se conserva el
+          // comportamiento anterior (no se bloquea la edición).
+          if (!revisionPpto.ok && !(revisionPpto.sinSPM && docCxpEdicionId !== null)) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(revisionPpto.mensaje) + '</div>';
+            return;
+          }
+        }
+
         // ===== Modo edición (ADMIN / Jefe Departamento): actualiza el
         // documento existente en vez de crear uno nuevo. No se tocan
         // tipo, folio, código ni estado.
@@ -23028,6 +23056,104 @@
         }
       }
 
+      // ===== Límite por usuario contra la SPM pagada del mes =====
+      // VC  -> presupuesto VIÁTICOS (VDC-2) del solicitante
+      // VI  -> presupuesto IAVE (VDC-1) del solicitante
+      // OC sin proyecto -> presupuesto COMPRAS (VDC-3) del solicitante
+      //                    (total con IVA en MXN)
+      // Si el usuario no tiene renglón, o el importe supera lo que le queda
+      // del mes, no se deja guardar y se muestra el saldo. Una SPM pagada
+      // capturada antes de los presupuestos por usuario no limita.
+      var ESTADOS_SIN_CONSUMO_PPTO = ['CANCELADA', 'CANCELADO', 'RECHAZADA', 'RECHAZADO'];
+      var NOMBRES_PPTO_USUARIO = { IAVE: 'IAVE (VDC-1)', VIATICOS: 'VIÁTICOS (VDC-2)', COMPRAS: 'COMPRAS (VDC-3)' };
+
+      function fechaISOCortaPpto(f) {
+        return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0');
+      }
+
+      async function revisarPresupuestoUsuarioSPM(o) {
+        var etiqueta = NOMBRES_PPTO_USUARIO[o.tipo] || o.tipo;
+        var spm = await obtenerSPMPagadaVigente(o.empresa, o.departamento, o.fecha);
+        if (!spm) {
+          return { ok: false, sinSPM: true, mensaje: 'No hay una SPM pagada para ' + o.empresa + (o.departamento ? ' / ' + o.departamento : '') + ' en este periodo. ' +
+            (o.tipo === 'COMPRAS' ? 'Las OC sin proyecto se descuentan del presupuesto de COMPRAS (VDC-3) del solicitante en la SPM pagada del mes.' : 'La SPM debe estar autorizada por el Director y marcada como pagada por Finanzas.') };
+        }
+        var folioSPM = spm.folio || spm.codigo || ('SPM ' + spm.id);
+        var det = null;
+        try {
+          var rDet = await supabase.from('documentos_cxp').select('presupuesto_detalle').eq('id', spm.id).maybeSingle();
+          if (!rDet.error && rDet.data) det = parsePresupuestoDetalleSPM(rDet.data.presupuesto_detalle);
+        } catch (eDet) { det = null; }
+        if (!det) return { ok: true, spm: spm };
+
+        var usuario = String(o.usuario || '').trim();
+        if (!usuario) {
+          return { ok: false, mensaje: 'Elige el solicitante: el importe se descuenta de su presupuesto de ' + etiqueta + ' en la SPM ' + folioSPM + '.' };
+        }
+        var presupuesto = (det.tkc || []).filter(function(f) {
+          return f.tipo === o.tipo && String(f.usuario || '').trim().toUpperCase() === usuario.toUpperCase();
+        }).reduce(function(a, f) { return a + (Number(f.monto) || 0); }, 0);
+        if (presupuesto <= 0) {
+          return { ok: false, mensaje: usuario + ' no tiene presupuesto de ' + etiqueta + ' en la SPM pagada ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). Pide que se le asigne en la SPM del mes.' };
+        }
+
+        var mesIdx = MESES_INDICADOR.indexOf(spm.mes);
+        var inicioMes = new Date(spm.anio, mesIdx, 1);
+        var finMes = new Date(spm.anio, mesIdx + 1, 1);
+        var usado = 0;
+        try {
+          var filasUsadas;
+          if (o.tipo === 'COMPRAS') {
+            var qOC = supabase.from('ordenes').select('id,montomxn,estado')
+              .eq('sin_proyecto', true).eq('empresa', o.empresa).eq('responsable', usuario)
+              .gte('fechacreacion', inicioMes.toISOString()).lt('fechacreacion', finMes.toISOString());
+            if (o.departamento) qOC = qOC.eq('departamento', o.departamento);
+            var rOC = await qOC;
+            if (rOC.error) throw rOC.error;
+            filasUsadas = (rOC.data || []).map(function(x) { return { id: x.id, monto: x.montomxn, estado: x.estado }; });
+          } else {
+            var qDoc = supabase.from('documentos_cxp').select('id,monto,estado')
+              .eq('tipo', o.tipo === 'IAVE' ? 'VI' : 'VC').eq('empresa', o.empresa).eq('solicitante', usuario)
+              .gte('fecha', fechaISOCortaPpto(inicioMes)).lt('fecha', fechaISOCortaPpto(finMes));
+            if (o.departamento) qDoc = qDoc.eq('departamento', o.departamento);
+            var rDoc = await qDoc;
+            if (rDoc.error) throw rDoc.error;
+            filasUsadas = rDoc.data || [];
+          }
+          filasUsadas.forEach(function(x) {
+            if (o.excluirId != null && x.id === o.excluirId) return;
+            if (ESTADOS_SIN_CONSUMO_PPTO.indexOf(String(x.estado || '').toUpperCase()) !== -1) return;
+            usado += Number(x.monto) || 0;
+          });
+        } catch (eUso) {
+          console.error('Error calculando el presupuesto usado:', eUso);
+          return { ok: false, mensaje: 'No se pudo verificar el presupuesto de ' + etiqueta + ' de ' + usuario + ': ' + (eUso.message || eUso) + '. Inténtalo de nuevo.' };
+        }
+        var disponible = presupuesto - usado;
+        var importe = Number(o.monto) || 0;
+        if (importe > disponible + 0.005) {
+          return { ok: false, mensaje: 'El importe supera el presupuesto de ' + etiqueta + ' de ' + usuario + ' en la SPM ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). ' +
+            'Presupuesto: ' + formatoMoneda(presupuesto, 'MXN') + ' · Usado: ' + formatoMoneda(usado, 'MXN') + ' · Disponible: ' + formatoMoneda(Math.max(0, disponible), 'MXN') +
+            ' · ' + (o.documento || 'Este documento') + ': ' + formatoMoneda(importe, 'MXN') + '.' };
+        }
+        return { ok: true, spm: spm, presupuesto: presupuesto, usado: usado, disponible: disponible };
+      }
+
+      // OC sin proyecto: se descuenta del presupuesto de COMPRAS (VDC-3)
+      // del solicitante (total con IVA en MXN).
+      async function validarComprasSinProyectoOC(datos, enPantalla) {
+        if (!datos || !datos.sin_proyecto) return true;
+        var r = await revisarPresupuestoUsuarioSPM({
+          tipo: 'COMPRAS', empresa: datos.empresa, departamento: datos.departamento,
+          usuario: datos.responsable, monto: Number(datos.montomxn) || 0, fecha: null, documento: 'Esta OC'
+        });
+        if (r.ok) return true;
+        var msgDiv = document.getElementById('mensajeOC');
+        if (enPantalla && msgDiv) msgDiv.innerHTML = '<div class="alert">❌ ' + escapeHTML(r.mensaje) + '</div>';
+        else alert('❌ ' + r.mensaje);
+        return false;
+      }
+
       // "Salario" y "TDD BBVA" son datos del EMPLEADO (tabla usuarios,
       // capturados por ADMIN en el módulo Colaboradores), no de la SPM: se
       // guardan ahí para que la próxima SPM ya los traiga precargados. Se
@@ -23317,16 +23443,226 @@
         });
       };
 
+      // ===== Presupuestos de la SPM por renglón (secciones II a V) =====
+      // Cada sección acepta varios renglones, igual que las partidas de una
+      // OC (➕ agrega, 🗑️ quita). En II (PMVDC Toka Connect) el XXXX del
+      // concepto es el USUARIO al que se destina el recurso, y ese monto es
+      // su límite del mes en la SPM pagada:
+      //   VDC-1 IAVE     -> limita sus Vales de IAVE (VI)
+      //   VDC-2 VIÁTICOS -> limita sus Vales de Caja (VC)
+      //   VDC-3 COMPRAS  -> limita sus OC sin proyecto
+      // En III, IV y V las X se capturan como texto libre.
+      // El detalle se guarda en documentos_cxp.presupuesto_detalle (jsonb);
+      // las columnas pmvdc_1, pmvdc_2, ... siguen guardando los totales.
+      var SPM_PPTO_DEF = {
+        tkc: { cuerpo: 'cuerpoPMVDCTkc', usuario: true, recalcular: 'recalcularPMVDC', tipos: {
+          IAVE: { cod: 'VDC-1', nombre: 'IAVE', partes: ['PM-06-VDC-', 'U', '-IAVE-TOKA CONNECT'] },
+          VIATICOS: { cod: 'VDC-2', nombre: 'VIÁTICOS', partes: ['PM-06-VDC-', 'U', '-VIATICOS-TOKA CONNECT'] },
+          COMPRAS: { cod: 'VDC-3', nombre: 'COMPRAS', partes: ['PM-06-VDC-', 'U', '-COMPRAS-TOKA CONNECT'] }
+        } },
+        cash: { cuerpo: 'cuerpoPMVDCCash', recalcular: 'recalcularPMVDCCash', tipos: {
+          VIATICOS_EFECTIVO: { cod: 'VDC-1', nombre: 'VIÁTICOS EFECTIVO', partes: ['PM-06-VDC-', 'X1', '-VIATICOS-EFECTIVO'] }
+        } },
+        vdg: { cuerpo: 'cuerpoPMVDG', recalcular: 'recalcularPMVDG', tipos: {
+          GASOLINA: { cod: 'VDG-1', nombre: 'GASOLINA', partes: ['PM-06-VDG-', 'X1', '-000'] }
+        } },
+        acr: { cuerpo: 'cuerpoPMACR', recalcular: 'recalcularPMACR', tipos: {
+          TDC: { cod: 'ACR-1', nombre: 'TDC', partes: ['PM-06-ACR-', 'X1', '-TDC-', 'X2'], marcas: { X2: 'XXXXX' } },
+          LDC: { cod: 'ACR-2', nombre: 'LDC', partes: ['PM-06-ACR-', 'X1', '-LDC-', 'X2'] }
+        } }
+      };
+
+      function valorParteConceptoSPM(parte, valores) {
+        var clave = parte === 'U' ? 'usuario' : parte.toLowerCase();
+        return String((valores && valores[clave]) || '').trim().toUpperCase();
+      }
+
+      // Concepto del renglón con el usuario / texto capturado en lugar de
+      // las X (o las X si todavía no se captura nada).
+      function conceptoPresupuestoSPM(seccion, tipo, valores) {
+        var sec = SPM_PPTO_DEF[seccion];
+        var def = sec && sec.tipos[tipo];
+        if (!def) return '';
+        return def.partes.map(function(p) {
+          if (p === 'U' || p === 'X1' || p === 'X2') {
+            return valorParteConceptoSPM(p, valores) || ((def.marcas && def.marcas[p]) || 'XXXX');
+          }
+          return p;
+        }).join('');
+      }
+
+      function parsePresupuestoDetalleSPM(valor) {
+        if (!valor) return null;
+        if (typeof valor === 'string') {
+          try { valor = JSON.parse(valor); } catch (e) { return null; }
+        }
+        return (valor && typeof valor === 'object') ? valor : null;
+      }
+
+      // SPM capturadas antes de los presupuestos por renglón: se arma el
+      // detalle con los totales guardados (sin usuario ni texto en las X).
+      function detalleLegadoSPM(d) {
+        return {
+          tkc: [
+            { tipo: 'IAVE', monto: Number(d.pmvdc_1) || 0 },
+            { tipo: 'VIATICOS', monto: Number(d.pmvdc_2) || 0 },
+            { tipo: 'COMPRAS', monto: Number(d.pmvdc_3) || 0 }
+          ],
+          cash: [{ tipo: 'VIATICOS_EFECTIVO', monto: Number(d.pmvdc_cash_1) || 0 }],
+          vdg: [{ tipo: 'GASOLINA', monto: Number(d.pmvdg_1 != null ? d.pmvdg_1 : d.pmvdg_total) || 0 }],
+          acr: [
+            { tipo: 'TDC', monto: Number(d.pmacr_1) || 0 },
+            { tipo: 'LDC', monto: Number(d.pmacr_2) || 0 }
+          ]
+        };
+      }
+
+      // Renglones de una sección para el PDF: { cod, concepto, monto }.
+      function filasPDFPresupuestoSPM(d, seccion) {
+        var det = parsePresupuestoDetalleSPM(d.presupuesto_detalle) || detalleLegadoSPM(d);
+        var sec = SPM_PPTO_DEF[seccion];
+        var filas = (det[seccion] || []).filter(function(f) { return sec.tipos[f.tipo]; });
+        if (!filas.length) filas = Object.keys(sec.tipos).map(function(t) { return { tipo: t, monto: 0 }; });
+        return filas.map(function(f) {
+          return { cod: sec.tipos[f.tipo].cod, concepto: conceptoPresupuestoSPM(seccion, f.tipo, f), monto: Number(f.monto) || 0 };
+        });
+      }
+
+      function opcionesUsuariosPresupuestoSPM(seleccionado) {
+        var lista = (usuariosDB || []).slice().sort(function(a, b) { return (a.usuario || '').localeCompare(b.usuario || ''); });
+        var html = '<option value="">XXXX</option>' + lista.map(function(u) {
+          return '<option value="' + escapeHTML(u.usuario) + '"' + (u.usuario === seleccionado ? ' selected' : '') + '>' + escapeHTML(u.usuario) + '</option>';
+        }).join('');
+        if (seleccionado && !lista.some(function(u) { return u.usuario === seleccionado; })) {
+          html += '<option value="' + escapeHTML(seleccionado) + '" selected>' + escapeHTML(seleccionado) + '</option>';
+        }
+        return html;
+      }
+
+      window.agregarFilaPresupuestoSPM = function(seccion, tipo, valores) {
+        var sec = SPM_PPTO_DEF[seccion];
+        if (!sec) return;
+        if (!tipo) {
+          var selTipo = document.getElementById('spmTipoNuevo_' + seccion);
+          tipo = selTipo ? selTipo.value : Object.keys(sec.tipos)[0];
+        }
+        var def = sec.tipos[tipo];
+        var cuerpo = document.getElementById(sec.cuerpo);
+        if (!def || !cuerpo) return;
+        valores = valores || {};
+
+        var concepto = def.partes.map(function(p) {
+          if (p === 'U') {
+            return '<select class="ppto-usuario" title="Usuario al que se destina el recurso" style="display:inline-block; width:auto; min-width:96px; padding:4px 6px; margin:0 2px;">' +
+              opcionesUsuariosPresupuestoSPM(valores.usuario || '') + '</select>';
+          }
+          if (p === 'X1' || p === 'X2') {
+            var marca = (def.marcas && def.marcas[p]) || 'XXXX';
+            return '<input class="ppto-' + p.toLowerCase() + '" type="text" maxlength="20" placeholder="' + marca + '" value="' + escapeHTML(valorParteConceptoSPM(p, valores)) + '"' +
+              ' oninput="this.value = this.value.toUpperCase()" style="display:inline-block; width:84px; padding:4px 6px; margin:0 2px; text-transform:uppercase;">';
+          }
+          return '<span>' + escapeHTML(p) + '</span>';
+        }).join('');
+
+        var tr = document.createElement('tr');
+        tr.className = 'fila-ppto-spm';
+        tr.dataset.seccion = seccion;
+        tr.dataset.tipo = tipo;
+        tr.innerHTML = '<td>' + escapeHTML(def.cod) + '</td>' +
+          '<td><div style="display:flex; flex-wrap:wrap; align-items:center;">' + concepto + '</div></td>' +
+          '<td><input class="ppto-monto" type="number" step="0.01" min="0" value="' + (Number(valores.monto) || 0) + '" style="width:100%;" oninput="window.' + sec.recalcular + '()" onchange="window.' + sec.recalcular + '()"></td>' +
+          '<td><button type="button" class="danger" title="Quitar renglón" onclick="window.eliminarFilaPresupuestoSPM(this)" style="width:auto; min-width:0; padding:6px 10px;">🗑️</button></td>';
+
+        // Se mantiene el orden por código (VDC-1, VDC-2, VDC-3...).
+        var orden = Object.keys(sec.tipos);
+        var antesDe = null;
+        Array.prototype.some.call(cuerpo.querySelectorAll('tr.fila-ppto-spm'), function(f) {
+          if (orden.indexOf(f.dataset.tipo) > orden.indexOf(tipo)) { antesDe = f; return true; }
+          return false;
+        });
+        cuerpo.insertBefore(tr, antesDe);
+        if (typeof window[sec.recalcular] === 'function') window[sec.recalcular]();
+      };
+
+      window.eliminarFilaPresupuestoSPM = function(boton) {
+        var tr = boton && boton.closest('tr');
+        if (!tr) return;
+        var sec = SPM_PPTO_DEF[tr.dataset.seccion];
+        tr.remove();
+        if (sec && typeof window[sec.recalcular] === 'function') window[sec.recalcular]();
+      };
+
+      function sumarMontosFilasSPM(seccion, tipo) {
+        var sec = SPM_PPTO_DEF[seccion];
+        var total = 0;
+        if (!sec) return 0;
+        document.querySelectorAll('#' + sec.cuerpo + ' tr.fila-ppto-spm').forEach(function(tr) {
+          if (tipo && tr.dataset.tipo !== tipo) return;
+          total += parseFloat((tr.querySelector('.ppto-monto') || {}).value) || 0;
+        });
+        return total;
+      }
+
+      // Nueva SPM: un renglón vacío por código, como el formato original.
+      function reiniciarPresupuestoSPM() {
+        Object.keys(SPM_PPTO_DEF).forEach(function(seccion) {
+          var sec = SPM_PPTO_DEF[seccion];
+          var cuerpo = document.getElementById(sec.cuerpo);
+          if (cuerpo) cuerpo.innerHTML = '';
+          Object.keys(sec.tipos).forEach(function(tipo) { window.agregarFilaPresupuestoSPM(seccion, tipo, {}); });
+        });
+      }
+
+      function cargarPresupuestoDetalleSPM(d) {
+        var det = parsePresupuestoDetalleSPM(d.presupuesto_detalle) || detalleLegadoSPM(d);
+        Object.keys(SPM_PPTO_DEF).forEach(function(seccion) {
+          var sec = SPM_PPTO_DEF[seccion];
+          var cuerpo = document.getElementById(sec.cuerpo);
+          if (cuerpo) cuerpo.innerHTML = '';
+          var filas = (det[seccion] || []).filter(function(f) { return sec.tipos[f.tipo]; });
+          if (!filas.length) filas = Object.keys(sec.tipos).map(function(t) { return { tipo: t }; });
+          filas.forEach(function(f) { window.agregarFilaPresupuestoSPM(seccion, f.tipo, f); });
+        });
+      }
+
+      // Lee los renglones capturados. Se ignoran los renglones vacíos; en
+      // PMVDC Toka todo renglón con monto debe tener usuario.
+      function leerPresupuestoDetalleSPM() {
+        var datos = { version: 1, tkc: [], cash: [], vdg: [], acr: [] };
+        var error = null;
+        Object.keys(SPM_PPTO_DEF).forEach(function(seccion) {
+          var sec = SPM_PPTO_DEF[seccion];
+          document.querySelectorAll('#' + sec.cuerpo + ' tr.fila-ppto-spm').forEach(function(tr) {
+            var tipo = tr.dataset.tipo;
+            var def = sec.tipos[tipo];
+            if (!def) return;
+            var monto = parseFloat((tr.querySelector('.ppto-monto') || {}).value) || 0;
+            var fila = { tipo: tipo, cod: def.cod, monto: Math.round(monto * 100) / 100 };
+            var selU = tr.querySelector('.ppto-usuario');
+            if (selU) fila.usuario = selU.value || '';
+            var x1 = tr.querySelector('.ppto-x1');
+            if (x1) fila.x1 = x1.value.trim().toUpperCase();
+            var x2 = tr.querySelector('.ppto-x2');
+            if (x2) fila.x2 = x2.value.trim().toUpperCase();
+            if (!error && monto < 0) error = 'El monto del renglón ' + def.cod + ' (' + def.nombre + ') no puede ser negativo.';
+            if (!monto && !fila.usuario && !fila.x1 && !fila.x2) return;
+            if (!error && sec.usuario && monto > 0 && !fila.usuario) {
+              error = 'Elige el usuario del renglón ' + def.cod + ' (' + def.nombre + ') de PMVDC Toka Connect: es a quien se destina ese presupuesto.';
+            }
+            fila.concepto = conceptoPresupuestoSPM(seccion, tipo, fila);
+            datos[seccion].push(fila);
+          });
+        });
+        return { datos: datos, error: error };
+      }
+
       // ===== PMVDC TKC =====
       // VDC = (VDC-1 + VDC-2 + VDC-3) × 1.03 × 1.16 (3% y luego 16% sobre
       // la suma de los tres montos capturados). La fila "VDC" es la
       // comisión (la diferencia entre el total con impuestos y la suma
       // capturada).
       function obtenerTotalPMVDCTkc() {
-        var v1 = parseFloat(document.getElementById('spmVDC1').value) || 0;
-        var v2 = parseFloat(document.getElementById('spmVDC2').value) || 0;
-        var v3 = parseFloat(document.getElementById('spmVDC3').value) || 0;
-        var base = v1 + v2 + v3;
+        var base = sumarMontosFilasSPM('tkc');
         var total = base * 1.03 * 1.16;
         return { base: base, comision: total - base, total: total };
       }
@@ -23345,7 +23681,7 @@
       // La fila "VDC-2" es la comisión: 6.38% (misma tasa que la de
       // PMSYS) sobre el monto capturado en VDC-1.
       function obtenerTotalPMVDCCash() {
-        var v1 = parseFloat(document.getElementById('spmCashVDC1').value) || 0;
+        var v1 = sumarMontosFilasSPM('cash');
         var comision = v1 * COMISION_PMSYS;
         return { base: v1, comision: comision, total: v1 + comision };
       }
@@ -23362,7 +23698,7 @@
 
       // ===== PMVDG (vale de gasolina) =====
       function obtenerTotalPMVDG() {
-        return parseFloat(document.getElementById('spmVDG1').value) || 0;
+        return sumarMontosFilasSPM('vdg');
       }
 
       window.recalcularPMVDG = function() {
@@ -23375,9 +23711,7 @@
 
       // ===== PMACR (acreedores diversos) =====
       function obtenerTotalPMACR() {
-        var a1 = parseFloat(document.getElementById('spmACR1').value) || 0;
-        var a2 = parseFloat(document.getElementById('spmACR2').value) || 0;
-        return a1 + a2;
+        return sumarMontosFilasSPM('acr');
       }
 
       window.recalcularPMACR = function() {
@@ -23465,13 +23799,7 @@
         document.getElementById('spmNumSemanas').value = 4;
         document.getElementById('spmFechaInicio').value = '';
         document.getElementById('spmFechaFin').value = '';
-        document.getElementById('spmVDC1').value = 0;
-        document.getElementById('spmVDC2').value = 0;
-        document.getElementById('spmVDC3').value = 0;
-        document.getElementById('spmCashVDC1').value = 0;
-        document.getElementById('spmVDG1').value = 0;
-        document.getElementById('spmACR1').value = 0;
-        document.getElementById('spmACR2').value = 0;
+        reiniciarPresupuestoSPM();
         document.getElementById('cuerpoPMSYS').innerHTML = '';
         var buscarColabNuevo = document.getElementById('buscarColaboradorPMSYS');
         if (buscarColabNuevo) { buscarColabNuevo.value = ''; buscarColabNuevo.style.background = ''; }
@@ -23540,13 +23868,7 @@
         var folioInput = document.getElementById('spmFolio');
         folioInput.value = d.folio || '';
 
-        document.getElementById('spmVDC1').value = d.pmvdc_1 || 0;
-        document.getElementById('spmVDC2').value = d.pmvdc_2 || 0;
-        document.getElementById('spmVDC3').value = d.pmvdc_3 || 0;
-        document.getElementById('spmCashVDC1').value = d.pmvdc_cash_1 || 0;
-        document.getElementById('spmVDG1').value = d.pmvdg_1 || 0;
-        document.getElementById('spmACR1').value = d.pmacr_1 || 0;
-        document.getElementById('spmACR2').value = d.pmacr_2 || 0;
+        cargarPresupuestoDetalleSPM(d);
 
         var tbody = document.getElementById('cuerpoPMSYS');
         tbody.innerHTML = '';
@@ -23610,6 +23932,16 @@
           });
         }
 
+        var lecturaPpto = leerPresupuestoDetalleSPM();
+        if (lecturaPpto.error) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(lecturaPpto.error) + '</div>';
+          return;
+        }
+        var detallePpto = lecturaPpto.datos;
+        var sumaDetalle = function(seccion, tipo) {
+          return detallePpto[seccion].filter(function(f) { return !tipo || f.tipo === tipo; }).reduce(function(a, f) { return a + (Number(f.monto) || 0); }, 0);
+        };
+
         var totales = window.recalcularTotalesPMSYS();
         var tkc = obtenerTotalPMVDCTkc();
         var cash = obtenerTotalPMVDCCash();
@@ -23658,9 +23990,9 @@
           pmsys_empleados: JSON.stringify(empleados),
           pmsys_total: totales.total,
           pmsys_comision: totales.comision,
-          pmvdc_1: parseFloat(document.getElementById('spmVDC1').value) || 0,
-          pmvdc_2: parseFloat(document.getElementById('spmVDC2').value) || 0,
-          pmvdc_3: parseFloat(document.getElementById('spmVDC3').value) || 0,
+          pmvdc_1: sumaDetalle('tkc', 'IAVE'),
+          pmvdc_2: sumaDetalle('tkc', 'VIATICOS'),
+          pmvdc_3: sumaDetalle('tkc', 'COMPRAS'),
           pmvdc_comision: tkc.comision,
           pmvdc_total: tkc.total,
           pmvdc_cash_1: cash.base,
@@ -23668,9 +24000,11 @@
           pmvdc_cash_total: cash.total,
           pmvdg_1: vdg,
           pmvdg_total: vdg,
-          pmacr_1: parseFloat(document.getElementById('spmACR1').value) || 0,
-          pmacr_2: parseFloat(document.getElementById('spmACR2').value) || 0,
+          pmacr_1: sumaDetalle('acr', 'TDC'),
+          pmacr_2: sumaDetalle('acr', 'LDC'),
           pmacr_total: acr,
+          // Renglones con el usuario (II) o el texto (III a V) en lugar de las X.
+          presupuesto_detalle: detallePpto,
           presupuesto_bancos: presupuestoBancos,
           presupuesto_toka: presupuestoToka,
           presupuesto_cash: presupuestoCash,
@@ -23700,6 +24034,10 @@
           window.cargarDocumentosCXP();
         } catch (e) {
           console.error('Error guardando SPM:', e);
+          if (/presupuesto_detalle/.test((e && e.message) || '')) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: falta ejecutar en Supabase el SQL "presupuesto_detalle_spm.sql" (columna presupuesto_detalle de documentos_cxp).</div>';
+            return;
+          }
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo guardar: ' + escapeHTML(e.message) + '</div>';
         }
       };
@@ -30511,6 +30849,7 @@
       window.previsualizarOC = async function() {
         var datos = recopilarDatosOC();
         if (!datos) return;
+        if (!(await validarComprasSinProyectoOC(datos, true))) return;
         // El folio mostrado en la previsualización (encabezado y pie de
         // página) debe ser el mismo que se usará al confirmar/guardar la
         // OC — se calcula aquí con la misma lógica (codigoBase +
@@ -30547,6 +30886,7 @@
         var momentoConfirmacion = new Date();
         if (!ocPreviewData) { alert('No hay datos para confirmar.'); return; }
         var datos = ocPreviewData;
+        if (!(await validarComprasSinProyectoOC(datos, false))) return;
         var codigoBase = generarCodigoOC(datos.empresa, datos.departamento, datos.proveedor, datos.proyectonombre, datos.cliente, datos.elaborador, '');
         var letra = verificarCodigoExistente(codigoBase);
         if (!letra) {
@@ -30667,6 +31007,7 @@
         var momentoConfirmacion = new Date();
         var datos = recopilarDatosOC();
         if (!datos) { console.log('❌ Datos inválidos, no se creará OC'); return; }
+        if (!(await validarComprasSinProyectoOC(datos, true))) return;
 
         if (!datos.empresa || !datos.departamento) {
           document.getElementById('mensajeOC').innerHTML = '<div class="alert">⚠️ ERROR: No se encontró empresa o departamento del proyecto.</div>';
