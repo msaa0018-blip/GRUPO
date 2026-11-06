@@ -19252,6 +19252,20 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
 
+        // OC sin proyecto que excede el presupuesto de COMPRAS: al
+        // autorizarla, ese presupuesto aumenta en el excedente.
+        var avisoAumentoCompras = '';
+        try {
+          var aumento = await aumentarPresupuestoComprasPorAutorizacion(oc);
+          if (aumento) {
+            avisoAumentoCompras = '\n\nEl presupuesto de COMPRAS de ' + aumento.usuario + ' en la SPM ' + aumento.spm_folio +
+              ' aumentó ' + formatoMoneda(aumento.exceso, 'MXN') + ' (ahora ' + formatoMoneda(aumento.nuevo, 'MXN') + ').';
+          }
+        } catch (eAumento) {
+          console.error('No se pudo aumentar el presupuesto de COMPRAS:', eAumento);
+          avisoAumentoCompras = '\n\n⚠️ La OC quedó autorizada, pero no se pudo aumentar el presupuesto de COMPRAS en la SPM: ' + ((eAumento && eAumento.message) || eAumento) + '. Avisa a ADMIN para ajustarlo.';
+        }
+
         if (oc.id === ocNotificadaId) {
           await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
           ocNotificadaId = null;
@@ -19271,12 +19285,12 @@
           pendingOcId = null;
           var urlLimpiaAutorizarOC = window.location.origin + window.location.pathname;
           window.history.replaceState({}, '', urlLimpiaAutorizarOC);
-          alert('¡OC aprobada gracias!');
+          alert('¡OC aprobada gracias!' + avisoAumentoCompras);
           location.reload();
           return;
         }
 
-        alert('✅ OC autorizada por Director.');
+        alert('✅ OC autorizada por Director.' + avisoAumentoCompras);
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -23480,7 +23494,9 @@
         var disponible = presupuesto - usado;
         var importe = Number(o.monto) || 0;
         if (importe > disponible + 0.005) {
-          return { ok: false, mensaje: 'El importe supera el presupuesto de ' + etiqueta + ' de ' + usuario + ' en la SPM ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). ' +
+          return { ok: false, excede: true, spm: spm, usuario: usuario, etiqueta: etiqueta, presupuesto: presupuesto, usado: usado,
+            disponible: disponible, importe: importe, exceso: Math.round((importe - disponible) * 100) / 100,
+            mensaje: 'El importe supera el presupuesto de ' + etiqueta + ' de ' + usuario + ' en la SPM ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). ' +
             'Presupuesto: ' + formatoMoneda(presupuesto, 'MXN') + ' · Usado: ' + formatoMoneda(usado, 'MXN') + ' · Disponible: ' + formatoMoneda(Math.max(0, disponible), 'MXN') +
             ' · ' + (o.documento || 'Este documento') + ': ' + formatoMoneda(importe, 'MXN') + '.' };
         }
@@ -23489,13 +23505,131 @@
 
       // OC sin proyecto: se descuenta del presupuesto de COMPRAS (VDC-3)
       // del solicitante (total con IVA en MXN).
+      // OC sin proyecto creada directo en PENDIENTE_DIRECTOR por exceder el
+      // presupuesto de COMPRAS: se notifica al Director por Telegram (mismo
+      // mensaje y link que las demás OC sin proyecto, con el motivo).
+      async function notificarDirectorExcesoCompras(datos, codigo) {
+        var info = datos && datos.envioDirectoDirector;
+        if (!info) return;
+        var oc = ordenes.find(function(o) { return o.codigo === codigo; });
+        if (!oc) return;
+        try {
+          var proyectoOC = proyectoDeOC(oc);
+          var productosOC = oc.productos || [];
+          if (typeof productosOC === 'string') { try { productosOC = JSON.parse(productosOC); } catch (eP) { productosOC = []; } }
+          var datosOC = {
+            codigo: oc.codigo, proyectonombre: oc.proyecto || 'SIN PROYECTO', empresa: oc.empresa, departamento: oc.departamento,
+            cliente: oc.cliente || 'No especificado', proveedor: oc.proveedor, rfc: oc.rfc || 'No especificado',
+            responsable: oc.responsable, solicitante: oc.responsable || 'No especificado', elaborador: oc.elaborador || 'Desconocido',
+            moneda: oc.moneda || 'MXN', montototal: oc.montototal || 0, montomxn: oc.montomxn || 0,
+            fechapago: oc.fechapago || new Date().toISOString(), fechaentrega: oc.fechaentrega || new Date().toISOString(),
+            productos: Array.isArray(productosOC) ? productosOC : []
+          };
+          var motivo = 'EXCEDE EL PRESUPUESTO DE COMPRAS (VDC-3) de ' + info.usuario + ' en la SPM ' + info.spm_folio + ': presupuesto ' +
+            formatoMoneda(info.presupuesto, 'MXN') + ', usado ' + formatoMoneda(info.usado, 'MXN') + ', esta OC ' + formatoMoneda(info.importe, 'MXN') +
+            ', excedente ' + formatoMoneda(info.exceso, 'MXN') + '. Requiere autorización directa del Director; si la autoriza, el presupuesto de COMPRAS aumenta en el excedente.';
+          var idMensaje = await enviarNotificacionTelegram(formatearMensajeOC(datosOC, proyectoOC, oc.id, motivo));
+          if (idMensaje) {
+            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: idMensaje }).eq('id', oc.id);
+            oc.notificacion_enviada = true;
+            oc.telegram_message_id = idMensaje;
+          }
+        } catch (eTg) {
+          console.error('No se pudo avisar al Director de la OC que excede Compras:', eTg);
+        }
+        var msgOC = document.getElementById('mensajeOC');
+        if (msgOC) msgOC.innerHTML += '<div class="alert" style="background:#fff7e6;color:#8a5a00;">⏳ La OC excede el presupuesto de COMPRAS: se envió directo al Director General para su autorización.</div>';
+      }
+
+      // Al autorizar el Director una OC sin proyecto que excede el
+      // presupuesto de COMPRAS del solicitante, ese presupuesto aumenta en
+      // el excedente (en la SPM pagada del mes de la OC) y queda registrado
+      // en las notas de edición de la SPM.
+      async function aumentarPresupuestoComprasPorAutorizacion(oc) {
+        if (!oc || !ocEsSinProyecto(oc)) return null;
+        var fechaOC = oc.fechacreacion ? new Date(oc.fechacreacion) : new Date();
+        var fechaCorta = fechaOC.getFullYear() + '-' + String(fechaOC.getMonth() + 1).padStart(2, '0') + '-' + String(fechaOC.getDate()).padStart(2, '0');
+        var r = await revisarPresupuestoUsuarioSPM({
+          tipo: 'COMPRAS', empresa: oc.empresa, departamento: oc.departamento, usuario: oc.responsable,
+          monto: Number(oc.montomxn) || 0, fecha: fechaCorta, excluirId: oc.id, documento: 'Esta OC'
+        });
+        if (!r.excede || !(r.exceso > 0)) return null;
+        var rS = await supabase.from('documentos_cxp').select('*').eq('id', r.spm.id).maybeSingle();
+        if (rS.error || !rS.data) throw (rS.error || new Error('no se encontró la SPM'));
+        var spm = rS.data;
+        var det = parsePresupuestoDetalleSPM(spm.presupuesto_detalle);
+        if (!det || !Array.isArray(det.tkc)) return null;
+        var usuarioUp = String(oc.responsable || '').trim().toUpperCase();
+        var fila = det.tkc.find(function(f) { return f.tipo === 'COMPRAS' && String(f.usuario || '').trim().toUpperCase() === usuarioUp; });
+        if (!fila) return null;
+        var sumaTipo = function(tipo) { return det.tkc.filter(function(f) { return !tipo || f.tipo === tipo; }).reduce(function(a, f) { return a + (Number(f.monto) || 0); }, 0); };
+        var baseAntes = sumaTipo();
+        var totalTkcAntes = spm.pmvdc_total != null ? Number(spm.pmvdc_total) : baseAntes * 1.03 * 1.16;
+        fila.monto = Math.round(((Number(fila.monto) || 0) + r.exceso) * 100) / 100;
+        var baseNueva = sumaTipo();
+        var totalTkcNuevo = Math.round(baseNueva * 1.03 * 1.16 * 100) / 100;
+        var delta = totalTkcNuevo - totalTkcAntes;
+        var montoNuevo = Math.round(((Number(spm.monto) || 0) + delta) * 100) / 100;
+        det.ediciones = (Array.isArray(det.ediciones) ? det.ediciones : []).concat([{
+          fecha: new Date().toISOString(),
+          usuario: actual ? actual.usuario : '',
+          nota: 'Aumento automático del presupuesto de COMPRAS (VDC-3) de ' + oc.responsable + ' en ' + formatoMoneda(r.exceso, 'MXN') +
+            ' por la OC ' + (oc.codigo || oc.id) + ' autorizada por el Director General (excedía el presupuesto).',
+          monto_anterior: Number(spm.monto) || 0,
+          monto_nuevo: montoNuevo
+        }]);
+        var cambiosSPM = {
+          presupuesto_detalle: det,
+          pmvdc_3: Math.round(sumaTipo('COMPRAS') * 100) / 100,
+          pmvdc_total: totalTkcNuevo,
+          pmvdc_comision: Math.round((totalTkcNuevo - baseNueva) * 100) / 100,
+          presupuesto_toka: Math.round(((spm.presupuesto_toka != null ? Number(spm.presupuesto_toka) : totalTkcAntes) + delta) * 100) / 100,
+          monto: montoNuevo
+        };
+        if (spm.presupuesto_mensual != null) cambiosSPM.presupuesto_mensual = Math.round((Number(spm.presupuesto_mensual) + delta) * 100) / 100;
+        var rU = await supabase.from('documentos_cxp').update(cambiosSPM).eq('id', spm.id);
+        if (rU.error) throw rU.error;
+        return { exceso: r.exceso, usuario: oc.responsable, spm_folio: spm.folio || spm.codigo, nuevo: fila.monto };
+      }
+
       async function validarComprasSinProyectoOC(datos, enPantalla) {
         if (!datos || !datos.sin_proyecto) return true;
         var r = await revisarPresupuestoUsuarioSPM({
           tipo: 'COMPRAS', empresa: datos.empresa, departamento: datos.departamento,
           usuario: datos.responsable, monto: Number(datos.montomxn) || 0, fecha: null, documento: 'Esta OC'
         });
-        if (r.ok) return true;
+        if (r.ok) {
+          // Ya no excede (p. ej. se bajó el importe): sigue el flujo normal.
+          if (datos.envioDirectoDirector) {
+            datos.estado = datos.estadoAntesDeDirector || datos.estado;
+            delete datos.envioDirectoDirector;
+            delete datos.estadoAntesDeDirector;
+          }
+          return true;
+        }
+        // Excede el presupuesto de COMPRAS: en lugar de bloquear, se ofrece
+        // pedir la autorización directa del Director General. Si la
+        // autoriza, el presupuesto de COMPRAS del usuario aumenta en el
+        // excedente (ver aumentarPresupuestoComprasPorAutorizacion).
+        if (r.excede) {
+          var infoExceso = {
+            usuario: r.usuario, spm_id: r.spm.id, spm_folio: r.spm.folio || r.spm.codigo || ('SPM ' + r.spm.id),
+            mes: r.spm.mes, anio: r.spm.anio, presupuesto: r.presupuesto, usado: r.usado, importe: r.importe, exceso: r.exceso
+          };
+          if (datos.envioDirectoDirector) { datos.envioDirectoDirector = infoExceso; return true; }
+          var pregunta = '⚠️ ' + r.mensaje + '\n\n¿Enviar la OC directo al Director General para su autorización?\n\n' +
+            'Si la autoriza, el presupuesto de COMPRAS (VDC-3) de ' + r.usuario + ' en la SPM ' + infoExceso.spm_folio +
+            ' aumentará en ' + formatoMoneda(r.exceso, 'MXN') + '.';
+          if (!confirm(pregunta)) {
+            var msgNo = document.getElementById('mensajeOC');
+            if (enPantalla && msgNo) msgNo.innerHTML = '<div class="alert">❌ ' + escapeHTML(r.mensaje) + '</div>';
+            return false;
+          }
+          datos.envioDirectoDirector = infoExceso;
+          datos.estadoAntesDeDirector = datos.estado;
+          datos.estado = 'PENDIENTE_DIRECTOR';
+          return true;
+        }
         var msgDiv = document.getElementById('mensajeOC');
         if (enPantalla && msgDiv) msgDiv.innerHTML = '<div class="alert">❌ ' + escapeHTML(r.mensaje) + '</div>';
         else alert('❌ ' + r.mensaje);
@@ -31431,6 +31565,7 @@
           if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
           render();
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
+        await notificarDirectorExcesoCompras(datos, codigo);
 
         try {
           // El folio puede haber cambiado respecto al que se calculó al
@@ -31556,6 +31691,7 @@
           if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
           render();
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
+        await notificarDirectorExcesoCompras(datos, codigo);
 
         try {
           // Igual que en confirmarDesdePreview: el PDF debe generarse con el
