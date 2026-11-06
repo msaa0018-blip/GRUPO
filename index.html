@@ -7267,6 +7267,11 @@
         </div>
       </div>
       <div class="modal-body">
+        <div id="spmGrupoJustificacion" class="hidden" style="background:#fff7e6; border:1px solid #f5c26b; border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+          <label for="spmJustificacionEdicion" style="font-weight:bold; display:block; margin-bottom:6px;">✏️ Justificación de la edición (obligatoria)</label>
+          <textarea id="spmJustificacionEdicion" rows="3" maxlength="500" placeholder="Explica por qué se modifica la SPM (p. ej. se aumenta el presupuesto de viáticos de AAMS por viaje a Querétaro)" style="width:100%;"></textarea>
+          <div id="spmHistorialEdiciones" style="margin-top:8px; font-size:0.85em;"></div>
+        </div>
         <div class="cxc-form-row">
           <select id="spmEmpresa" onchange="window.actualizarDeptosSPM()">
             <option value="">Selecciona empresa *</option>
@@ -13059,6 +13064,8 @@
           var granTotal = Number(d.monto) || (pmsysTotal + pmsysComision + tkcTotal + cashTotal + vdgTotal + acrTotal);
 
           var fmtCelda = function(v) { return (v === null || v === undefined) ? '—' : formatoMoneda(v, 'MXN'); };
+          // Ediciones hechas por ADMIN, con su justificación.
+          var edicionesPDF = edicionesSPM(d);
 
           // Dibuja todo el contenido con la escala "s" (1 = tamaño normal).
           // Regresa la Y donde terminó. Con permitirSaltos = false (ensayo)
@@ -13245,6 +13252,24 @@
             dd.setFontSize(Math.max(9, 12 * s));
             dd.text('TOTAL SPM:', pageWidth - margin - 200, y);
             dd.text(formatoMoneda(granTotal, 'MXN'), pageWidth - margin, y, { align: 'right' });
+
+            // Notas de edición: fecha, usuario (ADMIN) y justificación.
+            if (edicionesPDF.length) {
+              y += Math.max(10, 16 * s);
+              dd.setTextColor(0, 0, 0);
+              dd.setFont('helvetica', 'bold');
+              dd.setFontSize(Math.max(6.5, 9 * s));
+              dd.text('Notas de edición', margin, y);
+              y += Math.max(8, 11 * s);
+              dd.setFont('helvetica', 'normal');
+              var tamNota = Math.max(6, 8 * s);
+              dd.setFontSize(tamNota);
+              edicionesPDF.forEach(function(e) {
+                var lineasNota = dd.splitTextToSize(textoFechaEdicionSPM(e.fecha) + ' · ' + (e.usuario || '') + ': ' + (e.nota || ''), anchoUtil);
+                dd.text(lineasNota, margin, y);
+                y += lineasNota.length * tamNota * 1.25;
+              });
+            }
             return y + 4;
           };
 
@@ -22784,11 +22809,12 @@
         var btnImprimirByN = document.getElementById('btnAccionDocCxpImprimirByN');
         if (btnImprimirByN) btnImprimirByN.style.display = esSPM ? '' : 'none';
 
-        // Editar: las SPM no se pueden editar nunca, por nadie. VC/VI:
-        // solo ADMIN y Jefe de Departamento.
+        // Editar: VC/VI solo ADMIN y Jefe de Departamento. SPM solo ADMIN,
+        // y al guardar debe escribir la justificación de la edición.
         var btnEditar = document.getElementById('btnAccionDocCxpEditar');
         var puedeEditar = !esSPM && actual && (actual.rol === 'Administrador' || actual.rol === 'Jefe Departamento');
-        if (btnEditar) btnEditar.style.display = puedeEditar ? '' : 'none';
+        var puedeEditarSPM = esSPM && actual && actual.rol === 'Administrador';
+        if (btnEditar) btnEditar.style.display = (puedeEditar || puedeEditarSPM) ? '' : 'none';
 
         // Autorizar (solo SPM): exclusivo del Director General, y solo
         // mientras la SPM sigue PENDIENTE (esperando su autorización).
@@ -22837,7 +22863,11 @@
         window.cerrarModalAccionesDocumentoCXP();
         if (accion === 'pagar') window.marcarPagadoDocumentoCXP(id);
         else if (accion === 'eliminar') window.eliminarDocumentoCXP(id);
-        else if (accion === 'editar') window.editarDocumentoCXP(id);
+        else if (accion === 'editar') {
+          var docEditar = documentosCXPCache.find(function(x) { return x.id === id; });
+          if (docEditar && docEditar.tipo === 'SPM') window.abrirEditarSPM(id);
+          else window.editarDocumentoCXP(id);
+        }
         else if (accion === 'imprimir') window.imprimirPDFDocumentoCXP(id);
         else if (accion === 'previsualizar') window.imprimirPDFSPM(id, true);
         else if (accion === 'imprimir_byn') window.imprimirPDFSPM(id, 'imprimir');
@@ -23801,6 +23831,7 @@
         document.getElementById('spmFechaInicio').value = '';
         document.getElementById('spmFechaFin').value = '';
         reiniciarPresupuestoSPM();
+        mostrarJustificacionEdicionSPM(null);
         document.getElementById('cuerpoPMSYS').innerHTML = '';
         var buscarColabNuevo = document.getElementById('buscarColaboradorPMSYS');
         if (buscarColabNuevo) { buscarColabNuevo.value = ''; buscarColabNuevo.style.background = ''; }
@@ -23818,6 +23849,36 @@
         document.getElementById('agregarSPMModal').classList.add('active');
       };
 
+      // Bloque "Justificación de la edición": solo al editar (ADMIN). Muestra
+      // también las ediciones anteriores de la SPM con su justificación.
+      function edicionesSPM(d) {
+        var det = d ? parsePresupuestoDetalleSPM(d.presupuesto_detalle) : null;
+        return (det && Array.isArray(det.ediciones)) ? det.ediciones : [];
+      }
+
+      function textoFechaEdicionSPM(iso) {
+        var f = new Date(iso);
+        if (isNaN(f.getTime())) return '';
+        return f.toLocaleDateString('es-MX') + ' ' + f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      function mostrarJustificacionEdicionSPM(d) {
+        var grupo = document.getElementById('spmGrupoJustificacion');
+        var texto = document.getElementById('spmJustificacionEdicion');
+        var historial = document.getElementById('spmHistorialEdiciones');
+        if (!grupo || !texto) return;
+        texto.value = '';
+        grupo.classList.toggle('hidden', !d);
+        if (historial) {
+          var lista = edicionesSPM(d);
+          historial.innerHTML = lista.length
+            ? '<b>Ediciones anteriores:</b><br>' + lista.map(function(e) {
+                return escapeHTML(textoFechaEdicionSPM(e.fecha) + ' · ' + (e.usuario || '') + ': ' + (e.nota || ''));
+              }).join('<br>')
+            : '';
+        }
+      }
+
       window.cerrarAgregarSPM = function() {
         spmEdicionId = null;
         document.getElementById('agregarSPMModal').classList.remove('active');
@@ -23826,7 +23887,11 @@
       window.abrirEditarSPM = async function(id) {
         var d = documentosCXPCache.find(function(x) { return x.id === id; });
         if (!d) return;
+        if (!actual || actual.rol !== 'Administrador') {
+          return alert('❌ Solo ADMIN puede editar una SPM.');
+        }
         spmEdicionId = id;
+        mostrarJustificacionEdicionSPM(d);
         var msgDiv = document.getElementById('msgSPM');
         if (msgDiv) msgDiv.innerHTML = '';
         document.getElementById('spmModalTitulo').textContent = 'Editar SPM (' + (d.codigo || d.folio || '') + ')';
@@ -23939,6 +24004,26 @@
           return;
         }
         var detallePpto = lecturaPpto.datos;
+
+        // Edición (solo ADMIN): la justificación es obligatoria y se agrega
+        // al historial de ediciones de la SPM (presupuesto_detalle.ediciones),
+        // conservando las ediciones anteriores.
+        var spmOriginal = spmEdicionId !== null ? documentosCXPCache.find(function(x) { return x.id === spmEdicionId; }) : null;
+        var notaEdicion = null;
+        if (spmEdicionId !== null) {
+          if (!actual || actual.rol !== 'Administrador') {
+            if (msg) msg.innerHTML = '<div class="alert">❌ Solo ADMIN puede editar una SPM.</div>';
+            return;
+          }
+          notaEdicion = ((document.getElementById('spmJustificacionEdicion') || {}).value || '').trim();
+          if (notaEdicion.length < 10) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ Escribe la justificación de la edición (mínimo 10 caracteres).</div>';
+            var campoNota = document.getElementById('spmJustificacionEdicion');
+            if (campoNota) campoNota.focus();
+            return;
+          }
+        }
+        detallePpto.ediciones = edicionesSPM(spmOriginal).slice();
         var sumaDetalle = function(seccion, tipo) {
           return detallePpto[seccion].filter(function(f) { return !tipo || f.tipo === tipo; }).reduce(function(a, f) { return a + (Number(f.monto) || 0); }, 0);
         };
@@ -23949,6 +24034,15 @@
         var vdg = obtenerTotalPMVDG();
         var acr = obtenerTotalPMACR();
         var granTotal = totales.total + totales.comision + tkc.total + cash.total + vdg + acr;
+        if (notaEdicion) {
+          detallePpto.ediciones.push({
+            fecha: new Date().toISOString(),
+            usuario: actual ? actual.usuario : '',
+            nota: notaEdicion,
+            monto_anterior: spmOriginal ? Number(spmOriginal.monto) || 0 : null,
+            monto_nuevo: granTotal
+          });
+        }
 
         var totalTDD = 0, totalEfectivo = 0;
         empleados.forEach(function(emp) {
@@ -24015,6 +24109,13 @@
           estado: spmEdicionId === null ? 'PENDIENTE' : undefined
         };
         if (registro.estado === undefined) delete registro.estado;
+        if (spmEdicionId !== null) {
+          // La edición de ADMIN no cambia quién generó la SPM ni su fecha.
+          delete registro.solicitante;
+          delete registro.responsable;
+          delete registro.elaborador;
+          delete registro.fecha;
+        }
 
         try {
           // El salario semanal y el TDD BBVA de cada colaborador se
