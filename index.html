@@ -4383,7 +4383,7 @@
         </div>
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>Vehículo</th><th>Placas</th><th>Estado</th><th>Ciudad</th><th>Uso</th><th>Desde</th><th>Hasta</th><th>Situación</th><th>Registró</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Vehículo</th><th>Placas</th><th>Estado</th><th>Ciudad</th><th>Calle</th><th>Uso</th><th>Desde</th><th>Hasta</th><th>Situación</th><th>Registró</th><th>Acciones</th></tr></thead>
             <tbody id="cuerpoRastreo"></tbody>
           </table>
         </div>
@@ -5392,6 +5392,9 @@
             <div class="cxc-form-row">
               <select id="rastreoEstado"><option value="">Estado de la República *</option></select>
               <input id="rastreoCiudad" placeholder="Ciudad o municipio (opcional)">
+            </div>
+            <div class="cxc-form-row">
+              <input id="rastreoCalle" placeholder="Calle * (ej. AV INSURGENTES #120)">
             </div>
             <div class="cxc-form-row">
               <input id="rastreoUso" placeholder="Uso del vehículo * (ej. OBRA PLANTA SILAO)">
@@ -12190,7 +12193,7 @@
               '<td>' + escapeHTML(v.cantidad_solicitada || v.litros || '—') + '</td>' +
               '<td>' + (valeYaComprobado ? formatoMoneda(Number(v.importe) || Number(v.monto) || 0, 'MXN') : '—') + '</td>' +
               '<td>' + (v.kilometraje_actual != null ? v.kilometraje_actual : '—') + '</td>' +
-              '<td>' + (v.fecha ? new Date(v.fecha).toLocaleDateString() : '') + '</td>' +
+              '<td>' + (v.fecha ? fechaCortaLocalVale(v.fecha) : '') + '</td>' +
               '<td>' + escapeHTML(v.responsable) + '</td>' +
               '<td><span class="badge ' + infoEstado.clase + '">' + infoEstado.texto + '</span></td>' +
               '<td style="text-align:center;">' +
@@ -12363,8 +12366,8 @@
           ['Combustible', v.combustible],
           ['Nivel de tanque', v.nivel_tanque],
           ['Cantidad solicitada', v.cantidad_solicitada || v.litros],
-          ['Fecha de carga', v.fecha_carga ? new Date(v.fecha_carga).toLocaleDateString() : '—'],
-          ['Periodo de consumo', (v.periodo_inicio ? new Date(v.periodo_inicio).toLocaleDateString() : '—') + ' – ' + (v.periodo_fin ? new Date(v.periodo_fin).toLocaleDateString() : '—')],
+          ['Fecha de carga', fechaCortaLocalVale(v.fecha_carga)],
+          ['Periodo de consumo', fechaCortaLocalVale(v.periodo_inicio) + ' – ' + fechaCortaLocalVale(v.periodo_fin)],
           ['Proveedor', v.proveedor],
           ['Cliente', v.cliente],
           ['Centro de negocio / Sucursal', v.centro_negocio],
@@ -12432,11 +12435,25 @@
       // Formatea una fecha como "JUEVES, 20-08-26" (día de la semana en
       // español, mayúsculas, y fecha corta dd-mm-aa). Usado en el
       // documento del vale de gasolina.
+      // Las fechas sin hora ('AAAA-MM-DD') se leen como día local: con
+      // new Date('2026-11-06') el navegador las toma en UTC y en México
+      // salían un día antes (05/11 en lugar de 06/11).
+      function fechaLocalVale(valor) {
+        if (!valor) return null;
+        var t = String(valor);
+        var f = /^\d{4}-\d{2}-\d{2}$/.test(t) ? new Date(t + 'T00:00:00') : new Date(t);
+        return isNaN(f.getTime()) ? null : f;
+      }
+      function fechaCortaLocalVale(valor) {
+        var f = fechaLocalVale(valor);
+        return f ? f.toLocaleDateString() : '—';
+      }
+
       function formatearFechaVSC(fechaStr) {
         if (!fechaStr) return '—';
         var dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
-        var f = new Date(fechaStr);
-        if (isNaN(f.getTime())) return '—';
+        var f = fechaLocalVale(fechaStr);
+        if (!f) return '—';
         var dd = String(f.getDate()).padStart(2, '0');
         var mm = String(f.getMonth() + 1).padStart(2, '0');
         var yy = String(f.getFullYear()).slice(-2);
@@ -12448,8 +12465,8 @@
       // (paso pendiente), dibujado como vector — nunca como carácter
       // Unicode (✓/○), que en jsPDF con la fuente estándar puede
       // renderizarse mal (glifos rotos) según el visor de PDF.
-      function dibujarIndicadorProcesoVale(doc, x, y, hecho) {
-        var r = 3.6;
+      function dibujarIndicadorProcesoVale(doc, x, y, hecho, radio) {
+        var r = radio || 3.6;
         if (hecho) {
           doc.setDrawColor(34, 139, 74);
           doc.setFillColor(34, 139, 74);
@@ -12513,130 +12530,156 @@
         doc.roundedRect(x, y, w, h, radio, radio, 'S');
       }
 
-      // Dibuja UNA copia completa del vale (encabezado + cajas + tabla)
-      // dentro del rectángulo [margen, yTop, anchoUtil, altoTarjeta].
-      // Se usa dos veces por hoja (misma info, para poder recortar/
-      // conservar dos copias del mismo folio).
-      function dibujarValeCompleto(doc, ctx, yTop) {
+      // Tamaño de letra (de tamMax hacia abajo, hasta tamMin) con el que
+      // `texto` cabe en `ancho`; deja ese tamaño puesto en el documento.
+      function tamTextoQueCabeVale(doc, texto, ancho, tamMax, tamMin) {
+        var t = tamMax;
+        doc.setFontSize(t);
+        while (t > tamMin && doc.getTextWidth(String(texto == null ? '' : texto)) > ancho) {
+          t -= 0.25;
+          doc.setFontSize(t);
+        }
+        return t;
+      }
+
+      // Dibuja UNA copia del vale en 1/4 de hoja (A4: 10.5 x 14.8 cm),
+      // dentro del rectángulo [x0, y0, w, h]: encabezado con logos, cajas
+      // (proveedor, cliente, folio, fecha de carga), proceso, firma del
+      // chofer, QR, usuario, vehículo y tabla de conceptos. Se usa dos
+      // veces por hoja, lado a lado en la mitad de arriba (gasolinera y
+      // archivo interno); la mitad de abajo queda libre.
+      function dibujarValeCuarto(doc, ctx, x0, y0, w, h, copia) {
         var v = ctx.v, vehiculo = ctx.vehiculo;
-        var margen = ctx.margen, anchoUtil = ctx.anchoUtil;
-        // Factor vertical: cada copia ocupa su mitad de hoja completa; las
-        // cajas, separaciones y la tabla crecen en la misma proporción para
-        // repartir el contenido sin dejar espacio vacío abajo.
-        var kv = Math.max(1, (ctx.altoTarjeta - 72) / 266);
+        var pad = 7, x = x0 + pad, iw = w - pad * 2;
+        var sep = 6;
 
         // Marco de la tarjeta
         doc.setDrawColor(30, 30, 30);
-        doc.setLineWidth(1);
-        doc.rect(margen - 10, yTop, anchoUtil + 20, ctx.altoTarjeta);
+        doc.setLineWidth(0.8);
+        doc.rect(x0, y0, w, h);
 
-        // ===== Encabezado: logo Extingue (izq.) + razón social + título =====
-        // centrado + logo de la empresa del vale (der., si aplica) =====
-        var yHeader = yTop + 10;
-        var altoLogo = 46, anchoLogo = 82;
+        // ===== Encabezado: logo Extingue (izq.) + títulos + logo de la empresa (der.) =====
+        var yH = y0 + pad;
+        var altoLogo = 26, anchoLogo = 46;
         if (ctx.logoExtingueDataUrl) {
-          // El tamaño real (ctx.logoExtingueTam) ya viene calculado para
-          // respetar la relación de aspecto original del logo (ver
-          // ajustarImagenACaja): se centra dentro de la misma caja
-          // anchoLogo x altoLogo en vez de estirarlo a la fuerza.
-          var tamExt = ctx.logoExtingueTam || { w: anchoLogo, h: altoLogo };
-          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', margen + (anchoLogo - tamExt.w) / 2, yHeader + (altoLogo - tamExt.h) / 2, tamExt.w, tamExt.h);
+          var tamExt = ctx.logoExtingueTamCuarto || { w: anchoLogo, h: altoLogo };
+          doc.addImage(ctx.logoExtingueDataUrl, 'JPEG', x + (anchoLogo - tamExt.w) / 2, yH + (altoLogo - tamExt.h) / 2, tamExt.w, tamExt.h);
         }
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(11.5);
-        doc.setTextColor(20, 20, 20);
-        var xCentroTitulo = margen + anchoUtil / 2;
-        doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', xCentroTitulo, yHeader + 20, { align: 'center' });
-        doc.setFontSize(10);
-        doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', xCentroTitulo, yHeader + 35, { align: 'center' });
-        doc.setFont(undefined, 'normal');
-
-        // Logo de la empresa del vale (derecha), solo si no es Extingue
         if (ctx.logoEmpresaDataUrl) {
-          var tamEmp = ctx.logoEmpresaTam || { w: anchoLogo, h: altoLogo };
-          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', margen + anchoUtil - anchoLogo + (anchoLogo - tamEmp.w) / 2, yHeader + (altoLogo - tamEmp.h) / 2, tamEmp.w, tamEmp.h);
+          var tamEmp = ctx.logoEmpresaTamCuarto || { w: anchoLogo, h: altoLogo };
+          doc.addImage(ctx.logoEmpresaDataUrl, 'JPEG', x + iw - anchoLogo + (anchoLogo - tamEmp.w) / 2, yH + (altoLogo - tamEmp.h) / 2, tamEmp.w, tamEmp.h);
         }
+        var anchoTitulo = iw - anchoLogo * 2 - 8;
+        var xCentro = x + iw / 2;
+        doc.setTextColor(20, 20, 20);
+        doc.setFont(undefined, 'bold');
+        tamTextoQueCabeVale(doc, 'GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', anchoTitulo, 7, 5.5);
+        doc.text('GRUPO INDUSTRIAL EXTINGUE, S.A DE C.V.', xCentro, yH + 9, { align: 'center' });
+        tamTextoQueCabeVale(doc, 'ORDEN DE SUMINISTROS DE COMBUSTIBLE.', anchoTitulo, 6.5, 5.2);
+        doc.text('ORDEN DE SUMINISTROS DE COMBUSTIBLE.', xCentro, yH + 17.5, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(5.6);
+        doc.setTextColor(110, 110, 110);
+        doc.text('COPIA: ' + copia, xCentro, yH + 25.5, { align: 'center' });
+        doc.setTextColor(20, 20, 20);
 
-        var y = yHeader + altoLogo + 6;
-        var mitad = (anchoUtil - 14) / 2;
+        var y = yH + altoLogo + 6;
+
+        // Las cajas crecen en alto (factor kv) para ocupar todo el cuarto
+        // de hoja sin dejar espacio vacío abajo.
+        var altoTablaBase = 34;
+        var baseCajas = 30 + 30 + 84 + 26 + 26;
+        var baseSeps = sep * 4 + 7;
+        var disponible = (y0 + h - pad) - y - altoTablaBase;
+        var kv = Math.max(1, Math.min(1.45, (disponible - baseSeps) / baseCajas));
+
+        var mitad = (iw - sep) / 2;
+        var optsCaja = { alturaHeader: 11, etiquetaSize: 6.2, valorSize: 7 };
+        function caja(xc, yc, wc, hc, etiqueta, valor, extra) {
+          var o = Object.assign({}, optsCaja, extra || {});
+          var texto = (valor != null && valor !== '') ? String(valor) : '—';
+          doc.setFont(undefined, o.valorBold ? 'bold' : 'normal');
+          o.valorSize = tamTextoQueCabeVale(doc, texto, wc - 14, o.valorSize, 5);
+          dibujarCajaEtiquetaVale(doc, xc, yc, wc, hc, etiqueta, valor, o);
+        }
 
         // ===== Fila 1: Razón Social Proveedor / Num. Cliente Extingue =====
-        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32 * kv, 'Razón Social Proveedor', v.proveedor);
-        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32 * kv, 'Num. Cliente Extingue', v.cliente);
-        y += 40 * kv;
+        caja(x, y, mitad, 30 * kv, 'Razón Social Proveedor', v.proveedor);
+        caja(x + mitad + sep, y, mitad, 30 * kv, 'Num. Cliente Extingue', v.cliente);
+        y += 30 * kv + sep;
 
         // ===== Fila 2: Folio / Fecha de carga =====
-        dibujarCajaEtiquetaVale(doc, margen, y, mitad, 32 * kv, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 11.5 });
-        dibujarCajaEtiquetaVale(doc, margen + mitad + 14, y, mitad, 32 * kv, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
-        y += 40 * kv;
+        caja(x, y, mitad, 30 * kv, 'Folio', v.codigo, { valorColor: [211, 33, 33], valorBold: true, valorSize: 9 });
+        caja(x + mitad + sep, y, mitad, 30 * kv, 'Fecha de carga', formatearFechaVSC(v.fecha_carga));
+        y += 30 * kv + sep;
 
         // ===== Fila 3: Proceso / Firma Chofer / QR =====
-        var col3 = (anchoUtil - 28) / 3;
+        var col3 = (iw - sep * 2) / 3;
         var yFila3 = y;
-        var altoFila3 = 76 * kv;
+        var altoFila3 = 84 * kv;
         var radioFila3 = 3.5;
 
         doc.setDrawColor(120, 120, 120);
         doc.setLineWidth(0.6);
         doc.setFillColor(216, 216, 216);
-        doc.roundedRect(margen, yFila3, col3, 14, radioFila3, radioFila3, 'F');
+        doc.roundedRect(x, yFila3, col3, 11, radioFila3, radioFila3, 'F');
         doc.setFont(undefined, 'bold');
-        doc.setFontSize(8.5);
+        doc.setFontSize(6.2);
         doc.setTextColor(20, 20, 20);
-        doc.text('Proceso', margen + col3 / 2, yFila3 + 9.8, { align: 'center' });
+        doc.text('Proceso', x + col3 / 2, yFila3 + 7.7, { align: 'center' });
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(margen, yFila3 + 14, col3, altoFila3 - 14, radioFila3, radioFila3, 'F');
-        doc.roundedRect(margen, yFila3, col3, altoFila3, radioFila3, radioFila3, 'S');
+        doc.roundedRect(x, yFila3 + 11, col3, altoFila3 - 11, radioFila3, radioFila3, 'F');
+        doc.roundedRect(x, yFila3, col3, altoFila3, radioFila3, radioFila3, 'S');
         var pasosProceso = [
           { etiqueta: 'Solicitado', hecho: true },
           { etiqueta: 'Aprobado Jefe', hecho: ['APROBADA_JEFE', 'COMPROBADA', 'CERRADA'].indexOf(v.estado) !== -1 },
           { etiqueta: 'Autorizado (impreso)', hecho: !!v.fecha_impresion },
           { etiqueta: 'Comprobado', hecho: v.estado === 'COMPROBADA' || v.estado === 'CERRADA' }
         ];
-        var yPaso = yFila3 + 14 + 12 * kv;
+        var pasoAlto = (altoFila3 - 11) / 4;
+        var yPaso = yFila3 + 11 + pasoAlto / 2 + 2;
         doc.setFont(undefined, 'normal');
-        doc.setFontSize(8);
         pasosProceso.forEach(function(paso) {
-          dibujarIndicadorProcesoVale(doc, margen + 9, yPaso, paso.hecho);
+          dibujarIndicadorProcesoVale(doc, x + 6.5, yPaso + 0.6, paso.hecho, 2.8);
           doc.setTextColor(paso.hecho ? 20 : 150, paso.hecho ? 20 : 150, paso.hecho ? 20 : 150);
-          doc.setFont(undefined, 'normal');
-          doc.text(paso.etiqueta, margen + 20, yPaso);
-          yPaso += 13.5 * kv;
+          tamTextoQueCabeVale(doc, paso.etiqueta, col3 - 15, 6, 4.6);
+          doc.text(paso.etiqueta, x + 12.5, yPaso);
+          yPaso += pasoAlto;
         });
         doc.setTextColor(20, 20, 20);
 
         // Caja "Firma Chofer"
-        var xFirma = margen + col3 + 14;
+        var xFirma = x + col3 + sep;
         doc.setFillColor(216, 216, 216);
-        doc.roundedRect(xFirma, yFila3, col3, 14, radioFila3, radioFila3, 'F');
+        doc.roundedRect(xFirma, yFila3, col3, 11, radioFila3, radioFila3, 'F');
         doc.setFont(undefined, 'bold');
-        doc.setFontSize(8.5);
-        doc.text('Firma Chofer', xFirma + col3 / 2, yFila3 + 9.8, { align: 'center' });
+        doc.setFontSize(6.2);
+        doc.text('Firma Chofer', xFirma + col3 / 2, yFila3 + 7.7, { align: 'center' });
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(xFirma, yFila3 + 14, col3, altoFila3 - 14, radioFila3, radioFila3, 'F');
+        doc.roundedRect(xFirma, yFila3 + 11, col3, altoFila3 - 11, radioFila3, radioFila3, 'F');
         doc.roundedRect(xFirma, yFila3, col3, altoFila3, radioFila3, radioFila3, 'S');
         doc.setFont(undefined, 'normal');
 
-        // QR específico de este vale
-        var xQR = margen + (col3 + 14) * 2;
+        // QR específico de este vale (centrado en su columna)
+        var xQR = x + (col3 + sep) * 2;
         if (ctx.qrDataUrl) {
-          var qrLado = Math.min(col3, altoFila3) - 4;
-          doc.addImage(ctx.qrDataUrl, 'PNG', xQR + (col3 - qrLado) / 2, yFila3 + 2, qrLado, qrLado);
+          var qrLado = Math.min(col3, altoFila3) - 2;
+          doc.addImage(ctx.qrDataUrl, 'PNG', xQR + (col3 - qrLado) / 2, yFila3 + (altoFila3 - qrLado) / 2, qrLado, qrLado);
         }
 
-        y = yFila3 + altoFila3 + 8 * kv;
+        y = yFila3 + altoFila3 + sep;
 
         // ===== Usuario solicitante / Chofer =====
         var usuarioChofer = (v.departamento ? v.departamento + ' / ' : '') + (v.responsable || '');
-        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28 * kv, 'Usuario solicitante / Chofer', usuarioChofer);
-        y += 34 * kv;
+        caja(x, y, iw, 26 * kv, 'Usuario solicitante / Chofer', usuarioChofer);
+        y += 26 * kv + sep;
 
         // ===== Vehículo - Placas =====
         var vehiculoTexto = vehiculo
           ? (vehiculo.nombre + ' - ' + (vehiculo.placas || 'N/A') + ' - ' + (v.centro_negocio || '—'))
           : ('Bidón - N/A - ' + (v.centro_negocio || '—'));
-        dibujarCajaEtiquetaVale(doc, margen, y, anchoUtil, 28 * kv, 'Vehículo - Placas', vehiculoTexto);
-        y += 36 * kv;
+        caja(x, y, iw, 26 * kv, 'Vehículo - Placas', vehiculoTexto);
+        y += 26 * kv + 7;
 
         // ===== Tabla de conceptos =====
         var filaDatos = [
@@ -12646,18 +12689,41 @@
           v.precio_unitario != null ? formatoMoneda(v.precio_unitario, 'MXN') : '',
           v.importe != null ? formatoMoneda(v.importe, 'MXN') : ''
         ];
+        var altoRestante = (y0 + h - pad) - y;
         doc.autoTable({
           startY: y,
-          // Margen inferior mínimo: la copia de abajo termina cerca del
-          // borde y la tabla no debe saltar a otra hoja.
-          margin: { left: margen, right: margen, bottom: 8 },
+          margin: { left: x, right: doc.internal.pageSize.getWidth() - (x + iw), bottom: 4 },
           head: [['Concepto', 'Lts. Autorizados', 'Lts. Cargados', 'P.Unit', 'Importe']],
           body: [filaDatos],
           theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 3.5 * kv, halign: 'center', lineColor: [120, 120, 120], lineWidth: 0.6 },
-          headStyles: { fillColor: [140, 140, 140], textColor: [255, 255, 255], fontStyle: 'bold' },
-          tableWidth: anchoUtil
+          styles: { fontSize: 6.2, cellPadding: Math.max(2, Math.min(5, (altoRestante - 30) / 4 + 2)), halign: 'center', valign: 'middle', lineColor: [120, 120, 120], lineWidth: 0.5, overflow: 'linebreak' },
+          headStyles: { fillColor: [140, 140, 140], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 5.8 },
+          tableWidth: iw
         });
+      }
+
+      // Líneas de corte del vale en 1/4 de hoja: una vertical entre las dos
+      // copias y una horizontal a la mitad de la hoja (la mitad de abajo
+      // queda libre). El texto lleva fondo blanco para que la línea
+      // punteada no lo tache.
+      var CUARTO_HOJA_VALE = { ancho: 595.28 / 2, alto: 841.89 / 2 };
+      function dibujarLineasCorteValeCuarto(doc) {
+        var xC = CUARTO_HOJA_VALE.ancho, yC = CUARTO_HOJA_VALE.alto;
+        doc.setDrawColor(140, 140, 140);
+        doc.setLineWidth(0.7);
+        doc.setLineDashPattern([4, 3], 0);
+        doc.line(xC, 6, xC, yC);
+        doc.line(6, yC, 595.28 - 6, yC);
+        doc.setLineDashPattern([], 0);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(6.5);
+        var texto = 'CORTE AQUÍ';
+        var anchoTexto = doc.getTextWidth(texto) + 12;
+        doc.setFillColor(255, 255, 255);
+        doc.rect(xC - anchoTexto / 2, yC - 4.5, anchoTexto, 9, 'F');
+        doc.setTextColor(120, 120, 120);
+        doc.text(texto, xC, yC + 2.3, { align: 'center' });
+        doc.setTextColor(20, 20, 20);
       }
 
       // Genera el documento del vale con el formato "Orden de Suministros
@@ -12666,8 +12732,8 @@
       // Vehículo-Placas y tabla de conceptos). El QR codifica un enlace
       // directo ("?vale=ID") que, al escanearse y loguearse, abre este
       // mismo vale en su ventana modal para comprobarlo. La misma
-      // información se imprime DOS VECES en la misma hoja (dos copias
-      // del folio, una arriba y otra abajo).
+      // información se imprime DOS VECES, cada copia en 1/4 de hoja (lado
+      // a lado en la mitad de arriba: gasolinera y archivo interno).
       // Línea de corte a la MITAD exacta de la hoja (vales: una copia
       // arriba y otra abajo). El texto lleva fondo blanco para que la
       // línea punteada no lo tache.
@@ -12748,29 +12814,29 @@
           // Tamaño real de cada logo (respetando su relación de aspecto
           // original) dentro de la caja de 82x46pt del encabezado, para
           // que no se vea deforme/estirado.
-          var logoExtingueTam = ajustarImagenACaja(await medirImagenPDF(logoExtingueDataUrl), 82, 46);
-          var logoEmpresaTam = ajustarImagenACaja(await medirImagenPDF(logoEmpresaDataUrl), 82, 46);
+          var medidaLogoExtingue = await medirImagenPDF(logoExtingueDataUrl);
+          var medidaLogoEmpresa = await medirImagenPDF(logoEmpresaDataUrl);
 
           var ctx = {
             v: v,
             vehiculo: vehiculo,
-            margen: margen,
-            anchoUtil: anchoUtil,
-            // Cada copia ocupa su mitad de hoja (20 pt al borde, 12 pt a la línea de corte).
-            altoTarjeta: MITAD_HOJA_VALE - 20 - 12,
             logoExtingueDataUrl: logoExtingueDataUrl,
             logoEmpresaDataUrl: logoEmpresaDataUrl,
-            logoExtingueTam: logoExtingueTam,
-            logoEmpresaTam: logoEmpresaTam,
+            logoExtingueTamCuarto: ajustarImagenACaja(medidaLogoExtingue, 46, 26),
+            logoEmpresaTamCuarto: ajustarImagenACaja(medidaLogoEmpresa, 46, 26),
             qrDataUrl: qrDataUrl
           };
 
-          // Dos copias del mismo vale en la misma hoja (una para la
-          // gasolinera, otra para el expediente interno), separadas por
-          // una línea punteada de corte para poder recortarlas.
-          dibujarValeCompleto(doc, ctx, 20);
-          dibujarLineaCorteVale(doc, margen, anchoUtil, 'CORTE AQUÍ (gasolinera / archivo interno)');
-          dibujarValeCompleto(doc, ctx, MITAD_HOJA_VALE + 12);
+          // Dos copias del mismo vale, cada una en 1/4 de hoja, lado a lado
+          // en la mitad de arriba (una para la gasolinera, otra para el
+          // expediente interno), con líneas punteadas de corte. La mitad
+          // de abajo queda libre para ahorrar impresión.
+          var bordeCuarto = 14, sepCorte = 8;
+          var anchoCopia = CUARTO_HOJA_VALE.ancho - bordeCuarto - sepCorte;
+          var altoCopia = CUARTO_HOJA_VALE.alto - bordeCuarto - sepCorte;
+          dibujarValeCuarto(doc, ctx, bordeCuarto, bordeCuarto, anchoCopia, altoCopia, 'GASOLINERA');
+          dibujarValeCuarto(doc, ctx, CUARTO_HOJA_VALE.ancho + sepCorte, bordeCuarto, anchoCopia, altoCopia, 'ARCHIVO INTERNO');
+          dibujarLineasCorteValeCuarto(doc);
 
           await imprimirPDFSeguro(doc, v.codigo || 'vale', function() { doc.save((v.codigo || 'vale') + '.pdf'); });
 
@@ -22679,7 +22745,7 @@
               '<td>' + escapeHTML(d.concepto) + '</td>' +
               '<td>' + escapeHTML(d.beneficiario) + '</td>' +
               '<td>' + escapeHTML(d.folio) + '</td>' +
-              '<td>' + (d.fecha ? new Date(d.fecha).toLocaleDateString() : '') + '</td>' +
+              '<td>' + (d.fecha ? fechaCortaLocalVale(d.fecha) : '') + '</td>' +
               '<td>' + formatoMoneda(d.monto || 0, d.moneda || 'MXN') + '</td>' +
               '<td>' + badgeEstadoDocumentoCXP(d) + '</td>' +
               '<td>' + escapeHTML(d.responsable) + '</td>' +
@@ -34733,7 +34799,7 @@
                 if (r) {
                   var e = rastreoEstadoPorId(r.estado);
                   return '<div class="rastreo-veh' + (r.estado === rastreoEstadoSeleccionado ? ' activo' : '') + '" onclick="window.verUnidadRastreo(\'' + escapeHTML(String(r.id)) + '\')">🚚 <b>' + escapeHTML(u.vehiculo) + '</b>' + (u.placas ? ' · ' + escapeHTML(u.placas) : '') +
-                    '<small><b class="rastreo-lugar">📍 ' + escapeHTML(e ? e[1] : r.estado_nombre) + '</b>' + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + ' · ' + escapeHTML(r.uso) + ' · hasta ' + rastreoFechaCorta(r.fecha_fin) + '</small></div>';
+                    '<small><b class="rastreo-lugar">📍 ' + escapeHTML(e ? e[1] : r.estado_nombre) + '</b>' + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + (r.calle ? ' · ' + escapeHTML(r.calle) : '') + ' · ' + escapeHTML(r.uso) + ' · hasta ' + rastreoFechaCorta(r.fecha_fin) + '</small></div>';
                 }
                 var p = u.proximo;
                 return '<div class="rastreo-veh sin-ubicacion"' + (p ? ' onclick="window.seleccionarEstadoRastreo(\'' + p.estado + '\')"' : '') + '>🚚 <b>' + escapeHTML(u.vehiculo) + '</b>' + (u.placas ? ' · ' + escapeHTML(u.placas) : '') +
@@ -34785,7 +34851,7 @@
             return rastreoDia(a.r.fecha_inicio).localeCompare(rastreoDia(b.r.fecha_inicio));
           });
         if (!filas.length) {
-          cuerpo.innerHTML = '<tr><td colspan="10" class="mensaje-sin-datos">No hay ubicaciones registradas' + (filtroSit ? ' con esa situación' : '') + '.</td></tr>';
+          cuerpo.innerHTML = '<tr><td colspan="11" class="mensaje-sin-datos">No hay ubicaciones registradas' + (filtroSit ? ' con esa situación' : '') + '.</td></tr>';
           return;
         }
         cuerpo.innerHTML = filas.map(function(x) {
@@ -34799,6 +34865,7 @@
             '<td>' + escapeHTML(r.placas || '—') + '</td>' +
             '<td>' + escapeHTML(r.estado_nombre || '') + '</td>' +
             '<td>' + escapeHTML(r.ciudad || '—') + '</td>' +
+            '<td>' + escapeHTML(r.calle || '—') + '</td>' +
             '<td>' + escapeHTML(r.uso || '') + '</td>' +
             '<td style="white-space:nowrap;">' + rastreoFechaCorta(r.fecha_inicio) + '</td>' +
             '<td style="white-space:nowrap;">' + rastreoFechaCorta(r.fecha_fin) + '</td>' +
@@ -34825,7 +34892,7 @@
         function linea(r) {
           var punto = coloresInfo ? '<span class="rastreo-punto-depto" style="background:' + ((coloresInfo[rastreoClaveDepto(r)] || {}).color || '#2E9E5B') + '"></span>' : '';
           return '<li>' + punto + '🚚 <b>' + escapeHTML(r.vehiculo) + '</b>' + (r.placas ? ' · ' + escapeHTML(r.placas) : '') + (coloresInfo ? ' · ' + escapeHTML(rastreoEtiquetaDepto(r)) : '') +
-            '<br><span>' + escapeHTML(r.uso) + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + '</span>' +
+            '<br><span>' + escapeHTML(r.uso) + (r.ciudad ? ' · ' + escapeHTML(r.ciudad) : '') + (r.calle ? ' · ' + escapeHTML(r.calle) : '') + '</span>' +
             '<br><small>' + rastreoFechaCorta(r.fecha_inicio) + ' al ' + rastreoFechaCorta(r.fecha_fin) + ' · registró ' + escapeHTML(r.registrado_por || '—') + '</small></li>';
         }
         var html = '<div class="rastreo-info-tit"><b>' + escapeHTML(e[1]) + '</b><button type="button" class="rastreo-info-x" title="Cerrar" onclick="window.seleccionarEstadoRastreo(null)">✕</button></div>';
@@ -34937,12 +35004,13 @@
         selV.value = r ? String(r.vehiculo_id) : '';
         selE.value = r ? r.estado : (estadoPrevio || '');
         document.getElementById('rastreoCiudad').value = r ? (r.ciudad || '') : '';
+        document.getElementById('rastreoCalle').value = r ? (r.calle || '') : '';
         document.getElementById('rastreoUso').value = r ? (r.uso || '') : '';
         document.getElementById('rastreoDesde').value = r ? rastreoDia(r.fecha_inicio) : rastreoHoyISO();
         document.getElementById('rastreoHasta').value = r ? rastreoDia(r.fecha_fin) : '';
         document.getElementById('rastreoModalTitulo').textContent = r ? '✏️ Editar ubicación del vehículo' : '🗺️ Registrar ubicación del vehículo';
         document.getElementById('msgRastreoModal').innerHTML = vehiculos.length ? '' : '<div class="alert">⚠️ No hay vehículos activos de tu empresa/departamento. El Administrador los da de alta en ALTA DE REGISTROS → 🚗 Vehículos.</div>';
-        ['rastreoCiudad', 'rastreoUso'].forEach(function(cid) { marcarCampoRegla(document.getElementById(cid), []); });
+        ['rastreoCiudad', 'rastreoCalle', 'rastreoUso'].forEach(function(cid) { marcarCampoRegla(document.getElementById(cid), []); });
         document.getElementById('rastreoModal').classList.add('active');
       };
       window.cerrarRastreoModal = function() {
@@ -34959,11 +35027,13 @@
         if (!veh && previo && String(previo.vehiculo_id) === String(vehId)) veh = { id: previo.vehiculo_id, nombre: previo.vehiculo, placas: previo.placas, empresa: previo.empresa, departamento: previo.departamento };
         var edo = rastreoEstadoPorId(document.getElementById('rastreoEstado').value);
         var ciudad = document.getElementById('rastreoCiudad').value.trim().toUpperCase();
+        var calle = document.getElementById('rastreoCalle').value.trim().replace(/\s+/g, ' ').toUpperCase();
         var uso = document.getElementById('rastreoUso').value.trim().toUpperCase();
         var desde = document.getElementById('rastreoDesde').value;
         var hasta = document.getElementById('rastreoHasta').value;
         if (!veh) return error('❌ Selecciona el vehículo.');
         if (!edo) return error('❌ Selecciona el estado de la República.');
+        if (!calle) return error('❌ Indica la calle donde estará el vehículo.');
         if (!uso) return error('❌ Indica el uso del vehículo.');
         if (!desde || !hasta) return error('❌ Indica de cuándo (Desde) a cuándo (Hasta) estará el vehículo en ese estado.');
         if (hasta < desde) return error('❌ La fecha "Hasta" no puede ser anterior a "Desde".');
@@ -34984,6 +35054,7 @@
           estado: edo[0],
           estado_nombre: edo[1],
           ciudad: ciudad || null,
+          calle: calle,
           uso: uso,
           fecha_inicio: desde,
           fecha_fin: hasta
@@ -35360,6 +35431,7 @@
         // Rastreo de vehículos
         add(['rastreoUso'], 'descripcion', 'Uso del vehículo');
         add(['rastreoCiudad'], 'texto', 'Ciudad o municipio');
+        add(['rastreoCalle'], 'domicilio', 'Calle');
         return m;
       })();
 
