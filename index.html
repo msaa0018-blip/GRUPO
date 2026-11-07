@@ -8871,20 +8871,6 @@
         return director ? director.usuario : 'LJGR';
       }
 
-      // Para el PDF de VC/VI: "VALIDA" (Administrador) y "AR - PROGR. PAGO"
-      // (Caja / Finanzas) son roles fijos de la empresa, no capturados por
-      // documento — se toma el primer usuario con ese rol, igual que
-      // getDirector() hace con Director General.
-      function getAdministrador() {
-        var admin = usuariosDB.find(function(u) { return u.rol === 'Administrador'; });
-        return admin ? admin.usuario : 'ADMINISTRADOR';
-      }
-
-      function getResponsableCaja() {
-        var caja = usuariosDB.find(function(u) { return u.rol === 'Finanzas'; });
-        return caja ? caja.usuario : 'CAJA';
-      }
-
       // Partidas de una OC ya pagada, listas para prorratear por proyecto
       // (ver gastoProyectoMoneda). Si ninguna partida trae ".proyecto"
       // (OC no multiproyecto, o multiproyecto creada antes de este
@@ -12997,17 +12983,14 @@
         dibujarCeldaConceptoValeCXP(doc, margen, y, anchoUtil, altoD, lineasConcepto, formatoMoneda(d.monto, d.moneda));
         y += altoD + 6 * kv;
 
-        // Fila E: Firmas — 5 columnas en VI, 3 en VC (igual a los
-        // formatos originales)
-        var firmantes = (tipo === 'VI') ? [
+        // Fila E: Firmas — VC y VI llevan las mismas 3: Solicitante,
+        // Autoriza (el Jefe de Departamento elegido en "Quién autoriza" del
+        // vale; si no se eligió, el Jefe del departamento) y Recibe pago.
+        // En VI ya no van VALIDA (Administrador) ni AR - PROGR. PAGO (Caja).
+        var jefeAutoriza = d.autoriza || getJefeDepto(d.empresa, d.departamento);
+        var firmantes = [
           { numero: 1, titulo: 'SOLICITANTE.', valor: d.solicitante || d.responsable, pie: 'FIRMA.' },
-          { numero: 2, titulo: 'VALIDA', valor: getAdministrador(), pie: 'ADMINISTRADOR.' },
-          { numero: 3, titulo: 'AUTORIZA', valor: getDirector(), pie: 'DIR. GRAL.' },
-          { numero: 4, titulo: 'AR - PROGR. PAGO.', valor: getResponsableCaja(), pie: 'CAJA / FIRMA Y FECHA.' },
-          { numero: 5, titulo: 'RECIBE PAGO.', valor: d.beneficiario, pie: 'NOMBRE, FIRMA Y FECHA.' }
-        ] : [
-          { numero: 1, titulo: 'SOLICITANTE.', valor: d.solicitante || d.responsable, pie: 'FIRMA.' },
-          { numero: 2, titulo: 'AUTORIZA', valor: getAdministrador(), pie: 'ADMINISTRADOR.' },
+          { numero: 2, titulo: 'AUTORIZA', valor: jefeAutoriza, pie: 'JEFE DE DEPTO.' },
           { numero: 3, titulo: 'RECIBE PAGO.', valor: d.beneficiario, pie: 'NOMBRE, FIRMA Y FECHA.' }
         ];
         var wFirma = anchoUtil / firmantes.length;
