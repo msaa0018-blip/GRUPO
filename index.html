@@ -19341,11 +19341,20 @@
 
       window.autorizarDirector = async function(index) {
         var oc = ordenes[index];
-        // Paso del Director: lo autoriza el Director General, MCCC o ADMIN,
-        // de cualquier empresa y departamento, solo en PENDIENTE DIRECTOR.
+        // El Director General (y MCCC y ADMIN) autoriza cualquier OC que
+        // espere aprobación, en cualquier paso: si aún no la aprobó el
+        // Solicitante o el Jefe, su autorización la deja AUTORIZADA directo.
         if (!usuarioAutorizaComoDirector(actual, oc)) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+        if (ESTADOS_OC_POR_APROBAR.indexOf(oc.estado) === -1) return alert('La OC no está pendiente de aprobación');
+        var autorizaAntesDeJefe = oc.estado !== 'PENDIENTE_DIRECTOR';
+        if (autorizaAntesDeJefe && oc.moneda === 'USD' && !oc.tipocambio) {
+          return alert('⚠️ Esta OC es en USD y aún no tiene la paridad final. Apruébala como Jefe (o espera la aprobación del Jefe) para que se capture la paridad, y después autorízala.');
+        }
+        if (autorizaAntesDeJefe && !confirm('La OC ' + (oc.codigo || '') + ' aún no la aprueba ' + (oc.estado === 'CREADA' ? 'el Solicitante' : 'el Jefe de Departamento') + '.\n\n¿Autorizarla directo?')) return;
+        // Si se salta el paso del Jefe, el proveedor nuevo se registra aquí
+        // (igual que cuando el Jefe la aprueba).
+        if (autorizaAntesDeJefe) await registrarProveedorNuevoSiAplica(oc);
 
         // Se detecta ANTES de actualizar la OC (que abajo puede tocar otras
         // variables) si esta autorización viene del link exclusivo de
@@ -19416,7 +19425,7 @@
         var oc = ordenes[index];
         if (!usuarioAutorizaComoDirector(actual, oc)) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
-        if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
+        if (!ocSePuedeCancelarComoDirector(oc)) return alert('La OC ya no está pendiente de aprobación');
 
         if (!confirm('¿Estás seguro de CANCELAR la OC ' + oc.codigo + '?')) return;
 
@@ -21613,31 +21622,35 @@
       function esAdminOC(u) {
         return !!(u && u.rol === 'Administrador');
       }
-      // Autorizan o cancelan en el paso del Director (PENDIENTE DIRECTOR)
-      // las OC de cualquier empresa y departamento: el Director General y
-      // MCCC. El proceso no cambia: Solicitante -> Jefe -> Director.
+      // Aprueban o cancelan cualquier OC pendiente, de cualquier empresa y
+      // departamento y en cualquier paso (Solicitante, Jefe o Director):
+      // el Director General y MCCC.
       var USUARIOS_APRUEBAN_COMO_DIRECTOR = ['MCCC'];
       function usuarioApruebaComoDirector(u) {
         if (!u) return false;
         return u.rol === 'Director General' || USUARIOS_APRUEBAN_COMO_DIRECTOR.indexOf(String(u.usuario || u.u || '').trim().toUpperCase()) !== -1;
       }
-      // El Director (o MCCC o ADMIN) autoriza o cancela solo en su paso:
-      // cuando la OC está en PENDIENTE DIRECTOR.
-      function ocPendienteDeDirector(oc) {
-        return !!oc && !oc.pausada && oc.estado === 'PENDIENTE_DIRECTOR';
+      // Pasos en los que la OC todavía espera aprobación.
+      var ESTADOS_OC_POR_APROBAR = ['CREADA', 'APROBADA_SOLICITANTE', 'APROBADA_JEFE', 'PENDIENTE_DIRECTOR'];
+      function ocPendienteDeAprobacion(oc) {
+        return !!oc && !oc.pausada && ESTADOS_OC_POR_APROBAR.indexOf(oc.estado) !== -1;
+      }
+      // Se puede cancelar mientras espera aprobación o la paridad final.
+      function ocSePuedeCancelarComoDirector(oc) {
+        return !!oc && !oc.pausada && (ESTADOS_OC_POR_APROBAR.indexOf(oc.estado) !== -1 || oc.estado === 'PENDIENTE_PARIDAD');
       }
       // Quien puede autorizar o cancelar como Director: Director General,
       // MCCC y ADMIN (más la excepción de INMOBIENES, hoy desactivada).
       function usuarioAutorizaComoDirector(u, oc) {
         return !!u && (usuarioApruebaComoDirector(u) || esAdminOC(u) || (ocEsInmobienes(oc) && u.rol === 'Jefe Departamento'));
       }
-      // Director General y MCCC ven en la Bandeja todas las OC en PENDIENTE
-      // DIRECTOR, de cualquier empresa y departamento.
+      // Director General y MCCC ven en la Bandeja todas las OC que esperan
+      // aprobación, de cualquier empresa y departamento.
       function agregarOCsParaAprobarDirector(usuario, lista) {
         if (!usuarioApruebaComoDirector(usuario)) return lista;
         var ids = {};
         lista.forEach(function(o) { ids[o.id] = true; });
-        return lista.concat(ordenes.filter(function(o) { return !ids[o.id] && ocPendienteDeDirector(o); }));
+        return lista.concat(ordenes.filter(function(o) { return !ids[o.id] && ocSePuedeCancelarComoDirector(o); }));
       }
 
       function esDepartamentoInmobienes(departamento) {
@@ -26744,8 +26757,12 @@
             if (rol === 'Director General') {
               acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
 
-              if (ocPendienteDeDirector(o)) {
+              // El Director aprueba o cancela cualquier OC pendiente, en
+              // cualquier paso (antes solo en PENDIENTE DIRECTOR).
+              if (ocPendienteDeAprobacion(o)) {
                 acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
+              }
+              if (ocSePuedeCancelarComoDirector(o)) {
                 acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
               }
 
@@ -26794,10 +26811,12 @@
                 if (o.estado === 'APROBADA_SOLICITANTE' && (esAdminFila || (rol === 'Jefe Departamento' && proyFila && usuarioPuedeAcceder(actual, proyFila.empresa, proyFila.departamento)))) {
                   acciones += '<button class="btn-warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar Jefe</button>';
                 }
-                // Paso del Director (PENDIENTE DIRECTOR): MCCC y ADMIN, de
-                // cualquier departamento, igual que el Director General.
-                if (usuarioAutorizaComoDirector(actual, o) && ocPendienteDeDirector(o)) {
+                // Autorizar como Director (MCCC y ADMIN, cualquier OC
+                // pendiente de cualquier departamento). ADMIN cancela desde ☰.
+                if (usuarioAutorizaComoDirector(actual, o) && ocPendienteDeAprobacion(o)) {
                   acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar' + (esAdminFila ? ' (Dir.)' : '') + '</button>';
+                }
+                if (!esAdminFila && usuarioAutorizaComoDirector(actual, o) && ocSePuedeCancelarComoDirector(o)) {
                   acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
                 }
                 if (o.estado === 'PENDIENTE_PARIDAD' && (esAdminFila || (o.elaborador && String(o.elaborador).toUpperCase() === String(actual.usuario || actual.u || '').toUpperCase()))) {
