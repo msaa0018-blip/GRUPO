@@ -1571,6 +1571,11 @@
   .rastreo-zoom { position:absolute; top:8px; right:8px; display:flex; flex-direction:column; gap:4px; z-index:1100; }
   #rastreoMapaLeaflet { width:100%; aspect-ratio:793 / 498; min-height:260px; z-index:0; background:#e8eef5; }
   .rastreo-pin-cont { background:transparent; border:none; }
+  /* Pin de la ventana "Registrar ubicación": gota roja que se arrastra. */
+  .rastreo-pin-ubicar { width:22px; height:22px; border-radius:50% 50% 50% 0; background:#c0392b; border:2.5px solid #ffffff; box-shadow:0 1px 5px rgba(0,0,0,.45); transform:rotate(-45deg); }
+  #rastreoMiniMapa { height:230px; border-radius:10px; overflow:hidden; margin:2px 0 6px; border:1px solid #cfd6e0; }
+  #rastreoUbicacionTexto { font-size:12px; line-height:1.35; margin:0 0 6px; }
+  #btnRastreoUbicar { width:100%; }
   .rastreo-pin { width:26px; height:26px; border-radius:50%; border:2.5px solid #ffffff; box-shadow:0 1px 5px rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; font:700 12px/1 system-ui, sans-serif; }
   .rastreo-pin.sin-ciudad { border-style:dashed; }
   .leaflet-tooltip.rastreo-tip { font-size:12px; line-height:1.35; }
@@ -5394,8 +5399,13 @@
               <input id="rastreoCiudad" placeholder="Ciudad o municipio (opcional)">
             </div>
             <div class="cxc-form-row">
-              <input id="rastreoCalle" placeholder="Calle * (ej. AV INSURGENTES #120)">
+              <input id="rastreoCalle" placeholder="Calle, número y colonia * (ej. PRIVADA COPALILLO #298 COLONIA COPALILLO)">
             </div>
+            <div class="cxc-form-row">
+              <button type="button" id="btnRastreoUbicar" onclick="window.ubicarRastreoEnMapa()">📍 Ubicar en el mapa</button>
+            </div>
+            <div id="rastreoMiniMapa" class="hidden"></div>
+            <div id="rastreoUbicacionTexto"></div>
             <div class="cxc-form-row">
               <input id="rastreoUso" placeholder="Uso del vehículo * (ej. OBRA PLANTA SILAO)">
             </div>
@@ -35005,6 +35015,8 @@
         selE.value = r ? r.estado : (estadoPrevio || '');
         document.getElementById('rastreoCiudad').value = r ? (r.ciudad || '') : '';
         document.getElementById('rastreoCalle').value = r ? (r.calle || '') : '';
+        document.getElementById('rastreoMiniMapa').classList.add('hidden');
+        document.getElementById('rastreoUbicacionTexto').textContent = '';
         document.getElementById('rastreoUso').value = r ? (r.uso || '') : '';
         document.getElementById('rastreoDesde').value = r ? rastreoDia(r.fecha_inicio) : rastreoHoyISO();
         document.getElementById('rastreoHasta').value = r ? rastreoDia(r.fecha_fin) : '';
@@ -35012,9 +35024,112 @@
         document.getElementById('msgRastreoModal').innerHTML = vehiculos.length ? '' : '<div class="alert">⚠️ No hay vehículos activos de tu empresa/departamento. El Administrador los da de alta en ALTA DE REGISTROS → 🚗 Vehículos.</div>';
         ['rastreoCiudad', 'rastreoCalle', 'rastreoUso'].forEach(function(cid) { marcarCampoRegla(document.getElementById(cid), []); });
         document.getElementById('rastreoModal').classList.add('active');
+        // Al editar, la ubicación guardada vale mientras no cambie la dirección.
+        rastreoGeoModal = (r && r.lat != null && r.lng != null && r.calle)
+          ? { clave: rastreoClaveGeoModal(), lat: +r.lat, lng: +r.lng, precision: r.ubicacion_precision || 'MANUAL' }
+          : null;
+        if (rastreoGeoModal) rastreoMostrarMiniMapa(rastreoGeoModal);
       };
+      // Ubicación de la ventana: { clave (estado|ciudad|calle), lat, lng,
+      // precision } ya revisada por el usuario en el mini mapa.
+      var rastreoGeoModal = null;
+      var rastreoMiniMapa = null;
+      var rastreoBuscandoGeo = false;
+
+      function rastreoClaveGeoModal() {
+        return [document.getElementById('rastreoEstado').value,
+          rastreoNormTexto(document.getElementById('rastreoCiudad').value),
+          rastreoNormTexto(document.getElementById('rastreoCalle').value)].join('|');
+      }
+
+      function rastreoTextoPrecision(g) {
+        if (!g) return '';
+        if (g.precision === 'NUMERO') return '📍 Se encontró la calle y el número. Si el pin no está en el lugar exacto, arrástralo o toca el mapa.';
+        if (g.precision === 'CALLE') return '📍 Se encontró la calle (el mapa no tiene el número exacto). Arrastra el pin o toca el mapa para dejarlo en el lugar correcto.';
+        if (g.precision === 'COLONIA') return '⚠️ La calle no aparece en el mapa; el pin quedó en la colonia. Arrástralo o toca el mapa en el lugar correcto.';
+        if (g.precision === 'MANUAL') return '📍 Pin colocado a mano.';
+        return '⚠️ No se encontró la dirección en el mapa; el pin quedó en el centro de la ' + (g.precision === 'CIUDAD' ? 'ciudad' : 'entidad') + '. Arrástralo o toca el mapa en el lugar correcto.';
+      }
+
+      async function rastreoMostrarMiniMapa(g) {
+        var cont = document.getElementById('rastreoMiniMapa');
+        var texto = document.getElementById('rastreoUbicacionTexto');
+        texto.textContent = rastreoTextoPrecision(g);
+        var ok = await rastreoCargarLeaflet();
+        if (!ok || !window.L) return;
+        cont.classList.remove('hidden');
+        var zoom = g.precision === 'NUMERO' || g.precision === 'CALLE' || g.precision === 'MANUAL' ? 17 : g.precision === 'COLONIA' ? 15 : g.precision === 'CIUDAD' ? 12 : 8;
+        if (!rastreoMiniMapa) {
+          var mapa = L.map(cont, { zoomControl: true, attributionControl: true });
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+          }).addTo(mapa);
+          var icono = L.divIcon({ className: 'rastreo-pin-cont', html: '<div class="rastreo-pin-ubicar"></div>', iconSize: [22, 22], iconAnchor: [11, 27] });
+          var pin = L.marker([g.lat, g.lng], { icon: icono, draggable: true }).addTo(mapa);
+          function moverA(latlng) {
+            pin.setLatLng(latlng);
+            if (rastreoGeoModal) {
+              rastreoGeoModal.lat = +latlng.lat.toFixed(6);
+              rastreoGeoModal.lng = +latlng.lng.toFixed(6);
+              rastreoGeoModal.precision = 'MANUAL';
+              texto.textContent = rastreoTextoPrecision(rastreoGeoModal);
+            }
+          }
+          pin.on('dragend', function() { moverA(pin.getLatLng()); });
+          mapa.on('click', function(ev) { moverA(ev.latlng); });
+          rastreoMiniMapa = { mapa: mapa, pin: pin };
+        }
+        rastreoMiniMapa.pin.setLatLng([g.lat, g.lng]);
+        setTimeout(function() {
+          rastreoMiniMapa.mapa.invalidateSize();
+          rastreoMiniMapa.mapa.setView([g.lat, g.lng], zoom);
+        }, 60);
+      }
+
+      // Busca la dirección capturada y la muestra en el mini mapa para
+      // revisarla. Devuelve false si faltan datos o si no hubo red.
+      window.ubicarRastreoEnMapa = async function() {
+        var msg = document.getElementById('msgRastreoModal');
+        var texto = document.getElementById('rastreoUbicacionTexto');
+        var estadoId = document.getElementById('rastreoEstado').value;
+        var ciudad = document.getElementById('rastreoCiudad').value.trim();
+        var calle = document.getElementById('rastreoCalle').value.trim();
+        if (!estadoId || !calle) {
+          msg.innerHTML = '<div class="alert">❌ Para ubicar en el mapa indica el estado de la República y la calle.</div>';
+          return false;
+        }
+        if (rastreoBuscandoGeo) return false;
+        rastreoBuscandoGeo = true;
+        var btn = document.getElementById('btnRastreoUbicar');
+        btn.disabled = true;
+        msg.innerHTML = '';
+        texto.textContent = '⏳ Buscando la dirección en el mapa…';
+        try {
+          var clave = rastreoClaveGeoModal();
+          var g = await rastreoGeocodificarDireccion(estadoId, ciudad, calle);
+          if (g === null) {
+            texto.textContent = '⚠️ No se pudo consultar el mapa (sin conexión). Puedes guardar; el vehículo se verá en su ciudad.';
+            rastreoGeoModal = { clave: clave, sinRed: true };
+            return false;
+          }
+          if (g.nada) {
+            var c = rastreoCoordsCiudad(estadoId, ciudad);
+            var ancla = RASTREO_ANCLA_GEO[estadoId];
+            g = c ? { lat: c[0], lng: c[1], precision: 'CIUDAD' } : { lat: ancla[0], lng: ancla[1], precision: 'ESTADO' };
+          }
+          rastreoGeoModal = { clave: clave, lat: g.lat, lng: g.lng, precision: g.precision };
+          await rastreoMostrarMiniMapa(rastreoGeoModal);
+          return true;
+        } finally {
+          rastreoBuscandoGeo = false;
+          btn.disabled = false;
+        }
+      };
+
       window.cerrarRastreoModal = function() {
         rastreoEditandoId = null;
+        rastreoGeoModal = null;
         document.getElementById('rastreoModal').classList.remove('active');
       };
       window.guardarRastreo = async function() {
@@ -35045,6 +35160,18 @@
         if (choque) {
           return error('❌ ' + escapeHTML(veh.nombre) + ' ya está registrado en ' + escapeHTML(choque.estado_nombre) + ' del ' + rastreoFechaCorta(choque.fecha_inicio) + ' al ' + rastreoFechaCorta(choque.fecha_fin) + '. Ajusta las fechas o edita ese registro.');
         }
+        // La dirección se ubica en el mapa antes de guardar: si cambió (o
+        // aún no se buscó), se busca y se muestra el pin para revisarlo; el
+        // usuario lo ajusta si hace falta y vuelve a tocar ➜ para guardar.
+        if (!rastreoGeoModal || rastreoGeoModal.clave !== rastreoClaveGeoModal()) {
+          var ubicado = await window.ubicarRastreoEnMapa();
+          if (ubicado) {
+            msg.innerHTML = '<div class="alert">📍 Revisa que el pin esté en el lugar correcto (puedes arrastrarlo) y toca ➜ otra vez para guardar.</div>';
+            return;
+          }
+          if (!rastreoGeoModal) return;
+        }
+        var geo = rastreoGeoModal && !rastreoGeoModal.sinRed ? rastreoGeoModal : null;
         var datos = {
           vehiculo_id: String(veh.id),
           vehiculo: veh.nombre,
@@ -35055,6 +35182,9 @@
           estado_nombre: edo[1],
           ciudad: ciudad || null,
           calle: calle,
+          lat: geo ? geo.lat : null,
+          lng: geo ? geo.lng : null,
+          ubicacion_precision: geo ? geo.precision : null,
           uso: uso,
           fecha_inicio: desde,
           fecha_fin: hasta
@@ -35068,6 +35198,15 @@
           } else {
             datos.registrado_por = rastreoUsuarioActual();
             res = await supabase.from('rastreo_vehiculos').insert([datos]);
+          }
+          // Si aún no se ejecuta rastreo_ubicacion_calle.sql, se guarda sin
+          // las coordenadas (el vehículo se ve en su ciudad).
+          if (res.error && /lat|lng|ubicacion_precision/i.test(res.error.message || '') && /column|schema/i.test(res.error.message || '')) {
+            console.warn('Falta rastreo_ubicacion_calle.sql; se guarda sin coordenadas:', res.error);
+            delete datos.lat; delete datos.lng; delete datos.ubicacion_precision;
+            res = rastreoEditandoId
+              ? await supabase.from('rastreo_vehiculos').update(datos).eq('id', rastreoEditandoId)
+              : await supabase.from('rastreo_vehiculos').insert([datos]);
           }
           if (res.error) throw res.error;
           window.cerrarRastreoModal();
@@ -35224,6 +35363,11 @@
       // devolvió el buscador de OpenStreetMap (guardado en este equipo), o
       // el centro del estado.
       function rastreoCoordsRegistro(r) {
+        // Ubicación guardada al registrar (calle encontrada o pin colocado a mano).
+        if (r.lat != null && r.lng != null && (+r.lat || +r.lng)) {
+          var exacto = ['NUMERO', 'CALLE', 'MANUAL'].indexOf(r.ubicacion_precision) !== -1;
+          return { lat: +r.lat, lng: +r.lng, ciudad: true, exacto: exacto, colonia: r.ubicacion_precision === 'COLONIA' };
+        }
         var ancla = RASTREO_ANCLA_GEO[r.estado];
         var ciudad = rastreoNormTexto(r.ciudad);
         if (!ciudad) return { lat: ancla[0], lng: ancla[1], ciudad: false };
@@ -35250,15 +35394,133 @@
         if (!t) { rastreoGeoEnCurso = false; return; }
         rastreoGeoEnCurso = true;
         var e = rastreoEstadoPorId(t.estado);
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=mx&accept-language=es&q=' +
-          encodeURIComponent(t.ciudad + ', ' + (e ? e[1] : '') + ', MEXICO');
-        fetch(url, { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.ok ? r.json() : []; }).then(function(lista) {
+        rastreoNominatim({ q: t.ciudad + ', ' + (e ? e[1] : '') + ', MEXICO' }).then(function(lista) {
+          if (lista === null) return; // sin red: se queda en el centro del estado
           var res = lista && lista[0] ? { lat: +(+lista[0].lat).toFixed(4), lng: +(+lista[0].lon).toFixed(4) } : { lat: 0, lng: 0, nada: true };
           rastreoCacheGeo(t.clave, res);
           if (!res.nada && panelVisible('panelRastreo')) window.renderRastreo();
-        }).catch(function() { /* sin red: se queda en el centro del estado */ }).then(function() {
-          setTimeout(rastreoProcesarGeocodificacion, 1100);
+        }).then(function() {
+          rastreoProcesarGeocodificacion();
         });
+      }
+
+      // ------------------------------------------------------------
+      // UBICACIÓN POR CALLE (buscador de OpenStreetMap / Nominatim)
+      // ------------------------------------------------------------
+      // Todas las consultas pasan por aquí: máximo una por segundo (regla
+      // de uso de Nominatim) y 8 s de espera. Devuelve la lista de
+      // resultados, [] si no encontró nada o null si no hubo red.
+      var rastreoUltimaConsultaGeo = 0;
+      var RASTREO_TIPOS_VIA = ['CALLE', 'AVENIDA', 'PRIVADA', 'BOULEVARD', 'CERRADA', 'CALZADA', 'PROLONGACION', 'CARRETERA', 'ANDADOR', 'CALLEJON', 'CIRCUITO', 'RETORNO', 'PASEO', 'CAMINO', 'PERIFERICO', 'LIBRAMIENTO'];
+      var RASTREO_ABREV_VIA = { AV: 'AVENIDA', AVE: 'AVENIDA', PRIV: 'PRIVADA', PRIVA: 'PRIVADA', BLVD: 'BOULEVARD', BLVR: 'BOULEVARD', BOUL: 'BOULEVARD', CDA: 'CERRADA', CALZ: 'CALZADA', PROL: 'PROLONGACION', CARR: 'CARRETERA', AND: 'ANDADOR', CJON: 'CALLEJON', CTO: 'CIRCUITO', PERIF: 'PERIFERICO', LIB: 'LIBRAMIENTO' };
+      async function rastreoNominatim(params) {
+        var espera = rastreoUltimaConsultaGeo + 1100 - Date.now();
+        if (espera > 0) await new Promise(function(r) { setTimeout(r, espera); });
+        rastreoUltimaConsultaGeo = Date.now();
+        var qs = Object.keys(params).filter(function(k) { return params[k]; }).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+        var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=mx&accept-language=es&' + qs;
+        var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        var reloj = ctrl ? setTimeout(function() { ctrl.abort(); }, 8000) : null;
+        try {
+          var r = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: ctrl ? ctrl.signal : undefined });
+          if (!r.ok) return [];
+          var lista = await r.json();
+          return Array.isArray(lista) ? lista : [];
+        } catch (e) {
+          return null;
+        } finally {
+          if (reloj) clearTimeout(reloj);
+        }
+      }
+
+      // Separa lo capturado en "Calle": colonia (COLONIA / COL /
+      // FRACCIONAMIENTO / FRACC / BARRIO ...), número (#298, NUM 298 o el
+      // número al final) y el nombre de la calle, con las abreviaturas
+      // comunes escritas completas (AV -> AVENIDA, PRIV -> PRIVADA, ...).
+      function rastreoPartesCalle(calle) {
+        var t = String(calle || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+        var colonia = '';
+        var mC = t.match(/\b(?:COLONIA|COL|FRACCIONAMIENTO|FRACC|BARRIO|UNIDAD HABITACIONAL)\b[\s.:,]*(.+)$/);
+        if (mC) { colonia = mC[1]; t = t.slice(0, mC.index); }
+        var numero = '';
+        var mN = t.match(/#\s*([0-9]+[A-Z]?)/) || t.match(/\b(?:NUM|NUMERO|NO)\b[\s.]*([0-9]+[A-Z]?)/) || t.match(/\s([0-9]+[A-Z]?)\s*$/);
+        if (mN) { numero = mN[1]; t = t.slice(0, mN.index) + ' ' + t.slice(mN.index + mN[0].length); }
+        t = t.replace(/\b(?:INT|INTERIOR)\b.*$/, '').replace(/[#,]/g, ' ').replace(/\s+/g, ' ').trim();
+        var palabras = t.split(' ');
+        if (palabras.length && RASTREO_ABREV_VIA[palabras[0]]) palabras[0] = RASTREO_ABREV_VIA[palabras[0]];
+        return { via: palabras.join(' ').trim(), numero: numero, colonia: colonia.replace(/[#,]/g, ' ').replace(/\s+/g, ' ').trim() };
+      }
+
+      function rastreoMismoEstado(res, estadoNombre) {
+        var st = rastreoNormTexto((res.address || {}).state || '').replace(/^ESTADO DE /, '');
+        var nuestro = rastreoNormTexto(estadoNombre).replace(/^ESTADO DE /, '');
+        if (!st || !nuestro) return true;
+        return st.indexOf(nuestro) !== -1 || nuestro.indexOf(st) !== -1;
+      }
+      function rastreoDistanciaKm(a, b) {
+        var R = 6371, rad = Math.PI / 180;
+        var dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
+        var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * R * Math.asin(Math.sqrt(h));
+      }
+      // La calle del resultado debe llevar las palabras del nombre (sin
+      // CALLE, AVENIDA, PRIVADA...), para no tomar otra calle por error.
+      function rastreoCoincideCalle(res, via) {
+        var claves = rastreoNormTexto(via).split(' ').filter(function(w) { return w.length >= 3 && RASTREO_TIPOS_VIA.indexOf(w) === -1 && ['DE', 'DEL', 'LA', 'LAS', 'LOS', 'EL'].indexOf(w) === -1; });
+        var calleRes = rastreoNormTexto([(res.address || {}).road, res.name].join(' '));
+        return claves.length > 0 && claves.every(function(w) { return calleRes.indexOf(w) !== -1; });
+      }
+
+      // Busca la dirección de mayor a menor detalle: calle y número, calle
+      // en la colonia, calle en la ciudad y, si no aparece, la colonia.
+      // Devuelve { lat, lng, precision: NUMERO | CALLE | COLONIA, texto },
+      // { nada: true } si no la encontró o null si no hubo red.
+      async function rastreoGeocodificarDireccion(estadoId, ciudad, calle) {
+        var e = rastreoEstadoPorId(estadoId);
+        var edo = e ? e[1] : '';
+        var p = rastreoPartesCalle(calle);
+        var refCiudad = ciudad ? rastreoCoordsCiudad(estadoId, ciudad) : null;
+        function valido(res) {
+          if (!rastreoMismoEstado(res, edo)) return false;
+          if (refCiudad && rastreoDistanciaKm(refCiudad, [+res.lat, +res.lon]) > 60) return false;
+          return true;
+        }
+        var intentos = [];
+        if (p.via) {
+          intentos.push({ params: { street: (p.numero ? p.numero + ' ' : '') + p.via, city: ciudad, state: edo }, tipo: 'CALLE' });
+          if (p.colonia) intentos.push({ params: { q: p.via + ', ' + p.colonia + (ciudad ? ', ' + ciudad : '') + ', ' + edo }, tipo: 'CALLE' });
+          intentos.push({ params: { q: p.via + (ciudad ? ', ' + ciudad : '') + ', ' + edo }, tipo: 'CALLE' });
+        }
+        if (p.colonia) intentos.push({ params: { q: p.colonia + (ciudad ? ', ' + ciudad : '') + ', ' + edo }, tipo: 'COLONIA' });
+        var sinRed = true;
+        for (var i = 0; i < intentos.length; i++) {
+          var lista = await rastreoNominatim(intentos[i].params);
+          if (lista === null) continue;
+          sinRed = false;
+          for (var j = 0; j < lista.length; j++) {
+            var res = lista[j];
+            if (!valido(res)) continue;
+            if (intentos[i].tipo === 'CALLE' && !rastreoCoincideCalle(res, p.via)) continue;
+            var precision = intentos[i].tipo;
+            if (precision === 'CALLE' && p.numero && String((res.address || {}).house_number || '').toUpperCase() === p.numero) precision = 'NUMERO';
+            return { lat: +(+res.lat).toFixed(6), lng: +(+res.lon).toFixed(6), precision: precision, texto: res.display_name || '' };
+          }
+        }
+        return sinRed ? null : { nada: true };
+      }
+
+      // Coordenadas conocidas de una ciudad: catálogo o lo que ya devolvió
+      // el buscador en este equipo. null si no se conoce.
+      function rastreoCoordsCiudad(estadoId, ciudadTexto) {
+        var ciudad = rastreoNormTexto(ciudadTexto);
+        if (!ciudad) return null;
+        var tabla = RASTREO_CIUDADES_MX[estadoId] || {};
+        var intentos = [ciudad, ciudad.replace(/^CIUDAD /, ''), ciudad.replace(/^CD /, 'CIUDAD '), ciudad.replace(/ DE .*$/, '')];
+        for (var i = 0; i < intentos.length; i++) {
+          if (intentos[i] && tabla[intentos[i]]) return tabla[intentos[i]];
+        }
+        var guardado = rastreoCacheGeo(estadoId + '|' + ciudad);
+        return guardado && guardado.lat ? [guardado.lat, guardado.lng] : null;
       }
 
       // Relleno con rayas dentro del mapa real (patrón en el SVG de Leaflet).
@@ -35311,7 +35573,10 @@
           });
           var m = L.marker([g.c.lat, g.c.lng], { icon: icono, riseOnHover: true });
           var e = rastreoEstadoPorId(g.estado);
-          m.bindTooltip('<b>' + escapeHTML(g.c.ciudad ? (g.lista[0].ciudad || '') + ', ' + (e ? e[1] : '') : (e ? e[1] : '')) + '</b><br>' +
+          var tituloPin = (g.c.exacto || g.c.colonia) && g.lista[0].calle
+            ? g.lista[0].calle + (g.lista[0].ciudad ? ', ' + g.lista[0].ciudad : '') + ', ' + (e ? e[1] : '')
+            : (g.c.ciudad ? (g.lista[0].ciudad || '') + ', ' + (e ? e[1] : '') : (e ? e[1] : ''));
+          m.bindTooltip('<b>' + escapeHTML(tituloPin) + '</b><br>' +
             g.lista.map(function(r) { return '🚚 ' + escapeHTML(r.vehiculo) + (r.placas ? ' · ' + escapeHTML(r.placas) : '') + ' — ' + escapeHTML(r.uso); }).join('<br>'),
             { direction: 'top', offset: [0, -12], className: 'rastreo-tip' });
           m.on('click', function() { window.seleccionarEstadoRastreo(g.estado); });
@@ -35326,7 +35591,8 @@
         window.seleccionarEstadoRastreo(r.estado, true);
         if (rastreoLeaflet) {
           var c = rastreoCoordsRegistro(r);
-          if (c.ciudad) rastreoLeaflet.map.flyTo([c.lat, c.lng], 11, { duration: 0.8 });
+          if (c.exacto || c.colonia) rastreoLeaflet.map.flyTo([c.lat, c.lng], c.exacto ? 16 : 15, { duration: 0.8 });
+          else if (c.ciudad) rastreoLeaflet.map.flyTo([c.lat, c.lng], 11, { duration: 0.8 });
           else if (rastreoLeaflet.capas[r.estado]) rastreoLeaflet.map.flyToBounds(rastreoLeaflet.capas[r.estado].getBounds(), { padding: [20, 20], maxZoom: 8, duration: 0.8 });
         }
       };
