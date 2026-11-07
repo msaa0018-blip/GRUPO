@@ -8706,7 +8706,7 @@
       // CCHF es el ÚNICO que registra pagos de OC (sube comprobante y
       // marca PAGADA / Pendiente), sin respaldo de otro rol.
       function usuarioPuedeMarcarOCPagada(usuario) {
-        return esUsuarioPagosCCHF(usuario);
+        return esUsuarioPagosCCHF(usuario) || esAdminOC(usuario);
       }
 
       // CXP y CXF: estos usuarios ven las OC/OF de TODAS las empresas y
@@ -19179,22 +19179,21 @@
         if (!proyecto) return alert('Proyecto no encontrado');
 
         var esInmobienesOC = ocEsInmobienes(oc);
-        var rolValidoSolicitante = usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador', 'Jefe Departamento']) ||
+        // ADMIN puede aprobar en lugar del solicitante, en cualquier OC.
+        var esAdminSol = esAdminOC(actual);
+        var rolValidoSolicitante = esAdminSol || usuarioTieneAlgunRol(actual, ['Solicitante', 'Elaborador', 'Jefe Departamento']) ||
           (esInmobienesOC && actual.rol === 'Jefe Departamento');
         if (!rolValidoSolicitante) return alert('Solo el Solicitante/Responsable designado puede aprobar.');
 
         // Solo el solicitante/responsable designado en la propia OC puede
         // aprobarla en este paso: ningún otro usuario (incluido un Jefe de
-        // Departamento que no sea el designado) puede hacerlo en su lugar.
-        if (actual.u !== oc.responsable) {
-          return alert('❌ Solo el solicitante designado (' + oc.responsable + ') puede aprobar esta OC.');
+        // Departamento que no sea el designado) puede hacerlo en su lugar,
+        // salvo ADMIN.
+        if (!esAdminSol && actual.u !== oc.responsable) {
+          return alert('❌ Solo el solicitante designado (' + oc.responsable + ') o ADMIN pueden aprobar esta OC.');
         }
 
-        if (actual.rol === 'Jefe Departamento' && !usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) {
-          return alert('Sin permiso');
-        }
-
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        if (!esAdminSol && !usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
         // Antes existía un atajo para el departamento de Suministros: la
         // propia aprobación del Solicitante ya hacía las validaciones de
@@ -19221,13 +19220,14 @@
       };
 
       window.aprobarJefe = async function(index) {
-        if (!actual || actual.rol !== 'Jefe Departamento') return alert('No tienes permiso');
+        var esAdminJefe = esAdminOC(actual);
+        if (!actual || (actual.rol !== 'Jefe Departamento' && !esAdminJefe)) return alert('No tienes permiso');
         var oc = ordenes[index];
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'APROBADA_SOLICITANTE') return alert('La OC debe estar aprobada por el Solicitante');
         var proyecto = proyectoDeOC(oc);
         if (!proyecto) return alert('Proyecto no encontrado');
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        if (!esAdminJefe && !usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('❌ Solo el Jefe de ' + (proyecto.departamento || 'su departamento') + ' (o ADMIN) puede aprobar esta OC.');
 
         // Si el proveedor de esta OC no existe todavía en el catálogo, se
         // registra automáticamente en cuanto el Jefe de Departamento la
@@ -19341,9 +19341,9 @@
 
       window.autorizarDirector = async function(index) {
         var oc = ordenes[index];
-        var esInmobienesOC = actual && oc ? ocEsInmobienes(oc) : false;
-        var puedeAutorizar = actual && (actual.rol === 'Director General' || (esInmobienesOC && actual.rol === 'Jefe Departamento'));
-        if (!puedeAutorizar) return alert('No tienes permiso');
+        // Paso del Director: lo autoriza el Director General, MCCC o ADMIN,
+        // de cualquier empresa y departamento, solo en PENDIENTE DIRECTOR.
+        if (!usuarioAutorizaComoDirector(actual, oc)) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
 
@@ -19359,7 +19359,7 @@
         var updates = {
           estado: 'AUTORIZADA',
           fechaaprobaciondirector: new Date().toISOString(),
-          nombredirector: getDirector(),
+          nombredirector: actual.rol === 'Director General' ? getDirector() : actual.u,
           estadopago: null
         };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
@@ -19404,7 +19404,7 @@
           return;
         }
 
-        alert('✅ OC autorizada por Director.' + avisoAumentoCompras);
+        alert('✅ OC autorizada' + (actual.rol === 'Director General' ? ' por Director.' : ' por ' + actual.u + '.') + avisoAumentoCompras);
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -19414,9 +19414,7 @@
 
       window.cancelarDirector = async function(index) {
         var oc = ordenes[index];
-        var esInmobienesOC = actual && oc ? ocEsInmobienes(oc) : false;
-        var puedeCancelar = actual && (actual.rol === 'Director General' || (esInmobienesOC && actual.rol === 'Jefe Departamento'));
-        if (!puedeCancelar) return alert('No tienes permiso');
+        if (!usuarioAutorizaComoDirector(actual, oc)) return alert('No tienes permiso');
         if (oc.pausada) return alert('⚠️ OC pausada');
         if (oc.estado !== 'PENDIENTE_DIRECTOR') return alert('La OC no está pendiente de Director');
 
@@ -19462,7 +19460,7 @@
           return;
         }
 
-        alert('❌ OC cancelada por Director.');
+        alert('❌ OC cancelada' + (actual.rol === 'Director General' ? ' por Director.' : ' por ' + actual.u + '.'));
       };
 
       // Ingresa la paridad/tipo de cambio final de una OC en USD, o marca
@@ -19479,13 +19477,14 @@
         var oc = ordenes[index];
         if (!oc) return;
         // Solo quien elaboró ESTA OC puede capturar su paridad final.
-        if (!oc.elaborador || String(oc.elaborador).toUpperCase() !== String(actual.usuario || actual.u || '').toUpperCase()) {
-          return alert('❌ Solo el elaborador de esta OC (' + (oc.elaborador || '—') + ') puede definir la paridad final.');
+        var esAdminParidad = esAdminOC(actual);
+        if (!esAdminParidad && (!oc.elaborador || String(oc.elaborador).toUpperCase() !== String(actual.usuario || actual.u || '').toUpperCase())) {
+          return alert('❌ Solo el elaborador de esta OC (' + (oc.elaborador || '—') + ') o ADMIN pueden definir la paridad final.');
         }
         if (oc.estado !== 'PENDIENTE_PARIDAD') return alert('Esta OC no está pendiente de paridad final.');
         var proyecto = proyectoDeOC(oc);
         if (!proyecto) return alert('Proyecto no encontrado');
-        if (!usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
+        if (!esAdminParidad && !usuarioPuedeAcceder(actual, proyecto.empresa, proyecto.departamento)) return alert('Sin permiso');
 
         indexParidadPendiente = index;
         var titulo = document.getElementById('paridadOCCodigo');
@@ -20084,7 +20083,7 @@
 
       window.abrirComprobantePago = function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF puede subir el pago y marcar una OC como pagada.');
+        if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF o ADMIN pueden subir el pago y marcar una OC como pagada.');
         var oc = ordenes[index];
         if (!oc) return;
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
@@ -20489,6 +20488,7 @@
       }
       function usuarioSubeComplementoOC(u, oc) {
         if (!u || !oc) return false;
+        if (esAdminOC(u)) return true;
         return normalizar(u.usuario || u.u) === normalizar(oc.responsable);
       }
       function usuarioSubeComplementoCXC(u, cuenta) {
@@ -20585,8 +20585,8 @@
         // La factura solo la puede subir el solicitante/responsable de esa
         // OC — ningún otro rol (ni Finanzas, ni Jefe de Departamento, ni
         // Administrador) puede subirla en su lugar.
-        if (actual.u !== oc.responsable) {
-          return alert('❌ Solo el solicitante/responsable (' + oc.responsable + ') puede subir la factura de esta OC.');
+        if (actual.u !== oc.responsable && !esAdminOC(actual)) {
+          return alert('❌ Solo el solicitante/responsable (' + oc.responsable + ') o ADMIN pueden subir la factura de esta OC.');
         }
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
@@ -21042,7 +21042,7 @@
         var oc = ordenes[index];
         if (!oc) return;
         // El complemento de pago de la OC lo sube SOLO el responsable de la OC.
-        if (!usuarioSubeComplementoOC(actual, oc)) return alert('❌ Solo el responsable de la OC (' + (oc.responsable || '—') + ') puede subir su complemento de pago.');
+        if (!usuarioSubeComplementoOC(actual, oc)) return alert('❌ Solo el responsable de la OC (' + (oc.responsable || '—') + ') o ADMIN pueden subir su complemento de pago.');
         if (oc.estadopago !== 'PAGADA') return alert('La OC debe estar pagada.');
         if (!oc.uuidfactura) return alert('Aún no se ha registrado la factura de esta OC.');
         if (oc.estado === 'CONCLUIDA') return alert('Ya está concluida.');
@@ -21414,7 +21414,7 @@
 
       window.marcarPendiente = async function(index) {
         if (!actual) return alert('No has iniciado sesión');
-        if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF puede revertir el estado de pago de una OC.');
+        if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF o ADMIN pueden revertir el estado de pago de una OC.');
         var oc = ordenes[index];
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pendiente una OC autorizada.');
         // Regresar a Pendiente = ELIMINAR el pago registrado: se borran los
@@ -21605,6 +21605,39 @@
       // no otorga ninguna excepción.
       function ocEsInmobienes(oc) {
         return false;
+      }
+
+      // ADMIN tiene acceso a TODAS las opciones de cualquier OC (aprobar en
+      // cada paso, paridad, pago, factura, complemento, concluir, editar,
+      // pausar, cancelar, eliminar), sin importar empresa ni departamento.
+      function esAdminOC(u) {
+        return !!(u && u.rol === 'Administrador');
+      }
+      // Autorizan o cancelan en el paso del Director (PENDIENTE DIRECTOR)
+      // las OC de cualquier empresa y departamento: el Director General y
+      // MCCC. El proceso no cambia: Solicitante -> Jefe -> Director.
+      var USUARIOS_APRUEBAN_COMO_DIRECTOR = ['MCCC'];
+      function usuarioApruebaComoDirector(u) {
+        if (!u) return false;
+        return u.rol === 'Director General' || USUARIOS_APRUEBAN_COMO_DIRECTOR.indexOf(String(u.usuario || u.u || '').trim().toUpperCase()) !== -1;
+      }
+      // El Director (o MCCC o ADMIN) autoriza o cancela solo en su paso:
+      // cuando la OC está en PENDIENTE DIRECTOR.
+      function ocPendienteDeDirector(oc) {
+        return !!oc && !oc.pausada && oc.estado === 'PENDIENTE_DIRECTOR';
+      }
+      // Quien puede autorizar o cancelar como Director: Director General,
+      // MCCC y ADMIN (más la excepción de INMOBIENES, hoy desactivada).
+      function usuarioAutorizaComoDirector(u, oc) {
+        return !!u && (usuarioApruebaComoDirector(u) || esAdminOC(u) || (ocEsInmobienes(oc) && u.rol === 'Jefe Departamento'));
+      }
+      // Director General y MCCC ven en la Bandeja todas las OC en PENDIENTE
+      // DIRECTOR, de cualquier empresa y departamento.
+      function agregarOCsParaAprobarDirector(usuario, lista) {
+        if (!usuarioApruebaComoDirector(usuario)) return lista;
+        var ids = {};
+        lista.forEach(function(o) { ids[o.id] = true; });
+        return lista.concat(ordenes.filter(function(o) { return !ids[o.id] && ocPendienteDeDirector(o); }));
       }
 
       function esDepartamentoInmobienes(departamento) {
@@ -26566,6 +26599,7 @@
         // departamento (aunque tenga activo "Solo mis OC"), para poder
         // indicar el pago y subir el comprobante.
         ocVisibles = agregarOCsParaPagoCCHF(actual, ocVisibles);
+        ocVisibles = agregarOCsParaAprobarDirector(actual, ocVisibles);
 
         var filtroDepto = document.getElementById('filtroDepto');
         if (filtroDepto && filtroDepto.value) {
@@ -26710,7 +26744,7 @@
             if (rol === 'Director General') {
               acciones += '<button class="btn-visualizar" onclick="window.visualizarOC(' + idxOriginal + ')">👁️ Visualizar</button>';
 
-              if (!o.pausada && o.estado === 'PENDIENTE_DIRECTOR') {
+              if (ocPendienteDeDirector(o)) {
                 acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
                 acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
               }
@@ -26749,20 +26783,27 @@
               }
 
               if (!o.pausada) {
-                if ((rolIncluye(rol, 'Solicitante') || rolIncluye(rol, 'Elaborador') || rol === 'Jefe Departamento') && o.estado === 'CREADA' && o.responsable === actual.u) {
+                var esAdminFila = esAdminOC(actual);
+                if (o.estado === 'CREADA' && (esAdminFila || ((rolIncluye(rol, 'Solicitante') || rolIncluye(rol, 'Elaborador') || rol === 'Jefe Departamento') && o.responsable === actual.u))) {
                   acciones += '<button class="btn-success" onclick="window.aprobarSolicitante(' + idxOriginal + ')">✅ Aprobar Sol.</button>';
                 }
-                if (rol === 'Jefe Departamento' && o.estado === 'APROBADA_SOLICITANTE') {
+                // Aprobar Jefe: solo el Jefe del departamento de la OC (antes
+                // también lo veía un Jefe de otro departamento, p. ej. CCHF,
+                // y al tocarlo salía "Sin permiso") o ADMIN.
+                var proyFila = o.estado === 'APROBADA_SOLICITANTE' ? proyectoDeOC(o) : null;
+                if (o.estado === 'APROBADA_SOLICITANTE' && (esAdminFila || (rol === 'Jefe Departamento' && proyFila && usuarioPuedeAcceder(actual, proyFila.empresa, proyFila.departamento)))) {
                   acciones += '<button class="btn-warning" onclick="window.aprobarJefe(' + idxOriginal + ')">✅ Aprobar Jefe</button>';
                 }
-                if (rol === 'Jefe Departamento' && ocEsInmobienes(o) && o.estado === 'PENDIENTE_DIRECTOR') {
-                  acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar</button>';
+                // Paso del Director (PENDIENTE DIRECTOR): MCCC y ADMIN, de
+                // cualquier departamento, igual que el Director General.
+                if (usuarioAutorizaComoDirector(actual, o) && ocPendienteDeDirector(o)) {
+                  acciones += '<button class="btn-success ' + botonAura + '" onclick="window.autorizarDirectorDirecto(' + idxOriginal + ')">✅ Autorizar' + (esAdminFila ? ' (Dir.)' : '') + '</button>';
                   acciones += '<button class="btn-danger" onclick="window.cancelarDirector(' + idxOriginal + ')">❌ Cancelar</button>';
                 }
-                if (o.estado === 'PENDIENTE_PARIDAD' && o.elaborador && String(o.elaborador).toUpperCase() === String(actual.usuario || actual.u || '').toUpperCase()) {
+                if (o.estado === 'PENDIENTE_PARIDAD' && (esAdminFila || (o.elaborador && String(o.elaborador).toUpperCase() === String(actual.usuario || actual.u || '').toUpperCase()))) {
                   acciones += '<button class="btn-warning" onclick="window.abrirModalParidadOC(' + idxOriginal + ')">💰 Paridad</button>';
                 }
-                if (o.responsable === actual.u && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                if ((o.responsable === actual.u || esAdminFila) && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
