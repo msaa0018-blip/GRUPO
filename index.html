@@ -35945,7 +35945,30 @@
           alert('❌ Archivo no admitido. Renómbralo según las reglas (ej. COMPROBANTE_OC_FERREBAJIO.pdf):\n\n' + malos.join('\n'));
         }
       }, true);
-      window.__reglasCaptura = { erroresReglaValor: erroresReglaValor, erroresNombreArchivo: erroresNombreArchivo };
+      // Un archivo arrastrado y soltado FUERA del recuadro punteado lo
+      // abría el navegador en la misma pestaña: el usuario salía de la
+      // página y perdía la sesión (pasó en "Comprobar Factura de OC"). Se
+      // bloquea en toda la página: solo los recuadros para adjuntar (y los
+      // campos de archivo visibles) reciben el archivo; fuera de ellos se
+      // avisa y no pasa nada más.
+      function esArrastreDeArchivos(ev) {
+        var dt = ev.dataTransfer;
+        return !!(dt && Array.prototype.indexOf.call(dt.types || [], 'Files') !== -1);
+      }
+      function esCampoDeArchivo(el) {
+        return !!(el && el.tagName === 'INPUT' && el.type === 'file');
+      }
+      window.addEventListener('dragover', function(ev) {
+        if (!esArrastreDeArchivos(ev) || esCampoDeArchivo(ev.target)) return;
+        ev.preventDefault();
+      });
+      window.addEventListener('drop', function(ev) {
+        if (!esArrastreDeArchivos(ev) || esCampoDeArchivo(ev.target) || ev.defaultPrevented) return;
+        ev.preventDefault();
+        var zona = ev.target && ev.target.closest ? ev.target.closest('[ondrop]') : null;
+        if (!zona) alert('⚠️ El archivo no se adjuntó. Suéltalo dentro del recuadro punteado ("Arrastra el PDF aquí") o tócalo para elegirlo.');
+      });
+      window.__reglasCaptura ={ erroresReglaValor: erroresReglaValor, erroresNombreArchivo: erroresNombreArchivo };
 
     })();
   </script>
