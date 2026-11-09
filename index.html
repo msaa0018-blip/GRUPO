@@ -5527,6 +5527,11 @@
               <input type="number" id="comprobantePagoMonto" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" oninput="window.actualizarPendientePagoOC()" style="width:100%;box-sizing:border-box;">
               <div id="comprobantePagoPendienteTexto" class="pago-oc-pendiente"></div>
             </div>
+            <div class="grupo-formulario hidden" id="grupoFechaSiguientePago">
+              <label style="font-weight:500;" for="comprobantePagoFechaSiguiente">Fecha del siguiente pago *</label>
+              <input type="date" id="comprobantePagoFechaSiguiente" onchange="window.actualizarPendientePagoOC()" oninput="window.actualizarPendientePagoOC()" style="width:100%;box-sizing:border-box;">
+              <div style="margin-top:4px;font-size:12px;color:var(--gray-600, #475569);">Ese día CCHF recibe el aviso por Telegram para pagar lo pendiente.</div>
+            </div>
             <div class="grupo-formulario">
               <label style="font-weight:500;">Adjuntar comprobante de pago (PDF) *</label>
               <div id="comprobantePagoDropzone" class="foto-dropzone" style="width:100%;height:140px;" onclick="document.getElementById('comprobantePagoInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropComprobantePago(event, this)">
@@ -20184,10 +20189,17 @@
           parcial: !!oc && oc.estadopago !== 'PAGADA' && pagado > 0
         };
       }
-      // Texto corto "Pagado $X · Pendiente $Y" de una OC con pago parcial.
+      // Texto corto "Pagado $X · Pendiente $Y · Próximo pago dd/mm/aaaa"
+      // de una OC con pago parcial.
       function textoMontosPagoParcialOC(oc) {
         var m = montosPagoOC(oc);
-        return 'Pagado ' + formatoMoneda(m.pagado, m.moneda) + ' · Pendiente ' + formatoMoneda(m.pendiente, m.moneda);
+        return 'Pagado ' + formatoMoneda(m.pagado, m.moneda) + ' · Pendiente ' + formatoMoneda(m.pendiente, m.moneda) +
+          (oc && oc.fecha_siguiente_pago ? ' · Próximo pago ' + fechaCortaTelegram(oc.fecha_siguiente_pago) : '');
+      }
+      // Fecha de hoy (día local) en formato AAAA-MM-DD.
+      function fechaHoyLocalISO() {
+        var h = new Date();
+        return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
       }
       var montosPagoEnCurso = null;
 
@@ -20206,6 +20218,7 @@
             '<div class="pago-oc-dato"><small>Pagado</small><b>' + escapeHTML(formatoMoneda(m.pagado, m.moneda)) + '</b></div>' +
             '<div class="pago-oc-dato"><small>Pendiente por pagar</small><b>' + escapeHTML(formatoMoneda(m.pendiente, m.moneda)) + '</b></div>' +
             (historial.length ? '<div class="pago-oc-historial">Pagos registrados: ' + escapeHTML(historial.join(' | ')) + '</div>' : '') +
+            (oc.fecha_siguiente_pago && m.pendiente > 0 ? '<div class="pago-oc-historial">Próximo pago programado: ' + escapeHTML(fechaCortaTelegram(oc.fecha_siguiente_pago)) + '</div>' : '') +
             (function() {
               // Datos para el pago (también al entrar por el link de CCHF,
               // donde no se ve la OC completa).
@@ -20232,6 +20245,9 @@
         var input = document.getElementById('comprobantePagoMonto');
         if (!m || !input) return;
         var tipo = tipoPagoOCElegido();
+        // Parcialidad: se pide la fecha del siguiente pago (aviso a CCHF).
+        var grupoFecha = document.getElementById('grupoFechaSiguientePago');
+        if (grupoFecha) grupoFecha.classList.toggle('hidden', tipo !== 'PARCIAL');
         if (tipo === 'COMPLETO') {
           input.value = m.pendiente.toFixed(2);
           input.readOnly = true;
@@ -20259,6 +20275,11 @@
         else if (!(monto > 0)) error = 'Captura el monto pagado.';
         else if (tipo === 'PARCIAL' && monto >= m.pendiente - TOLERANCIA_PAGO_OC) error = 'Una parcialidad debe ser menor a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + '). Si liquida la OC, elige "Pago completo".';
         else if (tipo === 'COMPLETO' && Math.abs(monto - m.pendiente) > TOLERANCIA_PAGO_OC) error = 'El pago completo debe ser igual a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + ').';
+        var fechaSiguiente = (document.getElementById('comprobantePagoFechaSiguiente') || {}).value || '';
+        if (!error && tipo === 'PARCIAL') {
+          if (!fechaSiguiente) error = 'Indica la fecha del siguiente pago.';
+          else if (fechaSiguiente < fechaHoyLocalISO()) error = 'La fecha del siguiente pago no puede ser anterior a hoy.';
+        }
         if (error) {
           aviso.textContent = (input.value || tipo) ? '⚠️ ' + error : '';
           aviso.classList.add('error');
@@ -20266,7 +20287,8 @@
           var queda = redondearMontoPago(Math.max(0, m.pendiente - monto));
           aviso.textContent = queda <= TOLERANCIA_PAGO_OC
             ? '✅ Con este pago la OC queda liquidada (pendiente ' + formatoMoneda(0, m.moneda) + ').'
-            : 'Pendiente por pagar después de este pago: ' + formatoMoneda(queda, m.moneda);
+            : 'Pendiente por pagar después de este pago: ' + formatoMoneda(queda, m.moneda) +
+              (fechaSiguiente ? ' · Siguiente pago: ' + fechaCortaTelegram(fechaSiguiente) : '');
           aviso.classList.remove('error');
         }
         return error;
@@ -20304,11 +20326,18 @@
         document.querySelectorAll('input[name="comprobantePagoTipo"]').forEach(function(r) { r.checked = false; });
         var inputMonto = document.getElementById('comprobantePagoMonto');
         if (inputMonto) { inputMonto.value = ''; inputMonto.readOnly = false; inputMonto.style.background = ''; }
+        var inputFechaSig = document.getElementById('comprobantePagoFechaSiguiente');
+        if (inputFechaSig) { inputFechaSig.value = ''; inputFechaSig.min = fechaHoyLocalISO(); }
+        var grupoFechaSig = document.getElementById('grupoFechaSiguientePago');
+        if (grupoFechaSig) grupoFechaSig.classList.add('hidden');
         if (es5050) {
           var radio5050 = document.querySelector('input[name="comprobantePagoTipo"][value="' + (pagosPrevios.length ? 'COMPLETO' : 'PARCIAL') + '"]');
           if (radio5050) radio5050.checked = true;
           window.cambiarTipoPagoOC();
           if (!pagosPrevios.length && inputMonto) { inputMonto.value = redondearMontoPago(mPago.total / 2).toFixed(2); }
+          // Primer pago del 50/50: el siguiente pago es la fecha del 2do. pago.
+          var fecha2 = oc.fechapago2 ? String(oc.fechapago2).slice(0, 10) : '';
+          if (!pagosPrevios.length && inputFechaSig && fecha2 >= fechaHoyLocalISO()) inputFechaSig.value = fecha2;
         }
         window.actualizarPendientePagoOC();
 
@@ -20437,6 +20466,9 @@
           }
           var ahoraISO = new Date().toISOString();
           var es5050 = oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO';
+          // Parcialidad: fecha programada del siguiente pago (ese día CCHF
+          // recibe el aviso por Telegram — ver revisarPagosProgramadosOC).
+          var fechaSiguientePago = liquida ? null : ((document.getElementById('comprobantePagoFechaSiguiente') || {}).value || null);
           var listaPagos = mAntes.pagos.concat([{
             numero: numeroPago,
             tipo: liquida ? 'COMPLETO' : 'PARCIAL',
@@ -20444,11 +20476,12 @@
             moneda: mAntes.moneda,
             pagado_acumulado: pagadoDespues,
             pendiente: pendienteDespues,
+            fecha_siguiente_pago: fechaSiguientePago,
             comprobante_url: url,
             fecha: ahoraISO,
             registro: (actual && (actual.usuario || actual.u)) || null
           }]);
-          var updates = { pagos: listaPagos, monto_pagado: pagadoDespues };
+          var updates = { pagos: listaPagos, monto_pagado: pagadoDespues, fecha_siguiente_pago: fechaSiguientePago, aviso_pago_programado_en: null };
           // Compatibilidad con el 50/50: el primer pago va en pago1_* y el
           // que liquida la OC en pago2_* (si se paga en uno solo, pago1_*).
           if (es5050) {
@@ -20465,16 +20498,27 @@
           } else {
             mensajeFinal = '✅ Parcialidad ' + numeroPago + ' registrada: ' + formatoMoneda(montoPago, mAntes.moneda) +
               '.\nPagado: ' + formatoMoneda(pagadoDespues, mAntes.moneda) + ' de ' + formatoMoneda(mAntes.total, mAntes.moneda) +
-              '. Pendiente: ' + formatoMoneda(pendienteDespues, mAntes.moneda) + '.\n\nLa OC sigue por pagar hasta cubrir su total.';
+              '. Pendiente: ' + formatoMoneda(pendienteDespues, mAntes.moneda) + '.' +
+              '\nSiguiente pago programado: ' + fechaCortaTelegram(fechaSiguientePago) + ' (ese día se avisa a ' + USUARIO_PAGOS_OC + ' por Telegram).' +
+              '\n\nLa OC sigue por pagar hasta cubrir su total.';
           }
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-          if (error && /pagos|monto_pagado/i.test(error.message || '')) {
-            // Falta correr el SQL de parcialidades: un pago completo se
-            // guarda como antes; una parcialidad no se puede registrar.
-            if (!liquida) throw new Error('Falta ejecutar en Supabase el SQL "pagos_parciales_oc.sql" (columnas pagos y monto_pagado). La parcialidad no se registró.');
-            delete updates.pagos; delete updates.monto_pagado;
-            var reintento = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-            error = reintento.error;
+          if (error && /pagos|monto_pagado|fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || '')) {
+            // Falta correr un SQL: un pago completo se guarda como antes;
+            // una parcialidad no se puede registrar.
+            if (!liquida) {
+              throw new Error(/fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || '')
+                ? 'Falta ejecutar en Supabase el SQL "pagos_programados_oc.sql" (columnas fecha_siguiente_pago y aviso_pago_programado_en). La parcialidad no se registró.'
+                : 'Falta ejecutar en Supabase el SQL "pagos_parciales_oc.sql" (columnas pagos y monto_pagado). La parcialidad no se registró.');
+            }
+            // Se quitan solo las columnas que faltan (primero las del pago
+            // programado o las de parcialidades, según el error) y se
+            // reintenta; si faltan ambas, se quitan todas.
+            for (var reintentoCol = 0; reintentoCol < 2 && error && /pagos|monto_pagado|fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || ''); reintentoCol++) {
+              if (/fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || '')) { delete updates.fecha_siguiente_pago; delete updates.aviso_pago_programado_en; }
+              else { delete updates.pagos; delete updates.monto_pagado; }
+              error = (await supabase.from('ordenes').update(updates).eq('id', oc.id)).error;
+            }
           }
           if (error) throw error;
           Object.assign(oc, updates);
@@ -20495,6 +20539,7 @@
             pagado: pagadoDespues,
             pendiente: pendienteDespues,
             liquida: liquida,
+            fechaSiguiente: fechaSiguientePago,
             comprobanteArchivo: comprobantePagoArchivoPendiente,
             comprobanteUrl: url
           });
@@ -20730,13 +20775,21 @@
       // Revisiones automáticas mientras haya una sesión abierta: la cola de
       // reenvío (cada 2 minutos) y los recordatorios de factura y
       // complemento (cada 30 minutos). Arrancan al iniciar sesión.
+      // Recordatorios de factura/complemento, aviso diario a CCHF de OC por
+      // pagar, reportes del 25 y 29 a los Jefes y complementos de CXC.
+      async function revisarAvisosProgramados() {
+        await revisarRecordatoriosOC();
+        await revisarPagosProgramadosOC();
+        await revisarReporteMensualFacturas();
+        await revisarComplementosCXC();
+      }
       var procesosAvisosTelegramIniciados = false;
       function iniciarProcesosAvisosTelegram() {
-        setTimeout(function() { procesarColaTelegram(); revisarRecordatoriosOC(); }, 5000);
+        setTimeout(function() { procesarColaTelegram(); revisarAvisosProgramados(); }, 5000);
         if (procesosAvisosTelegramIniciados) return;
         procesosAvisosTelegramIniciados = true;
         setInterval(function() { if (!document.hidden) procesarColaTelegram(); }, 2 * 60000);
-        setInterval(function() { if (!document.hidden) revisarRecordatoriosOC(); }, 30 * 60000);
+        setInterval(function() { if (!document.hidden) revisarAvisosProgramados(); }, 30 * 60000);
       }
 
       function escaparHTMLTelegram(txt) {
@@ -20849,7 +20902,8 @@
             (esParcialidad ? ' (parcialidad ' + info.numeroPago + ')' : (info.numeroPago > 1 ? ' (pago ' + info.numeroPago + ', liquida la OC)' : ' (pago completo)'));
           var lineasSaldo = (esParcialidad || info.numeroPago > 1) && info.pagado != null
             ? '📊 <b>Pagado:</b> ' + escaparHTMLTelegram(conMoneda(info.pagado) + ' de ' + conMoneda(total)) + '\n' +
-              '⏳ <b>Pendiente:</b> ' + escaparHTMLTelegram(conMoneda(info.pendiente || 0)) + '\n'
+              '⏳ <b>Pendiente:</b> ' + escaparHTMLTelegram(conMoneda(info.pendiente || 0)) + '\n' +
+              (esParcialidad && info.fechaSiguiente ? '📅 <b>Siguiente pago:</b> ' + escaparHTMLTelegram(fechaCortaTelegram(info.fechaSiguiente)) + '\n' : '')
             : '';
           var fechaTxt = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -20948,8 +21002,14 @@
           if (r.ok) {
             var idMensaje = r.result && r.result.message_id;
             if (idMensaje) {
-              var { error } = await supabase.from('ordenes').update({ telegram_pago_message_id: idMensaje }).eq('id', oc.id);
-              if (!error) oc.telegram_pago_message_id = idMensaje;
+              // El aviso de "OC AUTORIZADA" cuenta como el aviso diario de hoy.
+              var cambiosAviso = { telegram_pago_message_id: idMensaje, aviso_pago_programado_en: new Date().toISOString() };
+              var { error } = await supabase.from('ordenes').update(cambiosAviso).eq('id', oc.id);
+              if (error && /aviso_pago_programado_en/.test(error.message || '')) {
+                delete cambiosAviso.aviso_pago_programado_en;
+                error = (await supabase.from('ordenes').update(cambiosAviso).eq('id', oc.id)).error;
+              }
+              if (!error) Object.assign(oc, cambiosAviso);
             }
             console.log('✅ Aviso de OC por pagar enviado a ' + USUARIO_PAGOS_OC);
             return true;
@@ -21033,6 +21093,7 @@
         var ultimo = pagos.length ? pagos[pagos.length - 1].fecha : null;
         return ultimo || oc.pago2_fecha_confirmacion || oc.pago1_fecha_confirmacion || oc.fechapago || null;
       }
+      function textoDias(n) { return n === 1 ? '1 día' : n + ' días'; }
       function diasDesdeFecha(valor) {
         var f = fechaLocalVale(valor);
         return f ? Math.floor((Date.now() - f.getTime()) / 86400000) : 0;
@@ -21080,7 +21141,7 @@
               '🧾 <b>OC:</b> ' + esc(oc.codigo || ('OC-' + oc.id)) + '\n' +
               '🏪 <b>Proveedor:</b> ' + esc(oc.proveedor || '—') + '\n' +
               '💲 <b>Monto pagado:</b> ' + esc(formatoMoneda(m.total, m.moneda) + ' ' + m.moneda) + '\n' +
-              '📅 <b>Pagada el:</b> ' + esc(fechaCortaTelegram(fechaPago) + ' (hace ' + diasDesdeFecha(fechaPago) + ' días)') + '\n\n' +
+              '📅 <b>Pagada el:</b> ' + esc(fechaCortaTelegram(fechaPago) + ' (hace ' + textoDias(diasDesdeFecha(fechaPago)) + ')') + '\n\n' +
               'La OC no puede concluirse hasta que se registre su factura.\n' +
               '👉 Súbela en 📬 Bandeja de OC (📄 Factura):\n' + esc(URL_APP_TELEGRAM);
             await enviarTelegramAChat(chatId, texto, oc.responsable, 'Recordatorio de factura ' + (oc.codigo || oc.id));
@@ -21118,6 +21179,278 @@
           console.warn('No se pudieron revisar los recordatorios de factura y complemento:', e);
         } finally {
           revisandoRecordatoriosOC = false;
+        }
+      }
+
+      // ===== AVISO DIARIO A CCHF: OC AUTORIZADA SIN PAGAR (09/11/2026) =====
+      // Mientras una OC autorizada siga sin liquidarse, CCHF recibe por
+      // Telegram un aviso cada día a partir de su fecha de pago:
+      // - con parcialidades: desde la fecha del siguiente pago capturada al
+      //   registrar la parcialidad (ordenes.fecha_siguiente_pago);
+      // - sin pagos: desde la fecha de pago de la OC (fechapago).
+      // Lleva lo pendiente y el link ?pago=ID. Se revisa al iniciar sesión
+      // cualquier usuario y cada 30 minutos (de 8:00 a 19:00) y sale una
+      // sola vez por día y OC: la OC se "toma" en la base de datos
+      // (aviso_pago_programado_en). El aviso de "OC AUTORIZADA" cuenta como
+      // el aviso de ese día.
+      function inicioDeHoyISO() {
+        var h = new Date();
+        return new Date(h.getFullYear(), h.getMonth(), h.getDate()).toISOString();
+      }
+      async function tomarAvisoDiarioOC(oc, columna) {
+        var limite = inicioDeHoyISO();
+        var cambio = {};
+        cambio[columna] = new Date().toISOString();
+        var r = await supabase.from('ordenes').update(cambio).eq('id', oc.id)
+          .or(columna + '.is.null,' + columna + '.lt."' + limite + '"').select('id');
+        if (r.error) { console.warn('No se pudo registrar el aviso diario (¿falta ejecutar pagos_programados_oc.sql?):', r.error); return false; }
+        return !!(r.data && r.data.length);
+      }
+      // Fecha (AAAA-MM-DD) desde la que se avisa a CCHF del pago de la OC.
+      function fechaObjetivoPagoOC(oc) {
+        if (oc.fecha_siguiente_pago) return String(oc.fecha_siguiente_pago).slice(0, 10);
+        var conPagos = pagosRegistradosOC(oc).length > 0;
+        if (conPagos && oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO' && oc.fechapago2) return String(oc.fechapago2).slice(0, 10);
+        return oc.fechapago ? String(oc.fechapago).slice(0, 10) : '';
+      }
+      var revisandoPagosPendientesCCHF = false;
+      async function revisarPagosProgramadosOC() {
+        if (revisandoPagosPendientesCCHF || !actual) return;
+        var hora = new Date().getHours();
+        if (hora < HORA_INICIO_RECORDATORIOS || hora >= HORA_FIN_RECORDATORIOS) return;
+        revisandoPagosPendientesCCHF = true;
+        try {
+          var hoy = fechaHoyLocalISO();
+          var { data, error } = await supabase.from('ordenes').select('*').eq('estado', 'AUTORIZADA');
+          if (error) return;
+          var ocs = (data || []).filter(function(o) {
+            if (o.estadopago === 'PAGADA' || o.pausada || !(montosPagoOC(o).pendiente > 0)) return false;
+            var fechaObj = fechaObjetivoPagoOC(o);
+            return !fechaObj || fechaObj <= hoy;
+          });
+          // Sin la columna de control (SQL no ejecutado) no se envía nada,
+          // para no repetir el aviso cada 30 minutos.
+          if (!ocs.length || !('aviso_pago_programado_en' in ocs[0])) return;
+          var chatId = await obtenerTelegramChatIdUsuario(USUARIO_PAGOS_OC);
+          if (!chatId) { console.warn('Aviso diario de pago: ' + USUARIO_PAGOS_OC + ' no tiene Chat ID de Telegram registrado.'); return; }
+          var inicioHoy = new Date(inicioDeHoyISO()).getTime();
+          var esc = escaparHTMLTelegram;
+          for (var i = 0; i < ocs.length; i++) {
+            var oc = ocs[i];
+            if (oc.aviso_pago_programado_en && new Date(oc.aviso_pago_programado_en).getTime() >= inicioHoy) continue;
+            if (!(await tomarAvisoDiarioOC(oc, 'aviso_pago_programado_en'))) continue;
+            var m = montosPagoOC(oc);
+            var fechaObj = fechaObjetivoPagoOC(oc);
+            var diasAtraso = fechaObj ? diasDesdeFecha(fechaObj) : 0;
+            var esParcial = m.pagado > 0;
+            var texto =
+              (esParcial ? '⏰ <b>PAGO PROGRAMADO — PARCIALIDAD PENDIENTE</b>\n\n' : '⏰ <b>OC POR PAGAR — FECHA DE PAGO ' + (diasAtraso > 0 ? 'VENCIDA' : 'HOY') + '</b>\n\n') +
+              lineasDatosOCTelegram(oc) +
+              '💲 <b>Pendiente por pagar:</b> ' + esc(formatoMoneda(m.pendiente, m.moneda) + ' ' + m.moneda) + '\n' +
+              (esParcial ? '📊 <b>Pagado:</b> ' + esc(formatoMoneda(m.pagado, m.moneda) + ' de ' + formatoMoneda(m.total, m.moneda)) + '\n' : '') +
+              '📅 <b>' + (esParcial ? 'Fecha programada' : 'Fecha de pago') + ':</b> ' +
+              esc(fechaObj ? fechaCortaTelegram(fechaObj) + (diasAtraso > 0 ? ' (hace ' + textoDias(diasAtraso) + ')' : ' (hoy)') : '—') + '\n\n' +
+              'Este aviso se repite cada día mientras la OC siga sin pagarse.\n' +
+              '👉 Subir comprobante de pago:\n' + esc(linkPagoOC(oc));
+            await enviarTelegramAChat(chatId, texto, USUARIO_PAGOS_OC, 'OC por pagar ' + (oc.codigo || oc.id));
+          }
+        } catch (e) {
+          console.warn('No se pudieron revisar las OC por pagar:', e);
+        } finally {
+          revisandoPagosPendientesCCHF = false;
+        }
+      }
+
+      // ===== REPORTES DEL 25 Y DEL 29 A LOS JEFES (09/11/2026) =====
+      // Cada mes, a cada Jefe de Departamento, con las OC de su(s)
+      // departamento(s):
+      // - Día 25: "PAGOS PENDIENTES DE FACTURAR": OC pagadas en su
+      //   totalidad que aún no tienen factura.
+      // - Día 29 (o el último día del mes, si tiene menos): la misma
+      //   lista a la fecha, más las OC con pago parcial y sin factura.
+      // Si nadie abre el sistema ese día, sale en cuanto alguien lo abra
+      // (el del 25, hasta antes del 29). No se envía a un Jefe sin
+      // pendientes. Cada envío queda registrado en la tabla
+      // avisos_periodicos (clave por reporte, mes y Jefe), así sale una
+      // sola vez aunque varios usuarios tengan el sistema abierto.
+      var MAX_RENGLONES_REPORTE_TELEGRAM = 30;
+      async function tomarAvisoPeriodico(clave, destinatarios, detalle) {
+        var r = await supabase.from('avisos_periodicos').insert([{ clave: clave, destinatarios: destinatarios, detalle: detalle || null }]);
+        if (!r.error) return 'ok';
+        if (r.error.code === '23505' || /duplicate|unique/i.test(r.error.message || '')) return 'ya';
+        console.warn('No se pudo registrar el aviso periódico (¿falta ejecutar avisos_periodicos_telegram.sql?):', r.error);
+        return 'error';
+      }
+      function jefesDeDeptoConDatos(empresa, departamento, usuariosTodos) {
+        var empNorm = normalizar(empresa || '');
+        var deptoNorm = deptoParaComparar(empresa || '', departamento || '');
+        return usuariosTodos.filter(function(u) {
+          if (!usuarioTieneAlgunRol(u, ['Jefe Departamento'])) return false;
+          var permisos = u.permisos;
+          if (typeof permisos === 'string') { try { permisos = JSON.parse(permisos); } catch (e) { permisos = []; } }
+          return Array.isArray(permisos) && permisos.some(function(pm) {
+            return normalizar(pm.empresa) === empNorm && deptoParaComparar(pm.empresa, pm.depto) === deptoNorm;
+          });
+        }).map(function(u) { return u.usuario; });
+      }
+      function renglonesReporteTelegram(lista, formato) {
+        var esc = escaparHTMLTelegram;
+        var lineas = lista.slice(0, MAX_RENGLONES_REPORTE_TELEGRAM).map(function(o) { return '• ' + esc(formato(o)); });
+        if (lista.length > MAX_RENGLONES_REPORTE_TELEGRAM) lineas.push('• … y ' + (lista.length - MAX_RENGLONES_REPORTE_TELEGRAM) + ' más (ver 📬 Bandeja de OC).');
+        return lineas.join('\n');
+      }
+      function totalesPorMonedaTexto(lista, campo) {
+        var porMoneda = {};
+        lista.forEach(function(o) { var m = montosPagoOC(o); porMoneda[m.moneda] = (porMoneda[m.moneda] || 0) + (Number(m[campo]) || 0); });
+        return Object.keys(porMoneda).map(function(mon) { return formatoMoneda(porMoneda[mon], mon) + ' ' + mon; }).join(' + ');
+      }
+      var revisandoReporteFacturas = false;
+      async function revisarReporteMensualFacturas() {
+        if (revisandoReporteFacturas || !actual) return;
+        var ahora = new Date();
+        if (ahora.getHours() < HORA_INICIO_RECORDATORIOS || ahora.getHours() >= HORA_FIN_RECORDATORIOS) return;
+        var dia = ahora.getDate();
+        var ultimoDia = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+        var dia29 = Math.min(29, ultimoDia);
+        var tipo = dia >= dia29 ? '29' : (dia >= 25 ? '25' : null);
+        if (!tipo) return;
+        revisandoReporteFacturas = true;
+        try {
+          var mes = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0');
+          var rO = await supabase.from('ordenes').select('*').eq('estado', 'AUTORIZADA');
+          var rU = await supabase.from('usuarios').select('usuario,rol,permisos');
+          var rP = await supabase.from('proyectos').select('nombre,empresa,departamento');
+          if (rO.error || rU.error || rP.error) return;
+          var proyectosTodos = rP.data || [];
+          var deptoDeOC = function(o) {
+            var p = proyectosTodos.find(function(x) { return normalizar(x.nombre) === normalizar(o.proyecto); });
+            return p ? { empresa: p.empresa, departamento: p.departamento } : { empresa: o.empresa, departamento: o.departamento };
+          };
+          var vigentes = (rO.data || []).filter(function(o) { return !o.pausada && !o.uuidfactura; });
+          var pagadasSinFactura = vigentes.filter(function(o) { return o.estadopago === 'PAGADA'; });
+          var parcialesSinFactura = tipo === '29' ? vigentes.filter(function(o) { return o.estadopago !== 'PAGADA' && montosPagoOC(o).pagado > 0; }) : [];
+          if (!pagadasSinFactura.length && !parcialesSinFactura.length) return;
+
+          // Jefe -> OC de sus departamentos
+          var porJefe = {};
+          var agregar = function(o, lista) {
+            var d = deptoDeOC(o);
+            jefesDeDeptoConDatos(d.empresa, d.departamento, rU.data || []).forEach(function(j) {
+              porJefe[j] = porJefe[j] || { pagadas: [], parciales: [] };
+              porJefe[j][lista].push(o);
+            });
+          };
+          pagadasSinFactura.forEach(function(o) { agregar(o, 'pagadas'); });
+          parcialesSinFactura.forEach(function(o) { agregar(o, 'parciales'); });
+
+          // Un solo mensaje por persona (cuentas dobles con el mismo chat).
+          var porChat = {};
+          var jefes = Object.keys(porJefe);
+          for (var i = 0; i < jefes.length; i++) {
+            var chat = await obtenerTelegramChatIdUsuario(jefes[i]);
+            if (!chat) { console.warn('Reporte de facturas: ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.'); continue; }
+            var g = porChat[chat] = porChat[chat] || { usuarios: [], pagadas: [], parciales: [] };
+            g.usuarios.push(jefes[i]);
+            porJefe[jefes[i]].pagadas.forEach(function(o) { if (g.pagadas.indexOf(o) === -1) g.pagadas.push(o); });
+            porJefe[jefes[i]].parciales.forEach(function(o) { if (g.parciales.indexOf(o) === -1) g.parciales.push(o); });
+          }
+
+          var esc = escaparHTMLTelegram;
+          var fechaHoyTxt = fechaCortaTelegram(fechaHoyLocalISO());
+          var formatoPagada = function(o) {
+            var m = montosPagoOC(o);
+            return (o.codigo || ('OC-' + o.id)) + ' — ' + (o.proveedor || '—') + ' — ' + formatoMoneda(m.total, m.moneda) + ' ' + m.moneda +
+              ' — pagada el ' + fechaCortaTelegram(fechaUltimoPagoOC(o)) + ' — resp. ' + (o.responsable || '—');
+          };
+          var formatoParcial = function(o) {
+            var m = montosPagoOC(o);
+            return (o.codigo || ('OC-' + o.id)) + ' — ' + (o.proveedor || '—') + ' — pagado ' + formatoMoneda(m.pagado, m.moneda) + ' de ' +
+              formatoMoneda(m.total, m.moneda) + ' ' + m.moneda + ' — último pago ' + fechaCortaTelegram(fechaUltimoPagoOC(o)) + ' — resp. ' + (o.responsable || '—');
+          };
+          var chats = Object.keys(porChat);
+          for (var c = 0; c < chats.length; c++) {
+            var grupo = porChat[chats[c]];
+            if (!grupo.pagadas.length && !grupo.parciales.length) continue;
+            var cuentas = grupo.usuarios.slice().sort();
+            var clave = 'FACTURAS' + tipo + '-' + mes + '-' + cuentas.join('+');
+            var tomado = await tomarAvisoPeriodico(clave, cuentas.join(', '), grupo.pagadas.length + ' pagadas sin factura, ' + grupo.parciales.length + ' con pago parcial');
+            if (tomado === 'error') return;   // sin la tabla no se envía (evita repetirlo)
+            if (tomado === 'ya') continue;
+            var texto = tipo === '25'
+              ? '🧾 <b>PAGOS PENDIENTES DE FACTURAR</b>\n📅 Corte del ' + esc(fechaHoyTxt) + '\n\n' +
+                'OC de tu departamento pagadas que aún no tienen factura:\n' + renglonesReporteTelegram(grupo.pagadas, formatoPagada) + '\n\n' +
+                '💲 <b>Total:</b> ' + esc(grupo.pagadas.length + ' OC por ' + totalesPorMonedaTexto(grupo.pagadas, 'total')) + '\n\n' +
+                'Pide a cada responsable que suba su factura antes del cierre de mes.\n👉 📬 Bandeja de OC (📄 Factura):\n' + esc(URL_APP_TELEGRAM)
+              : '🧾 <b>PAGOS PENDIENTES DE FACTURAR A LA FECHA</b>\n📅 Corte del ' + esc(fechaHoyTxt) + '\n\n' +
+                '<b>OC pagadas sin factura:</b>\n' + (grupo.pagadas.length ? renglonesReporteTelegram(grupo.pagadas, formatoPagada) + '\n💲 Total: ' + esc(grupo.pagadas.length + ' OC por ' + totalesPorMonedaTexto(grupo.pagadas, 'total')) : '• Ninguna') + '\n\n' +
+                '<b>OC con pago parcial y sin factura:</b>\n' + (grupo.parciales.length ? renglonesReporteTelegram(grupo.parciales, formatoParcial) + '\n💲 Pagado: ' + esc(grupo.parciales.length + ' OC por ' + totalesPorMonedaTexto(grupo.parciales, 'pagado')) : '• Ninguna') + '\n\n' +
+                'Último aviso antes del cierre de mes.\n👉 📬 Bandeja de OC (📄 Factura):\n' + esc(URL_APP_TELEGRAM);
+            await enviarTelegramAChat(chats[c], texto, cuentas[0], 'Reporte ' + tipo + ' de pagos por facturar ' + mes);
+          }
+        } catch (e) {
+          console.warn('No se pudo revisar el reporte mensual de pagos por facturar:', e);
+        } finally {
+          revisandoReporteFacturas = false;
+        }
+      }
+
+      // ===== AVISO A FINANZAS: COMPLEMENTO DE PAGO DE CXC SIN ATENDER (09/11/2026) =====
+      // Cuenta por cobrar de una OF con método de pago PPD: cuando ya se
+      // subió el comprobante de cobro de la OF y pasan
+      // DIAS_AVISO_COMPLEMENTO_CXC días sin subir el complemento de pago en
+      // CXC, FINANZAS (antes DMHS) recibe el aviso; se repite con la misma
+      // frecuencia mientras siga sin atenderse. Control en
+      // cuentas_cxc.recordatorio_complemento_en (una vez aunque varios
+      // usuarios tengan el sistema abierto).
+      var DIAS_AVISO_COMPLEMENTO_CXC = 3;
+      var revisandoComplementosCXC = false;
+      async function revisarComplementosCXC() {
+        if (revisandoComplementosCXC || !actual) return;
+        var hora = new Date().getHours();
+        if (hora < HORA_INICIO_RECORDATORIOS || hora >= HORA_FIN_RECORDATORIOS) return;
+        revisandoComplementosCXC = true;
+        try {
+          var rC = await supabase.from('cuentas_cxc').select('*').neq('estado', 'PAGADO');
+          if (rC.error) return;
+          var cuentas = (rC.data || []).filter(function(c) { return !c.complemento_pago_url && c.of_id; });
+          if (!cuentas.length || !('recordatorio_complemento_en' in cuentas[0])) return;
+          var rF = await supabase.from('ordenes_facturacion').select('*').in('id', cuentas.map(function(c) { return c.of_id; }));
+          if (rF.error) return;
+          var limite = Date.now() - DIAS_AVISO_COMPLEMENTO_CXC * 86400000;
+          var limiteISO = new Date(limite).toISOString();
+          var destino = USUARIOS_COMPLEMENTO_PAGO[0];
+          var chatId = await obtenerTelegramChatIdUsuario(destino);
+          if (!chatId) { console.warn('Complementos CXC: ' + destino + ' no tiene Chat ID de Telegram registrado.'); return; }
+          var pendientes = [];
+          for (var i = 0; i < cuentas.length; i++) {
+            var c = cuentas[i];
+            var of = (rF.data || []).find(function(x) { return x.id === c.of_id; });
+            if (!of || String(of.metodo_pago || '').toUpperCase().indexOf('PPD') !== 0) continue;
+            var fechaCobro = of.comprobante_pago_fecha_subida || (of.estado === 'PAGADO' ? of.fecha_pago : null);
+            if (!fechaCobro || new Date(fechaCobro).getTime() > limite) continue;
+            if (c.recordatorio_complemento_en && new Date(c.recordatorio_complemento_en).getTime() > limite) continue;
+            var t = await supabase.from('cuentas_cxc').update({ recordatorio_complemento_en: new Date().toISOString() }).eq('id', c.id)
+              .or('recordatorio_complemento_en.is.null,recordatorio_complemento_en.lt."' + limiteISO + '"').select('id');
+            if (t.error || !t.data || !t.data.length) continue;
+            pendientes.push({ cuenta: c, of: of, fechaCobro: fechaCobro });
+          }
+          if (!pendientes.length) return;
+          var esc = escaparHTMLTelegram;
+          var lineas = pendientes.map(function(p) {
+            return '• ' + esc((p.cuenta.folio_factura || p.cuenta.concepto || ('CXC-' + p.cuenta.id)) + ' — ' + (p.cuenta.cliente || '—') + ' — ' +
+              formatoMoneda(Number(p.cuenta.importe) || 0, p.cuenta.moneda || 'MXN') + ' ' + (p.cuenta.moneda || 'MXN') + ' — OF ' + (p.of.folio || p.of.id) +
+              ' — cobrada el ' + fechaCortaTelegram(p.fechaCobro) + ' (hace ' + textoDias(diasDesdeFecha(p.fechaCobro)) + ') — resp. ' + (p.cuenta.responsable || '—'));
+          }).join('\n');
+          var texto =
+            '💰 <b>COMPLEMENTO DE PAGO SIN ATENDER (CXC)</b>\n\n' +
+            'Cuentas por cobrar con factura PPD ya cobradas que, después de ' + DIAS_AVISO_COMPLEMENTO_CXC + ' días, aún no tienen complemento de pago:\n' +
+            lineas + '\n\n' +
+            '👉 Súbelo en INGRESOS → CXC (📎 Subir complemento de pago):\n' + esc(URL_APP_TELEGRAM);
+          await enviarTelegramAChat(chatId, texto, destino, 'Complementos CXC sin atender');
+        } catch (e) {
+          console.warn('No se pudieron revisar los complementos de pago de CXC:', e);
+        } finally {
+          revisandoComplementosCXC = false;
         }
       }
 
@@ -22099,13 +22432,17 @@
           pago1_fecha_confirmacion: null,
           pago2_comprobante_url: null,
           pago2_fecha_confirmacion: null,
-          // También se borran las parcialidades registradas.
+          // También se borran las parcialidades registradas y el pago programado.
           pagos: [],
-          monto_pagado: 0
+          monto_pagado: 0,
+          fecha_siguiente_pago: null,
+          aviso_pago_programado_en: null
         };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
-        if (error && /pagos|monto_pagado/i.test(error.message || '')) {
-          delete updates.pagos; delete updates.monto_pagado;
+        for (var reintentoPend = 0; reintentoPend < 2 && error && /pagos|monto_pagado|fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || ''); reintentoPend++) {
+          // Columnas que aún no existen (SQL sin ejecutar): se quitan y se reintenta.
+          if (/fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || '')) { delete updates.fecha_siguiente_pago; delete updates.aviso_pago_programado_en; }
+          else { delete updates.pagos; delete updates.monto_pagado; }
           error = (await supabase.from('ordenes').update(updates).eq('id', oc.id)).error;
         }
         if (error) return alert('Error al actualizar OC: ' + error.message);
