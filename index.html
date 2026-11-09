@@ -880,6 +880,20 @@
   .badge-paridad { background: #f5e56b; color: #0b1a33 }
   .badge-vencida { background: var(--color-rojo); color: white }
   .badge-pendiente-pago { background: #f5e56b; color: #0b1a33 }
+  /* Pago de OC en parcialidades (ventana "Comprobante de Pago") */
+  .pago-oc-resumen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .pago-oc-resumen .pago-oc-dato { border: 1px solid var(--gray-300, #cbd5e1); border-radius: 8px; padding: 8px 10px; }
+  .pago-oc-resumen .pago-oc-dato small { display: block; font-size: 11px; color: var(--gray-600, #475569); }
+  .pago-oc-resumen .pago-oc-dato b { font-size: 14px; white-space: nowrap; }
+  .pago-oc-resumen .pago-oc-historial { grid-column: 1 / -1; font-size: 12px; color: var(--gray-600, #475569); white-space: normal; }
+  .pago-oc-tipos { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pago-oc-tipo { flex: 1 1 180px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--gray-300, #cbd5e1); border-radius: 8px; padding: 9px 10px; cursor: pointer; font-weight: 500; }
+  .pago-oc-tipo span { font-weight: 400; font-size: 12px; color: var(--gray-600, #475569); }
+  .pago-oc-tipo input { margin: 0; width: auto; }
+  .pago-oc-pendiente { margin-top: 6px; font-size: 13px; font-weight: 600; white-space: normal; }
+  .pago-oc-pendiente.error { color: #c0392b; }
+  .pago-oc-monto-badge { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  @media (max-width: 550px) { .pago-oc-resumen { grid-template-columns: 1fr; } }
   .badge-cxc-pagado { background: var(--color-verde); color: #0b1a33 }
   .badge-cxc-pendiente { background: #f5e56b; color: #0b1a33 }
   .badge-cxc-vencido { background: var(--color-rojo); color: white }
@@ -5499,7 +5513,20 @@
             </div>
           </div>
           <div class="modal-body">
-            <p class="text-muted" style="margin-bottom:12px;">Para marcar esta OC como pagada es obligatorio adjuntar el comprobante de pago (PDF).</p>
+            <p class="text-muted" style="margin-bottom:12px;">Para registrar un pago es obligatorio indicar si es el pago completo o una parcialidad, el monto pagado y adjuntar el comprobante (PDF). La OC queda PAGADA solo cuando se cubre su total.</p>
+            <div id="comprobantePagoResumen" class="pago-oc-resumen"></div>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;">Tipo de pago *</label>
+              <div class="pago-oc-tipos">
+                <label class="pago-oc-tipo"><input type="radio" name="comprobantePagoTipo" value="COMPLETO" onchange="window.cambiarTipoPagoOC()"> Pago completo <span>(liquida lo pendiente)</span></label>
+                <label class="pago-oc-tipo"><input type="radio" name="comprobantePagoTipo" value="PARCIAL" onchange="window.cambiarTipoPagoOC()"> Parcialidad <span>(abono a cuenta)</span></label>
+              </div>
+            </div>
+            <div class="grupo-formulario">
+              <label style="font-weight:500;" for="comprobantePagoMonto">Monto pagado <span id="comprobantePagoMonedaTexto"></span> *</label>
+              <input type="number" id="comprobantePagoMonto" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" oninput="window.actualizarPendientePagoOC()" style="width:100%;box-sizing:border-box;">
+              <div id="comprobantePagoPendienteTexto" class="pago-oc-pendiente"></div>
+            </div>
             <div class="grupo-formulario">
               <label style="font-weight:500;">Adjuntar comprobante de pago (PDF) *</label>
               <div id="comprobantePagoDropzone" class="foto-dropzone" style="width:100%;height:140px;" onclick="document.getElementById('comprobantePagoInput').click();" ondragover="window.manejarDragOverFoto(event, this)" ondragleave="window.manejarDragLeaveFoto(event, this)" ondrop="window.manejarDropComprobantePago(event, this)">
@@ -20090,34 +20117,169 @@
       // pago, igual que antes.
       var comprobantePagoNumeroPendiente = 1;
 
+      // ===== PAGO COMPLETO O EN PARCIALIDADES (09/11/2026) =====
+      // Al subir cada comprobante, CCHF (o ADMIN) indica si es el pago
+      // completo (liquida lo pendiente) o una parcialidad, y el monto
+      // pagado; la ventana muestra el total, lo ya pagado y lo pendiente.
+      // Cada pago se guarda en ordenes.pagos (jsonb) y el acumulado en
+      // ordenes.monto_pagado (SQL pagos_parciales_oc.sql). La OC queda
+      // PAGADA (y sigue a factura, complemento y concluir) solo cuando lo
+      // pagado cubre el total; mientras tanto sigue "por pagar" con el
+      // botón "💰 Pagar" para la siguiente parcialidad. El monto se mide
+      // igual que la factura: en una OC en USD convertida con paridad, en
+      // pesos (montomxn); en las demás, en la moneda de la OC.
+      var TOLERANCIA_PAGO_OC = 0.01;
+      function redondearMontoPago(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+      function pagosRegistradosOC(oc) {
+        if (!oc) return [];
+        var lista = oc.pagos;
+        if (typeof lista === 'string') { try { lista = JSON.parse(lista); } catch (e) { lista = []; } }
+        if (Array.isArray(lista) && lista.length) return lista.slice();
+        // OC anteriores a este cambio: el primer pago de un 50/50 ya
+        // registrado cuenta como parcialidad del 50%.
+        if (oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO' && oc.pago1_fecha_confirmacion && oc.estadopago !== 'PAGADA') {
+          return [{ numero: 1, tipo: 'PARCIAL', monto: redondearMontoPago(montoEsperadoFacturaOC(oc).monto / 2), moneda: montoEsperadoFacturaOC(oc).moneda,
+            comprobante_url: oc.pago1_comprobante_url || null, fecha: oc.pago1_fecha_confirmacion, registro: null }];
+        }
+        return [];
+      }
+      function montosPagoOC(oc) {
+        var esperado = montoEsperadoFacturaOC(oc || {});
+        var total = redondearMontoPago(esperado.monto);
+        var pagos = pagosRegistradosOC(oc);
+        var pagado;
+        if (oc && oc.estadopago === 'PAGADA') {
+          pagado = total;
+        } else if (pagos.length) {
+          pagado = redondearMontoPago(pagos.reduce(function(s, p) { return s + (Number(p.monto) || 0); }, 0));
+        } else {
+          pagado = redondearMontoPago(oc && oc.monto_pagado);
+        }
+        var pendiente = redondearMontoPago(Math.max(0, total - pagado));
+        return {
+          total: total, pagado: pagado, pendiente: pendiente, pagos: pagos, moneda: esperado.moneda,
+          parcial: !!oc && oc.estadopago !== 'PAGADA' && pagado > 0
+        };
+      }
+      // Texto corto "Pagado $X · Pendiente $Y" de una OC con pago parcial.
+      function textoMontosPagoParcialOC(oc) {
+        var m = montosPagoOC(oc);
+        return 'Pagado ' + formatoMoneda(m.pagado, m.moneda) + ' · Pendiente ' + formatoMoneda(m.pendiente, m.moneda);
+      }
+      var montosPagoEnCurso = null;
+
+      function pintarResumenPagoOC(oc) {
+        var m = montosPagoOC(oc);
+        montosPagoEnCurso = m;
+        var cont = document.getElementById('comprobantePagoResumen');
+        if (cont) {
+          var historial = m.pagos.map(function(p) {
+            var f = p.fecha ? new Date(p.fecha) : null;
+            return 'Pago ' + (p.numero || '') + ' (' + (p.tipo === 'COMPLETO' ? 'completo' : 'parcialidad') + '): ' + formatoMoneda(Number(p.monto) || 0, p.moneda || m.moneda) +
+              (f && !isNaN(f.getTime()) ? ' el ' + f.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+          });
+          cont.innerHTML =
+            '<div class="pago-oc-dato"><small>Total de la OC</small><b>' + escapeHTML(formatoMoneda(m.total, m.moneda)) + '</b></div>' +
+            '<div class="pago-oc-dato"><small>Pagado</small><b>' + escapeHTML(formatoMoneda(m.pagado, m.moneda)) + '</b></div>' +
+            '<div class="pago-oc-dato"><small>Pendiente por pagar</small><b>' + escapeHTML(formatoMoneda(m.pendiente, m.moneda)) + '</b></div>' +
+            (historial.length ? '<div class="pago-oc-historial">Pagos registrados: ' + escapeHTML(historial.join(' | ')) + '</div>' : '');
+        }
+        var monedaTxt = document.getElementById('comprobantePagoMonedaTexto');
+        if (monedaTxt) monedaTxt.textContent = '(' + m.moneda + ')';
+        return m;
+      }
+
+      function tipoPagoOCElegido() {
+        var r = document.querySelector('input[name="comprobantePagoTipo"]:checked');
+        return r ? r.value : '';
+      }
+
+      // Pago completo: el monto es exactamente lo pendiente (no se edita).
+      // Parcialidad: se captura el monto, que debe ser menor a lo pendiente.
+      window.cambiarTipoPagoOC = function() {
+        var m = montosPagoEnCurso;
+        var input = document.getElementById('comprobantePagoMonto');
+        if (!m || !input) return;
+        var tipo = tipoPagoOCElegido();
+        if (tipo === 'COMPLETO') {
+          input.value = m.pendiente.toFixed(2);
+          input.readOnly = true;
+          input.style.background = 'var(--gray-200)';
+        } else {
+          if (input.readOnly) input.value = '';
+          input.readOnly = false;
+          input.style.background = '';
+          if (tipo === 'PARCIAL') try { input.focus(); } catch (e) {}
+        }
+        window.actualizarPendientePagoOC();
+      };
+
+      // Muestra lo que quedará pendiente después de este pago y valida el
+      // monto. Devuelve el error (texto) o '' si es válido.
+      window.actualizarPendientePagoOC = function() {
+        var m = montosPagoEnCurso;
+        var input = document.getElementById('comprobantePagoMonto');
+        var aviso = document.getElementById('comprobantePagoPendienteTexto');
+        if (!m || !input || !aviso) return '';
+        var tipo = tipoPagoOCElegido();
+        var monto = redondearMontoPago(input.value);
+        var error = '';
+        if (!tipo) error = 'Indica si es el pago completo o una parcialidad.';
+        else if (!(monto > 0)) error = 'Captura el monto pagado.';
+        else if (tipo === 'PARCIAL' && monto >= m.pendiente - TOLERANCIA_PAGO_OC) error = 'Una parcialidad debe ser menor a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + '). Si liquida la OC, elige "Pago completo".';
+        else if (tipo === 'COMPLETO' && Math.abs(monto - m.pendiente) > TOLERANCIA_PAGO_OC) error = 'El pago completo debe ser igual a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + ').';
+        if (error) {
+          aviso.textContent = (input.value || tipo) ? '⚠️ ' + error : '';
+          aviso.classList.add('error');
+        } else {
+          var queda = redondearMontoPago(Math.max(0, m.pendiente - monto));
+          aviso.textContent = queda <= TOLERANCIA_PAGO_OC
+            ? '✅ Con este pago la OC queda liquidada (pendiente ' + formatoMoneda(0, m.moneda) + ').'
+            : 'Pendiente por pagar después de este pago: ' + formatoMoneda(queda, m.moneda);
+          aviso.classList.remove('error');
+        }
+        return error;
+      };
+
       window.abrirComprobantePago = function(index) {
         if (!actual) return alert('No has iniciado sesión');
         if (!usuarioPuedeMarcarOCPagada(actual)) return alert('❌ Solo el usuario CCHF o ADMIN pueden subir el pago y marcar una OC como pagada.');
         var oc = ordenes[index];
         if (!oc) return;
         if (oc.estado !== 'AUTORIZADA') return alert('Solo se puede marcar pagada una OC autorizada.');
+        if (oc.estadopago === 'PAGADA') return alert('Esta OC ya está pagada en su totalidad. No hay pagos pendientes.');
 
         var es5050 = oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO';
-        var pago1Hecho = !!oc.pago1_fecha_confirmacion;
-        if (es5050 && pago1Hecho && oc.estadopago === 'PAGADA') {
-          return alert('Esta OC ya tiene registrados los 2 pagos (50/50). No hay más pagos pendientes.');
-        }
+        var pagosPrevios = pagosRegistradosOC(oc);
 
         indexComprobantePagoPendiente = index;
         comprobantePagoArchivoPendiente = null;
-        comprobantePagoNumeroPendiente = (es5050 && pago1Hecho) ? 2 : 1;
+        comprobantePagoNumeroPendiente = pagosPrevios.length + 1;
 
         var codigoEl = document.getElementById('comprobantePagoOCCodigo');
         if (codigoEl) {
-          var textoCodigo = '— ' + (oc.codigo || ('OC-' + oc.id));
+          var textoCodigo = '— ' + (oc.codigo || ('OC-' + oc.id)) + ' (Pago ' + comprobantePagoNumeroPendiente + ')';
           if (es5050) {
-            var montoPago = (oc.montototal || 0) / 2;
-            var fechaPagoEsperada = comprobantePagoNumeroPendiente === 2 ? oc.fechapago2 : oc.fechapago;
-            textoCodigo += ' (Pago ' + comprobantePagoNumeroPendiente + ' de 2 — 50/50 — ' + formatoMoneda(montoPago, oc.moneda) +
-              (fechaPagoEsperada ? (' — vence ' + new Date(fechaPagoEsperada).toLocaleDateString()) : '') + ')';
+            var fechaPagoEsperada = pagosPrevios.length ? oc.fechapago2 : oc.fechapago;
+            // Fecha AAAA-MM-DD leída como día local (antes salía un día antes).
+            textoCodigo += ' — condición 50/50' + (fechaPagoEsperada ? (' — vence ' + fechaCortaLocalVale(fechaPagoEsperada)) : '');
           }
           codigoEl.textContent = textoCodigo;
         }
+
+        // Tipo y monto: sin preselección, salvo el 50/50, que propone su
+        // primer pago como parcialidad del 50% y el segundo como completo.
+        var mPago = pintarResumenPagoOC(oc);
+        document.querySelectorAll('input[name="comprobantePagoTipo"]').forEach(function(r) { r.checked = false; });
+        var inputMonto = document.getElementById('comprobantePagoMonto');
+        if (inputMonto) { inputMonto.value = ''; inputMonto.readOnly = false; inputMonto.style.background = ''; }
+        if (es5050) {
+          var radio5050 = document.querySelector('input[name="comprobantePagoTipo"][value="' + (pagosPrevios.length ? 'COMPLETO' : 'PARCIAL') + '"]');
+          if (radio5050) radio5050.checked = true;
+          window.cambiarTipoPagoOC();
+          if (!pagosPrevios.length && inputMonto) { inputMonto.value = redondearMontoPago(mPago.total / 2).toFixed(2); }
+        }
+        window.actualizarPendientePagoOC();
 
         var dropzone = document.getElementById('comprobantePagoDropzone');
         var texto = document.getElementById('comprobantePagoDropzoneTexto');
@@ -20178,6 +20340,12 @@
         var oc = ordenes[indexComprobantePagoPendiente];
         if (!oc) return;
 
+        // Tipo de pago y monto (completo o parcialidad) antes que el PDF.
+        var errorMontoPago = window.actualizarPendientePagoOC();
+        if (errorMontoPago) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(errorMontoPago) + '</div>';
+          return;
+        }
         if (!comprobantePagoArchivoPendiente) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Adjunta el comprobante de pago (PDF) para poder confirmar el pago.</div>';
           return;
@@ -20188,27 +20356,62 @@
         }
 
         try {
-          var url = await subirComprobantePago(comprobantePagoArchivoPendiente, (oc.codigo || ('OC-' + oc.id)) + '-PAGO' + comprobantePagoNumeroPendiente);
+          // Se recalcula con la OC actual por si cambió desde que se abrió.
+          var mAntes = montosPagoOC(oc);
+          var tipoPago = tipoPagoOCElegido();
+          var montoPago = tipoPago === 'COMPLETO' ? mAntes.pendiente : redondearMontoPago(document.getElementById('comprobantePagoMonto').value);
+          var pagadoDespues = redondearMontoPago(mAntes.pagado + montoPago);
+          var pendienteDespues = redondearMontoPago(Math.max(0, mAntes.total - pagadoDespues));
+          var liquida = pendienteDespues <= TOLERANCIA_PAGO_OC;
+          var numeroPago = mAntes.pagos.length + 1;
+          comprobantePagoNumeroPendiente = numeroPago;
+
+          var url = await subirComprobantePago(comprobantePagoArchivoPendiente, (oc.codigo || ('OC-' + oc.id)) + '-PAGO' + numeroPago);
           if (!url) {
             if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo subir el comprobante. Intenta de nuevo.</div>';
             return;
           }
+          var ahoraISO = new Date().toISOString();
           var es5050 = oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO';
-          var updates;
+          var listaPagos = mAntes.pagos.concat([{
+            numero: numeroPago,
+            tipo: liquida ? 'COMPLETO' : 'PARCIAL',
+            monto: montoPago,
+            moneda: mAntes.moneda,
+            pagado_acumulado: pagadoDespues,
+            pendiente: pendienteDespues,
+            comprobante_url: url,
+            fecha: ahoraISO,
+            registro: (actual && (actual.usuario || actual.u)) || null
+          }]);
+          var updates = { pagos: listaPagos, monto_pagado: pagadoDespues };
+          // Compatibilidad con el 50/50: el primer pago va en pago1_* y el
+          // que liquida la OC en pago2_* (si se paga en uno solo, pago1_*).
+          if (es5050) {
+            if (!oc.pago1_fecha_confirmacion) { updates.pago1_comprobante_url = url; updates.pago1_fecha_confirmacion = ahoraISO; }
+            else if (liquida) { updates.pago2_comprobante_url = url; updates.pago2_fecha_confirmacion = ahoraISO; }
+          }
           var mensajeFinal;
-          if (es5050 && comprobantePagoNumeroPendiente === 1) {
-            // Primer pago del 50/50: se registra su comprobante, pero la OC
-            // sigue sin marcarse PAGADA hasta que se confirme el segundo.
-            updates = { pago1_comprobante_url: url, pago1_fecha_confirmacion: new Date().toISOString() };
-            mensajeFinal = '✅ Primer pago (50%) registrado. Falta el segundo pago en la fecha indicada.';
-          } else if (es5050 && comprobantePagoNumeroPendiente === 2) {
-            updates = { pago2_comprobante_url: url, pago2_fecha_confirmacion: new Date().toISOString(), estadopago: 'PAGADA', comprobante_pago_url: url };
-            mensajeFinal = '✅ Segundo pago (50%) registrado. OC marcada como PAGADA. Ahora queda pendiente de que se registre la factura.';
+          if (liquida) {
+            updates.estadopago = 'PAGADA';
+            updates.comprobante_pago_url = url;
+            mensajeFinal = '✅ Pago ' + numeroPago + ' registrado (' + (tipoPago === 'COMPLETO' ? 'pago completo' : 'liquida la OC') + '): ' + formatoMoneda(montoPago, mAntes.moneda) +
+              '.\nPagado: ' + formatoMoneda(pagadoDespues, mAntes.moneda) + ' de ' + formatoMoneda(mAntes.total, mAntes.moneda) +
+              '. Pendiente: ' + formatoMoneda(0, mAntes.moneda) + '.\n\nOC marcada como PAGADA. Ahora queda pendiente de que se registre la factura.';
           } else {
-            updates = { estadopago: 'PAGADA', comprobante_pago_url: url };
-            mensajeFinal = '✅ OC marcada como PAGADA. Ahora queda pendiente de que se registre la factura.';
+            mensajeFinal = '✅ Parcialidad ' + numeroPago + ' registrada: ' + formatoMoneda(montoPago, mAntes.moneda) +
+              '.\nPagado: ' + formatoMoneda(pagadoDespues, mAntes.moneda) + ' de ' + formatoMoneda(mAntes.total, mAntes.moneda) +
+              '. Pendiente: ' + formatoMoneda(pendienteDespues, mAntes.moneda) + '.\n\nLa OC sigue por pagar hasta cubrir su total.';
           }
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          if (error && /pagos|monto_pagado/i.test(error.message || '')) {
+            // Falta correr el SQL de parcialidades: un pago completo se
+            // guarda como antes; una parcialidad no se puede registrar.
+            if (!liquida) throw new Error('Falta ejecutar en Supabase el SQL "pagos_parciales_oc.sql" (columnas pagos y monto_pagado). La parcialidad no se registró.');
+            delete updates.pagos; delete updates.monto_pagado;
+            var reintento = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+            error = reintento.error;
+          }
           if (error) throw error;
           Object.assign(oc, updates);
           if (updates.estadopago === 'PAGADA' && ocEsSinProyecto(oc)) {
@@ -20220,8 +20423,14 @@
           // (no bloquea: si falla, el pago ya quedó registrado).
           if (msg) msg.innerHTML = '<div class="success-msg">⏳ Pago registrado. Terminando…</div>';
           var resultadoAviso = await notificarPagoOCTelegram(oc, {
-            numeroPago: comprobantePagoNumeroPendiente,
+            numeroPago: numeroPago,
             es5050: es5050,
+            monto: montoPago,
+            moneda: mAntes.moneda,
+            total: mAntes.total,
+            pagado: pagadoDespues,
+            pendiente: pendienteDespues,
+            liquida: liquida,
             comprobanteArchivo: comprobantePagoArchivoPendiente,
             comprobanteUrl: url
           });
@@ -20427,19 +20636,27 @@
             return resultado;
           }
 
-          var moneda = oc.moneda || 'MXN';
-          var total = Number(oc.montototal) || 0;
-          var esParcial = !!info.es5050;
-          var montoPagado = esParcial ? total / 2 : total;
-          var montoTxt = formatoMoneda(montoPagado, moneda) + (moneda === 'USD' ? '' : ' MXN') +
-            (esParcial ? ' (pago ' + info.numeroPago + ' de 2 — 50% de ' + formatoMoneda(total, moneda) + ')' : '');
+          // Monto real de este pago (completo o parcialidad) con lo pagado
+          // y lo pendiente de la OC.
+          var moneda = info.moneda || oc.moneda || 'MXN';
+          var total = info.total != null ? Number(info.total) : (Number(oc.montototal) || 0);
+          var montoPagado = info.monto != null ? Number(info.monto) : total;
+          var conMoneda = function(v) { return formatoMoneda(v, moneda) + (moneda === 'USD' ? '' : ' MXN'); };
+          var esParcialidad = info.liquida === false;
+          var montoTxt = conMoneda(montoPagado) +
+            (esParcialidad ? ' (parcialidad ' + info.numeroPago + ')' : (info.numeroPago > 1 ? ' (pago ' + info.numeroPago + ', liquida la OC)' : ' (pago completo)'));
+          var lineasSaldo = (esParcialidad || info.numeroPago > 1) && info.pagado != null
+            ? '📊 <b>Pagado:</b> ' + escaparHTMLTelegram(conMoneda(info.pagado) + ' de ' + conMoneda(total)) + '\n' +
+              '⏳ <b>Pendiente:</b> ' + escaparHTMLTelegram(conMoneda(info.pendiente || 0)) + '\n'
+            : '';
           var fechaTxt = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
           var texto =
-            '✅ <b>Pago realizado</b>\n\n' +
+            (esParcialidad ? '✅ <b>Pago parcial realizado</b>\n\n' : '✅ <b>Pago realizado</b>\n\n') +
             '📅 <b>Fecha:</b> ' + escaparHTMLTelegram(fechaTxt) + '\n' +
             '🏢 <b>Proveedor:</b> ' + escaparHTMLTelegram(oc.proveedor || '—') + '\n' +
             '💲 <b>Monto:</b> ' + escaparHTMLTelegram(montoTxt) + '\n' +
+            lineasSaldo +
             '📝 <b>Concepto:</b> ' + escaparHTMLTelegram(oc.concepto || '—') + '\n\n' +
             '🧾 OC: ' + escaparHTMLTelegram(oc.codigo || ('OC-' + oc.id));
           var nombreComprobante = (oc.codigo || ('OC-' + oc.id)) + '-PAGO' + (info.numeroPago || 1) + '.pdf';
@@ -21430,19 +21647,32 @@
         // comprobantes (también el archivo en el almacenamiento) y la OC
         // vuelve a quedar por pagar, con el botón "💰 Pagar" para que CCHF
         // suba de nuevo el comprobante. En 50/50 se borran ambos pagos.
-        if (!confirm('¿Regresar la OC ' + (oc.codigo || oc.id) + ' a pendiente de pago?\n\nSe ELIMINARÁ el pago registrado y su comprobante, y habrá que volver a registrar el pago.')) return;
-        var urlsComprobante = [oc.comprobante_pago_url, oc.pago1_comprobante_url, oc.pago2_comprobante_url].filter(function(u, i, arr) {
-          return u && arr.indexOf(u) === i;
-        });
+        var nPagosRegistrados = pagosRegistradosOC(oc).length;
+        if (!confirm('¿Regresar la OC ' + (oc.codigo || oc.id) + ' a pendiente de pago?\n\n' +
+          (nPagosRegistrados > 1
+            ? 'Se ELIMINARÁN los ' + nPagosRegistrados + ' pagos registrados (parcialidades) y sus comprobantes, y habrá que volver a registrar los pagos.'
+            : 'Se ELIMINARÁ el pago registrado y su comprobante, y habrá que volver a registrar el pago.'))) return;
+        var urlsComprobante = [oc.comprobante_pago_url, oc.pago1_comprobante_url, oc.pago2_comprobante_url]
+          .concat(pagosRegistradosOC(oc).map(function(p) { return p.comprobante_url; }))
+          .filter(function(u, i, arr) {
+            return u && arr.indexOf(u) === i;
+          });
         var updates = {
           estadopago: null,
           comprobante_pago_url: null,
           pago1_comprobante_url: null,
           pago1_fecha_confirmacion: null,
           pago2_comprobante_url: null,
-          pago2_fecha_confirmacion: null
+          pago2_fecha_confirmacion: null,
+          // También se borran las parcialidades registradas.
+          pagos: [],
+          monto_pagado: 0
         };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+        if (error && /pagos|monto_pagado/i.test(error.message || '')) {
+          delete updates.pagos; delete updates.monto_pagado;
+          error = (await supabase.from('ordenes').update(updates).eq('id', oc.id)).error;
+        }
         if (error) return alert('Error al actualizar OC: ' + error.message);
         Object.assign(oc, updates);
 
@@ -22241,6 +22471,9 @@
                 estadoLabel = 'PAGADA';
                 badgeClass = 'badge-autorizada-pagada';
               }
+            } else if (o.estado === 'AUTORIZADA' && montosPagoOC(o).parcial) {
+              estadoLabel = 'PAGO PARCIAL<span class="pago-oc-monto-badge">' + escapeHTML(textoMontosPagoParcialOC(o)) + '</span>';
+              badgeClass = 'badge-pendiente-pago';
             } else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
               var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
               var ahora = new Date();
@@ -26712,6 +26945,10 @@
                   badgeClass = 'badge-paridad';
                   estadoMostrado = '⏳ PEND. CONFIRMAR';
                 }
+              } else if (montosPagoOC(o).parcial) {
+                // Pagada en parte: sigue por pagar hasta cubrir el total.
+                badgeClass = 'badge-pendiente-pago';
+                estadoMostrado = '💵 PAGO PARCIAL<span class="pago-oc-monto-badge">' + escapeHTML(textoMontosPagoParcialOC(o)) + '</span>';
               } else if (o.estadopago === 'PENDIENTE' || o.estadopago === null) {
                 var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
                 var ahora = new Date();
