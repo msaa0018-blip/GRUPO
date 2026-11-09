@@ -35899,10 +35899,13 @@
           return original.apply(this, arguments);
         };
       });
-      // Nombres de archivos adjuntos: sin Ñ, acentos, espacios, puntos
-      // (salvo la extensión) ni caracteres especiales, y sin iniciar con
-      // número. (Ya no hay campos exentos: el ticket del vale de gasolina
-      // se comprueba con su folio, sin foto.)
+      // Nombres de archivos adjuntos: en MAYÚSCULAS, sin Ñ, acentos ni
+      // caracteres especiales, y sin iniciar con número. SÍ se admiten
+      // guiones, guion bajo, paréntesis, puntos y espacios, para respetar
+      // la nomenclatura de documentos (ej.
+      // GIE-TRNS-261106-TONY PAPELERIA-AAMS-CCHF.pdf). (Ya no hay campos
+      // exentos: el ticket del vale de gasolina se comprueba con su folio,
+      // sin foto.)
       var ARCHIVOS_EXENTOS = [];
       function erroresNombreArchivo(nombre) {
         var base = String(nombre || ''); var p = base.lastIndexOf('.');
@@ -35910,9 +35913,7 @@
         var e = [];
         if (/[Ññ]/.test(sinExt)) e.push('lleva Ñ');
         if (/[ÁÉÍÓÚÜáéíóúü]/.test(sinExt)) e.push('lleva acentos');
-        if (/\s/.test(sinExt)) e.push('lleva espacios');
-        if (/\./.test(sinExt)) e.push('lleva puntos');
-        if (/[#\/&%$"'()\[\]{}!¡¿?,;:+=@~^*]/.test(sinExt)) e.push('lleva caracteres especiales');
+        if (/[#\/&%$"'\[\]{}!¡¿?,;:+=@~^*]/.test(sinExt)) e.push('lleva caracteres especiales');
         if (/^[0-9]/.test(sinExt)) e.push('inicia con número');
         if (/[a-z]/.test(sinExt)) e.push('no está en MAYÚSCULAS');
         return e;
