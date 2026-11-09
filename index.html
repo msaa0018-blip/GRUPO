@@ -6446,6 +6446,18 @@
               <tbody id="cuerpoProductos"></tbody>
               <tfoot>
                 <tr>
+                  <td colspan="9" style="text-align:right;">Subtotal (sin IVA):</td>
+                  <td id="subtotalProductos" style="min-width:200px;width:210px;">$0.00</td>
+                  <td class="hidden col-proyecto-partida"></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colspan="9" style="text-align:right;" id="ivaProductosEtiqueta">IVA:</td>
+                  <td id="ivaProductos" style="min-width:200px;width:210px;">$0.00</td>
+                  <td class="hidden col-proyecto-partida"></td>
+                  <td></td>
+                </tr>
+                <tr>
                   <td colspan="9" style="text-align:right;font-weight:bold">Total OC:</td>
                   <td id="totalProductos" style="font-weight:bold;font-size:16px;min-width:200px;width:210px;">$0.00</td>
                   <td class="hidden col-proyecto-partida"></td>
@@ -7169,6 +7181,16 @@
             </thead>
             <tbody id="cuerpoEditarProductosOC"></tbody>
             <tfoot>
+              <tr>
+                <td colspan="9" style="text-align:right;">Subtotal (sin IVA):</td>
+                <td id="subtotalEditarProductosOC">$0.00</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td colspan="9" style="text-align:right;" id="ivaEditarProductosOCEtiqueta">IVA:</td>
+                <td id="ivaEditarProductosOC">$0.00</td>
+                <td></td>
+              </tr>
               <tr>
                 <td colspan="9" style="text-align:right;font-weight:bold">Total OC:</td>
                 <td id="totalEditarProductosOC" style="font-weight:bold;">$0.00</td>
@@ -20065,9 +20087,21 @@
       // Aplica el movimiento completo de una OC al inventario: signo +1
       // (al pagarse) suma la cantidad de cada línea con código al stock;
       // signo -1 (al revertir el pago) la resta.
-      async function aplicarMovimientoInventarioOC(productosOC, signo, ocCodigo) {
+      // ENTRADA AL INVENTARIO AL PAGARSE LA OC (09/11/2026): los productos
+      // de la OC entran al inventario, con las cantidades de la OC, en
+      // cuanto queda PAGADA en su totalidad (con parcialidades, al
+      // liquidarse). Se marca en el pago que la liquida
+      // (ordenes.pagos[].inventario_aplicado), para no volver a sumarlos al
+      // concluir. Las OC pagadas antes de este cambio (sin la marca) siguen
+      // entrando al concluirse. Si después se regresa el pago a pendiente,
+      // se cancela o se elimina la OC (sin concluir), se restan.
+      function inventarioAplicadoOC(oc) {
+        return pagosRegistradosOC(oc).some(function(p) { return p && p.inventario_aplicado; });
+      }
+
+      async function aplicarMovimientoInventarioOC(productosOC, signo, ocCodigo, causaTexto) {
         if (!Array.isArray(productosOC)) return;
-        var causa = signo > 0 ? 'Entrada por conclusión de OC' : 'Reversión de inventario por OC';
+        var causa = causaTexto || (signo > 0 ? 'Entrada por conclusión de OC' : 'Reversión de inventario por OC');
         for (var i = 0; i < productosOC.length; i++) {
           var linea = productosOC[i];
           var codigo = (linea.codigo || '').trim();
@@ -20479,7 +20513,9 @@
             fecha_siguiente_pago: fechaSiguientePago,
             comprobante_url: url,
             fecha: ahoraISO,
-            registro: (actual && (actual.usuario || actual.u)) || null
+            registro: (actual && (actual.usuario || actual.u)) || null,
+            // El pago que liquida la OC mete sus productos al inventario.
+            inventario_aplicado: liquida
           }]);
           var updates = { pagos: listaPagos, monto_pagado: pagadoDespues, fecha_siguiente_pago: fechaSiguientePago, aviso_pago_programado_en: null };
           // Compatibilidad con el 50/50: el primer pago va en pago1_* y el
@@ -20522,6 +20558,13 @@
           }
           if (error) throw error;
           Object.assign(oc, updates);
+          // OC pagada en su totalidad: sus productos entran al inventario
+          // con las cantidades de la OC (solo si quedó guardada la marca en
+          // los pagos; si no, entran al concluir, como antes).
+          if (liquida && ('pagos' in updates)) {
+            await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo, 'Entrada por pago de OC');
+            mensajeFinal += '\n\n📦 Los productos de la OC se agregaron al inventario con sus cantidades.';
+          }
           if (updates.estadopago === 'PAGADA' && ocEsSinProyecto(oc)) {
             var nombreProyNuevo = await registrarOCSinProyectoComoProyecto(oc);
             if (nombreProyNuevo) mensajeFinal += '\n\n📁 Se registró como proyecto "' + nombreProyNuevo + '" del departamento.';
@@ -22351,10 +22394,10 @@
           if (error) throw error;
           Object.assign(oc, updates);
 
-          // Los productos de la OC se agregan al inventario solo hasta
-          // este momento: cuando ya está pagada (estadopago === 'PAGADA',
-          // verificado en registrarFactura) Y facturada/concluida.
-          await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo);
+          // Los productos entran al inventario al pagarse la OC. Solo las
+          // OC pagadas antes de ese cambio (sin la marca en sus pagos)
+          // entran aquí, al concluirse.
+          if (!inventarioAplicadoOC(oc)) await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo);
 
           ocConclusionPendiente = null;
           facturaArchivoPendiente = null;
@@ -22416,10 +22459,13 @@
         // vuelve a quedar por pagar, con el botón "💰 Pagar" para que CCHF
         // suba de nuevo el comprobante. En 50/50 se borran ambos pagos.
         var nPagosRegistrados = pagosRegistradosOC(oc).length;
+        // Si sus productos entraron al inventario con el pago, se restan.
+        var revertirInventarioPend = inventarioAplicadoOC(oc) && oc.estado !== 'CONCLUIDA';
         if (!confirm('¿Regresar la OC ' + (oc.codigo || oc.id) + ' a pendiente de pago?\n\n' +
           (nPagosRegistrados > 1
             ? 'Se ELIMINARÁN los ' + nPagosRegistrados + ' pagos registrados (parcialidades) y sus comprobantes, y habrá que volver a registrar los pagos.'
-            : 'Se ELIMINARÁ el pago registrado y su comprobante, y habrá que volver a registrar el pago.'))) return;
+            : 'Se ELIMINARÁ el pago registrado y su comprobante, y habrá que volver a registrar el pago.') +
+          (revertirInventarioPend ? '\n\n📦 También se restarán del inventario los productos que entraron con el pago.' : ''))) return;
         var urlsComprobante = [oc.comprobante_pago_url, oc.pago1_comprobante_url, oc.pago2_comprobante_url]
           .concat(pagosRegistradosOC(oc).map(function(p) { return p.comprobante_url; }))
           .filter(function(u, i, arr) {
@@ -22446,7 +22492,9 @@
           error = (await supabase.from('ordenes').update(updates).eq('id', oc.id)).error;
         }
         if (error) return alert('Error al actualizar OC: ' + error.message);
+        var productosRevertirPend = revertirInventarioPend ? parsearProductosOC(oc) : null;
         Object.assign(oc, updates);
+        if (productosRevertirPend) await aplicarMovimientoInventarioOC(productosRevertirPend, -1, oc.codigo, 'Reversión de inventario: pago de OC regresado a pendiente');
 
         // Borrar los archivos del bucket (si falla, el pago ya quedó eliminado de la OC).
         try {
@@ -22471,12 +22519,16 @@
       window.eliminarOC = async function(index) {
         if (!actual || actual.rol !== 'Administrador') return alert('No tienes permiso');
         var oc = ordenes[index];
-        if (!confirm('¿Eliminar OC ' + oc.codigo + '?')) return;
+        var revertirInventarioElim = inventarioAplicadoOC(oc) && oc.estado !== 'CONCLUIDA';
+        if (!confirm('¿Eliminar OC ' + oc.codigo + '?' +
+          (revertirInventarioElim ? '\n\n📦 Se restarán del inventario los productos que entraron al pagarse.' : ''))) return;
         var justificacionEliminar = pedirJustificacionOC('Justificación de la eliminación de la OC ' + oc.codigo + ' (obligatoria):');
         if (justificacionEliminar === null) return;
         var montoAntesEliminar = Number(oc.montototal) || 0;
+        var productosRevertirElim = revertirInventarioElim ? parsearProductosOC(oc) : null;
         var { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
         if (error) return alert('Error al eliminar OC');
+        if (productosRevertirElim) await aplicarMovimientoInventarioOC(productosRevertirElim, -1, oc.codigo, 'Reversión de inventario por eliminación de OC');
         await registrarBitacoraOC(oc, 'ELIMINADA', montoAntesEliminar, 0, justificacionEliminar);
         ordenes.splice(index, 1);
         render();
@@ -22552,7 +22604,9 @@
         if (oc.estado === 'CONCLUIDA' || oc.estado === 'CANCELADA') {
           return alert('Esta OC ya está ' + oc.estado.toLowerCase() + ' y no se puede cancelar.');
         }
-        if (!confirm('¿Cancelar la OC ' + oc.codigo + '? Esta acción detiene su flujo de aprobación/pago.')) return;
+        var revertirInventarioCanc = inventarioAplicadoOC(oc);
+        if (!confirm('¿Cancelar la OC ' + oc.codigo + '? Esta acción detiene su flujo de aprobación/pago.' +
+          (revertirInventarioCanc ? '\n\n📦 Se restarán del inventario los productos que entraron al pagarse.' : ''))) return;
 
         var motivo = prompt('¿Motivo de la cancelación?');
         if (motivo === null) return;
@@ -22568,6 +22622,7 @@
           updates = { estado: 'CANCELADA' };
         }
         Object.assign(oc, updates);
+        if (revertirInventarioCanc) await aplicarMovimientoInventarioOC(parsearProductosOC(oc), -1, oc.codigo, 'Reversión de inventario por cancelación de OC');
         await registrarBitacoraOC(oc, 'CANCELADA', Number(oc.montototal) || 0, 0, motivo);
         await agregarNotaOC(oc, 'OC CANCELADA', motivo);
         render();
@@ -26669,7 +26724,8 @@
           var enInv = it.numero_parte ? buscarProductoCatalogoPorParte(it.numero_parte) : null;
           codigoInv = enInv ? (enInv.codigo || '') : '';
         }
-        window.agregarFilaProducto(codigoInv, it.numero_parte || '', it.descripcion || '', it.udm || 'PZA', 1, Number(it.precio) || 0, 0, Number(it.impuesto_pct) || 0, it);
+        window.agregarFilaProducto(codigoInv, it.numero_parte || '', it.descripcion || '', it.udm || 'PZA', 1, Number(it.precio) || 0, 0,
+          (it.impuesto_pct === null || it.impuesto_pct === undefined || it.impuesto_pct === '') ? IMPUESTO_OC_PREDETERMINADO : (Number(it.impuesto_pct) || 0), it);
         if (it.tipo === 'SERVICIO') {
           var filasSrv = document.querySelectorAll('#cuerpoProductos tr');
           var ultimaSrv = filasSrv[filasSrv.length - 1];
@@ -26823,7 +26879,8 @@
         document.getElementById('psModelo').value = it ? (it.modelo || '') : '';
         document.getElementById('psPrecio').value = it ? (Number(it.precio) || 0) : '';
         document.getElementById('psMoneda').value = it ? (it.moneda || 'MXN') : 'MXN';
-        document.getElementById('psImpuesto').value = it ? (Number(it.impuesto_pct) || 0) : 0;
+        // Producto nuevo del catálogo: IVA 16% por defecto.
+        document.getElementById('psImpuesto').value = it ? (Number(it.impuesto_pct) || 0) : IMPUESTO_OC_PREDETERMINADO;
         document.getElementById('psActivo').checked = it ? it.activo !== false : true;
         document.getElementById('msgProdServModal').innerHTML = '';
         document.getElementById('prodServModal').classList.add('active');
@@ -27468,6 +27525,43 @@
         }
       };
 
+      // ===== IMPORTE DE PARTIDAS SIN IVA (09/11/2026) =====
+      // Importe de cada partida = cantidad × precio unitario − descuento,
+      // SIN IVA. Resumen de la OC: Subtotal = suma de los importes;
+      // IVA = suma de (importe × Imp.% de cada partida) — con todas al 16%
+      // es el 16% del subtotal; Total = Subtotal + IVA (es el montototal de
+      // la OC, igual que antes). Para OC anteriores (cuyo importe guardado
+      // traía IVA) el PDF recalcula el importe con cantidad, precio y
+      // descuento.
+      var IMPUESTO_OC_PREDETERMINADO = 16;
+      function redondear2OC(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+      function importePartidaSinIVA(cantidad, precio, descuento) {
+        return redondear2OC((Number(cantidad) || 0) * (Number(precio) || 0) * (1 - (Number(descuento) || 0) / 100));
+      }
+      // partidas: [{ importe (sin IVA), impuesto (%) }]
+      function resumenImportesOC(partidas) {
+        var subtotal = 0, ivaSinRedondear = 0, tasas = {};
+        (partidas || []).forEach(function(pt) {
+          var imp = redondear2OC(pt.importe);
+          var tasa = Number(pt.impuesto) || 0;
+          subtotal += imp;
+          ivaSinRedondear += imp * tasa / 100;
+          tasas[tasa] = true;
+        });
+        subtotal = redondear2OC(subtotal);
+        var iva = redondear2OC(ivaSinRedondear);
+        var listaTasas = Object.keys(tasas);
+        return { subtotal: subtotal, iva: iva, total: redondear2OC(subtotal + iva), tasaUnica: listaTasas.length === 1 ? Number(listaTasas[0]) : null };
+      }
+      function partidasOCSinIVA(productos) {
+        return (productos || []).map(function(pr) {
+          return { importe: importePartidaSinIVA(pr.cantidad, pr.precioUnitario, pr.descuento), impuesto: Number(pr.impuesto) || 0 };
+        });
+      }
+      function etiquetaIVAOC(resumen) {
+        return resumen.tasaUnica !== null ? 'IVA (' + resumen.tasaUnica.toFixed(2) + '%)' : 'IVA';
+      }
+
       window.agregarFilaProducto = function(codigo, parte, descripcion, udm, cantidad, precio, descuento, impuesto, itemCatalogo) {
         // Sin captura manual: solo se agregan partidas del catálogo de
         // productos y servicios del proveedor (ver agregarProductoDesdeCatalogo).
@@ -27572,11 +27666,9 @@
           }
         }
 
-        var subtotal = cantidad * precio;
-        var descuentoValor = subtotal * (descuento / 100);
-        var subtotalConDescuento = subtotal - descuentoValor;
-        var impuestoValor = subtotalConDescuento * (impuesto / 100);
-        var importe = subtotalConDescuento + impuestoValor;
+        // Importe de la partida SIN IVA (cantidad × precio − descuento);
+        // el IVA va en el resumen (ver recalcularTotal).
+        var importe = importePartidaSinIVA(cantidad, precio, descuento);
 
         if (importeInput) {
           importeInput.value = formatearNumeroMexico(importe, true);
@@ -27584,21 +27676,31 @@
         window.recalcularTotal();
       };
 
+      // Resumen de la OC: Subtotal (suma de importes sin IVA), IVA (según
+      // el Imp.% de cada partida) y Total OC = Subtotal + IVA. Devuelve el
+      // total con IVA (es el montototal que se guarda).
       window.recalcularTotal = function() {
         var tbody = document.getElementById('cuerpoProductos');
         var filas = tbody.querySelectorAll('tr');
-        var total = 0;
+        var partidas = [];
         filas.forEach(function(fila) {
           var importeInput = fila.querySelector('.importe');
           if (importeInput) {
-            total += parseNumero(importeInput.value);
+            partidas.push({ importe: parseNumero(importeInput.value), impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0 });
           }
         });
+        var r = resumenImportesOC(partidas);
+        var subEl = document.getElementById('subtotalProductos');
+        if (subEl) subEl.textContent = '$' + formatearNumeroMexico(r.subtotal, true);
+        var ivaEl = document.getElementById('ivaProductos');
+        if (ivaEl) ivaEl.textContent = '$' + formatearNumeroMexico(r.iva, true);
+        var ivaEt = document.getElementById('ivaProductosEtiqueta');
+        if (ivaEt) ivaEt.textContent = (partidas.length ? etiquetaIVAOC(r) : 'IVA') + ':';
         var totalEl = document.getElementById('totalProductos');
         if (totalEl) {
-          totalEl.textContent = '$' + formatearNumeroMexico(total, true);
+          totalEl.textContent = '$' + formatearNumeroMexico(r.total, true);
         }
-        return total;
+        return r.total;
       };
 
       // ============================================================
@@ -28670,9 +28772,8 @@
         var precio = parseNumero(fila.querySelector('.precio') ? fila.querySelector('.precio').value : '0');
         var descuento = parseFloat(fila.querySelector('.descuento') ? fila.querySelector('.descuento').value : 0) || 0;
         var impuesto = parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0;
-        var subtotal = cantidad * precio;
-        var conDescuento = subtotal * (1 - descuento / 100);
-        var importe = conDescuento * (1 + impuesto / 100);
+        // Importe de la partida SIN IVA; el IVA va en el total.
+        var importe = importePartidaSinIVA(cantidad, precio, descuento);
         var celdaImporte = fila.querySelector('.importe');
         if (celdaImporte) celdaImporte.value = importe.toFixed(2);
         window.recalcularTotalEditarOC();
@@ -28680,13 +28781,23 @@
 
       window.recalcularTotalEditarOC = function() {
         var filas = document.querySelectorAll('#cuerpoEditarProductosOC tr');
-        var total = 0;
+        var partidas = [];
         filas.forEach(function(fila) {
-          total += parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
+          partidas.push({
+            importe: parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0'),
+            impuesto: parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0
+          });
         });
+        var r = resumenImportesOC(partidas);
+        var celdaSub = document.getElementById('subtotalEditarProductosOC');
+        if (celdaSub) celdaSub.textContent = formatoMoneda(r.subtotal, 'MXN');
+        var celdaIva = document.getElementById('ivaEditarProductosOC');
+        if (celdaIva) celdaIva.textContent = formatoMoneda(r.iva, 'MXN');
+        var etIva = document.getElementById('ivaEditarProductosOCEtiqueta');
+        if (etIva) etIva.textContent = (partidas.length ? etiquetaIVAOC(r) : 'IVA') + ':';
         var celdaTotal = document.getElementById('totalEditarProductosOC');
-        if (celdaTotal) celdaTotal.textContent = formatoMoneda(total, 'MXN');
-        return total;
+        if (celdaTotal) celdaTotal.textContent = formatoMoneda(r.total, 'MXN');
+        return r.total;
       };
 
       window.cerrarEditarProductosOC = function() {
@@ -28777,7 +28888,8 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Revisa los productos: descripción, cantidad y precio deben ser válidos.</div>';
           return;
         }
-        var nuevoTotal = productosNuevos.reduce(function(s, p) { return s + p.importe; }, 0);
+        // Total = subtotal (importes sin IVA) + IVA de cada partida.
+        var nuevoTotal = resumenImportesOC(productosNuevos.map(function(pn) { return { importe: pn.importe, impuesto: pn.impuesto }; })).total;
         var tipoCambio = oc.tipocambio || 1;
         var nuevoMontoMXN = oc.moneda === 'USD' ? nuevoTotal * tipoCambio : nuevoTotal;
 
@@ -28885,12 +28997,11 @@
           }
           await registrarBitacoraOC(oc, 'MODIFICADA', montoAntesEdicionOC, nuevoTotal, justificacionEdicionOC + textoFechaBitacora);
 
-          // El inventario SOLO se ajusta si la OC ya está pagada Y
-          // facturada (CONCLUIDA) — ya se le había sumado el inventario en
-          // ese momento. Si todavía no llega a CONCLUIDA, el cambio de
-          // productos no debe tocar el inventario todavía.
+          // El inventario SOLO se ajusta si a la OC ya se le sumaron sus
+          // productos: al pagarse en su totalidad (marca en sus pagos) o,
+          // en OC anteriores a ese cambio, al concluirse.
           var inventarioAjustado = false;
-          if (oc.estado === 'CONCLUIDA') {
+          if (oc.estado === 'CONCLUIDA' || inventarioAplicadoOC(oc)) {
             var deltas = calcularDeltaInventarioOC(productosViejos, productosNuevos);
             await aplicarDeltaInventarioOC(deltas, oc.codigo);
             inventarioAjustado = true;
@@ -32773,7 +32884,9 @@
           var selProyectoPartida = fila.querySelector('.prod-proyecto');
           var proyectoPartida = (esMultiproyecto && selProyectoPartida && selProyectoPartida.value) ? selProyectoPartida.value : null;
           if (proyectoPartida) {
-            gastoPorProyectoPartida[proyectoPartida] = (gastoPorProyectoPartida[proyectoPartida] || 0) + importe;
+            // El gasto del proyecto incluye el IVA de la partida.
+            var impuestoPartida = parseFloat(fila.querySelector('.impuesto') ? fila.querySelector('.impuesto').value : 0) || 0;
+            gastoPorProyectoPartida[proyectoPartida] = (gastoPorProyectoPartida[proyectoPartida] || 0) + importe * (1 + impuestoPartida / 100);
           }
           var udmPartida = fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA';
           productos.push({
@@ -33044,6 +33157,7 @@
           document.getElementById('cuerpoProductos').innerHTML = ''; var inpNomSPReset = document.getElementById('nombreProyectoSinProyOC'); if (inpNomSPReset) inpNomSPReset.value = '';
           window.agregarFilaProducto();
           document.getElementById('totalProductos').textContent = '$0.00';
+          ['subtotalProductos', 'ivaProductos'].forEach(function(idCelda) { var c = document.getElementById(idCelda); if (c) c.textContent = '$0.00'; });
           if (data && data.length > 0) { ordenes.push(data[0]); } else { await cargarDatos(); }
           render();
         } catch (err) { console.error('⚠️ OC guardada, pero falló el refresco de la vista:', err.stack || err); }
@@ -33254,6 +33368,7 @@
         document.getElementById('cuerpoProductos').innerHTML = ''; var inpNomSPReset = document.getElementById('nombreProyectoSinProyOC'); if (inpNomSPReset) inpNomSPReset.value = '';
         window.agregarFilaProducto();
         document.getElementById('totalProductos').textContent = '$0.00';
+        ['subtotalProductos', 'ivaProductos'].forEach(function(idCelda) { var c = document.getElementById(idCelda); if (c) c.textContent = '$0.00'; });
         document.getElementById('mensajeOC').innerHTML = '';
 
         if (typeof window.actualizarDatosOC === 'function') window.actualizarDatosOC();
@@ -33826,7 +33941,9 @@
             formatoMoneda(p.precioUnitario, datos.moneda),
             (p.descuento || 0).toFixed(2) + '%',
             (p.impuesto || 0).toFixed(2) + '%',
-            formatoMoneda(p.importe, datos.moneda)
+            // Importe SIN IVA (cantidad × precio − descuento), también en
+            // OC anteriores cuyo importe guardado traía IVA.
+            formatoMoneda(importePartidaSinIVA(p.cantidad, p.precioUnitario, p.descuento), datos.moneda)
           ];
         });
 
@@ -34255,17 +34372,11 @@
           y = window._tableFinalY || doc.lastAutoTable.finalY + 10;
         }
 
-        var subtotal = 0,
-          iva = 0,
-          impuestoPorcentaje = 0;
-        if (datos.productos && datos.productos.length > 0) {
-          datos.productos.forEach(function(p) {
-            var precioConDescuento = p.precioUnitario * (1 - (p.descuento || 0) / 100);
-            subtotal += precioConDescuento * p.cantidad;
-          });
-          impuestoPorcentaje = datos.productos[0]?.impuesto || 0;
-          iva = subtotal * (impuestoPorcentaje / 100);
-        }
+        // Resumen financiero: Subtotal = suma de importes sin IVA; IVA =
+        // importe × Imp.% de cada partida (16% del subtotal si todas son 16).
+        var resumenOC = resumenImportesOC(partidasOCSinIVA(datos.productos));
+        var subtotal = resumenOC.subtotal,
+          iva = resumenOC.iva;
 
         // ---------- 4. PARTE INFERIOR (dos columnas) ----------
         // bottomW/bottomX1/bottomX2/bottomHeaderH/camposCondicionesExtra/
@@ -34351,7 +34462,7 @@
         doc.text('Subtotal:', bottomX2 + 12, yResumen);
         doc.text(formatoMoneda(subtotal, datos.moneda), bottomX2 + bottomW - 12, yResumen, { align: 'right' });
         yResumen += 11;
-        doc.text('IVA (' + (impuestoPorcentaje || 0).toFixed(2) + '%):', bottomX2 + 12, yResumen);
+        doc.text(etiquetaIVAOC(resumenOC) + ':', bottomX2 + 12, yResumen);
         doc.text(formatoMoneda(iva, datos.moneda), bottomX2 + bottomW - 12, yResumen, { align: 'right' });
         yResumen += 8;
 
