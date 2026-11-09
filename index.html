@@ -9262,6 +9262,20 @@
       }
 
       // ============================================================
+      // ENLACE DE TELEGRAM PARA SUBIR EL PAGO DE UNA OC (?pago=ID)
+      // ============================================================
+      // Lo recibe CCHF en el aviso "OC AUTORIZADA — PENDIENTE DE PAGO".
+      // Es exclusivo de quien registra pagos (CCHF o ADMIN): abre solo la
+      // ventana del comprobante de pago de esa OC y, al terminar o al
+      // tocar la X, se cierra la sesión (ver abrirPagoDesdeLink).
+      function detectarEnlacePago() {
+        try {
+          var pagoParam = parseInt(new URLSearchParams(window.location.search).get('pago'), 10);
+          return pagoParam || null;
+        } catch (e) { return null; }
+      }
+
+      // ============================================================
       // FUNCIÓN PARA DETECTAR ENLACE DE VALE DE GASOLINA (QR del VSC)
       // ============================================================
       // El QR impreso en cada vale (window.imprimirPDFVale) codifica una
@@ -19241,6 +19255,8 @@
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
+        // Aviso por Telegram a los Jefes del departamento de la OC.
+        await notificarJefesOCPorAprobar(oc);
         render();
         alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
@@ -19303,6 +19319,8 @@
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) return alert('Error al actualizar OC');
           Object.assign(oc, updates);
+          // Aviso a CCHF con el link para subir el comprobante de pago.
+          await notificarPagoPendienteCCHF(oc, 'En automático, dentro del ' + obtenerPorcentajeLimite(proyecto) + '% (aprobó el Jefe ' + actual.u + ')');
           render();
           alert('✅ OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
@@ -19349,7 +19367,7 @@
             'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
 
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
-          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
+          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram, { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
           if (telegramMessageId) {
             await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: telegramMessageId }).eq('id', oc.id);
             oc.notificacion_enviada = true;
@@ -19423,6 +19441,9 @@
         }
 
         reaccionarMensajeTelegramOC(oc, '👍');
+        // Aviso a CCHF con el link para subir el comprobante de pago (se
+        // espera a que salga: por el link del Director la página se recarga).
+        await notificarPagoPendienteCCHF(oc, actual.rol === 'Director General' ? 'Director General (' + (actual.u || actual.usuario) + ')' : (actual.u || actual.usuario));
 
         render();
 
@@ -19663,6 +19684,8 @@
           var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
           if (error) return alert('Error al actualizar OC');
           Object.assign(oc, updates);
+          // Aviso a CCHF con el link para subir el comprobante de pago.
+          await notificarPagoPendienteCCHF(oc, 'En automático tras la paridad, dentro del ' + obtenerPorcentajeLimite(proyecto) + '%');
           render();
           alert('✅ ' + mensajeOrigen + '. OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
@@ -19705,7 +19728,7 @@
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
             'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
-          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram);
+          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram, { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
           if (telegramMessageId) {
             await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: telegramMessageId }).eq('id', oc.id);
             oc.notificacion_enviada = true;
@@ -19877,7 +19900,7 @@
               console.warn('Aviso de inventario VEXPAR: ' + u + ' no tiene Chat ID de Telegram registrado.');
               continue;
             }
-            if (await enviarTelegramAChat(chatId, texto)) {
+            if (await enviarTelegramAChat(chatId, texto, u, 'Movimiento de inventario VEXPAR')) {
               console.log('✅ Aviso de movimiento de inventario enviado por Telegram a ' + u);
             }
           }
@@ -19905,7 +19928,7 @@
             '👤 <b>Eliminó:</b> ' + escaparHTMLTelegram((actual && actual.usuario) || '—');
           for (var i = 0; i < USUARIOS_AVISO_INVENTARIO_VEXPAR.length; i++) {
             var chatId = await obtenerTelegramChatIdUsuario(USUARIOS_AVISO_INVENTARIO_VEXPAR[i]);
-            if (chatId) await enviarTelegramAChat(chatId, texto);
+            if (chatId) await enviarTelegramAChat(chatId, texto, USUARIOS_AVISO_INVENTARIO_VEXPAR[i], 'Producto eliminado VEXPAR');
           }
         } catch (e) {
           console.error('No se pudo enviar el aviso de producto eliminado por Telegram:', e);
@@ -20182,7 +20205,15 @@
             '<div class="pago-oc-dato"><small>Total de la OC</small><b>' + escapeHTML(formatoMoneda(m.total, m.moneda)) + '</b></div>' +
             '<div class="pago-oc-dato"><small>Pagado</small><b>' + escapeHTML(formatoMoneda(m.pagado, m.moneda)) + '</b></div>' +
             '<div class="pago-oc-dato"><small>Pendiente por pagar</small><b>' + escapeHTML(formatoMoneda(m.pendiente, m.moneda)) + '</b></div>' +
-            (historial.length ? '<div class="pago-oc-historial">Pagos registrados: ' + escapeHTML(historial.join(' | ')) + '</div>' : '');
+            (historial.length ? '<div class="pago-oc-historial">Pagos registrados: ' + escapeHTML(historial.join(' | ')) + '</div>' : '') +
+            (function() {
+              // Datos para el pago (también al entrar por el link de CCHF,
+              // donde no se ve la OC completa).
+              var datos = [['Proveedor', oc.proveedor], ['Banco', oc.banco], ['CLABE', oc.clabe], ['Cuenta', oc.cuenta],
+                ['SWIFT', oc.swift], ['CIE', oc.cie], ['Referencia', oc.referencia]]
+                .filter(function(d) { return d[1]; }).map(function(d) { return d[0] + ': ' + d[1]; });
+              return datos.length ? '<div class="pago-oc-historial">Datos para el pago: ' + escapeHTML(datos.join(' · ')) + '</div>' : '';
+            })();
         }
         var monedaTxt = document.getElementById('comprobantePagoMonedaTexto');
         if (monedaTxt) monedaTxt.textContent = '(' + m.moneda + ')';
@@ -20297,7 +20328,40 @@
         indexComprobantePagoPendiente = null;
         comprobantePagoArchivoPendiente = null;
         document.getElementById('comprobantePagoModal').classList.remove('active');
+        // Entrada por el link de pago de Telegram: la X cierra la sesión.
+        if (sesionPorEnlace === 'pago') cerrarSesionPorEnlace();
       };
+
+      // Se ejecuta al entrar con el link de pago de Telegram (?pago=ID):
+      // abre solo la ventana del comprobante de esa OC. Si ya está pagada
+      // (o concluida), "Link previamente atendido." y se cierra la sesión.
+      async function abrirPagoDesdeLink(id) {
+        try {
+          var r = await supabase.from('ordenes').select('*').eq('id', id);
+          if (r.error) throw r.error;
+          var ocBD = (r.data || [])[0];
+          if (!ocBD) return cerrarSesionPorEnlace('⚠️ No se encontró la OC del link (' + id + '). Puede que ya no exista.');
+          var idx = ordenes.findIndex(function(o) { return o.id === ocBD.id; });
+          if (idx === -1) { ordenes.push(ocBD); idx = ordenes.length - 1; } else { Object.assign(ordenes[idx], ocBD); }
+          var oc = ordenes[idx];
+          var codigo = oc.codigo || ('OC-' + oc.id);
+          if (oc.estadopago === 'PAGADA' || oc.estado === 'CONCLUIDA') {
+            var fechaPagada = fechaUltimoPagoOC(oc);
+            return cerrarSesionPorEnlace('✅ Link previamente atendido.\n\nLa OC ' + codigo + ' ya está pagada' +
+              (fechaPagada && oc.estadopago === 'PAGADA' ? ' (' + fechaCortaTelegram(fechaPagada) + ')' : '') + '.');
+          }
+          if (oc.estado === 'CANCELADA') return cerrarSesionPorEnlace('❌ La OC ' + codigo + ' fue cancelada. Ya no requiere pago.');
+          if (oc.estado !== 'AUTORIZADA') return cerrarSesionPorEnlace('⚠️ La OC ' + codigo + ' no está autorizada para pago.');
+          if (oc.pausada) return cerrarSesionPorEnlace('⏸️ La OC ' + codigo + ' está pausada. Por ahora no se puede registrar su pago.');
+          // La ventana se muestra encima del menú principal.
+          var modal = document.getElementById('comprobantePagoModal');
+          if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+          window.abrirComprobantePago(idx);
+        } catch (e) {
+          console.error('Error abriendo el pago desde el link de Telegram:', e);
+          cerrarSesionPorEnlace('❌ No se pudo abrir la OC del link: ' + ((e && e.message) || e));
+        }
+      }
 
       window.manejarSeleccionComprobantePago = function(input) {
         if (!input.files || !input.files[0]) return;
@@ -20438,12 +20502,20 @@
           // registra el pago; solo queda en la consola.
           console.log('Aviso de pago por Telegram:', textoResultadoAvisoTelegram(resultadoAviso));
 
+          // OC pagada en su totalidad: 👍 al aviso que recibió CCHF.
+          if (liquida) await reaccionarMensajePagoCCHF(oc, '👍');
+
           indexComprobantePagoPendiente = null;
           comprobantePagoArchivoPendiente = null;
           document.getElementById('comprobantePagoModal').classList.remove('active');
 
           render();
           actualizarTotalesMenuPrincipal();
+          // Entrada por el link de pago de Telegram: solo esta acción.
+          if (sesionPorEnlace === 'pago') {
+            cerrarSesionPorEnlace(mensajeFinal + '\n\nSe cerrará la sesión.');
+            return;
+          }
           alert(mensajeFinal);
         } catch (e) {
           console.error('Error confirmando el pago:', e);
@@ -20537,7 +20609,7 @@
       // Llama a la API de Telegram a través de Supabase (RPC telegram_api),
       // que agrega el token del lado del servidor. Devuelve la respuesta de
       // Telegram ({ ok, result, description }).
-      async function telegramAPI(metodo, payload) {
+      async function telegramAPIUnaVez(metodo, payload) {
         try {
           var { data, error } = await supabase.rpc('telegram_api', { p_metodo: metodo, p_payload: payload });
           if (error) return { ok: false, description: error.message || String(error) };
@@ -20547,28 +20619,155 @@
         }
       }
 
+      // ===== REENVÍO AUTOMÁTICO DE AVISOS (09/11/2026) =====
+      // 1) Si un envío falla por algo pasajero (Supabase no logra conectar
+      //    con Telegram, tiempo de espera, límite de envíos, red), se
+      //    reintenta solo a los 1.5 segundos. Los errores definitivos
+      //    (chat inexistente, bot bloqueado por el usuario, texto mal
+      //    formado) no se reintentan.
+      // 2) Si el reintento también falla, el aviso se guarda en la cola
+      //    telegram_pendientes (SQL avisos_telegram_oc.sql) y el sistema lo
+      //    reenvía solo —al iniciar sesión cualquier usuario y cada 2
+      //    minutos mientras alguien tenga el sistema abierto— hasta
+      //    lograrlo, durante máximo 24 horas.
+      function errorTelegramDefinitivo(r) {
+        if (!r || r.ok) return false;
+        var codigo = Number(r.error_code) || 0;
+        if (codigo === 400 || codigo === 401 || codigo === 403 || codigo === 404) return true;
+        return /chat not found|bot was blocked|user is deactivated|bot can't initiate|forbidden|can't parse entities|message to react not found|reaction_invalid|wrong file identifier|failed to get http url content|wrong type of the web page content/i
+          .test(String(r.description || ''));
+      }
+      var ESPERA_REINTENTO_TELEGRAM_MS = 1500;
+      async function telegramAPI(metodo, payload) {
+        var r = await telegramAPIUnaVez(metodo, payload);
+        if (r.ok || errorTelegramDefinitivo(r)) return r;
+        var espera = ESPERA_REINTENTO_TELEGRAM_MS;
+        var retryAfter = r.parameters && Number(r.parameters.retry_after);
+        if (retryAfter) espera = Math.min(retryAfter, 10) * 1000;
+        console.warn('Telegram no respondió (' + metodo + '); se reintenta en ' + espera + ' ms:', r.description);
+        await new Promise(function(resolver) { setTimeout(resolver, espera); });
+        return await telegramAPIUnaVez(metodo, payload);
+      }
+
+      // Cola de reenvío: se guarda el USUARIO destinatario (no su Chat ID,
+      // que se vuelve a leer al reenviar). DESTINO_TELEGRAM_DIRECTOR = el
+      // chat del Director General. "ref" indica dónde guardar el número de
+      // mensaje cuando por fin sale (para las reacciones 👍/👎).
+      var DESTINO_TELEGRAM_DIRECTOR = '__DIRECTOR__';
+      var REF_TELEGRAM_PERMITIDAS = { ordenes: ['telegram_message_id', 'telegram_pago_message_id'], documentos_cxp: ['telegram_message_id'] };
+      async function encolarAvisoTelegram(destinatario, metodo, payload, descripcion, ref) {
+        if (!destinatario) return false;
+        try {
+          var copia = Object.assign({}, payload);
+          delete copia.chat_id;
+          var fila = {
+            destinatario: destinatario, metodo: metodo, payload: copia, descripcion: descripcion || null,
+            ref_tabla: (ref && ref.tabla) || null, ref_id: (ref && ref.id) || null, ref_columna: (ref && ref.columna) || null
+          };
+          var { error } = await supabase.from('telegram_pendientes').insert([fila]);
+          if (error) throw error;
+          console.warn('📮 Aviso de Telegram guardado para reenvío automático (' + destinatario + '): ' + (descripcion || metodo));
+          return true;
+        } catch (e) {
+          console.error('No se pudo guardar el aviso para reenvío (¿falta ejecutar avisos_telegram_oc.sql?):', e);
+          return false;
+        }
+      }
+      async function chatIdDestinoTelegram(destinatario) {
+        return destinatario === DESTINO_TELEGRAM_DIRECTOR ? await obtenerChatIdDirectorTelegram() : await obtenerTelegramChatIdUsuario(destinatario);
+      }
+      var procesandoColaTelegram = false;
+      async function procesarColaTelegram() {
+        if (procesandoColaTelegram || !actual) return;
+        procesandoColaTelegram = true;
+        try {
+          var { data, error } = await supabase.from('telegram_pendientes').select('*')
+            .is('enviado_en', null).eq('descartado', false).lte('siguiente_intento', new Date().toISOString())
+            .order('creado_en', { ascending: true }).limit(20);
+          if (error) return;   // sin la tabla (SQL no ejecutado) no hay cola
+          for (var i = 0; i < (data || []).length; i++) {
+            var p = data[i];
+            // Se "toma" el aviso; si otro usuario lo tomó al mismo tiempo, se salta.
+            var tomado = await supabase.from('telegram_pendientes')
+              .update({ bloqueado_hasta: new Date(Date.now() + 2 * 60000).toISOString() })
+              .eq('id', p.id).is('enviado_en', null)
+              .or('bloqueado_hasta.is.null,bloqueado_hasta.lt."' + new Date().toISOString() + '"')
+              .select('id');
+            if (tomado.error || !tomado.data || !tomado.data.length) continue;
+            var caducado = (Date.now() - new Date(p.creado_en).getTime()) > 24 * 3600000;
+            var chatId = caducado ? null : await chatIdDestinoTelegram(p.destinatario);
+            var r = chatId
+              ? await telegramAPIUnaVez(p.metodo, Object.assign({}, p.payload, { chat_id: chatId }))
+              : { ok: false, description: caducado ? 'Más de 24 horas sin poder enviarse' : 'Sin Chat ID de Telegram' };
+            var intentos = (Number(p.intentos) || 0) + 1;
+            var cambios;
+            if (r.ok) {
+              cambios = { enviado_en: new Date().toISOString(), intentos: intentos, ultimo_error: null, bloqueado_hasta: null };
+              var columnasRef = REF_TELEGRAM_PERMITIDAS[p.ref_tabla];
+              if (columnasRef && columnasRef.indexOf(p.ref_columna) !== -1 && p.ref_id && r.result && r.result.message_id) {
+                var cambioRef = {};
+                cambioRef[p.ref_columna] = r.result.message_id;
+                await supabase.from(p.ref_tabla).update(cambioRef).eq('id', p.ref_id);
+              }
+              console.log('✅ Aviso de Telegram reenviado (' + p.destinatario + '): ' + (p.descripcion || p.metodo));
+            } else {
+              var minutos = [2, 5, 10, 15, 30, 60][Math.min(intentos - 1, 5)];
+              cambios = {
+                intentos: intentos, ultimo_error: String(r.description || 'Error').slice(0, 300), bloqueado_hasta: null,
+                descartado: caducado || !chatId || errorTelegramDefinitivo(r) || intentos >= 15,
+                siguiente_intento: new Date(Date.now() + minutos * 60000).toISOString()
+              };
+            }
+            await supabase.from('telegram_pendientes').update(cambios).eq('id', p.id);
+          }
+        } catch (e) {
+          console.warn('No se pudo procesar la cola de reenvío de Telegram:', e);
+        } finally {
+          procesandoColaTelegram = false;
+        }
+      }
+
+      // Revisiones automáticas mientras haya una sesión abierta: la cola de
+      // reenvío (cada 2 minutos) y los recordatorios de factura y
+      // complemento (cada 30 minutos). Arrancan al iniciar sesión.
+      var procesosAvisosTelegramIniciados = false;
+      function iniciarProcesosAvisosTelegram() {
+        setTimeout(function() { procesarColaTelegram(); revisarRecordatoriosOC(); }, 5000);
+        if (procesosAvisosTelegramIniciados) return;
+        procesosAvisosTelegramIniciados = true;
+        setInterval(function() { if (!document.hidden) procesarColaTelegram(); }, 2 * 60000);
+        setInterval(function() { if (!document.hidden) revisarRecordatoriosOC(); }, 30 * 60000);
+      }
+
       function escaparHTMLTelegram(txt) {
         return String(txt == null ? '' : txt).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
 
-      async function enviarTelegramAChat(chatId, textoHTML) {
+      // destinatario (usuario) y descripcion son para la cola de reenvío:
+      // sin destinatario, un aviso que no sale no se guarda para reenviar.
+      async function enviarTelegramAChat(chatId, textoHTML, destinatario, descripcion) {
+        var payload = { chat_id: chatId, text: textoHTML, parse_mode: 'HTML', disable_web_page_preview: true };
         try {
-          var data = await telegramAPI('sendMessage', { chat_id: chatId, text: textoHTML, parse_mode: 'HTML', disable_web_page_preview: true });
+          var data = await telegramAPI('sendMessage', payload);
           if (!data.ok) {
             console.error('❌ Telegram rechazó el aviso:', data);
+            if (destinatario && !errorTelegramDefinitivo(data)) await encolarAvisoTelegram(destinatario, 'sendMessage', payload, descripcion);
             return false;
           }
           return true;
         } catch (e) {
           console.error('❌ Error enviando aviso por Telegram:', e);
+          if (destinatario) await encolarAvisoTelegram(destinatario, 'sendMessage', payload, descripcion);
           return false;
         }
       }
 
       // Jefes de Departamento con permiso sobre la empresa/departamento del
-      // proyecto de la OC (usuariosDB ya trae usuario, rol y permisos).
+      // proyecto de la OC (usuariosDB ya trae usuario, rol y permisos). En
+      // una OC sin proyecto (aún no registrada como proyecto) se usan la
+      // empresa y el departamento de la propia OC.
       function obtenerJefesDepartamentoOC(oc) {
-        var proyectoOC = (proyectos || []).find(function(pr) { return normalizar(pr.nombre) === normalizar(oc.proyecto); });
+        var proyectoOC = proyectoDeOC(oc);
         if (!proyectoOC) return [];
         return (usuariosDB || []).filter(function(u) {
           if (!usuarioTieneAlgunRol(u, ['Jefe Departamento'])) return false;
@@ -20586,7 +20785,7 @@
       // si no se tiene el archivo, le pasa a Telegram la URL pública del
       // comprobante. Si ambas fallan, manda el aviso como texto con el
       // enlace al comprobante, para que el aviso nunca se pierda.
-      async function enviarTelegramDocumento(chatId, textoHTML, archivo, urlArchivo, nombreArchivo) {
+      async function enviarTelegramDocumento(chatId, textoHTML, archivo, urlArchivo, nombreArchivo, destinatario, descripcion) {
         // El envío pasa por Supabase (telegram_api), así que el comprobante
         // se manda por su URL pública (el archivo ya está en Storage).
         try {
@@ -20599,7 +20798,7 @@
           console.warn('Error enviando el comprobante por Telegram:', e);
         }
         var respaldo = textoHTML + (urlArchivo ? '\n\n📎 <a href="' + escaparHTMLTelegram(urlArchivo) + '">Ver comprobante de pago</a>' : '');
-        return await enviarTelegramAChat(chatId, respaldo);
+        return await enviarTelegramAChat(chatId, respaldo, destinatario, descripcion);
       }
 
       // Devuelve un diagnóstico { enviados, sinChatId, fallidos, motivo }
@@ -20609,7 +20808,10 @@
         var resultado = { enviados: [], sinChatId: [], fallidos: [], motivo: '' };
         try {
           var quienPago = actual ? actual.usuario : null;
-          var proyectoOC = (proyectos || []).find(function(pr) { return normalizar(pr.nombre) === normalizar(oc.proyecto); });
+          // OC sin proyecto: mientras no se registra como proyecto (al
+          // liquidarse) se usan la empresa y el departamento de la OC, para
+          // que también las parcialidades avisen al solicitante y al Jefe.
+          var proyectoOC = proyectoDeOC(oc);
           if (!proyectoOC) {
             resultado.motivo = 'No se encontró el proyecto "' + (oc.proyecto || '') + '" de la OC, así que no se sabe a qué departamento avisar.';
             console.warn(resultado.motivo);
@@ -20672,7 +20874,7 @@
             // Misma persona con 2 cuentas (ej. IQA1/IQA2): un solo aviso.
             if (chatsYaAvisados[chatId]) { resultado.enviados.push(jefes[i]); continue; }
             chatsYaAvisados[chatId] = true;
-            if (await enviarTelegramDocumento(chatId, texto, info.comprobanteArchivo || null, info.comprobanteUrl || null, nombreComprobante)) {
+            if (await enviarTelegramDocumento(chatId, texto, info.comprobanteArchivo || null, info.comprobanteUrl || null, nombreComprobante, jefes[i], 'Pago de OC ' + (oc.codigo || oc.id))) {
               resultado.enviados.push(jefes[i]);
               console.log('✅ Aviso de pago enviado por Telegram a ' + jefes[i]);
             } else {
@@ -20684,6 +20886,239 @@
           resultado.motivo = 'Error al enviar: ' + (e && e.message ? e.message : e);
         }
         return resultado;
+      }
+
+      // ===== DATOS COMUNES DE LOS AVISOS DE OC (09/11/2026) =====
+      function fechaCortaTelegram(valor) {
+        var f = fechaLocalVale(valor);
+        return f ? f.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+      }
+      function lineasDatosOCTelegram(oc) {
+        var esc = escaparHTMLTelegram;
+        var proyecto = proyectoDeOC(oc) || {};
+        var empresa = proyecto.empresa || oc.empresa || '';
+        var nombreProyecto = ocEsSinProyecto(oc)
+          ? 'SIN PROYECTO' + (oc.proyecto && normalizar(oc.proyecto) !== normalizar(NOMBRE_OC_SIN_PROYECTO) ? ' (' + oc.proyecto + ')' : '')
+          : (oc.proyecto || '—');
+        return '🧾 <b>OC:</b> ' + esc(oc.codigo || ('OC-' + oc.id)) + '\n' +
+          '🏢 <b>Empresa / Depto:</b> ' + esc((getAbreviaturaEmpresa(empresa) || empresa || '—') + ' / ' + mostrarDepto(proyecto.departamento || oc.departamento)) + '\n' +
+          '📁 <b>Proyecto:</b> ' + esc(nombreProyecto) + '\n' +
+          '👤 <b>Solicitante:</b> ' + esc(oc.responsable || '—') + '\n' +
+          '🏪 <b>Proveedor:</b> ' + esc(oc.proveedor || '—') + '\n' +
+          '📝 <b>Concepto:</b> ' + esc(oc.concepto || '—') + '\n';
+      }
+
+      // ===== AVISO A CCHF: OC AUTORIZADA, PENDIENTE DE PAGO (09/11/2026) =====
+      // Igual que el Director recibe las OC por autorizar, el usuario de
+      // pagos (CCHF) recibe cada OC que queda AUTORIZADA —con o sin
+      // proyecto, por cualquier vía: en automático dentro del límite, por
+      // el Director, MCCC o ADMIN, o después de capturar la paridad— con el
+      // link ?pago=ID. Ese link abre SOLO la ventana para subir el
+      // comprobante de pago y, al terminar (o al tocar la X), cierra la
+      // sesión. Con la OC ya pagada, el link muestra "Link previamente
+      // atendido.". Cuando la OC queda pagada en su totalidad, el bot
+      // reacciona 👍 a este aviso.
+      var USUARIO_PAGOS_OC = 'CCHF';
+      function linkPagoOC(oc) { return URL_APP_TELEGRAM + '?pago=' + oc.id; }
+      async function notificarPagoPendienteCCHF(oc, autorizo) {
+        try {
+          if (!oc) return false;
+          var esc = escaparHTMLTelegram;
+          var m = montosPagoOC(oc);
+          var es5050 = oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO';
+          var montoTxt = formatoMoneda(m.total, m.moneda) + ' ' + m.moneda +
+            (oc.moneda === 'USD' && m.moneda === 'MXN' ? ' (OC en USD ' + formatoMoneda(Number(oc.montototal) || 0, 'USD') + ', paridad ' + oc.tipocambio + ')' : '');
+          var texto =
+            '💰 <b>OC AUTORIZADA — PENDIENTE DE PAGO</b>\n\n' +
+            lineasDatosOCTelegram(oc) +
+            '💲 <b>A pagar:</b> ' + esc(montoTxt) + '\n' +
+            '💳 <b>Condición:</b> ' + esc(oc.condicionpago || '—') +
+            (es5050 ? esc(' (2 pagos: ' + fechaCortaTelegram(oc.fechapago) + ' y ' + fechaCortaTelegram(oc.fechapago2) + ')') : '') + '\n' +
+            '📅 <b>Fecha de pago:</b> ' + esc(fechaCortaTelegram(oc.fechapago)) + '\n' +
+            '✅ <b>Autorizó:</b> ' + esc(autorizo || '—') + '\n\n' +
+            '👉 Subir comprobante de pago:\n' + esc(linkPagoOC(oc));
+          var chatId = await obtenerTelegramChatIdUsuario(USUARIO_PAGOS_OC);
+          if (!chatId) {
+            console.warn('Aviso de pago pendiente: ' + USUARIO_PAGOS_OC + ' no tiene Chat ID de Telegram registrado.');
+            return false;
+          }
+          var payload = { chat_id: chatId, text: texto, parse_mode: 'HTML', disable_web_page_preview: true };
+          var ref = { tabla: 'ordenes', id: oc.id, columna: 'telegram_pago_message_id' };
+          var r = await telegramAPI('sendMessage', payload);
+          if (r.ok) {
+            var idMensaje = r.result && r.result.message_id;
+            if (idMensaje) {
+              var { error } = await supabase.from('ordenes').update({ telegram_pago_message_id: idMensaje }).eq('id', oc.id);
+              if (!error) oc.telegram_pago_message_id = idMensaje;
+            }
+            console.log('✅ Aviso de OC por pagar enviado a ' + USUARIO_PAGOS_OC);
+            return true;
+          }
+          console.error('❌ No se pudo avisar a ' + USUARIO_PAGOS_OC + ' de la OC por pagar:', r);
+          if (!errorTelegramDefinitivo(r)) await encolarAvisoTelegram(USUARIO_PAGOS_OC, 'sendMessage', payload, 'OC por pagar ' + (oc.codigo || oc.id), ref);
+          return false;
+        } catch (e) {
+          console.error('Error avisando a ' + USUARIO_PAGOS_OC + ' de la OC por pagar:', e);
+          return false;
+        }
+      }
+      // 👍 al aviso de CCHF cuando la OC queda pagada en su totalidad.
+      async function reaccionarMensajePagoCCHF(oc, emoji) {
+        try {
+          if (!oc || !oc.telegram_pago_message_id) return false;
+          var chatId = await obtenerTelegramChatIdUsuario(USUARIO_PAGOS_OC);
+          if (!chatId) return false;
+          var r = await telegramAPI('setMessageReaction', { chat_id: chatId, message_id: oc.telegram_pago_message_id, reaction: [{ type: 'emoji', emoji: emoji }] });
+          if (!r.ok) console.warn('⚠️ Telegram no aceptó la reacción al aviso de pago:', r);
+          return !!r.ok;
+        } catch (e) {
+          console.warn('No se pudo reaccionar al aviso de pago:', e);
+          return false;
+        }
+      }
+
+      // ===== AVISO AL JEFE: OC ESPERA SU APROBACIÓN (09/11/2026) =====
+      // Cuando el Solicitante aprueba la OC, los Jefes de Departamento de la
+      // empresa y el departamento de la OC reciben el aviso (salvo quien
+      // acaba de aprobarla, si también es Jefe).
+      async function notificarJefesOCPorAprobar(oc) {
+        try {
+          var quien = actual ? String(actual.usuario || actual.u || '') : '';
+          var jefes = obtenerJefesDepartamentoOC(oc).filter(function(j, i, arr) { return j && j !== quien && arr.indexOf(j) === i; });
+          if (!jefes.length) {
+            console.warn('No hay Jefes de Departamento a quién avisar de la OC ' + (oc.codigo || oc.id) + '.');
+            return;
+          }
+          var esc = escaparHTMLTelegram;
+          var m = montosPagoOC(oc);
+          var texto =
+            '⏳ <b>OC PENDIENTE DE TU APROBACIÓN</b>\n\n' +
+            lineasDatosOCTelegram(oc) +
+            '💲 <b>Total:</b> ' + esc(formatoMoneda(Number(oc.montototal) || 0, oc.moneda || 'MXN') + ' ' + (oc.moneda || 'MXN')) + '\n' +
+            '✅ <b>Aprobó como solicitante:</b> ' + esc(quien || '—') + '\n\n' +
+            '👉 Apruébala en 📬 Bandeja de OC (✅ Aprobar Jefe):\n' + esc(URL_APP_TELEGRAM);
+          var chatsAvisados = {};
+          for (var i = 0; i < jefes.length; i++) {
+            var chatId = await obtenerTelegramChatIdUsuario(jefes[i]);
+            if (!chatId) { console.warn('El Jefe ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.'); continue; }
+            if (chatsAvisados[chatId]) continue;   // misma persona con 2 cuentas
+            chatsAvisados[chatId] = true;
+            await enviarTelegramAChat(chatId, texto, jefes[i], 'OC por aprobar ' + (oc.codigo || oc.id));
+          }
+          console.log('Aviso de OC por aprobar enviado a: ' + jefes.join(', '));
+        } catch (e) {
+          console.error('No se pudo avisar a los Jefes de la OC por aprobar:', e);
+        }
+      }
+
+      // ===== RECORDATORIOS AL RESPONSABLE (09/11/2026) =====
+      // - Factura pendiente: OC pagada en su totalidad sin factura
+      //   registrada. Primer recordatorio a los DIAS_RECORDATORIO_FACTURA
+      //   días del último pago; después, cada DIAS_RECORDATORIO_FACTURA
+      //   días mientras siga sin factura.
+      // - Complemento pendiente: OC con factura(s) PPD sin complemento de
+      //   pago. Primer recordatorio a los DIAS_RECORDATORIO_COMPLEMENTO días
+      //   del registro de la factura; después, con la misma frecuencia.
+      // Se revisan al iniciar sesión cualquier usuario y cada 30 minutos
+      // mientras alguien tenga el sistema abierto, solo de 8:00 a 19:00.
+      // Antes de enviar, cada OC se "toma" en la base de datos (columnas
+      // recordatorio_factura_en / recordatorio_complemento_en): aunque
+      // varios usuarios tengan el sistema abierto, sale una sola vez.
+      var DIAS_RECORDATORIO_FACTURA = 3;
+      var DIAS_RECORDATORIO_COMPLEMENTO = 3;
+      var HORA_INICIO_RECORDATORIOS = 8;
+      var HORA_FIN_RECORDATORIOS = 19;
+      function fechaUltimoPagoOC(oc) {
+        var pagos = pagosRegistradosOC(oc);
+        var ultimo = pagos.length ? pagos[pagos.length - 1].fecha : null;
+        return ultimo || oc.pago2_fecha_confirmacion || oc.pago1_fecha_confirmacion || oc.fechapago || null;
+      }
+      function diasDesdeFecha(valor) {
+        var f = fechaLocalVale(valor);
+        return f ? Math.floor((Date.now() - f.getTime()) / 86400000) : 0;
+      }
+      async function tomarRecordatorioOC(oc, columna, dias) {
+        var limite = new Date(Date.now() - dias * 86400000).toISOString();
+        var cambio = {};
+        cambio[columna] = new Date().toISOString();
+        var r = await supabase.from('ordenes').update(cambio).eq('id', oc.id)
+          .or(columna + '.is.null,' + columna + '.lt."' + limite + '"').select('id');
+        if (r.error) { console.warn('No se pudo registrar el recordatorio (¿falta ejecutar avisos_telegram_oc.sql?):', r.error); return false; }
+        return !!(r.data && r.data.length);
+      }
+      var revisandoRecordatoriosOC = false;
+      async function revisarRecordatoriosOC() {
+        if (revisandoRecordatoriosOC || !actual) return;
+        var hora = new Date().getHours();
+        if (hora < HORA_INICIO_RECORDATORIOS || hora >= HORA_FIN_RECORDATORIOS) return;
+        revisandoRecordatoriosOC = true;
+        try {
+          var { data, error } = await supabase.from('ordenes').select('*').eq('estadopago', 'PAGADA').neq('estado', 'CONCLUIDA');
+          if (error) return;
+          var ocs = (data || []).filter(function(o) { return o.estado !== 'CANCELADA' && !o.pausada && o.responsable; });
+          // Sin las columnas de control (SQL no ejecutado) no se envía nada,
+          // para no repetir el recordatorio cada vez.
+          if (!ocs.length || !('recordatorio_factura_en' in ocs[0])) return;
+          var esc = escaparHTMLTelegram;
+          var limiteFactura = Date.now() - DIAS_RECORDATORIO_FACTURA * 86400000;
+          var limiteComplemento = Date.now() - DIAS_RECORDATORIO_COMPLEMENTO * 86400000;
+
+          // 1) Factura pendiente
+          for (var i = 0; i < ocs.length; i++) {
+            var oc = ocs[i];
+            if (oc.uuidfactura) continue;
+            var fechaPago = fechaUltimoPagoOC(oc);
+            var fPago = fechaLocalVale(fechaPago);
+            if (!fPago || fPago.getTime() > limiteFactura) continue;
+            if (oc.recordatorio_factura_en && new Date(oc.recordatorio_factura_en).getTime() > limiteFactura) continue;
+            var chatId = await obtenerTelegramChatIdUsuario(oc.responsable);
+            if (!chatId) continue;
+            if (!(await tomarRecordatorioOC(oc, 'recordatorio_factura_en', DIAS_RECORDATORIO_FACTURA))) continue;
+            var m = montosPagoOC(oc);
+            var texto =
+              '📄 <b>RECORDATORIO: FACTURA PENDIENTE</b>\n\n' +
+              '🧾 <b>OC:</b> ' + esc(oc.codigo || ('OC-' + oc.id)) + '\n' +
+              '🏪 <b>Proveedor:</b> ' + esc(oc.proveedor || '—') + '\n' +
+              '💲 <b>Monto pagado:</b> ' + esc(formatoMoneda(m.total, m.moneda) + ' ' + m.moneda) + '\n' +
+              '📅 <b>Pagada el:</b> ' + esc(fechaCortaTelegram(fechaPago) + ' (hace ' + diasDesdeFecha(fechaPago) + ' días)') + '\n\n' +
+              'La OC no puede concluirse hasta que se registre su factura.\n' +
+              '👉 Súbela en 📬 Bandeja de OC (📄 Factura):\n' + esc(URL_APP_TELEGRAM);
+            await enviarTelegramAChat(chatId, texto, oc.responsable, 'Recordatorio de factura ' + (oc.codigo || oc.id));
+          }
+
+          // 2) Complemento pendiente (facturas PPD)
+          var conFactura = ocs.filter(function(o) { return o.uuidfactura && ocRequiereSubirComplemento(o); });
+          if (!conFactura.length) return;
+          var rF = await supabase.from('facturas_oc').select('*').in('oc_id', conFactura.map(function(o) { return o.id; }));
+          if (rF.error) return;
+          for (var j = 0; j < conFactura.length; j++) {
+            var ocC = conFactura[j];
+            var ppd = (rF.data || []).filter(function(f) { return f.oc_id === ocC.id && facturaRequiereComplemento(f) && !f.complemento_pago_url; });
+            if (!ppd.length) continue;
+            var fechaFactura = ppd.map(function(f) { return f.fecha; }).filter(Boolean).sort()[0];
+            var fFactura = fechaLocalVale(fechaFactura);
+            if (!fFactura || fFactura.getTime() > limiteComplemento) continue;
+            if (ocC.recordatorio_complemento_en && new Date(ocC.recordatorio_complemento_en).getTime() > limiteComplemento) continue;
+            var chatIdC = await obtenerTelegramChatIdUsuario(ocC.responsable);
+            if (!chatIdC) continue;
+            if (!(await tomarRecordatorioOC(ocC, 'recordatorio_complemento_en', DIAS_RECORDATORIO_COMPLEMENTO))) continue;
+            var lineasFacturas = ppd.map(function(f) {
+              return '• ' + esc((f.uuid || 'Factura') + ' — ' + formatoMoneda(Number(f.monto) || 0, montosPagoOC(ocC).moneda) + ' (registrada el ' + fechaCortaTelegram(f.fecha) + ')');
+            }).join('\n');
+            var textoC =
+              '💰 <b>RECORDATORIO: COMPLEMENTO DE PAGO PENDIENTE</b>\n\n' +
+              '🧾 <b>OC:</b> ' + esc(ocC.codigo || ('OC-' + ocC.id)) + '\n' +
+              '🏪 <b>Proveedor:</b> ' + esc(ocC.proveedor || '—') + '\n' +
+              '🧾 <b>Factura(s) PPD sin complemento:</b>\n' + lineasFacturas + '\n\n' +
+              'La OC no puede concluirse hasta que se suba el complemento de pago.\n' +
+              '👉 Súbelo en 📬 Bandeja de OC (💰 Complemento Pago):\n' + esc(URL_APP_TELEGRAM);
+            await enviarTelegramAChat(chatIdC, textoC, ocC.responsable, 'Recordatorio de complemento ' + (ocC.codigo || ocC.id));
+          }
+        } catch (e) {
+          console.warn('No se pudieron revisar los recordatorios de factura y complemento:', e);
+        } finally {
+          revisandoRecordatoriosOC = false;
+        }
       }
 
       function textoResultadoAvisoTelegram(r) {
@@ -20790,7 +21225,7 @@
             var urlComprobanteOC = oc.pago2_comprobante_url || oc.comprobante_pago_url || oc.pago1_comprobante_url || null;
             var enviadoComp = urlComprobanteOC
               ? await enviarTelegramDocumento(chatId, texto, null, urlComprobanteOC, (oc.codigo || ('OC-' + oc.id)) + '-COMPROBANTE-PAGO.pdf')
-              : await enviarTelegramAChat(chatId, texto);
+              : await enviarTelegramAChat(chatId, texto, usuarioDest, 'Complemento de pago solicitado');
             if (enviadoComp) resultado.enviados.push(usuarioDest);
           }
           if (!resultado.enviados.length) {
@@ -21941,19 +22376,24 @@
         return TELEGRAM_CHAT_ID;
       }
 
-      async function enviarNotificacionTelegram(mensaje) {
+      // ref = { tabla, id, columna }: si el aviso no sale y queda en la cola
+      // de reenvío, al enviarse se guarda ahí su número de mensaje (para
+      // que la reacción 👍/👎 siga funcionando).
+      async function enviarNotificacionTelegram(mensaje, ref) {
         try {
           var chatIdDirector = await obtenerChatIdDirectorTelegram();
-          var data = await telegramAPI('sendMessage', {
+          var payloadDirector = {
             chat_id: chatIdDirector,
             text: mensaje,
             parse_mode: 'Markdown'
-          });
+          };
+          var data = await telegramAPI('sendMessage', payloadDirector);
           if (data.ok) {
             console.log('✅ Notificación enviada a Telegram');
             return (data.result && data.result.message_id) || null;
           } else {
             console.error('❌ Error al enviar notificación:', data);
+            if (!errorTelegramDefinitivo(data)) await encolarAvisoTelegram(DESTINO_TELEGRAM_DIRECTOR, 'sendMessage', payloadDirector, 'Aviso al Director', ref);
             return null;
           }
         } catch (error) {
@@ -23719,7 +24159,7 @@
       // Envía el aviso al Director; devuelve true si Telegram lo aceptó.
       async function notificarDirectorSPM(d) {
         try {
-          var idMensaje = await enviarNotificacionTelegram(formatearMensajeSPM(d, d.id));
+          var idMensaje = await enviarNotificacionTelegram(formatearMensajeSPM(d, d.id), { tabla: 'documentos_cxp', id: d.id, columna: 'telegram_message_id' });
           if (!idMensaje) return false;
           try {
             var rTg = await supabase.from('documentos_cxp').update({ telegram_message_id: idMensaje }).eq('id', d.id);
@@ -24169,7 +24609,7 @@
           var motivo = 'EXCEDE EL PRESUPUESTO DE COMPRAS (VDC-3) de ' + info.usuario + ' en la SPM ' + info.spm_folio + ': presupuesto ' +
             formatoMoneda(info.presupuesto, 'MXN') + ', usado ' + formatoMoneda(info.usado, 'MXN') + ', esta OC ' + formatoMoneda(info.importe, 'MXN') +
             ', excedente ' + formatoMoneda(info.exceso, 'MXN') + '. Requiere autorización directa del Director; si la autoriza, el presupuesto de COMPRAS aumenta en el excedente.';
-          var idMensaje = await enviarNotificacionTelegram(formatearMensajeOC(datosOC, proyectoOC, oc.id, motivo));
+          var idMensaje = await enviarNotificacionTelegram(formatearMensajeOC(datosOC, proyectoOC, oc.id, motivo), { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
           if (idMensaje) {
             await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: idMensaje }).eq('id', oc.id);
             oc.notificacion_enviada = true;
@@ -28576,6 +29016,16 @@
             return;
           }
 
+          // Link de pago de una OC (?pago=ID): exclusivo de CCHF (o ADMIN).
+          if (detectarEnlacePago() && !usuarioPuedeMarcarOCPagada(actual)) {
+            actual = null;
+            btnLogin.disabled = false;
+            btnLogin.textContent = 'Ingresar';
+            errorDiv.classList.remove('hidden');
+            errorDiv.innerHTML = '❌ Este enlace es exclusivo de ' + USUARIO_PAGOS_OC + ' (pagos de OC). Tu usuario no tiene permiso para acceder por esta vía.';
+            return;
+          }
+
           var ocIdTelegramCheck = detectarEnlaceTelegram();
           if (ocIdTelegramCheck && actual.rol !== 'Director General') {
             actual = null;
@@ -28603,7 +29053,8 @@
           try {
             var paramsEnlace = new URLSearchParams(window.location.search);
             sesionPorEnlace = paramsEnlace.get('complemento') ? 'complemento'
-              : (paramsEnlace.get('oc') ? 'oc' : (paramsEnlace.get('vale') ? 'vale' : (detectarEnlaceSPM() ? 'spm' : null)));
+              : (detectarEnlacePago() ? 'pago'
+              : (paramsEnlace.get('oc') ? 'oc' : (paramsEnlace.get('vale') ? 'vale' : (detectarEnlaceSPM() ? 'spm' : null))));
           } catch (eEnlace) { sesionPorEnlace = null; }
 
         } catch (e) {
@@ -28623,6 +29074,9 @@
         document.getElementById('mainHeader').classList.remove('hidden');
         document.getElementById('login').classList.add('hidden');
         document.getElementById('loginContainer').style.display = 'none';
+        // Reenvío automático de avisos pendientes y recordatorios de
+        // factura/complemento (ver iniciarProcesosAvisosTelegram).
+        iniciarProcesosAvisosTelegram();
 
         try {
 
@@ -28742,7 +29196,7 @@
             document.getElementById('contenidoApp').classList.remove('hidden');
             document.getElementById('contenidoApp').classList.add('visible');
             // Entrada por Telegram: solo la acción de la OC (sin volver al menú).
-            document.getElementById('btnVolverMenu').classList.toggle('hidden', sesionPorEnlace === 'oc');
+            document.getElementById('btnVolverMenu').classList.toggle('hidden', sesionPorEnlace === 'oc' || sesionPorEnlace === 'pago');
 
             var esAdmin = actual && actual.rol === 'Administrador';
             var esFinanzas = actual && actual.rol === 'Finanzas';
@@ -29067,6 +29521,12 @@
           var enlaceComplementoAbrir = detectarEnlaceComplemento();
           if (enlaceComplementoAbrir) {
             setTimeout(function() { abrirComplementoDesdeLink(enlaceComplementoAbrir); }, 700);
+          }
+
+          // Link de Telegram de CCHF para subir el pago de una OC (?pago=ID).
+          var pagoIdEnlaceAbrir = detectarEnlacePago();
+          if (pagoIdEnlaceAbrir) {
+            setTimeout(function() { abrirPagoDesdeLink(pagoIdEnlaceAbrir); }, 700);
           }
 
           // Link de Telegram del Director para autorizar una SPM (?spm=ID).
