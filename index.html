@@ -19778,57 +19778,101 @@
       // la columna "Código" de la tabla de productos de la OC). Si el
       // código no existe en el catálogo, no hace nada (esa línea de la OC
       // no está ligada a inventario).
-      async function ajustarInventarioPorCodigo(codigo, delta, lineaOrigen, causaMotivo, ocCodigo) {
-        if (!codigo || !delta) return;
+      // ===== PRODUCTO DEL INVENTARIO PARA LA ENTRADA DE UNA OC (10/11/2026) =====
+      // El código PROD-xxxxx de una partida nueva es solo una vista previa
+      // (siguienteCodigoProductoPreview) y varias OC pendientes llegaron a
+      // tener el mismo código para productos distintos (p. ej. PROD-00025
+      // era MICA en una OC, CARGADOR LENOVO en otra y PILAS AAA en el
+      // inventario). Por eso, en una ENTRADA el producto se busca así:
+      //   1) mismo número de parte;
+      //   2) mismo código y misma descripción;
+      //   3) misma descripción (sin otro número de parte).
+      // Si no existe, se da de alta con su código si está libre o, si ese
+      // código ya es de otro producto, con el siguiente código libre
+      // (inventario y partidas de todas las OC). La partida de la OC se
+      // actualiza con el código final (ver aplicarMovimientoInventarioOC).
+      var CAMPOS_PRODUCTO_INVENTARIO_OC = 'id, codigo, cantidad, descripcion, numero_parte, almacen_id, marca, modelo';
+      function claveProductoInventario(valor) { return String(valor == null ? '' : valor).toUpperCase().replace(/\s+/g, ' ').trim(); }
+      async function siguienteCodigoProductoLibreBD(productosBD) {
+        var maxNum = 0;
+        function considerar(c) { var m = /^PROD-(\d+)$/.exec(claveProductoInventario(c)); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
+        (productosBD || []).forEach(function(p) { considerar(p && p.codigo); });
         try {
-          var { data: prod, error: errGet } = await supabase.from('productos').select('id, cantidad, descripcion, almacen_id, marca, modelo').eq('codigo', codigo).maybeSingle();
-          if (errGet) return;
-          if (!prod) {
-            // La partida trae un código (p. ej. "PROD-00016") que el
-            // formulario de Crear OC generó como VISTA PREVIA para un
-            // producto nuevo (ver siguienteCodigoProductoPreview) pero que
-            // nunca se llegó a registrar de verdad en el catálogo de
-            // 📦 Productos — sin esto, la entrada de inventario se perdía
-            // en silencio porque ese código nunca coincidía con ningún
-            // producto real. Si es una entrada (delta > 0) y la partida
-            // trae descripción, se da de alta el producto en el catálogo
-            // en ese momento, con el mismo código, en vez de perder el
-            // movimiento.
-            if (delta > 0 && lineaOrigen && lineaOrigen.descripcion) {
-              try {
-                var { data: nuevoProd, error: errIns } = await supabase.from('productos').insert([{
-                  codigo: codigo,
-                  descripcion: lineaOrigen.descripcion,
-                  udm: lineaOrigen.udm || 'PZA',
-                  numero_parte: lineaOrigen.parte || null,
-                  marca: lineaOrigen.marca || null,
-                  modelo: lineaOrigen.modelo || null,
-                  cantidad: 0,
-                  precio_referencia: lineaOrigen.precioUnitario || 0,
-                  activo: true,
-                  origen: 'OC',
-                  origen_oc: ocCodigo || null,
-                  fecha_alta: new Date().toISOString()
-                }]).select().maybeSingle();
-                if (errIns || !nuevoProd) {
-                  console.error('No se pudo registrar automáticamente el producto ' + codigo + ' en el catálogo:', errIns);
-                  return;
-                }
-                prod = nuevoProd;
-              } catch (eIns) {
-                console.error('No se pudo registrar automáticamente el producto ' + codigo + ' en el catálogo:', eIns);
-                return;
-              }
-            } else {
-              return;
-            }
+          var rOC = await supabase.from('ordenes').select('productos');
+          if (!rOC.error) (rOC.data || []).forEach(function(o) { parsearProductosOC(o).forEach(function(l) { considerar(l && l.codigo); }); });
+        } catch (eOC) { console.warn('No se pudieron leer las partidas de las OC para el siguiente código:', eOC); }
+        return 'PROD-' + String(maxNum + 1).padStart(5, '0');
+      }
+      async function productoParaEntradaOC(codigo, linea) {
+        var r = await supabase.from('productos').select(CAMPOS_PRODUCTO_INVENTARIO_OC);
+        if (r.error) return { error: r.error };
+        var todos = r.data || [];
+        var parte = claveProductoInventario(linea.parte);
+        var desc = claveProductoInventario(linea.descripcion);
+        var cod = claveProductoInventario(codigo);
+        var prod = parte ? todos.find(function(p) { return claveProductoInventario(p.numero_parte) === parte; }) : null;
+        if (!prod) prod = todos.find(function(p) { return claveProductoInventario(p.codigo) === cod && claveProductoInventario(p.descripcion) === desc; }) || null;
+        if (!prod && desc) prod = todos.find(function(p) { return claveProductoInventario(p.descripcion) === desc && (!parte || !claveProductoInventario(p.numero_parte)); }) || null;
+        if (prod) return { prod: prod };
+        var ocupado = todos.some(function(p) { return claveProductoInventario(p.codigo) === cod; });
+        return { prod: null, codigoAlta: ocupado ? await siguienteCodigoProductoLibreBD(todos) : String(codigo).trim().toUpperCase() };
+      }
+      async function altaProductoDesdePartidaOC(codigoAlta, lineaOrigen, ocCodigo) {
+        var datos = {
+          codigo: codigoAlta,
+          descripcion: lineaOrigen.descripcion,
+          udm: lineaOrigen.udm || 'PZA',
+          numero_parte: lineaOrigen.parte || null,
+          marca: lineaOrigen.marca || null,
+          modelo: lineaOrigen.modelo || null,
+          cantidad: 0,
+          precio_referencia: lineaOrigen.precioUnitario || 0,
+          activo: true,
+          origen: 'OC',
+          origen_oc: ocCodigo || null,
+          fecha_alta: new Date().toISOString()
+        };
+        var r = await supabase.from('productos').insert([datos]).select().maybeSingle();
+        if (r.error && (r.error.code === '23505' || /duplicate|unique/i.test(r.error.message || ''))) {
+          // Otro usuario tomó ese código al mismo tiempo: siguiente libre.
+          var rTodos = await supabase.from('productos').select('codigo');
+          datos.codigo = await siguienteCodigoProductoLibreBD(rTodos.data || []);
+          r = await supabase.from('productos').insert([datos]).select().maybeSingle();
+        }
+        if (r.error || !r.data) {
+          console.error('No se pudo registrar automáticamente el producto ' + datos.codigo + ' en el catálogo:', r.error);
+          return null;
+        }
+        return r.data;
+      }
+
+      // Regresa el código del producto que se movió (puede ser distinto
+      // al de la partida, ver productoParaEntradaOC) o null si no se movió.
+      async function ajustarInventarioPorCodigo(codigo, delta, lineaOrigen, causaMotivo, ocCodigo) {
+        if (!codigo || !delta) return null;
+        try {
+          var prod = null;
+          if (delta > 0 && lineaOrigen && lineaOrigen.descripcion) {
+            // Entrada: producto por número de parte, código y descripción;
+            // si no existe, se da de alta en ese momento (antes la entrada
+            // de un código de vista previa nunca registrado se perdía).
+            var resEntrada = await productoParaEntradaOC(codigo, lineaOrigen);
+            if (resEntrada.error) return null;
+            prod = resEntrada.prod || await altaProductoDesdePartidaOC(resEntrada.codigoAlta, lineaOrigen, ocCodigo);
+            if (!prod) return null;
+          } else {
+            var { data: prodCodigo, error: errGet } = await supabase.from('productos').select(CAMPOS_PRODUCTO_INVENTARIO_OC).eq('codigo', codigo).maybeSingle();
+            if (errGet || !prodCodigo) return null;
+            prod = prodCodigo;
           }
+          var codigoFinal = prod.codigo || codigo;
           var nuevaCantidad = (prod.cantidad || 0) + delta;
           if (nuevaCantidad < 0) nuevaCantidad = 0;
           var cambiosProd = { cantidad: nuevaCantidad };
           if (lineaOrigen && lineaOrigen.marca && !prod.marca) cambiosProd.marca = String(lineaOrigen.marca).toUpperCase();
           if (lineaOrigen && lineaOrigen.modelo && !prod.modelo) cambiosProd.modelo = String(lineaOrigen.modelo).toUpperCase();
-          await supabase.from('productos').update(cambiosProd).eq('id', prod.id);
+          var { error: errCant } = await supabase.from('productos').update(cambiosProd).eq('id', prod.id);
+          if (errCant) { console.error('No se pudo actualizar la existencia de ' + codigoFinal + ':', errCant); return null; }
           // El motivo siempre indica la causa del movimiento y, si viene de
           // una OC, el código de esa OC al final separado por un guion —
           // así el módulo de Inventario permite rastrear de qué OC vino
@@ -19837,14 +19881,16 @@
           if (ocCodigo) motivoFinal += ' - ' + ocCodigo;
           await registrarMovimientoInventario({
             producto_id: prod.id,
-            codigo: codigo,
+            codigo: codigoFinal,
             descripcion: prod.descripcion || '',
             almacen: nombreAlmacenPorId(prod.almacen_id),
             cantidad: delta,
             motivo: motivoFinal
           });
+          return codigoFinal;
         } catch (e) {
           console.error('Error ajustando inventario para código ' + codigo + ':', e);
+          return null;
         }
       }
 
@@ -20095,20 +20141,88 @@
       // concluir. Las OC pagadas antes de este cambio (sin la marca) siguen
       // entrando al concluirse. Si después se regresa el pago a pendiente,
       // se cancela o se elimina la OC (sin concluir), se restan.
+      // MARCA EN LA OC (10/11/2026): columna ordenes.inventario_aplicado
+      // (SQL inventario_oc.sql). La marca se "toma" en la base de datos
+      // antes de mover el inventario: así una OC no entra dos veces aunque
+      // se dé doble clic o dos usuarios la procesen al mismo tiempo (la OC
+      // GIE-TI-OC-260917-A-STEREN entró dos veces al concluirse el
+      // 28/10/2026). Sin la columna se usa la marca en los pagos, como antes.
       function inventarioAplicadoOC(oc) {
+        if (!oc) return false;
+        if (oc.inventario_aplicado === true) return true;
         return pagosRegistradosOC(oc).some(function(p) { return p && p.inventario_aplicado; });
       }
+      // true: esta llamada cambió la marca; false: ya tenía ese valor (otra
+      // sesión se adelantó) o hubo un error; null: la columna aún no existe.
+      async function tomarMarcaInventarioOC(oc, valor) {
+        if (!oc || !oc.id) return false;
+        try {
+          var q = supabase.from('ordenes').update({ inventario_aplicado: valor }).eq('id', oc.id);
+          q = valor ? q.or('inventario_aplicado.is.null,inventario_aplicado.eq.false') : q.eq('inventario_aplicado', true);
+          var r = await q.select('id');
+          if (r.error) {
+            if (/inventario_aplicado/.test(r.error.message || '')) return null;
+            console.error('No se pudo registrar la marca de inventario de la OC ' + (oc.codigo || oc.id) + ':', r.error);
+            return false;
+          }
+          var tomada = !!(r.data && r.data.length);
+          if (tomada) oc.inventario_aplicado = valor;
+          return tomada;
+        } catch (e) {
+          console.error('No se pudo registrar la marca de inventario de la OC ' + (oc.codigo || oc.id) + ':', e);
+          return false;
+        }
+      }
+      // Entrada de los productos de la OC (al pagarse en su totalidad, al
+      // concluirse o en la regularización). marcaEnPagos: solo si la
+      // columna no existe — indica si la marca quedó guardada en los pagos.
+      async function registrarEntradaInventarioOC(oc, causa, marcaEnPagos) {
+        var marca = await tomarMarcaInventarioOC(oc, true);
+        if (marca === false) return false;
+        if (marca === null) {
+          if (marcaEnPagos !== undefined ? !marcaEnPagos : inventarioAplicadoOC(oc)) return false;
+        }
+        await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo, causa, oc);
+        return true;
+      }
+      // Resta los productos que entraron (pago regresado a pendiente,
+      // cancelación o eliminación). El llamador ya verificó que entraron.
+      async function revertirEntradaInventarioOC(oc, productos, causa) {
+        var marca = await tomarMarcaInventarioOC(oc, false);
+        if (marca === false) return false;
+        await aplicarMovimientoInventarioOC(productos || parsearProductosOC(oc), -1, oc.codigo, causa, oc);
+        return true;
+      }
+      // Guarda en la OC los códigos finales de sus partidas (cuando una
+      // entrada dio de alta el producto con otro código).
+      async function guardarCodigosPartidasOC(oc, ocCodigo, productos) {
+        try {
+          var q = supabase.from('ordenes').update({ productos: productos });
+          q = (oc && oc.id) ? q.eq('id', oc.id) : q.eq('codigo', ocCodigo);
+          var { error } = await q;
+          if (error) { console.error('No se pudieron guardar los códigos de las partidas de la OC ' + ocCodigo + ':', error); return; }
+          if (oc) oc.productos = productos;
+          (typeof ordenes !== 'undefined' && Array.isArray(ordenes) ? ordenes : []).forEach(function(o) {
+            if (o !== oc && ((oc && oc.id && o.id === oc.id) || (!(oc && oc.id) && o.codigo === ocCodigo))) o.productos = productos;
+          });
+        } catch (e) {
+          console.error('No se pudieron guardar los códigos de las partidas de la OC ' + ocCodigo + ':', e);
+        }
+      }
 
-      async function aplicarMovimientoInventarioOC(productosOC, signo, ocCodigo, causaTexto) {
+      async function aplicarMovimientoInventarioOC(productosOC, signo, ocCodigo, causaTexto, oc) {
         if (!Array.isArray(productosOC)) return;
         var causa = causaTexto || (signo > 0 ? 'Entrada por conclusión de OC' : 'Reversión de inventario por OC');
+        var codigosCambiados = false;
         for (var i = 0; i < productosOC.length; i++) {
           var linea = productosOC[i];
           var codigo = (linea.codigo || '').trim();
           var cantidadLinea = Number(linea.cantidad) || 0;
           if (!codigo || cantidadLinea <= 0) continue;
-          await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea, linea, causa, ocCodigo);
+          var codigoFinal = await ajustarInventarioPorCodigo(codigo, signo * cantidadLinea, linea, causa, ocCodigo);
+          if (codigoFinal && codigoFinal !== codigo) { linea.codigo = codigoFinal; codigosCambiados = true; }
         }
+        if (codigosCambiados) await guardarCodigosPartidasOC(oc, ocCodigo, productosOC);
         if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
       }
 
@@ -20136,15 +20250,20 @@
         return mapa;
       }
 
-      async function aplicarDeltaInventarioOC(mapaDeltas, ocCodigo) {
+      async function aplicarDeltaInventarioOC(mapaDeltas, ocCodigo, oc, productosNuevos) {
         var codigos = Object.keys(mapaDeltas);
+        var codigosCambiados = false;
         for (var i = 0; i < codigos.length; i++) {
           var codigo = codigos[i];
           var entrada = mapaDeltas[codigo];
           if (entrada && entrada.delta) {
-            await ajustarInventarioPorCodigo(codigo, entrada.delta, entrada.linea, 'Ajuste de inventario por edición de productos de OC', ocCodigo);
+            var codigoFinal = await ajustarInventarioPorCodigo(codigo, entrada.delta, entrada.linea, 'Ajuste de inventario por edición de productos de OC', ocCodigo);
+            if (codigoFinal && codigoFinal !== codigo && Array.isArray(productosNuevos)) {
+              productosNuevos.forEach(function(l) { if (l && String(l.codigo || '').trim() === codigo) { l.codigo = codigoFinal; codigosCambiados = true; } });
+            }
           }
         }
+        if (codigosCambiados) await guardarCodigosPartidasOC(oc, ocCodigo, productosNuevos);
         if (typeof window.cargarProductosCatalogo === 'function') window.cargarProductosCatalogo();
       }
 
@@ -20460,7 +20579,19 @@
         }
       }
 
+      // Doble clic en "Confirmar pago": el segundo clic se ignora mientras
+      // el primero sigue guardando (antes podía registrar el pago dos veces).
+      var registrandoPagoOC = false;
       window.confirmarComprobantePago = async function() {
+        if (registrandoPagoOC) return;
+        registrandoPagoOC = true;
+        try {
+          return await confirmarComprobantePagoInterno();
+        } finally {
+          registrandoPagoOC = false;
+        }
+      };
+      async function confirmarComprobantePagoInterno() {
         var msg = document.getElementById('msgComprobantePago');
         if (msg) msg.innerHTML = '';
         if (indexComprobantePagoPendiente === null) return;
@@ -20561,8 +20692,7 @@
           // OC pagada en su totalidad: sus productos entran al inventario
           // con las cantidades de la OC (solo si quedó guardada la marca en
           // los pagos; si no, entran al concluir, como antes).
-          if (liquida && ('pagos' in updates)) {
-            await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo, 'Entrada por pago de OC');
+          if (liquida && (await registrarEntradaInventarioOC(oc, 'Entrada por pago de OC', ('pagos' in updates)))) {
             mensajeFinal += '\n\n📦 Los productos de la OC se agregaron al inventario con sus cantidades.';
           }
           if (updates.estadopago === 'PAGADA' && ocEsSinProyecto(oc)) {
@@ -20826,9 +20956,49 @@
         await revisarReporteMensualFacturas();
         await revisarComplementosCXC();
       }
+      // ===== REGULARIZACIÓN DE INVENTARIO DE OC PAGADAS (10/11/2026) =====
+      // Toda OC pagada en su totalidad (no cancelada ni concluida) cuyos
+      // productos aún no entraron al inventario (marca
+      // ordenes.inventario_aplicado en false) entra al iniciar sesión
+      // cualquier usuario: las OC pagadas antes del cambio del 09/11/2026
+      // y cualquier entrada al pagar que hubiera fallado. La marca se toma en la base de datos antes de mover el
+      // inventario, así entra una sola vez aunque varios usuarios inicien
+      // sesión a la vez. Sin la columna (inventario_oc.sql sin ejecutar)
+      // no hace nada.
+      var regularizandoInventarioOC = false;
+      async function regularizarInventarioOCPagadas() {
+        if (regularizandoInventarioOC || !actual || sesionPorEnlace) return;
+        regularizandoInventarioOC = true;
+        try {
+          var r = await supabase.from('ordenes').select('*').eq('estadopago', 'PAGADA').neq('estado', 'CANCELADA');
+          if (r.error) return;
+          // Las CONCLUIDAS no: una versión anterior del sistema les sumó el
+          // inventario al concluirlas sin poner la marca.
+          var pendientes = (r.data || []).filter(function(o) { return ('inventario_aplicado' in o) && o.inventario_aplicado !== true && o.estado !== 'CONCLUIDA'; });
+          var regularizadas = [];
+          for (var i = 0; i < pendientes.length; i++) {
+            var o = pendientes[i];
+            // Pagada con la versión del 09/11 (marca en sus pagos): ya
+            // entró; solo se pone la marca de la OC.
+            if (pagosRegistradosOC(o).some(function(p) { return p && p.inventario_aplicado; })) { await tomarMarcaInventarioOC(o, true); continue; }
+            if (await registrarEntradaInventarioOC(o, 'Entrada por pago de OC (regularización)')) {
+              regularizadas.push(o.codigo || o.id);
+              (typeof ordenes !== 'undefined' && Array.isArray(ordenes) ? ordenes : []).forEach(function(enMemoria) {
+                if (enMemoria.id === o.id) { enMemoria.inventario_aplicado = true; enMemoria.productos = o.productos; }
+              });
+            }
+          }
+          if (regularizadas.length) console.log('📦 Inventario regularizado de OC pagadas: ' + regularizadas.join(', '));
+        } catch (e) {
+          console.warn('No se pudo regularizar el inventario de las OC pagadas:', e);
+        } finally {
+          regularizandoInventarioOC = false;
+        }
+      }
+
       var procesosAvisosTelegramIniciados = false;
       function iniciarProcesosAvisosTelegram() {
-        setTimeout(function() { procesarColaTelegram(); revisarAvisosProgramados(); }, 5000);
+        setTimeout(function() { procesarColaTelegram(); revisarAvisosProgramados(); regularizarInventarioOCPagadas(); }, 5000);
         if (procesosAvisosTelegramIniciados) return;
         procesosAvisosTelegramIniciados = true;
         setInterval(function() { if (!document.hidden) procesarColaTelegram(); }, 2 * 60000);
@@ -22366,6 +22536,7 @@
         document.getElementById('concluirOCModal').classList.remove('active');
       };
 
+      var concluyendoOCEnCurso = false;
       window.finalizarProcesoFacturaOC = async function() {
         if (!ocConclusionPendiente) return;
         if (!actual || (actual.rol !== 'Contabilidad' && actual.rol !== 'Administrador')) {
@@ -22388,16 +22559,27 @@
           }
         }
 
+        if (concluyendoOCEnCurso) return;
+        concluyendoOCEnCurso = true;
         try {
           var updates = { estado: 'CONCLUIDA' };
-          var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
+          // Solo concluye si no estaba ya concluida (doble clic u otra sesión).
+          var { data: filasConcluidas, error } = await supabase.from('ordenes').update(updates).eq('id', oc.id).neq('estado', 'CONCLUIDA').select('id');
           if (error) throw error;
+          if (!filasConcluidas || !filasConcluidas.length) {
+            Object.assign(oc, updates);
+            ocConclusionPendiente = null;
+            document.getElementById('concluirOCModal').classList.remove('active');
+            render();
+            alert('ℹ️ Esta OC ya estaba CONCLUIDA.');
+            return;
+          }
           Object.assign(oc, updates);
 
           // Los productos entran al inventario al pagarse la OC. Solo las
-          // OC pagadas antes de ese cambio (sin la marca en sus pagos)
+          // OC que aún no tienen la marca (pagadas antes de ese cambio)
           // entran aquí, al concluirse.
-          if (!inventarioAplicadoOC(oc)) await aplicarMovimientoInventarioOC(parsearProductosOC(oc), 1, oc.codigo);
+          await registrarEntradaInventarioOC(oc, 'Entrada por conclusión de OC');
 
           ocConclusionPendiente = null;
           facturaArchivoPendiente = null;
@@ -22408,6 +22590,8 @@
         } catch (e) {
           console.error('Error concluyendo la OC:', e);
           alert('❌ No se pudo concluir la OC: ' + e.message);
+        } finally {
+          concluyendoOCEnCurso = false;
         }
       };
 
@@ -22494,7 +22678,7 @@
         if (error) return alert('Error al actualizar OC: ' + error.message);
         var productosRevertirPend = revertirInventarioPend ? parsearProductosOC(oc) : null;
         Object.assign(oc, updates);
-        if (productosRevertirPend) await aplicarMovimientoInventarioOC(productosRevertirPend, -1, oc.codigo, 'Reversión de inventario: pago de OC regresado a pendiente');
+        if (productosRevertirPend) await revertirEntradaInventarioOC(oc, productosRevertirPend, 'Reversión de inventario: pago de OC regresado a pendiente');
 
         // Borrar los archivos del bucket (si falla, el pago ya quedó eliminado de la OC).
         try {
@@ -22526,8 +22710,15 @@
         if (justificacionEliminar === null) return;
         var montoAntesEliminar = Number(oc.montototal) || 0;
         var productosRevertirElim = revertirInventarioElim ? parsearProductosOC(oc) : null;
+        // La marca se quita antes de borrar la OC (después ya no existe):
+        // si otra sesión ya la quitó, no se resta dos veces.
+        var marcaQuitadaElim = productosRevertirElim ? await tomarMarcaInventarioOC(oc, false) : null;
+        if (marcaQuitadaElim === false) productosRevertirElim = null;
         var { error } = await supabase.from('ordenes').delete().eq('id', oc.id);
-        if (error) return alert('Error al eliminar OC');
+        if (error) {
+          if (marcaQuitadaElim === true) await tomarMarcaInventarioOC(oc, true);
+          return alert('Error al eliminar OC');
+        }
         if (productosRevertirElim) await aplicarMovimientoInventarioOC(productosRevertirElim, -1, oc.codigo, 'Reversión de inventario por eliminación de OC');
         await registrarBitacoraOC(oc, 'ELIMINADA', montoAntesEliminar, 0, justificacionEliminar);
         ordenes.splice(index, 1);
@@ -22622,7 +22813,7 @@
           updates = { estado: 'CANCELADA' };
         }
         Object.assign(oc, updates);
-        if (revertirInventarioCanc) await aplicarMovimientoInventarioOC(parsearProductosOC(oc), -1, oc.codigo, 'Reversión de inventario por cancelación de OC');
+        if (revertirInventarioCanc) await revertirEntradaInventarioOC(oc, parsearProductosOC(oc), 'Reversión de inventario por cancelación de OC');
         await registrarBitacoraOC(oc, 'CANCELADA', Number(oc.montototal) || 0, 0, motivo);
         await agregarNotaOC(oc, 'OC CANCELADA', motivo);
         render();
@@ -27399,6 +27590,15 @@
             if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
           });
         }
+        // También los códigos de vista previa de las OC ya capturadas (sus
+        // productos nuevos aún no están en el inventario): antes la OC
+        // siguiente repetía esos códigos para productos distintos.
+        (typeof ordenes !== 'undefined' && Array.isArray(ordenes) ? ordenes : []).forEach(function(o) {
+          parsearProductosOC(o).forEach(function(l) {
+            var m = /^PROD-(\d+)$/.exec(String((l && l.codigo) || '').trim());
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+          });
+        });
         return 'PROD-' + String(maxNum + 1).padStart(5, '0');
       }
 
@@ -29003,7 +29203,7 @@
           var inventarioAjustado = false;
           if (oc.estado === 'CONCLUIDA' || inventarioAplicadoOC(oc)) {
             var deltas = calcularDeltaInventarioOC(productosViejos, productosNuevos);
-            await aplicarDeltaInventarioOC(deltas, oc.codigo);
+            await aplicarDeltaInventarioOC(deltas, oc.codigo, oc, productosNuevos);
             inventarioAjustado = true;
           }
 
