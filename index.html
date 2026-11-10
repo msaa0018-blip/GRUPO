@@ -9526,6 +9526,10 @@
         }, 400);
       }
 
+      function ordenarOCPorId(lista) {
+        return (lista || []).slice().sort(function(a, b) { return (Number(a && a.id) || 0) - (Number(b && b.id) || 0); });
+      }
+
       async function cargarDatos() {
         try {
           await cargarUsuarios();
@@ -9537,7 +9541,11 @@
 
           var { data: oData, error: e2 } = await supabase.from('ordenes').select('*');
           if (e2) throw e2;
-          ordenes = oData || [];
+          // Orden fijo por id: la base de datos regresa las filas en otro
+          // orden después de cada cambio, y las ventanas que guardan la
+          // posición de la OC en esta lista terminaban apuntando a otra OC
+          // si la lista se recargaba con la ventana abierta.
+          ordenes = ordenarOCPorId(oData);
 
           var { data: cxcData, error: e3 } = await supabase.from('cuentas_cxc').select('*');
           if (e3) throw e3;
@@ -17601,8 +17609,8 @@
           if (cxcData.error) throw cxcData.error;
           if (ofData.error) throw ofData.error;
 
-          // Actualizar datos globales
-          ordenes = ocData.data || [];
+          // Actualizar datos globales (OC en orden fijo por id, ver cargarDatos)
+          ordenes = ordenarOCPorId(ocData.data);
           proyectos = proyData.data || [];
           cuentasCXC = cxcData.data || [];
           ordenesFacturacion = ofData.data || [];
@@ -20302,6 +20310,15 @@
 
       // ===== MODAL: Comprobante de pago (obligatorio para marcar PAGADA) =====
       var indexComprobantePagoPendiente = null;
+      // La OC de la ventana se identifica por su id: la posición en la
+      // lista puede cambiar si la lista se recarga con la ventana abierta
+      // (el 09/11 la ventana mostraba TONY PAPELERIA y al confirmar tomó la
+      // OC BIOMETRICO de ARITHMO).
+      var ocComprobantePagoPendienteId = null;
+      function ocComprobantePagoEnCurso() {
+        if (indexComprobantePagoPendiente === null || ocComprobantePagoPendienteId === null) return null;
+        return (ordenes || []).find(function(o) { return o && o.id === ocComprobantePagoPendienteId; }) || null;
+      }
       var comprobantePagoArchivoPendiente = null;
       // Cuando la OC tiene condiciones comerciales "50/50 FINIQUITO Y
       // ANTICIPO" se piden 2 pagos independientes (cada uno con su propio
@@ -20515,7 +20532,8 @@
         var cajaSaldo = document.getElementById('comprobantePagoSaldoFavor');
         var saldoFavor = tipo === 'EXCEDENTE' ? redondearMontoPago(monto - m.pendiente) : 0;
         if (cajaSaldo) {
-          var proveedorPago = (indexComprobantePagoPendiente !== null && ordenes[indexComprobantePagoPendiente]) ? ordenes[indexComprobantePagoPendiente].proveedor : '';
+          var ocPagoEnCurso = ocComprobantePagoEnCurso();
+          var proveedorPago = ocPagoEnCurso ? ocPagoEnCurso.proveedor : '';
           cajaSaldo.innerHTML = saldoFavor > TOLERANCIA_PAGO_OC
             ? '💚 Saldo a favor con ' + escapeHTML(proveedorPago || 'el proveedor') + ': <b>' + escapeHTML(formatoMoneda(saldoFavor, m.moneda) + ' ' + m.moneda) + '</b>' +
               '<small>Se pagaron ' + escapeHTML(formatoMoneda(monto, m.moneda)) + ' y lo pendiente de la OC es ' + escapeHTML(formatoMoneda(m.pendiente, m.moneda)) + '.</small>'
@@ -20553,6 +20571,7 @@
         var pagosPrevios = pagosRegistradosOC(oc);
 
         indexComprobantePagoPendiente = index;
+        ocComprobantePagoPendienteId = oc.id;
         comprobantePagoArchivoPendiente = null;
         comprobantePagoNumeroPendiente = pagosPrevios.length + 1;
 
@@ -20695,8 +20714,11 @@
         var msg = document.getElementById('msgComprobantePago');
         if (msg) msg.innerHTML = '';
         if (indexComprobantePagoPendiente === null) return;
-        var oc = ordenes[indexComprobantePagoPendiente];
-        if (!oc) return;
+        var oc = ocComprobantePagoEnCurso();
+        if (!oc) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ No se encontró la OC de esta ventana en la lista actual. Cierra la ventana y vuelve a abrir el pago.</div>';
+          return;
+        }
 
         // Tipo de pago y monto (completo o parcialidad) antes que el PDF.
         var errorMontoPago = window.actualizarPendientePagoOC();
@@ -20714,10 +20736,17 @@
         }
 
         try {
-          // Se recalcula con la OC actual por si cambió desde que se abrió.
+          // Se recalcula con la OC tal como está en la base de datos en este
+          // momento (otro usuario pudo registrar un pago o editarla).
+          var rOCFresca = await supabase.from('ordenes').select('*').eq('id', oc.id);
+          if (rOCFresca.error) throw rOCFresca.error;
+          if (!rOCFresca.data || !rOCFresca.data[0]) throw new Error('La OC ' + (oc.codigo || oc.id) + ' ya no existe.');
+          Object.assign(oc, rOCFresca.data[0]);
+          if (oc.estadopago === 'PAGADA') throw new Error('La OC ' + (oc.codigo || oc.id) + ' ya quedó pagada en su totalidad (otro usuario registró el pago). Cierra la ventana.');
           var mAntes = montosPagoOC(oc);
           var tipoPago = tipoPagoOCElegido();
           var montoPago = tipoPago === 'COMPLETO' ? mAntes.pendiente : redondearMontoPago(document.getElementById('comprobantePagoMonto').value);
+          if (tipoPago === 'PARCIAL' && montoPago >= mAntes.pendiente - TOLERANCIA_PAGO_OC) throw new Error('Lo pendiente de la OC cambió a ' + formatoMoneda(mAntes.pendiente, mAntes.moneda) + ': la parcialidad debe ser menor. Revisa el monto.');
           // Pago de más: a la OC se aplica lo pendiente; el resto es saldo a favor.
           var esPagoDeMas = tipoPago === 'EXCEDENTE';
           var montoAplicado = esPagoDeMas ? mAntes.pendiente : montoPago;
