@@ -893,6 +893,11 @@
   .pago-oc-pendiente { margin-top: 6px; font-size: 13px; font-weight: 600; white-space: normal; }
   .pago-oc-pendiente.error { color: #c0392b; }
   .pago-oc-monto-badge { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  /* Saldo a favor con el proveedor (pago de más) */
+  .saldo-favor-caja { border: 2px solid #16a34a; background: #dcfce7; color: #14532d; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; white-space: normal; }
+  .saldo-favor-caja b { font-size: 16px; white-space: nowrap; }
+  .saldo-favor-caja small { display: block; margin-top: 3px; font-size: 12px; color: #166534; }
+  .saldo-favor-badge { display: inline-block; margin-top: 4px; border: 2px solid #16a34a; background: #dcfce7; color: #14532d; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   @media (max-width: 550px) { .pago-oc-resumen { grid-template-columns: 1fr; } }
   .badge-cxc-pagado { background: var(--color-verde); color: #0b1a33 }
   .badge-cxc-pendiente { background: #f5e56b; color: #0b1a33 }
@@ -5513,19 +5518,26 @@
             </div>
           </div>
           <div class="modal-body">
-            <p class="text-muted" style="margin-bottom:12px;">Para registrar un pago es obligatorio indicar si es el pago completo o una parcialidad, el monto pagado y adjuntar el comprobante (PDF). La OC queda PAGADA solo cuando se cubre su total.</p>
+            <p class="text-muted" style="margin-bottom:12px;">Para registrar un pago es obligatorio indicar si es el pago completo, una parcialidad o un pago de más, el monto pagado y adjuntar el comprobante (PDF). La OC queda PAGADA solo cuando se cubre su total.</p>
             <div id="comprobantePagoResumen" class="pago-oc-resumen"></div>
+            <div id="comprobantePagoSaldoProveedor" class="saldo-favor-caja hidden"></div>
             <div class="grupo-formulario">
               <label style="font-weight:500;">Tipo de pago *</label>
               <div class="pago-oc-tipos">
                 <label class="pago-oc-tipo"><input type="radio" name="comprobantePagoTipo" value="COMPLETO" onchange="window.cambiarTipoPagoOC()"> Pago completo <span>(liquida lo pendiente)</span></label>
                 <label class="pago-oc-tipo"><input type="radio" name="comprobantePagoTipo" value="PARCIAL" onchange="window.cambiarTipoPagoOC()"> Parcialidad <span>(abono a cuenta)</span></label>
+                <label class="pago-oc-tipo"><input type="radio" name="comprobantePagoTipo" value="EXCEDENTE" onchange="window.cambiarTipoPagoOC()"> Pago de más <span>(liquida y deja saldo a favor)</span></label>
               </div>
             </div>
             <div class="grupo-formulario">
               <label style="font-weight:500;" for="comprobantePagoMonto">Monto pagado <span id="comprobantePagoMonedaTexto"></span> *</label>
               <input type="number" id="comprobantePagoMonto" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" oninput="window.actualizarPendientePagoOC()" style="width:100%;box-sizing:border-box;">
               <div id="comprobantePagoPendienteTexto" class="pago-oc-pendiente"></div>
+            </div>
+            <div class="grupo-formulario hidden" id="grupoSaldoFavorPago">
+              <div id="comprobantePagoSaldoFavor" class="saldo-favor-caja"></div>
+              <label style="font-weight:500;" for="comprobantePagoNotaSaldo">Nota del saldo a favor *</label>
+              <textarea id="comprobantePagoNotaSaldo" rows="2" placeholder="Motivo del pago de más y cómo se aplicará (mínimo 10 caracteres)" oninput="window.actualizarPendientePagoOC()" style="width:100%;box-sizing:border-box;"></textarea>
             </div>
             <div class="grupo-formulario hidden" id="grupoFechaSiguientePago">
               <label style="font-weight:500;" for="comprobantePagoFechaSiguiente">Fecha del siguiente pago *</label>
@@ -20332,7 +20344,8 @@
         if (oc && oc.estadopago === 'PAGADA') {
           pagado = total;
         } else if (pagos.length) {
-          pagado = redondearMontoPago(pagos.reduce(function(s, p) { return s + (Number(p.monto) || 0); }, 0));
+          // Un pago de más cuenta solo lo que se aplicó a la OC (aplicado_oc).
+          pagado = redondearMontoPago(pagos.reduce(function(s, p) { return s + (Number(p.aplicado_oc != null ? p.aplicado_oc : p.monto) || 0); }, 0));
         } else {
           pagado = redondearMontoPago(oc && oc.monto_pagado);
         }
@@ -20349,6 +20362,67 @@
         return 'Pagado ' + formatoMoneda(m.pagado, m.moneda) + ' · Pendiente ' + formatoMoneda(m.pendiente, m.moneda) +
           (oc && oc.fecha_siguiente_pago ? ' · Próximo pago ' + fechaCortaTelegram(oc.fecha_siguiente_pago) : '');
       }
+      // ===== SALDO A FAVOR CON EL PROVEEDOR (10/11/2026) =====
+      // Si CCHF indica "Pago de más", el pago liquida la OC y el excedente
+      // queda como saldo a favor con ese proveedor, con una nota
+      // obligatoria. Se guarda en el pago que lo generó (ordenes.pagos:
+      // monto = lo pagado, aplicado_oc = lo que cubrió de la OC,
+      // saldo_a_favor, nota_saldo_favor); no requiere SQL. Se ve en verde
+      // en la ventana de pago, en la fila de la OC y en el aviso de pago.
+      // "⏳ Pendiente" (borrar el pago) también borra el saldo a favor.
+      var MIN_NOTA_SALDO_FAVOR = 10;
+      function saldoFavorOC(oc) {
+        var total = 0, moneda = null, notas = [];
+        pagosRegistradosOC(oc).forEach(function(p) {
+          var s = Number(p && p.saldo_a_favor) || 0;
+          if (s > 0) { total += s; moneda = p.moneda || moneda; if (p.nota_saldo_favor) notas.push(p.nota_saldo_favor); }
+        });
+        return { monto: redondearMontoPago(total), moneda: moneda || montoEsperadoFacturaOC(oc || {}).moneda, notas: notas };
+      }
+      function htmlSaldoFavorFilaOC(oc) {
+        var s = saldoFavorOC(oc);
+        if (!(s.monto > 0)) return '';
+        return '<br><span class="saldo-favor-badge" title="' + escapeHTML(s.notas.join(' | ')) + '">💚 Saldo a favor ' + escapeHTML(formatoMoneda(s.monto, s.moneda) + ' ' + s.moneda) + '</span>';
+      }
+      function mismoProveedorOC(a, b) {
+        if (!a || !b) return false;
+        var rfcA = normalizar(a.rfc), rfcB = normalizar(b.rfc);
+        if (rfcA && rfcB) return rfcA === rfcB;
+        return !!normalizar(a.proveedor) && normalizar(a.proveedor) === normalizar(b.proveedor);
+      }
+      // Saldo a favor acumulado con el proveedor de la OC (todas sus OC no
+      // canceladas), por moneda, con el detalle de cada OC que lo generó.
+      async function saldoFavorProveedor(oc) {
+        var r = await supabase.from('ordenes').select('*').neq('estado', 'CANCELADA');
+        if (r.error) return null;
+        var porMoneda = {}, detalle = [];
+        (r.data || []).filter(function(o) { return mismoProveedorOC(o, oc); }).forEach(function(o) {
+          var s = saldoFavorOC(o);
+          if (!(s.monto > 0)) return;
+          porMoneda[s.moneda] = redondearMontoPago((porMoneda[s.moneda] || 0) + s.monto);
+          detalle.push({ codigo: o.codigo || ('OC-' + o.id), monto: s.monto, moneda: s.moneda, nota: s.notas.join(' | ') });
+        });
+        return { porMoneda: porMoneda, detalle: detalle };
+      }
+      async function pintarSaldoFavorProveedorPago(oc) {
+        var caja = document.getElementById('comprobantePagoSaldoProveedor');
+        if (!caja) return;
+        caja.classList.add('hidden');
+        caja.innerHTML = '';
+        try {
+          var s = await saldoFavorProveedor(oc);
+          if (!s || !s.detalle.length) return;
+          var montos = Object.keys(s.porMoneda).map(function(mon) { return formatoMoneda(s.porMoneda[mon], mon) + ' ' + mon; }).join(' + ');
+          caja.innerHTML = '💚 Saldo a favor con ' + escapeHTML(oc.proveedor || 'este proveedor') + ': <b>' + escapeHTML(montos) + '</b>' +
+            s.detalle.map(function(d) {
+              return '<small>' + escapeHTML(d.codigo + ': ' + formatoMoneda(d.monto, d.moneda) + ' ' + d.moneda + (d.nota ? ' — ' + d.nota : '')) + '</small>';
+            }).join('');
+          caja.classList.remove('hidden');
+        } catch (e) {
+          console.warn('No se pudo calcular el saldo a favor del proveedor:', e);
+        }
+      }
+
       // Fecha de hoy (día local) en formato AAAA-MM-DD.
       function fechaHoyLocalISO() {
         var h = new Date();
@@ -20401,6 +20475,9 @@
         // Parcialidad: se pide la fecha del siguiente pago (aviso a CCHF).
         var grupoFecha = document.getElementById('grupoFechaSiguientePago');
         if (grupoFecha) grupoFecha.classList.toggle('hidden', tipo !== 'PARCIAL');
+        // Pago de más: monto mayor a lo pendiente y nota del saldo a favor.
+        var grupoSaldo = document.getElementById('grupoSaldoFavorPago');
+        if (grupoSaldo) grupoSaldo.classList.toggle('hidden', tipo !== 'EXCEDENTE');
         if (tipo === 'COMPLETO') {
           input.value = m.pendiente.toFixed(2);
           input.readOnly = true;
@@ -20409,7 +20486,7 @@
           if (input.readOnly) input.value = '';
           input.readOnly = false;
           input.style.background = '';
-          if (tipo === 'PARCIAL') try { input.focus(); } catch (e) {}
+          if (tipo === 'PARCIAL' || tipo === 'EXCEDENTE') try { input.focus(); } catch (e) {}
         }
         window.actualizarPendientePagoOC();
       };
@@ -20424,21 +20501,38 @@
         var tipo = tipoPagoOCElegido();
         var monto = redondearMontoPago(input.value);
         var error = '';
-        if (!tipo) error = 'Indica si es el pago completo o una parcialidad.';
+        if (!tipo) error = 'Indica si es el pago completo, una parcialidad o un pago de más.';
         else if (!(monto > 0)) error = 'Captura el monto pagado.';
-        else if (tipo === 'PARCIAL' && monto >= m.pendiente - TOLERANCIA_PAGO_OC) error = 'Una parcialidad debe ser menor a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + '). Si liquida la OC, elige "Pago completo".';
+        else if (tipo === 'PARCIAL' && monto >= m.pendiente - TOLERANCIA_PAGO_OC) error = 'Una parcialidad debe ser menor a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + '). Si liquida la OC, elige "Pago completo"; si se pagó de más, "Pago de más".';
         else if (tipo === 'COMPLETO' && Math.abs(monto - m.pendiente) > TOLERANCIA_PAGO_OC) error = 'El pago completo debe ser igual a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + ').';
+        else if (tipo === 'EXCEDENTE' && monto <= m.pendiente + TOLERANCIA_PAGO_OC) error = 'En un pago de más el monto debe ser mayor a lo pendiente (' + formatoMoneda(m.pendiente, m.moneda) + '). Si se pagó exacto, elige "Pago completo".';
         var fechaSiguiente = (document.getElementById('comprobantePagoFechaSiguiente') || {}).value || '';
         if (!error && tipo === 'PARCIAL') {
           if (!fechaSiguiente) error = 'Indica la fecha del siguiente pago.';
           else if (fechaSiguiente < fechaHoyLocalISO()) error = 'La fecha del siguiente pago no puede ser anterior a hoy.';
+        }
+        // Pago de más: el excedente se ve en verde y la nota es obligatoria.
+        var cajaSaldo = document.getElementById('comprobantePagoSaldoFavor');
+        var saldoFavor = tipo === 'EXCEDENTE' ? redondearMontoPago(monto - m.pendiente) : 0;
+        if (cajaSaldo) {
+          var proveedorPago = (indexComprobantePagoPendiente !== null && ordenes[indexComprobantePagoPendiente]) ? ordenes[indexComprobantePagoPendiente].proveedor : '';
+          cajaSaldo.innerHTML = saldoFavor > TOLERANCIA_PAGO_OC
+            ? '💚 Saldo a favor con ' + escapeHTML(proveedorPago || 'el proveedor') + ': <b>' + escapeHTML(formatoMoneda(saldoFavor, m.moneda) + ' ' + m.moneda) + '</b>' +
+              '<small>Se pagaron ' + escapeHTML(formatoMoneda(monto, m.moneda)) + ' y lo pendiente de la OC es ' + escapeHTML(formatoMoneda(m.pendiente, m.moneda)) + '.</small>'
+            : '💚 Captura el monto pagado: lo que exceda lo pendiente (' + escapeHTML(formatoMoneda(m.pendiente, m.moneda)) + ') queda como saldo a favor con el proveedor.';
+        }
+        if (!error && tipo === 'EXCEDENTE') {
+          var notaSaldo = ((document.getElementById('comprobantePagoNotaSaldo') || {}).value || '').trim();
+          if (notaSaldo.length < MIN_NOTA_SALDO_FAVOR) error = 'Escribe la nota del saldo a favor (mínimo ' + MIN_NOTA_SALDO_FAVOR + ' caracteres).';
         }
         if (error) {
           aviso.textContent = (input.value || tipo) ? '⚠️ ' + error : '';
           aviso.classList.add('error');
         } else {
           var queda = redondearMontoPago(Math.max(0, m.pendiente - monto));
-          aviso.textContent = queda <= TOLERANCIA_PAGO_OC
+          aviso.textContent = tipo === 'EXCEDENTE'
+            ? '✅ Con este pago la OC queda liquidada y quedan ' + formatoMoneda(saldoFavor, m.moneda) + ' de saldo a favor con el proveedor.'
+            : queda <= TOLERANCIA_PAGO_OC
             ? '✅ Con este pago la OC queda liquidada (pendiente ' + formatoMoneda(0, m.moneda) + ').'
             : 'Pendiente por pagar después de este pago: ' + formatoMoneda(queda, m.moneda) +
               (fechaSiguiente ? ' · Siguiente pago: ' + fechaCortaTelegram(fechaSiguiente) : '');
@@ -20483,6 +20577,12 @@
         if (inputFechaSig) { inputFechaSig.value = ''; inputFechaSig.min = fechaHoyLocalISO(); }
         var grupoFechaSig = document.getElementById('grupoFechaSiguientePago');
         if (grupoFechaSig) grupoFechaSig.classList.add('hidden');
+        var grupoSaldoFav = document.getElementById('grupoSaldoFavorPago');
+        if (grupoSaldoFav) grupoSaldoFav.classList.add('hidden');
+        var notaSaldoFav = document.getElementById('comprobantePagoNotaSaldo');
+        if (notaSaldoFav) notaSaldoFav.value = '';
+        // Saldo a favor que ya se tiene con este proveedor (de otras OC).
+        pintarSaldoFavorProveedorPago(oc);
         if (es5050) {
           var radio5050 = document.querySelector('input[name="comprobantePagoTipo"][value="' + (pagosPrevios.length ? 'COMPLETO' : 'PARCIAL') + '"]');
           if (radio5050) radio5050.checked = true;
@@ -20618,7 +20718,13 @@
           var mAntes = montosPagoOC(oc);
           var tipoPago = tipoPagoOCElegido();
           var montoPago = tipoPago === 'COMPLETO' ? mAntes.pendiente : redondearMontoPago(document.getElementById('comprobantePagoMonto').value);
-          var pagadoDespues = redondearMontoPago(mAntes.pagado + montoPago);
+          // Pago de más: a la OC se aplica lo pendiente; el resto es saldo a favor.
+          var esPagoDeMas = tipoPago === 'EXCEDENTE';
+          var montoAplicado = esPagoDeMas ? mAntes.pendiente : montoPago;
+          var saldoFavorPago = esPagoDeMas ? redondearMontoPago(montoPago - mAntes.pendiente) : 0;
+          var notaSaldoFavor = esPagoDeMas ? ((document.getElementById('comprobantePagoNotaSaldo') || {}).value || '').trim() : '';
+          if (esPagoDeMas && !(saldoFavorPago > TOLERANCIA_PAGO_OC)) throw new Error('Lo pendiente cambió: el monto ya no es mayor a lo pendiente (' + formatoMoneda(mAntes.pendiente, mAntes.moneda) + ').');
+          var pagadoDespues = redondearMontoPago(mAntes.pagado + montoAplicado);
           var pendienteDespues = redondearMontoPago(Math.max(0, mAntes.total - pagadoDespues));
           var liquida = pendienteDespues <= TOLERANCIA_PAGO_OC;
           var numeroPago = mAntes.pagos.length + 1;
@@ -20634,7 +20740,7 @@
           // Parcialidad: fecha programada del siguiente pago (ese día CCHF
           // recibe el aviso por Telegram — ver revisarPagosProgramadosOC).
           var fechaSiguientePago = liquida ? null : ((document.getElementById('comprobantePagoFechaSiguiente') || {}).value || null);
-          var listaPagos = mAntes.pagos.concat([{
+          var listaPagos = mAntes.pagos.concat([Object.assign({
             numero: numeroPago,
             tipo: liquida ? 'COMPLETO' : 'PARCIAL',
             monto: montoPago,
@@ -20647,7 +20753,11 @@
             registro: (actual && (actual.usuario || actual.u)) || null,
             // El pago que liquida la OC mete sus productos al inventario.
             inventario_aplicado: liquida
-          }]);
+          }, esPagoDeMas ? {
+            aplicado_oc: montoAplicado,
+            saldo_a_favor: saldoFavorPago,
+            nota_saldo_favor: notaSaldoFavor
+          } : {})]);
           var updates = { pagos: listaPagos, monto_pagado: pagadoDespues, fecha_siguiente_pago: fechaSiguientePago, aviso_pago_programado_en: null };
           // Compatibilidad con el 50/50: el primer pago va en pago1_* y el
           // que liquida la OC en pago2_* (si se paga en uno solo, pago1_*).
@@ -20659,9 +20769,11 @@
           if (liquida) {
             updates.estadopago = 'PAGADA';
             updates.comprobante_pago_url = url;
-            mensajeFinal = '✅ Pago ' + numeroPago + ' registrado (' + (tipoPago === 'COMPLETO' ? 'pago completo' : 'liquida la OC') + '): ' + formatoMoneda(montoPago, mAntes.moneda) +
+            mensajeFinal = '✅ Pago ' + numeroPago + ' registrado (' + (tipoPago === 'COMPLETO' ? 'pago completo' : (esPagoDeMas ? 'pago de más' : 'liquida la OC')) + '): ' + formatoMoneda(montoPago, mAntes.moneda) +
               '.\nPagado: ' + formatoMoneda(pagadoDespues, mAntes.moneda) + ' de ' + formatoMoneda(mAntes.total, mAntes.moneda) +
-              '. Pendiente: ' + formatoMoneda(0, mAntes.moneda) + '.\n\nOC marcada como PAGADA. Ahora queda pendiente de que se registre la factura.';
+              '. Pendiente: ' + formatoMoneda(0, mAntes.moneda) + '.' +
+              (esPagoDeMas ? '\n\n💚 Saldo a favor con ' + (oc.proveedor || 'el proveedor') + ': ' + formatoMoneda(saldoFavorPago, mAntes.moneda) + ' ' + mAntes.moneda + '.\nNota: ' + notaSaldoFavor : '') +
+              '\n\nOC marcada como PAGADA. Ahora queda pendiente de que se registre la factura.';
           } else {
             mensajeFinal = '✅ Parcialidad ' + numeroPago + ' registrada: ' + formatoMoneda(montoPago, mAntes.moneda) +
               '.\nPagado: ' + formatoMoneda(pagadoDespues, mAntes.moneda) + ' de ' + formatoMoneda(mAntes.total, mAntes.moneda) +
@@ -20683,6 +20795,10 @@
             // reintenta; si faltan ambas, se quitan todas.
             for (var reintentoCol = 0; reintentoCol < 2 && error && /pagos|monto_pagado|fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || ''); reintentoCol++) {
               if (/fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || '')) { delete updates.fecha_siguiente_pago; delete updates.aviso_pago_programado_en; }
+              else if (esPagoDeMas) {
+                // El saldo a favor se guarda en ordenes.pagos: sin esa columna no se registra.
+                throw new Error('Falta ejecutar en Supabase el SQL "pagos_parciales_oc.sql" (columnas pagos y monto_pagado). El pago de más no se registró.');
+              }
               else { delete updates.pagos; delete updates.monto_pagado; }
               error = (await supabase.from('ordenes').update(updates).eq('id', oc.id)).error;
             }
@@ -20692,7 +20808,8 @@
           // OC pagada en su totalidad: sus productos entran al inventario
           // con las cantidades de la OC (solo si quedó guardada la marca en
           // los pagos; si no, entran al concluir, como antes).
-          if (liquida && (await registrarEntradaInventarioOC(oc, 'Entrada por pago de OC', ('pagos' in updates)))) {
+          if (liquida && (await registrarEntradaInventarioOC(oc, 'Entrada por pago de OC', ('pagos' in updates))) &&
+              parsearProductosOC(oc).some(function(l) { return l && String(l.codigo || '').trim() && Number(l.cantidad) > 0; })) {
             mensajeFinal += '\n\n📦 Los productos de la OC se agregaron al inventario con sus cantidades.';
           }
           if (updates.estadopago === 'PAGADA' && ocEsSinProyecto(oc)) {
@@ -20713,6 +20830,8 @@
             pendiente: pendienteDespues,
             liquida: liquida,
             fechaSiguiente: fechaSiguientePago,
+            saldoFavor: saldoFavorPago,
+            notaSaldoFavor: notaSaldoFavor,
             comprobanteArchivo: comprobantePagoArchivoPendiente,
             comprobanteUrl: url
           });
@@ -21111,13 +21230,19 @@
           var montoPagado = info.monto != null ? Number(info.monto) : total;
           var conMoneda = function(v) { return formatoMoneda(v, moneda) + (moneda === 'USD' ? '' : ' MXN'); };
           var esParcialidad = info.liquida === false;
+          var conSaldoFavor = Number(info.saldoFavor) > 0;
           var montoTxt = conMoneda(montoPagado) +
-            (esParcialidad ? ' (parcialidad ' + info.numeroPago + ')' : (info.numeroPago > 1 ? ' (pago ' + info.numeroPago + ', liquida la OC)' : ' (pago completo)'));
+            (esParcialidad ? ' (parcialidad ' + info.numeroPago + ')' : (conSaldoFavor ? ' (pago de más' + (info.numeroPago > 1 ? ', pago ' + info.numeroPago : '') + ', liquida la OC)' : (info.numeroPago > 1 ? ' (pago ' + info.numeroPago + ', liquida la OC)' : ' (pago completo)')));
           var lineasSaldo = (esParcialidad || info.numeroPago > 1) && info.pagado != null
             ? '📊 <b>Pagado:</b> ' + escaparHTMLTelegram(conMoneda(info.pagado) + ' de ' + conMoneda(total)) + '\n' +
               '⏳ <b>Pendiente:</b> ' + escaparHTMLTelegram(conMoneda(info.pendiente || 0)) + '\n' +
               (esParcialidad && info.fechaSiguiente ? '📅 <b>Siguiente pago:</b> ' + escaparHTMLTelegram(fechaCortaTelegram(info.fechaSiguiente)) + '\n' : '')
             : '';
+          // Pago de más: saldo a favor con el proveedor y su nota.
+          if (conSaldoFavor) {
+            lineasSaldo += '💚 <b>Saldo a favor con el proveedor:</b> ' + escaparHTMLTelegram(conMoneda(Number(info.saldoFavor))) + '\n' +
+              (info.notaSaldoFavor ? '🗒️ <b>Nota:</b> ' + escaparHTMLTelegram(String(info.notaSaldoFavor).length > 200 ? String(info.notaSaldoFavor).slice(0, 200) + '…' : info.notaSaldoFavor) + '\n' : '');
+          }
           var fechaTxt = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
           var texto =
@@ -22649,7 +22774,8 @@
           (nPagosRegistrados > 1
             ? 'Se ELIMINARÁN los ' + nPagosRegistrados + ' pagos registrados (parcialidades) y sus comprobantes, y habrá que volver a registrar los pagos.'
             : 'Se ELIMINARÁ el pago registrado y su comprobante, y habrá que volver a registrar el pago.') +
-          (revertirInventarioPend ? '\n\n📦 También se restarán del inventario los productos que entraron con el pago.' : ''))) return;
+          (revertirInventarioPend ? '\n\n📦 También se restarán del inventario los productos que entraron con el pago.' : '') +
+          (saldoFavorOC(oc).monto > 0 ? '\n\n💚 También se borrará el saldo a favor con el proveedor (' + formatoMoneda(saldoFavorOC(oc).monto, saldoFavorOC(oc).moneda) + ').' : ''))) return;
         var urlsComprobante = [oc.comprobante_pago_url, oc.pago1_comprobante_url, oc.pago2_comprobante_url]
           .concat(pagosRegistradosOC(oc).map(function(p) { return p.comprobante_url; }))
           .filter(function(u, i, arr) {
@@ -23522,7 +23648,7 @@
               '<td data-label="Equiv. MXN">' + formatoMoneda(o.montomxn || 0, 'MXN') + '</td>' +
               '<td data-label="F.Pago">' + fechaSoloDia(o.fechapago).toLocaleDateString() + '</td>' +
               '<td data-label="F.Aprobación">' + (o.fechaaprobaciondirector ? new Date(o.fechaaprobaciondirector).toLocaleDateString() : (o.fechaaprobacionjefe ? new Date(o.fechaaprobacionjefe).toLocaleDateString() : '—')) + '</td>' +
-              '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoLabel + '</span></td>' +
+              '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoLabel + '</span>' + htmlSaldoFavorFilaOC(o) + '</td>' +
               '</tr>' +
               '<tr>' +
               '<td colspan="8">' +
@@ -28191,7 +28317,7 @@
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="F.Pago">' + fechaPago + '</td>' +
               '<td data-label="UUID">' + (o.uuidfactura || '—') + '</td>' +
-              '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span></td>' +
+              '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span>' + htmlSaldoFavorFilaOC(o) + '</td>' +
               '<td data-label="Acciones" class="acciones-header">—</td>' +
               '</tr>';
 
