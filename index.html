@@ -898,6 +898,11 @@
   .saldo-favor-caja b { font-size: 16px; white-space: nowrap; }
   .saldo-favor-caja small { display: block; margin-top: 3px; font-size: 12px; color: #166534; }
   .saldo-favor-badge { display: inline-block; margin-top: 4px; border: 2px solid #16a34a; background: #dcfce7; color: #14532d; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  /* Saldo en contra con el proveedor (factura mayor al total de la OC) */
+  .saldo-contra-caja { border: 2px solid #dc2626; background: #fee2e2; color: #7f1d1d; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; white-space: normal; }
+  .saldo-contra-caja b { font-size: 16px; white-space: nowrap; }
+  .saldo-contra-caja small { display: block; margin-top: 3px; font-size: 12px; color: #991b1b; }
+  .saldo-contra-badge { display: inline-block; margin-top: 4px; border: 2px solid #dc2626; background: #fee2e2; color: #7f1d1d; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   @media (max-width: 550px) { .pago-oc-resumen { grid-template-columns: 1fr; } }
   .badge-cxc-pagado { background: var(--color-verde); color: #0b1a33 }
   .badge-cxc-pendiente { background: #f5e56b; color: #0b1a33 }
@@ -5696,6 +5701,7 @@
           </div>
           <div class="modal-body">
             <div id="facturaListaAgregadas" style="margin-bottom:12px;"></div>
+            <div id="facturaSaldoProveedor" class="saldo-favor-caja hidden"></div>
 
             <div id="facturaFormularioContainer">
               <div class="grupo-formulario">
@@ -5704,7 +5710,8 @@
               </div>
               <div class="grupo-formulario">
                 <label style="font-weight:500;">Monto de la factura <span id="facturaMontoLabelMoneda">(misma moneda de la OC)</span> *</label>
-                <input id="facturaMontoInput" type="number" placeholder="Monto" style="width:100%;">
+                <input id="facturaMontoInput" type="number" placeholder="Monto" style="width:100%;" oninput="window.actualizarDiferenciaFacturaOC()">
+                <div id="facturaResumenMontos" class="pago-oc-pendiente"></div>
               </div>
               <div class="grupo-formulario">
                 <label style="font-weight:500;">Tipo de factura *</label>
@@ -5716,6 +5723,16 @@
               <div class="grupo-formulario hidden" id="facturaNotaContainer">
                 <label style="font-weight:500;">Nota (obligatoria para facturas PPD) *</label>
                 <textarea id="facturaNotaInput" placeholder="Motivo / seguimiento de esta factura PPD" style="width:100%;min-height:60px;"></textarea>
+              </div>
+              <!-- PPD que no completa el total: puede cerrar la OC con saldo a favor -->
+              <div class="grupo-formulario hidden" id="facturaUltimaContainer">
+                <label style="display:flex;gap:8px;align-items:center;font-weight:500;cursor:pointer;"><input type="checkbox" id="facturaUltimaCheck" onchange="window.actualizarDiferenciaFacturaOC()" style="width:auto;"> Es la última factura de esta OC (cierra con saldo a favor)</label>
+              </div>
+              <!-- Diferencia entre lo facturado y el total de la OC -->
+              <div class="grupo-formulario hidden" id="grupoDiferenciaFactura">
+                <div id="facturaCajaDiferencia" class="saldo-favor-caja"></div>
+                <label style="font-weight:500;" for="facturaNotaDiferencia">Nota de la diferencia *</label>
+                <textarea id="facturaNotaDiferencia" rows="2" placeholder="Motivo de la diferencia y cómo se resolverá (mínimo 10 caracteres)" oninput="window.actualizarDiferenciaFacturaOC()" style="width:100%;box-sizing:border-box;"></textarea>
               </div>
               <div class="grupo-formulario">
                 <label style="font-weight:500;">Adjuntar factura (PDF) *</label>
@@ -20396,10 +20413,27 @@
         });
         return { monto: redondearMontoPago(total), moneda: moneda || montoEsperadoFacturaOC(oc || {}).moneda, notas: notas };
       }
+      // Diferencia de la(s) factura(s) contra el total de la OC (10/11/2026,
+      // columnas ordenes.diferencia_factura y nota_diferencia_factura):
+      // negativa = se facturó de menos (saldo a favor); positiva = se
+      // facturó de más (saldo en contra).
+      function diferenciaFacturaOC(oc) {
+        var d = oc ? Number(oc.diferencia_factura) : NaN;
+        if (!oc || oc.diferencia_factura == null || oc.diferencia_factura === '' || isNaN(d) || Math.abs(d) <= 0.009) return null;
+        return { monto: redondearMontoPago(d), moneda: montoEsperadoFacturaOC(oc).moneda, nota: oc.nota_diferencia_factura || '' };
+      }
       function htmlSaldoFavorFilaOC(oc) {
+        var html = '';
         var s = saldoFavorOC(oc);
-        if (!(s.monto > 0)) return '';
-        return '<br><span class="saldo-favor-badge" title="' + escapeHTML(s.notas.join(' | ')) + '">💚 Saldo a favor ' + escapeHTML(formatoMoneda(s.monto, s.moneda) + ' ' + s.moneda) + '</span>';
+        if (s.monto > 0) {
+          html += '<br><span class="saldo-favor-badge" title="' + escapeHTML(s.notas.join(' | ')) + '">💚 Saldo a favor ' + escapeHTML(formatoMoneda(s.monto, s.moneda) + ' ' + s.moneda) + '</span>';
+        }
+        var d = diferenciaFacturaOC(oc);
+        if (d) {
+          html += '<br><span class="' + (d.monto < 0 ? 'saldo-favor-badge' : 'saldo-contra-badge') + '" title="' + escapeHTML(d.nota) + '">' +
+            (d.monto < 0 ? '💚 Factura: a favor ' : '🔴 Factura: en contra ') + escapeHTML(formatoMoneda(Math.abs(d.monto), d.moneda) + ' ' + d.moneda) + '</span>';
+        }
+        return html;
       }
       function mismoProveedorOC(a, b) {
         if (!a || !b) return false;
@@ -20407,38 +20441,54 @@
         if (rfcA && rfcB) return rfcA === rfcB;
         return !!normalizar(a.proveedor) && normalizar(a.proveedor) === normalizar(b.proveedor);
       }
-      // Saldo a favor acumulado con el proveedor de la OC (todas sus OC no
-      // canceladas), por moneda, con el detalle de cada OC que lo generó.
+      // Saldo con el proveedor de la OC (todas sus OC no canceladas), por
+      // moneda: suma los pagos de más (a favor) y las diferencias de
+      // factura (de menos = a favor; de más = en contra), con el detalle de
+      // cada OC. Positivo = a favor; negativo = en contra.
       async function saldoFavorProveedor(oc) {
         var r = await supabase.from('ordenes').select('*').neq('estado', 'CANCELADA');
         if (r.error) return null;
         var porMoneda = {}, detalle = [];
         (r.data || []).filter(function(o) { return mismoProveedorOC(o, oc); }).forEach(function(o) {
           var s = saldoFavorOC(o);
-          if (!(s.monto > 0)) return;
-          porMoneda[s.moneda] = redondearMontoPago((porMoneda[s.moneda] || 0) + s.monto);
-          detalle.push({ codigo: o.codigo || ('OC-' + o.id), monto: s.monto, moneda: s.moneda, nota: s.notas.join(' | ') });
+          if (s.monto > 0) {
+            porMoneda[s.moneda] = redondearMontoPago((porMoneda[s.moneda] || 0) + s.monto);
+            detalle.push({ codigo: o.codigo || ('OC-' + o.id), concepto: 'pago de más', monto: s.monto, moneda: s.moneda, nota: s.notas.join(' | ') });
+          }
+          var d = diferenciaFacturaOC(o);
+          if (d) {
+            porMoneda[d.moneda] = redondearMontoPago((porMoneda[d.moneda] || 0) - d.monto);
+            detalle.push({ codigo: o.codigo || ('OC-' + o.id), concepto: d.monto < 0 ? 'factura de menos' : 'factura de más', monto: -d.monto, moneda: d.moneda, nota: d.nota });
+          }
         });
         return { porMoneda: porMoneda, detalle: detalle };
       }
-      async function pintarSaldoFavorProveedorPago(oc) {
-        var caja = document.getElementById('comprobantePagoSaldoProveedor');
+      async function pintarSaldoProveedor(idCaja, oc) {
+        var caja = document.getElementById(idCaja);
         if (!caja) return;
         caja.classList.add('hidden');
         caja.innerHTML = '';
         try {
           var s = await saldoFavorProveedor(oc);
           if (!s || !s.detalle.length) return;
-          var montos = Object.keys(s.porMoneda).map(function(mon) { return formatoMoneda(s.porMoneda[mon], mon) + ' ' + mon; }).join(' + ');
-          caja.innerHTML = '💚 Saldo a favor con ' + escapeHTML(oc.proveedor || 'este proveedor') + ': <b>' + escapeHTML(montos) + '</b>' +
+          var monedas = Object.keys(s.porMoneda);
+          var hayEnContra = monedas.some(function(mon) { return s.porMoneda[mon] < -0.009; });
+          var hayAFavor = monedas.some(function(mon) { return s.porMoneda[mon] > 0.009; });
+          var enContra = hayEnContra && !hayAFavor;
+          var montos = monedas.map(function(mon) { return formatoMoneda(Math.abs(s.porMoneda[mon]), mon) + ' ' + mon + (hayEnContra && hayAFavor ? (s.porMoneda[mon] < 0 ? ' en contra' : ' a favor') : ''); }).join(' + ');
+          var compensado = !hayEnContra && !hayAFavor;
+          caja.className = enContra ? 'saldo-contra-caja' : 'saldo-favor-caja';
+          caja.innerHTML = (enContra ? '🔴 Saldo en contra con ' : (compensado ? '⚖️ Saldo con ' : '💚 Saldo a favor con ')) + escapeHTML(oc.proveedor || 'este proveedor') + ': <b>' + escapeHTML(montos) + '</b>' +
+            (compensado ? ' (se compensan)' : '') +
             s.detalle.map(function(d) {
-              return '<small>' + escapeHTML(d.codigo + ': ' + formatoMoneda(d.monto, d.moneda) + ' ' + d.moneda + (d.nota ? ' — ' + d.nota : '')) + '</small>';
+              return '<small>' + escapeHTML(d.codigo + ' (' + d.concepto + '): ' + (d.monto < 0 ? '−' : '+') + formatoMoneda(Math.abs(d.monto), d.moneda) + ' ' + d.moneda + (d.nota ? ' — ' + d.nota : '')) + '</small>';
             }).join('');
           caja.classList.remove('hidden');
         } catch (e) {
-          console.warn('No se pudo calcular el saldo a favor del proveedor:', e);
+          console.warn('No se pudo calcular el saldo con el proveedor:', e);
         }
       }
+      function pintarSaldoFavorProveedorPago(oc) { return pintarSaldoProveedor('comprobantePagoSaldoProveedor', oc); }
 
       // Fecha de hoy (día local) en formato AAAA-MM-DD.
       function fechaHoyLocalISO() {
@@ -20816,7 +20866,7 @@
             // una parcialidad no se puede registrar.
             if (!liquida) {
               throw new Error(/fecha_siguiente_pago|aviso_pago_programado_en/i.test(error.message || '')
-                ? 'Falta ejecutar en Supabase el SQL "pagos_programados_oc.sql" (columnas fecha_siguiente_pago y aviso_pago_programado_en). La parcialidad no se registró.'
+                ? 'Falta ejecutar en Supabase el SQL "pagos_programados_y_facturas_oc.sql" (columnas fecha_siguiente_pago y aviso_pago_programado_en). La parcialidad no se registró.'
                 : 'Falta ejecutar en Supabase el SQL "pagos_parciales_oc.sql" (columnas pagos y monto_pagado). La parcialidad no se registró.');
             }
             // Se quitan solo las columnas que faltan (primero las del pago
@@ -21570,7 +21620,7 @@
         cambio[columna] = new Date().toISOString();
         var r = await supabase.from('ordenes').update(cambio).eq('id', oc.id)
           .or(columna + '.is.null,' + columna + '.lt."' + limite + '"').select('id');
-        if (r.error) { console.warn('No se pudo registrar el aviso diario (¿falta ejecutar pagos_programados_oc.sql?):', r.error); return false; }
+        if (r.error) { console.warn('No se pudo registrar el aviso diario (¿falta ejecutar pagos_programados_y_facturas_oc.sql?):', r.error); return false; }
         return !!(r.data && r.data.length);
       }
       // Fecha (AAAA-MM-DD) desde la que se avisa a CCHF del pago de la OC.
@@ -21966,8 +22016,7 @@
       // true si las facturas registradas de la OC ya cubren su monto.
       function facturasOCCompletas(oc) {
         if (!ocConclusionPendiente || !ocConclusionPendiente.facturas.length) return false;
-        var esperado = montoEsperadoFacturaOC(oc);
-        return (sumaFacturasOC() - esperado.monto) >= -TOLERANCIA_MONTO_FACTURA;
+        return facturasCubrenOC(oc, ocConclusionPendiente.facturas);
       }
 
       // Vista "COMPROBADA": oculta el formulario (ya no se puede subir otra
@@ -21981,9 +22030,19 @@
         if (texto && oc) {
           var esperado = montoEsperadoFacturaOC(oc);
           var n = ocConclusionPendiente.facturas.length;
-          texto.textContent = 'La' + (n > 1 ? 's ' + n + ' facturas' : ' factura') + ' de esta OC ya cubre' + (n > 1 ? 'n' : '') +
-            ' el total (' + formatoMoneda(sumaFacturasOC(), esperado.moneda) + ' de ' + formatoMoneda(esperado.monto, esperado.moneda) + '). No es posible subir otra factura.' +
-            (textoExtra ? '\n\n' + textoExtra : '');
+          var conDiferencia = ocConclusionPendiente.facturas.filter(facturaCierraConDiferencia).pop();
+          if (conDiferencia) {
+            var difC = Number(conDiferencia.diferencia) || 0;
+            texto.textContent = 'La' + (n > 1 ? 's ' + n + ' facturas' : ' factura') + ' de esta OC suma' + (n > 1 ? 'n' : '') + ' ' +
+              formatoMoneda(sumaFacturasOC(), esperado.moneda) + ' de ' + formatoMoneda(esperado.monto, esperado.moneda) + ' y se cerró con ' +
+              (difC < 0 ? 'saldo a favor' : 'saldo en contra') + ' de ' + formatoMoneda(Math.abs(difC), esperado.moneda) + ' ' + esperado.moneda +
+              (conDiferencia.nota_diferencia ? ' (nota: ' + conDiferencia.nota_diferencia + ')' : '') + '. No es posible subir otra factura.' +
+              (textoExtra ? '\n\n' + textoExtra : '');
+          } else {
+            texto.textContent = 'La' + (n > 1 ? 's ' + n + ' facturas' : ' factura') + ' de esta OC ya cubre' + (n > 1 ? 'n' : '') +
+              ' el total (' + formatoMoneda(sumaFacturasOC(), esperado.moneda) + ' de ' + formatoMoneda(esperado.monto, esperado.moneda) + '). No es posible subir otra factura.' +
+              (textoExtra ? '\n\n' + textoExtra : '');
+          }
         }
       }
 
@@ -22064,6 +22123,8 @@
 
         window.limpiarFormularioFactura();
         window.renderFacturasAgregadasOC();
+        // Saldo a favor o en contra que ya se tiene con este proveedor.
+        pintarSaldoProveedor('facturaSaldoProveedor', oc);
 
         // Esta ventana es solo para SUBIR factura(s). El complemento de
         // pago lo sube Finanzas aparte, y confirmar/concluir la OC se
@@ -22095,6 +22156,10 @@
         if (tipoSelect) tipoSelect.value = 'PUE';
         var notaInput = document.getElementById('facturaNotaInput');
         if (notaInput) notaInput.value = '';
+        var ultimaCheck = document.getElementById('facturaUltimaCheck');
+        if (ultimaCheck) ultimaCheck.checked = false;
+        var notaDif = document.getElementById('facturaNotaDiferencia');
+        if (notaDif) notaDif.value = '';
         var msg = document.getElementById('msgAdjuntarFactura');
         if (msg) msg.innerHTML = '';
         window.actualizarUITipoFactura();
@@ -22107,6 +22172,7 @@
         var esPPD = tipoSelect && tipoSelect.value === 'PPD';
         if (notaContainer) notaContainer.classList.toggle('hidden', !esPPD);
         if (btn) btn.textContent = esPPD ? '📌 Marcar PENDIENTE PPD' : '✔️ Comprobar Factura';
+        window.actualizarDiferenciaFacturaOC();
       };
 
       window.renderFacturasAgregadasOC = function() {
@@ -22119,7 +22185,8 @@
         }
         var html = '<div style="background:var(--gray-50);border-radius:8px;padding:10px;margin-bottom:10px;"><strong>Facturas comprobadas (' + facturas.length + '/' + MAX_FACTURAS_POR_OC + '):</strong><ul style="margin:6px 0 0 18px;padding:0;">';
         facturas.forEach(function(f) {
-          html += '<li>' + escapeHTML(f.uuid || '') + ' — ' + formatoMoneda(f.monto || 0, montoEsperadoFacturaOC(ocConclusionPendiente.oc).moneda) + ' — ' + f.tipo + (f.tipo === 'PPD' ? ' (' + (f.estado === 'PENDIENTE_PPD' ? 'PENDIENTE PPD' : f.estado) + ')' : '') + '</li>';
+          html += '<li>' + escapeHTML(f.uuid || '') + ' — ' + formatoMoneda(f.monto || 0, montoEsperadoFacturaOC(ocConclusionPendiente.oc).moneda) + ' — ' + f.tipo + (f.tipo === 'PPD' ? ' (' + (f.estado === 'PENDIENTE_PPD' ? 'PENDIENTE PPD' : f.estado) + ')' : '') +
+            htmlDiferenciaFacturaItem(f, montoEsperadoFacturaOC(ocConclusionPendiente.oc).moneda) + '</li>';
         });
         html += '</ul></div>';
         cont.innerHTML = html;
@@ -22196,6 +22263,88 @@
         return ocConclusionPendiente.facturas.reduce(function(s, f) { return s + (Number(f.monto) || 0); }, 0);
       }
 
+      // ===== DIFERENCIAS DE FACTURA: SALDO A FAVOR O EN CONTRA (10/11/2026) =====
+      // Igual que en los pagos: si lo facturado no coincide con el total de
+      // la OC, la diferencia se muestra encuadrada (verde = a favor, se
+      // facturó de menos; rojo = en contra, se facturó de más) y se pide una
+      // nota para registrarla. La factura que cierra con diferencia guarda
+      // facturas_oc.diferencia (facturado − total de la OC) y
+      // nota_diferencia; la OC, diferencia_factura y
+      // nota_diferencia_factura. Una PUE siempre cierra la OC; una PPD la
+      // cierra si llega o pasa el total, o si se marca "Es la última
+      // factura". Sustituye al rechazo anterior ("no coincide con el monto
+      // esperado" en PUE y "excede el saldo pendiente" en PPD).
+      var MIN_NOTA_DIFERENCIA_FACTURA = 10;
+      function htmlDiferenciaFacturaItem(f, moneda) {
+        if (!facturaCierraConDiferencia(f) || Math.abs(Number(f.diferencia)) <= TOLERANCIA_MONTO_FACTURA) return '';
+        var d = Number(f.diferencia);
+        return ' <span class="' + (d < 0 ? 'saldo-favor-badge' : 'saldo-contra-badge') + '" title="' + escapeHTML(f.nota_diferencia || '') + '">' +
+          (d < 0 ? '💚 a favor ' : '🔴 en contra ') + escapeHTML(formatoMoneda(Math.abs(d), moneda)) + '</span>' +
+          (f.nota_diferencia ? '<br><span style="font-size:12px;color:var(--gray-600);">Nota: ' + escapeHTML(f.nota_diferencia) + '</span>' : '');
+      }
+      function facturaCierraConDiferencia(f) {
+        return !!f && f.diferencia !== null && f.diferencia !== undefined && f.diferencia !== '' && !isNaN(Number(f.diferencia));
+      }
+      // true si las facturas ya comprueban la OC: cubren su total o una de
+      // ellas la cerró con diferencia.
+      function facturasCubrenOC(oc, facturas) {
+        var lista = facturas || [];
+        if (!lista.length) return false;
+        if (lista.some(facturaCierraConDiferencia)) return true;
+        var suma = lista.reduce(function(s, f) { return s + (Number(f.monto) || 0); }, 0);
+        return (suma - montoEsperadoFacturaOC(oc).monto) >= -TOLERANCIA_MONTO_FACTURA;
+      }
+      function calculoDiferenciaFacturaOC() {
+        if (!ocConclusionPendiente) return null;
+        var oc = ocConclusionPendiente.oc;
+        var esperado = montoEsperadoFacturaOC(oc);
+        var total = redondearMontoPago(esperado.monto);
+        var previa = redondearMontoPago(sumaFacturasOC());
+        var monto = redondearMontoPago((document.getElementById('facturaMontoInput') || {}).value);
+        var tipo = (document.getElementById('facturaTipoSelect') || {}).value || 'PUE';
+        var ultima = !!(document.getElementById('facturaUltimaCheck') || {}).checked;
+        var acumulado = redondearMontoPago(previa + monto);
+        var dif = redondearMontoPago(acumulado - total);
+        var falta = dif < -TOLERANCIA_MONTO_FACTURA;
+        var sobra = dif > TOLERANCIA_MONTO_FACTURA;
+        var cierra = tipo === 'PUE' || !falta || (tipo === 'PPD' && ultima);
+        return {
+          oc: oc, moneda: esperado.moneda, total: total, previa: previa, monto: monto, tipo: tipo, ultima: ultima,
+          acumulado: acumulado, dif: dif, falta: falta, sobra: sobra, cierra: cierra,
+          hayDiferencia: monto > 0 && cierra && (falta || sobra)
+        };
+      }
+      // Pinta el resumen y la diferencia en vivo; regresa el error que
+      // impide registrar la factura ('' si no hay).
+      window.actualizarDiferenciaFacturaOC = function() {
+        var c = calculoDiferenciaFacturaOC();
+        if (!c) return '';
+        var mon = function(v) { return formatoMoneda(v, c.moneda); };
+        var resumen = document.getElementById('facturaResumenMontos');
+        if (resumen) {
+          resumen.classList.remove('error');
+          resumen.textContent = 'Total de la OC: ' + mon(c.total) + (c.previa > 0 ? ' · Facturado antes: ' + mon(c.previa) : '') +
+            (c.monto > 0 ? ' · Con esta factura: ' + mon(c.acumulado) : '');
+        }
+        var ultimaCont = document.getElementById('facturaUltimaContainer');
+        if (ultimaCont) ultimaCont.classList.toggle('hidden', !(c.tipo === 'PPD' && c.monto > 0 && c.falta));
+        var grupo = document.getElementById('grupoDiferenciaFactura');
+        if (grupo) grupo.classList.toggle('hidden', !c.hayDiferencia);
+        var caja = document.getElementById('facturaCajaDiferencia');
+        if (caja && c.hayDiferencia) {
+          var proveedor = c.oc.proveedor || 'el proveedor';
+          caja.className = c.falta ? 'saldo-favor-caja' : 'saldo-contra-caja';
+          caja.innerHTML = (c.falta ? '💚 Saldo a favor con ' : '🔴 Saldo en contra con ') + escapeHTML(proveedor) + ': <b>' +
+            escapeHTML(mon(Math.abs(c.dif)) + ' ' + c.moneda) + '</b>' +
+            '<small>Se facturaron ' + escapeHTML(mon(c.acumulado)) + ' y el total de la OC es ' + escapeHTML(mon(c.total)) + '.</small>';
+        }
+        if (c.hayDiferencia) {
+          var nota = ((document.getElementById('facturaNotaDiferencia') || {}).value || '').trim();
+          if (nota.length < MIN_NOTA_DIFERENCIA_FACTURA) return 'La factura no coincide con el total de la OC (' + (c.falta ? 'saldo a favor' : 'saldo en contra') + ' de ' + mon(Math.abs(c.dif)) + '). Escribe la nota de la diferencia (mínimo ' + MIN_NOTA_DIFERENCIA_FACTURA + ' caracteres).';
+        }
+        return '';
+      };
+
       // Comprueba (agrega) una factura a la OC en curso. Hasta
       // MAX_FACTURAS_POR_OC facturas pueden adjuntarse a la misma OC.
       //
@@ -22248,20 +22397,17 @@
         // Validación de monto antes de subir/guardar nada. Si la OC se
         // generó en USD y se pagó convertida a pesos (paridad aplicada),
         // se compara contra el equivalente en pesos, no contra el monto
-        // original en dólares (ver montoEsperadoFacturaOC).
+        // original en dólares (ver montoEsperadoFacturaOC). Si lo facturado
+        // no coincide con el total de la OC, la diferencia (saldo a favor o
+        // en contra) se registra con su nota obligatoria.
         var esperado = montoEsperadoFacturaOC(oc);
-        if (tipo === 'PUE') {
-          if (Math.abs(monto - esperado.monto) > TOLERANCIA_MONTO_FACTURA) {
-            if (msg) msg.innerHTML = '<div class="alert">❌ La factura ingresada (' + formatoMoneda(monto, esperado.moneda) + ') no coincide con el monto esperado de la OC (' + formatoMoneda(esperado.monto, esperado.moneda) + (esperado.moneda !== (oc.moneda || 'MXN') ? ', ya convertido con la paridad aplicada' : '') + '). Verifica el monto y vuelve a intentar, o si es un pago parcial cambia el Tipo de factura a PPD para poder agregar otra factura después.</div>';
-            return;
-          }
-        } else {
-          var sumaPrevia = sumaFacturasOC();
-          if ((sumaPrevia + monto) - esperado.monto > TOLERANCIA_MONTO_FACTURA) {
-            if (msg) msg.innerHTML = '<div class="alert">❌ El monto ingresado excede el saldo pendiente de la OC (' + formatoMoneda(esperado.monto - sumaPrevia, esperado.moneda) + ').</div>';
-            return;
-          }
+        var calcDif = calculoDiferenciaFacturaOC();
+        var errorDif = window.actualizarDiferenciaFacturaOC();
+        if (errorDif) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(errorDif) + '</div>';
+          return;
         }
+        var notaDiferencia = calcDif && calcDif.hayDiferencia ? ((document.getElementById('facturaNotaDiferencia') || {}).value || '').trim() : '';
 
         try {
           var urlFactura = await subirDocumentoFactura(facturaArchivoPendiente, (oc.codigo || ('OC-' + oc.id)) + '-F' + (ocConclusionPendiente.facturas.length + 1));
@@ -22277,8 +22423,16 @@
             usuario: actual ? actual.u : '',
             fecha: new Date().toISOString()
           };
+          // Factura que cierra la OC con diferencia (saldo a favor o en contra).
+          if (calcDif && calcDif.hayDiferencia) {
+            nuevaFactura.diferencia = calcDif.dif;
+            nuevaFactura.nota_diferencia = notaDiferencia;
+          }
 
           var { data, error } = await supabase.from('facturas_oc').insert([nuevaFactura]).select();
+          if (error && /diferencia/i.test(error.message || '')) {
+            throw new Error('Falta ejecutar en Supabase el SQL "pagos_programados_y_facturas_oc.sql" (columnas de diferencia de factura). La factura con diferencia no se registró.');
+          }
           if (error) throw error;
 
           var facturaGuardada = (data && data[0]) || nuevaFactura;
@@ -22296,8 +22450,11 @@
           // complemento; una PUE no lo requiere.
           var esFacturaPPD = facturaRequiereComplemento(facturaGuardada);
           if (esFacturaPPD && oc.complemento_pago_url) updatesOC.complemento_pago_url = null;
-          var sumaTrasFactura = sumaFacturasOC();
-          var completaTrasFactura = (sumaTrasFactura - esperado.monto) >= -TOLERANCIA_MONTO_FACTURA;
+          if (calcDif && calcDif.hayDiferencia) {
+            updatesOC.diferencia_factura = calcDif.dif;
+            updatesOC.nota_diferencia_factura = notaDiferencia;
+          }
+          var completaTrasFactura = facturasCubrenOC(oc, ocConclusionPendiente.facturas);
           var ppdSinComplemento = ocConclusionPendiente.facturas.filter(function(f) {
             return facturaRequiereComplemento(f) && !f.complemento_pago_url;
           }).length;
@@ -22305,12 +22462,16 @@
           // total y ninguna PPD está pendiente de complemento.
           updatesOC.complemento_requerido = !(completaTrasFactura && ppdSinComplemento === 0);
           var { error: errorUpdOC } = await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
-          if (errorUpdOC && /complemento_requerido/.test(errorUpdOC.message || '')) {
-            // Columna aún no creada (falta correr el SQL): se guarda lo demás.
-            delete updatesOC.complemento_requerido;
-            await supabase.from('ordenes').update(updatesOC).eq('id', oc.id);
+          for (var reintentoFac = 0; reintentoFac < 2 && errorUpdOC && /complemento_requerido|diferencia_factura/.test(errorUpdOC.message || ''); reintentoFac++) {
+            // Columna aún no creada (falta correr el SQL): se guarda lo demás
+            // (la diferencia ya quedó en la factura).
+            if (/complemento_requerido/.test(errorUpdOC.message || '')) delete updatesOC.complemento_requerido;
+            else { delete updatesOC.diferencia_factura; delete updatesOC.nota_diferencia_factura; }
+            errorUpdOC = (await supabase.from('ordenes').update(updatesOC).eq('id', oc.id)).error;
           }
           Object.assign(oc, updatesOC);
+          // La fila de la OC muestra la diferencia (verde o roja) al momento.
+          if (updatesOC.diferencia_factura !== undefined) { try { render(); } catch (eRender) {} }
 
           // El complemento de pago de la OC lo sube el mismo responsable
           // (quien sube la factura): ya no se solicita por Telegram a DMHS,
@@ -22324,7 +22485,7 @@
           // confirmar/concluir la OC se hace desde "🏁 Concluir"
           // (Contabilidad).
           var sumaActual = sumaFacturasOC();
-          var montoCompleto = (sumaActual - esperado.monto) >= -TOLERANCIA_MONTO_FACTURA;
+          var montoCompleto = facturasCubrenOC(oc, ocConclusionPendiente.facturas);
           var alcanzoLimite = ocConclusionPendiente.facturas.length >= MAX_FACTURAS_POR_OC;
 
           document.getElementById('facturaFormularioContainer').classList.add('hidden');
@@ -22652,7 +22813,8 @@
                 : '<span class="text-muted" style="font-size:12px;">Sin PDF</span>';
               return '<div style="border:1px solid var(--gray-200); border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">' +
                 '<div><strong>Factura ' + (i + 1) + '</strong> — ' + escapeHTML(f.uuid || '') + '<br>' +
-                '<span style="font-size:12px; color:var(--gray-600);">' + formatoMoneda(f.monto || 0, montoEsperadoFacturaOC(oc).moneda) + ' — ' + etiquetaTipo + '</span></div>' +
+                '<span style="font-size:12px; color:var(--gray-600);">' + formatoMoneda(f.monto || 0, montoEsperadoFacturaOC(oc).moneda) + ' — ' + etiquetaTipo + '</span>' +
+                htmlDiferenciaFacturaItem(f, montoEsperadoFacturaOC(oc).moneda) + '</div>' +
                 botonVer +
                 '</div>';
             }).join('');
@@ -22661,7 +22823,9 @@
 
         var esperadoResumen = montoEsperadoFacturaOC(oc);
         var resumen = document.getElementById('concluirOCResumen');
-        var montoCompleto = (sumaActual - esperadoResumen.monto) >= -TOLERANCIA_MONTO_FACTURA;
+        var montoCompleto = facturasCubrenOC(oc, ocConclusionPendiente.facturas);
+        var facturaConDif = ocConclusionPendiente.facturas.filter(facturaCierraConDiferencia).pop();
+        var difConcluir = facturaConDif ? Number(facturaConDif.diferencia) || 0 : 0;
         if (resumen) {
           resumen.innerHTML = 'Total facturado: ' + formatoMoneda(sumaActual, esperadoResumen.moneda) +
             ' &nbsp;|&nbsp; Total de la OC: ' + formatoMoneda(esperadoResumen.monto, esperadoResumen.moneda) +
@@ -22671,7 +22835,13 @@
                 ' &nbsp;<button type="button" class="btn-imprimir" onclick="window.abrirFacturaVer(\'' + escapeHTML(oc.complemento_pago_url) + '\', \'Complemento de Pago\')">👁️ Ver</button>'
               : (oc.complemento_requerido === false
                   ? ' &nbsp;|&nbsp; Complemento de pago: no requerido (factura PUE)'
-                  : ' &nbsp;|&nbsp; Complemento de pago: ⚠️ pendiente'));
+                  : ' &nbsp;|&nbsp; Complemento de pago: ⚠️ pendiente')) +
+            (Math.abs(difConcluir) > TOLERANCIA_MONTO_FACTURA
+              ? '<div class="' + (difConcluir < 0 ? 'saldo-favor-caja' : 'saldo-contra-caja') + '" style="margin-top:8px;">' +
+                  (difConcluir < 0 ? '💚 Saldo a favor con ' : '🔴 Saldo en contra con ') + escapeHTML(oc.proveedor || 'el proveedor') + ': <b>' +
+                  escapeHTML(formatoMoneda(Math.abs(difConcluir), esperadoResumen.moneda) + ' ' + esperadoResumen.moneda) + '</b>' +
+                  (facturaConDif.nota_diferencia ? '<small>Nota: ' + escapeHTML(facturaConDif.nota_diferencia) + '</small>' : '') + '</div>'
+              : '');
         }
 
         var msg = document.getElementById('msgConcluirOC');
@@ -22707,7 +22877,7 @@
         if (ultimoTipo === 'PPD') {
           var sumaActual = sumaFacturasOC();
           var esperadoFinal = montoEsperadoFacturaOC(oc);
-          if ((sumaActual - esperadoFinal.monto) < -TOLERANCIA_MONTO_FACTURA) {
+          if (!facturasCubrenOC(oc, ocConclusionPendiente.facturas)) {
             alert('⚠️ El monto acumulado de las facturas (' + formatoMoneda(sumaActual, esperadoFinal.moneda) + ') no cubre el total de la OC (' + formatoMoneda(esperadoFinal.monto, esperadoFinal.moneda) + '). No se puede concluir el proceso.');
             return;
           }
