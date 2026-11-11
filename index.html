@@ -5028,7 +5028,7 @@
           </select>
         </div>
         <div class="cxc-form-row">
-          <button class="success" onclick="window.agregarValeGasolina()">➕ Registrar Vale</button>
+          <button class="success" id="btnRegistrarVale" onclick="window.agregarValeGasolina()">➕ Registrar Vale</button>
         </div>
         <div id="msgVales"></div>
         </div>
@@ -12342,7 +12342,70 @@
         window.configurarEmpresaDeptoVale();
       };
 
+      // Sin respuesta del servidor ("Failed to fetch" y similares): la
+      // conexión se cortó y no se sabe si el vale se guardó.
+      function esErrorDeConexion(e) {
+        var t = String((e && (e.message || e)) || '');
+        return /Failed to fetch|NetworkError|Load failed|network request failed|ERR_NETWORK|ERR_INTERNET/i.test(t);
+      }
+      // ¿Ya quedó guardado? Mismo solicitante, vehículo, fecha de carga y
+      // estado, registrado hace menos de 10 minutos.
+      async function buscarValeRecienRegistrado(nuevo, desdeISO) {
+        var q = supabase.from('vales_gasolina').select('id,codigo,fecha_creacion')
+          .eq('responsable', nuevo.responsable).eq('vehiculo_id', nuevo.vehiculo_id).eq('estado', nuevo.estado)
+          .gte('fecha_creacion', desdeISO);
+        if (nuevo.fecha_carga) q = q.eq('fecha_carga', nuevo.fecha_carga);
+        var r = await q.order('id', { ascending: false }).limit(1);
+        if (r.error) throw r.error;
+        return (r.data && r.data[0]) || null;
+      }
+      // Registra el vale. Si no hay respuesta del servidor, revisa si ya se
+      // guardó (para no duplicarlo) y, si no, lo intenta una vez más.
+      async function insertarValeGasolina(nuevo) {
+        var desde = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        var errorConexion = new Error('No hubo respuesta del servidor (se cortó la conexión a internet o a la base de datos). El vale NO se registró; revisa tu conexión y vuelve a tocar "Registrar Vale".');
+        for (var intento = 1; intento <= 2; intento++) {
+          try {
+            var r = await supabase.from('vales_gasolina').insert([nuevo]).select();
+            if (r.error) throw r.error;
+            return r.data[0];
+          } catch (e) {
+            if (!esErrorDeConexion(e)) throw e;
+            console.warn('Registro de vale sin respuesta del servidor (intento ' + intento + '):', e);
+            await new Promise(function(res) { setTimeout(res, 1500); });
+            var yaGuardado = null;
+            try { yaGuardado = await buscarValeRecienRegistrado(nuevo, desde); }
+            catch (eBusca) { throw errorConexion; }
+            if (yaGuardado) return yaGuardado;
+            if (intento === 2) throw errorConexion;
+          }
+        }
+      }
+
+      // Vales que quedan AUTORIZADOS en cuanto se registran (listos para
+      // imprimir), sin pasar por la aprobación del Jefe: los del Director
+      // General LJGR. Quien los autoriza es el mismo usuario.
+      var USUARIOS_VALE_AUTORIZADO_AL_CREAR = ['LJGR'];
+      function valeSeAutorizaAlCrear(u) {
+        return !!(u && USUARIOS_VALE_AUTORIZADO_AL_CREAR.indexOf(String(u.usuario || '').trim().toUpperCase()) !== -1);
+      }
+
+      var registrandoValeGasolina = false;
       window.agregarValeGasolina = async function() {
+        if (registrandoValeGasolina) return;
+        registrandoValeGasolina = true;
+        var btnRegistrar = document.getElementById('btnRegistrarVale');
+        var textoBtnRegistrar = btnRegistrar ? btnRegistrar.innerHTML : '';
+        if (btnRegistrar) { btnRegistrar.disabled = true; btnRegistrar.innerHTML = '⏳ Registrando…'; }
+        try {
+          await registrarValeGasolinaPasos();
+        } finally {
+          registrandoValeGasolina = false;
+          if (btnRegistrar) { btnRegistrar.disabled = false; btnRegistrar.innerHTML = textoBtnRegistrar; }
+        }
+      };
+
+      async function registrarValeGasolinaPasos() {
         var msg = document.getElementById('msgVales');
         if (actual && actual.rol === 'Finanzas') {
           if (msg) msg.innerHTML = '<div class="alert">❌ Finanzas no tiene permiso para agregar vales.</div>';
@@ -12412,12 +12475,20 @@
           elaborador: actual ? actual.usuario : null,
           estado: 'CREADA'
         };
+        // LJGR: el vale queda AUTORIZADO al registrarse, listo para imprimir.
+        var autorizadoAlCrear = valeSeAutorizaAlCrear(actual);
+        if (autorizadoAlCrear) {
+          nuevo.estado = 'APROBADA_JEFE';
+          nuevo.nombre_jefe = actual.usuario;
+          nuevo.fecha_aprobacion_jefe = new Date().toISOString();
+        }
         try {
-          var { data, error } = await supabase.from('vales_gasolina').insert([nuevo]).select();
-          if (error) throw error;
-          var nuevoId = data[0].id;
+          var valeGuardado = await insertarValeGasolina(nuevo);
+          var nuevoId = valeGuardado.id;
           var codigoGenerado = 'VSC-' + String(nuevoId).padStart(5, '0');
-          await supabase.from('vales_gasolina').update({ codigo: codigoGenerado }).eq('id', nuevoId);
+          if (valeGuardado.codigo !== codigoGenerado) {
+            await supabase.from('vales_gasolina').update({ codigo: codigoGenerado }).eq('id', nuevoId);
+          }
 
           // Al registrar exitosamente, el formulario se limpia y regresa
           // a sus valores originales (como al entrar al módulo VSC), para
@@ -12426,12 +12497,14 @@
           window.limpiarFormularioVale();
           var textoTopeVale = proyectoValeSinTope(nuevo.proyecto_oc) ? ' Proyecto ' + nuevo.proyecto_oc + ': sin tope de consumo.'
             : (topeVale && topeVale.presupuesto ? ' Presupuesto de gasolina disponible (estimado): ' + formatoMoneda(Math.max(0, topeVale.disponible), 'MXN') + '.' : '');
-          if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.' + escapeHTML(textoTopeVale) + '</div>';
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) +
+            (autorizadoAlCrear ? ' y AUTORIZADO; ya se puede imprimir.' : '.') + escapeHTML(textoTopeVale) +
+            (autorizadoAlCrear ? ' <button type="button" class="success" style="margin-left:8px;" onclick="window.visualizarVale(' + nuevoId + ')">🖨️ Ver e imprimir</button>' : '') + '</div>';
         } catch (e) {
           console.error('Error registrando vale de gasolina:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo registrar: ' + escapeHTML(e.message) + '</div>';
         }
-      };
+      }
 
       window.cargarValesGasolina = async function() {
         var cuerpo = document.getElementById('cuerpoValesGasolina');
