@@ -5374,11 +5374,33 @@
             <button class="btn-modal-x" onclick="window.cerrarDashboardVSC()">✕</button>
           </div>
           <div class="modal-body">
+            <div class="cxc-form-row" style="align-items:flex-end; margin-bottom:12px;">
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Periodo
+                <select id="vscDashTipoPeriodo" onchange="window.cambiarTipoPeriodoDashboardVSC()" style="width:100%;margin-top:4px;">
+                  <option value="mes">Mensual</option>
+                  <option value="trimestre">Trimestral</option>
+                  <option value="anio">Anual</option>
+                  <option value="todo">Todo</option>
+                </select>
+              </label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Mes, trimestre o año
+                <select id="vscDashPeriodo" onchange="window.renderDashboardVSC()" style="width:100%;margin-top:4px;"></select>
+              </label>
+            </div>
             <div id="vscDashboardResumen" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;"></div>
+            <h4>Consumo por departamento <span id="vscDashTituloPeriodo" class="text-muted" style="font-weight:400;"></span></h4>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Empresa</th><th>Departamento</th><th># Vales</th><th>Por comprobar</th><th>Litros cargados</th><th>Importe</th><th>Presupuesto PMVDG</th><th>% usado</th></tr></thead>
+                <tbody id="vscDashboardDeptos"></tbody>
+                <tfoot id="vscDashboardDeptosTotal"></tfoot>
+              </table>
+            </div>
+            <p class="text-muted" style="font-size:12px; margin:6px 0 16px;">Litros cargados e importe: vales comprobados o cerrados, por el mes del periodo de consumo (o de la fecha de carga). Presupuesto PMVDG: suma de las SPM pagadas del departamento en el periodo. El % usado no cuenta los vales de proyectos sin tope (DIRECCION).</p>
             <h4>Consumo por vehículo</h4>
             <div class="table-wrapper">
               <table>
-                <thead><tr><th>Vehículo</th><th>Litros</th><th>Monto</th><th># Vales</th></tr></thead>
+                <thead><tr><th>Vehículo</th><th>Litros cargados</th><th>Importe</th><th># Vales</th></tr></thead>
                 <tbody id="vscDashboardCuerpo"></tbody>
               </table>
             </div>
@@ -12145,23 +12167,141 @@
         window.actualizarProyectosNuevoVale();
       };
 
+      // ===== Proyectos y tope de consumo de los vales de gasolina =====
+      // Un proyecto solo lo eligen los vales del departamento que lo creó
+      // (misma empresa y departamento del proyecto).
+      function sinAcentosVale(s) {
+        return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase();
+      }
+      function proyectoEsDelDepartamento(p, empresa, depto) {
+        if (!p || !empresa) return false;
+        if (normalizar(p.empresa) !== normalizar(empresa)) return false;
+        return deptoParaComparar(p.empresa, p.departamento) === deptoParaComparar(empresa, depto);
+      }
+      function proyectosDelDepartamentoVale(empresa, depto) {
+        return (proyectos || []).filter(function(p) { return proyectoEsDelDepartamento(p, empresa, depto); });
+      }
+      // Empresa y departamento elegidos en el formulario "Nuevo Vale".
+      function empresaDeptoFormularioVale() {
+        var empresaSel = document.getElementById('valeEmpresa');
+        var empresaOculto = document.getElementById('valeEmpresaValor');
+        var deptoSel = document.getElementById('valeDepartamento');
+        var deptoOculto = document.getElementById('valeDepartamentoValor');
+        return {
+          empresa: empresaOculto ? empresaOculto.value : (empresaSel ? empresaSel.value : ''),
+          depto: deptoOculto ? deptoOculto.value : (deptoSel ? deptoSel.value : '')
+        };
+      }
+      // Proyectos sin tope de consumo: los vales del proyecto DIRECCION
+      // (Dirección, LJGR) no piden SPM pagada ni se descuentan del
+      // presupuesto de gasolina (PMVDG).
+      var PROYECTOS_VALE_SIN_TOPE = ['DIRECCION'];
+      function proyectoValeSinTope(nombreProyecto) {
+        return PROYECTOS_VALE_SIN_TOPE.indexOf(sinAcentosVale(nombreProyecto)) !== -1;
+      }
+      // Fecha que ubica al vale en un mes (la misma con la que se busca su
+      // SPM): inicio del periodo de consumo; si no, la fecha de carga.
+      function fechaMesVale(v) {
+        return (v && (v.periodo_inicio || v.fecha_carga || v.fecha || String(v.fecha_creacion || '').slice(0, 10))) || '';
+      }
+
+      // Último precio por litro comprobado de cada combustible, para
+      // estimar el importe de los vales que siguen por comprobar.
+      async function preciosReferenciaVale() {
+        var precios = {};
+        try {
+          var r = await supabase.from('vales_gasolina').select('combustible,precio_unitario,fecha_comprobacion,estado')
+            .in('estado', ['COMPROBADA', 'CERRADA']).order('fecha_comprobacion', { ascending: false }).limit(300);
+          (r.data || []).forEach(function(x) {
+            var precio = Number(x.precio_unitario) || 0;
+            var clave = sinAcentosVale(x.combustible);
+            if (precio > 0 && clave && !(clave in precios)) precios[clave] = precio;
+          });
+        } catch (e) { console.warn('No se pudieron leer los precios de referencia de gasolina:', e); }
+        return precios;
+      }
+      function importeEstimadoVale(litros, combustible, precios) {
+        var precio = precios[sinAcentosVale(combustible)] || 0;
+        return Math.round((Number(litros) || 0) * precio * 100) / 100;
+      }
+
+      // Tope de los vales de gasolina: el renglón PMVDG (VDG-1 GASOLINA)
+      // del solicitante en la SPM pagada del mes. Se descuenta el importe
+      // de sus vales comprobados de ese mes y, de los que siguen por
+      // comprobar, un estimado (litros × último precio por litro
+      // comprobado del combustible). Sin renglón, o sin disponible, no se
+      // registra el vale. Los vales de proyectos sin tope no cuentan. Una
+      // SPM capturada antes de los presupuestos por usuario no limita.
+      async function revisarTopeGasolinaVale(o) {
+        var spm = o.spm;
+        var folioSPM = spm.folio || spm.codigo || ('SPM ' + spm.id);
+        var det = null;
+        try {
+          var rDet = await supabase.from('documentos_cxp').select('presupuesto_detalle').eq('id', spm.id).maybeSingle();
+          if (!rDet.error && rDet.data) det = parsePresupuestoDetalleSPM(rDet.data.presupuesto_detalle);
+        } catch (eDet) { det = null; }
+        if (!det) return { ok: true };
+
+        var usuario = String(o.usuario || '').trim().toUpperCase();
+        var presupuesto = (det.vdg || []).filter(function(f) {
+          return (f.tipo || 'GASOLINA') === 'GASOLINA' && String(f.usuario || '').trim().toUpperCase() === usuario;
+        }).reduce(function(a, f) { return a + (Number(f.monto) || 0); }, 0);
+        if (presupuesto <= 0) {
+          return { ok: false, mensaje: usuario + ' no tiene presupuesto de gasolina (PMVDG) en la SPM pagada ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). Pide que se le asigne en la SPM del mes.' };
+        }
+
+        var mesClave = spm.anio + '-' + String(MESES_INDICADOR.indexOf(spm.mes) + 1).padStart(2, '0');
+        var comprobado = 0, porComprobar = 0;
+        var precios = await preciosReferenciaVale();
+        try {
+          var r = await supabase.from('vales_gasolina')
+            .select('id,estado,responsable,empresa,departamento,proyecto_oc,importe,litros,combustible,periodo_inicio,fecha_carga,fecha,fecha_creacion')
+            .eq('empresa', o.empresa).eq('responsable', usuario);
+          if (r.error) throw r.error;
+          (r.data || []).forEach(function(v) {
+            if (o.excluirId != null && v.id === o.excluirId) return;
+            if (v.estado === 'CANCELADA') return;
+            if (deptoParaComparar(v.empresa, v.departamento) !== deptoParaComparar(o.empresa, o.departamento)) return;
+            if (fechaMesVale(v).slice(0, 7) !== mesClave) return;
+            if (proyectoValeSinTope(v.proyecto_oc)) return;
+            if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') comprobado += Number(v.importe) || 0;
+            else porComprobar += importeEstimadoVale(v.litros, v.combustible, precios);
+          });
+        } catch (eUso) {
+          console.error('Error calculando el consumo de gasolina del mes:', eUso);
+          return { ok: false, mensaje: 'No se pudo verificar el presupuesto de gasolina de ' + usuario + ': ' + (eUso.message || eUso) + '. Inténtalo de nuevo.' };
+        }
+        var disponible = presupuesto - comprobado - porComprobar;
+        var estimadoNuevo = importeEstimadoVale(o.litros, o.combustible, precios);
+        var detalle = 'Presupuesto: ' + formatoMoneda(presupuesto, 'MXN') + ' · Comprobado: ' + formatoMoneda(comprobado, 'MXN') +
+          ' · Por comprobar (estimado): ' + formatoMoneda(porComprobar, 'MXN') + ' · Disponible: ' + formatoMoneda(Math.max(0, disponible), 'MXN');
+        if (disponible <= 0.005 || estimadoNuevo > disponible + 0.005) {
+          return { ok: false, excede: true, mensaje: 'Se rebasa el presupuesto de gasolina (PMVDG) de ' + usuario + ' en la SPM ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). ' +
+            detalle + (estimadoNuevo > 0 ? ' · Este vale (estimado): ' + formatoMoneda(estimadoNuevo, 'MXN') : '') + '.' };
+        }
+        return { ok: true, presupuesto: presupuesto, disponible: disponible - estimadoNuevo, detalle: detalle };
+      }
+
       // "Selecciona proyecto / contrato / OC" muestra los proyectos reales
-      // (módulo Proyectos) ligados al cliente y centro de trabajo /
-      // negocio elegidos en el vale — sin restringir por empresa o
-      // departamento del solicitante, ya que un mismo cliente/centro de
-      // trabajo puede tener proyectos de distintos departamentos.
-      window.actualizarProyectosNuevoVale = function(empresa, depto) {
+      // (módulo Proyectos) del departamento del vale (solo el
+      // departamento que creó el proyecto lo puede elegir), ligados al
+      // cliente y centro de trabajo / negocio elegidos.
+      window.actualizarProyectosNuevoVale = function() {
         var sel = document.getElementById('valeProyectoOC');
         if (!sel) return;
         var valorActual = sel.value;
         var nombreCliente = document.getElementById('valeCliente') ? document.getElementById('valeCliente').value : '';
         var centroNegocio = document.getElementById('valeCentroNegocio') ? document.getElementById('valeCentroNegocio').value : '';
-        var coincidencias = (proyectos || []).filter(function(p) {
+        var ed = empresaDeptoFormularioVale();
+        var coincidencias = proyectosDelDepartamentoVale(ed.empresa, ed.depto).filter(function(p) {
           if (nombreCliente && p.cliente !== nombreCliente) return false;
           if (centroNegocio && p.centro_trabajo !== centroNegocio) return false;
           return true;
         });
-        sel.innerHTML = '<option value="" disabled selected hidden>' + (nombreCliente ? 'Selecciona proyecto / contrato / OC' : 'Selecciona primero un cliente') + '</option>' +
+        var textoVacio = !ed.empresa || (!ed.depto && getDepartamentosPorEmpresa(ed.empresa).length) ? 'Selecciona primero el departamento'
+          : (!nombreCliente ? 'Selecciona primero un cliente'
+          : (coincidencias.length ? 'Selecciona proyecto / contrato / OC' : 'Sin proyectos de tu departamento con este cliente'));
+        sel.innerHTML = '<option value="" disabled selected hidden>' + textoVacio + '</option>' +
           coincidencias.map(function(p) { return '<option value="' + escapeHTML(p.nombre) + '">' + escapeHTML(p.nombre) + (p.codigo ? ' (' + escapeHTML(p.codigo) + ')' : '') + '</option>'; }).join('');
         // Conserva la selección previa si sigue siendo una opción válida.
         if (coincidencias.some(function(p) { return p.nombre === valorActual; })) sel.value = valorActual;
@@ -12221,13 +12361,10 @@
           if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, vehículo, combustible y cantidad solicitada son obligatorios.</div>';
           return;
         }
-        // Un vale de gasolina nuevo solo puede registrarse si ya existe
-        // una SPM autorizada por el Director y pagada por Finanzas para
-        // esa empresa/departamento en el mes correspondiente.
-        var fechaParaSPMVale = document.getElementById('valePeriodoInicio').value || document.getElementById('valeFechaCarga').value || null;
-        var spmVigenteVale = await obtenerSPMPagadaVigente(empresa, depto, fechaParaSPMVale);
-        if (!spmVigenteVale) {
-          if (msg) msg.innerHTML = '<div class="alert">❌ No hay una SPM pagada para ' + escapeHTML(empresa) + (depto ? ' / ' + escapeHTML(depto) : '') + ' en este periodo. La SPM debe estar autorizada por el Director y marcada como pagada por Finanzas antes de poder registrar este vale.</div>';
+        // El proyecto solo puede ser uno del departamento del vale.
+        var proyectoVale = document.getElementById('valeProyectoOC').value || '';
+        if (proyectoVale && !proyectosDelDepartamentoVale(empresa, depto).some(function(p) { return p.nombre === proyectoVale; })) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El proyecto ' + escapeHTML(proyectoVale) + ' no es de ' + escapeHTML(empresa) + (depto ? ' / ' + escapeHTML(depto) : '') + ': solo lo puede elegir el departamento que lo creó.</div>';
           return;
         }
 
@@ -12235,6 +12372,26 @@
         // numérico solo cuando aplica, y el texto elegido siempre en
         // cantidad_solicitada.
         var litros = (cantidadValor === 'TANQUE LLENO') ? null : parseFloat(cantidadValor);
+
+        // Un vale de gasolina nuevo solo puede registrarse si ya existe
+        // una SPM autorizada por el Director y pagada por Finanzas para
+        // esa empresa/departamento en el mes correspondiente, y si el
+        // solicitante tiene disponible en su renglón PMVDG. Los vales de
+        // un proyecto sin tope (DIRECCION) no tienen esas restricciones.
+        var topeVale = null;
+        if (!proyectoValeSinTope(proyectoVale)) {
+          var fechaParaSPMVale = document.getElementById('valePeriodoInicio').value || document.getElementById('valeFechaCarga').value || null;
+          var spmVigenteVale = await obtenerSPMPagadaVigente(empresa, depto, fechaParaSPMVale);
+          if (!spmVigenteVale) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ No hay una SPM pagada para ' + escapeHTML(empresa) + (depto ? ' / ' + escapeHTML(depto) : '') + ' en este periodo. La SPM debe estar autorizada por el Director y marcada como pagada por Finanzas antes de poder registrar este vale.</div>';
+            return;
+          }
+          topeVale = await revisarTopeGasolinaVale({ spm: spmVigenteVale, empresa: empresa, departamento: depto, usuario: actual ? actual.usuario : '', litros: litros, combustible: combustible });
+          if (!topeVale.ok) {
+            if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(topeVale.mensaje) + '</div>';
+            return;
+          }
+        }
         var nuevo = {
           empresa: empresa,
           departamento: depto || null,
@@ -12267,7 +12424,9 @@
           // capturar el siguiente vale desde cero.
           window.cargarValesGasolina();
           window.limpiarFormularioVale();
-          if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.</div>';
+          var textoTopeVale = proyectoValeSinTope(nuevo.proyecto_oc) ? ' Proyecto ' + nuevo.proyecto_oc + ': sin tope de consumo.'
+            : (topeVale && topeVale.presupuesto ? ' Presupuesto de gasolina disponible (estimado): ' + formatoMoneda(Math.max(0, topeVale.disponible), 'MXN') + '.' : '');
+          if (msg) msg.innerHTML = '<div class="success-msg">✅ Vale registrado con código ' + escapeHTML(codigoGenerado) + '.' + escapeHTML(textoTopeVale) + '</div>';
         } catch (e) {
           console.error('Error registrando vale de gasolina:', e);
           if (msg) msg.innerHTML = '<div class="alert">❌ No se pudo registrar: ' + escapeHTML(e.message) + '</div>';
@@ -13851,7 +14010,13 @@
         llenarDatalistEdicionVale('valeEditarListaProveedor', 'proveedor', v.proveedor);
         llenarDatalistEdicionVale('valeEditarListaCliente', 'cliente', v.cliente);
         llenarDatalistEdicionVale('valeEditarListaCentro', 'centro_negocio', v.centro_negocio);
-        llenarDatalistEdicionVale('valeEditarListaProyecto', 'proyecto', v.proyecto_oc);
+        // Proyecto: solo los del departamento del vale.
+        var dlProyectoVale = document.getElementById('valeEditarListaProyecto');
+        if (dlProyectoVale) {
+          var nombresProyectoVale = proyectosDelDepartamentoVale(v.empresa, v.departamento).map(function(p) { return p.nombre; });
+          if (v.proyecto_oc && nombresProyectoVale.indexOf(v.proyecto_oc) === -1) nombresProyectoVale.unshift(v.proyecto_oc);
+          dlProyectoVale.innerHTML = nombresProyectoVale.map(function(n) { return '<option value="' + escapeHTML(n) + '"></option>'; }).join('');
+        }
 
         CAMPOS_EDICION_VALE.forEach(function(def) {
           var el = document.getElementById(def.id);
@@ -13924,6 +14089,11 @@
         });
         if (!cambios.length) {
           if (msg) msg.innerHTML = '<div class="alert">ℹ️ No hay cambios que guardar.</div>';
+          return;
+        }
+        // El proyecto solo puede ser uno del departamento del vale.
+        if (cambiosDB.proyecto_oc && !proyectosDelDepartamentoVale(v.empresa, v.departamento).some(function(p) { return p.nombre === cambiosDB.proyecto_oc; })) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ El proyecto ' + escapeHTML(cambiosDB.proyecto_oc) + ' no es de ' + escapeHTML(v.empresa || '') + (v.departamento ? ' / ' + escapeHTML(v.departamento) : '') + ': solo lo puede elegir el departamento que lo creó.</div>';
           return;
         }
         // Campos derivados, igual que al registrar el vale.
