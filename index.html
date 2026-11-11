@@ -14275,92 +14275,205 @@
       };
 
       // ===== Dashboard de Consumo de Gasolina =====
+      // Consumo por periodo (mensual, trimestral, anual o todo) de los
+      // departamentos visibles para el usuario. El consumo (litros
+      // cargados e importe) es el de los vales comprobados o cerrados; el
+      // vale cae en el mes de su periodo de consumo (o de su fecha de
+      // carga), igual que al buscar su SPM.
+      var dashboardVSCDatos = null;
+
+      function clavesPeriodoVale(fechaStr) {
+        var f = String(fechaStr || '').slice(0, 10);
+        if (!/^\d{4}-\d{2}/.test(f)) return null;
+        var anio = f.slice(0, 4), mes = parseInt(f.slice(5, 7), 10);
+        return { mes: anio + '-' + String(mes).padStart(2, '0'), trimestre: anio + '-T' + Math.ceil(mes / 3), anio: anio };
+      }
+      var NOMBRES_TRIMESTRE_VALE = ['enero a marzo', 'abril a junio', 'julio a septiembre', 'octubre a diciembre'];
+      function etiquetaPeriodoVale(tipo, clave) {
+        if (tipo === 'mes') return MESES_INDICADOR[parseInt(clave.slice(5, 7), 10) - 1] + ' ' + clave.slice(0, 4);
+        if (tipo === 'trimestre') { var t = parseInt(clave.slice(6), 10); return 'Trimestre ' + t + ' de ' + clave.slice(0, 4) + ' (' + NOMBRES_TRIMESTRE_VALE[t - 1] + ')'; }
+        if (tipo === 'anio') return 'Año ' + clave;
+        return 'Todo el historial';
+      }
+      // Periodos que se pueden elegir: del más antiguo con datos al actual.
+      function periodosDisponiblesVale(tipo) {
+        var hoy = new Date();
+        var mesHoy = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+        var meses = [mesHoy];
+        ((dashboardVSCDatos && dashboardVSCDatos.vales) || []).forEach(function(v) { var c = clavesPeriodoVale(fechaMesVale(v)); if (c) meses.push(c.mes); });
+        ((dashboardVSCDatos && dashboardVSCDatos.spms) || []).forEach(function(d) { if (d.mesClave) meses.push(d.mesClave); });
+        meses.sort();
+        var primero = meses[0], ultimo = meses[meses.length - 1];
+        var lista = [];
+        var a = parseInt(primero.slice(0, 4), 10), m = parseInt(primero.slice(5, 7), 10);
+        var aFin = parseInt(ultimo.slice(0, 4), 10), mFin = parseInt(ultimo.slice(5, 7), 10);
+        while (a < aFin || (a === aFin && m <= mFin)) {
+          var c = clavesPeriodoVale(a + '-' + String(m).padStart(2, '0') + '-01');
+          var clave = c[tipo];
+          if (lista.indexOf(clave) === -1) lista.push(clave);
+          m++; if (m > 12) { m = 1; a++; }
+        }
+        return lista.reverse();
+      }
+
+      window.cambiarTipoPeriodoDashboardVSC = function() {
+        var tipo = document.getElementById('vscDashTipoPeriodo').value;
+        var sel = document.getElementById('vscDashPeriodo');
+        if (tipo === 'todo') {
+          sel.innerHTML = '<option value="todo">Todo el historial</option>';
+          sel.disabled = true;
+        } else {
+          var hoy = clavesPeriodoVale(new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-01');
+          sel.innerHTML = periodosDisponiblesVale(tipo).map(function(c) {
+            return '<option value="' + c + '"' + (c === hoy[tipo] ? ' selected' : '') + '>' + escapeHTML(etiquetaPeriodoVale(tipo, c)) + '</option>';
+          }).join('');
+          sel.disabled = false;
+        }
+        window.renderDashboardVSC();
+      };
+
       window.abrirDashboardVSC = async function() {
         if (!usuarioPuedeVerDashboardVales(actual)) return alert('❌ El dashboard de vales no está disponible para tu rol.');
         var modal = document.getElementById('valesGasolinaDashboardModal');
         var resumen = document.getElementById('vscDashboardResumen');
-        var cuerpo = document.getElementById('vscDashboardCuerpo');
         resumen.innerHTML = '<p>Cargando…</p>';
-        cuerpo.innerHTML = '';
+        document.getElementById('vscDashboardCuerpo').innerHTML = '';
+        document.getElementById('vscDashboardDeptos').innerHTML = '';
+        document.getElementById('vscDashboardDeptosTotal').innerHTML = '';
         modal.classList.add('active');
         try {
-          var query = supabase.from('vales_gasolina').select('*');
-          var { data, error } = await query;
+          var { data, error } = await supabase.from('vales_gasolina').select('*');
           if (error) throw error;
-          var vales = filtrarPorEmpresaDepto(data);
-
+          // Presupuesto de gasolina (PMVDG) de las SPM pagadas.
+          var spms = [];
+          try {
+            var rSPM = await supabase.from('documentos_cxp').select('id,empresa,departamento,mes,anio,estado,pmvdg_total,pmvdg_1').eq('tipo', 'SPM').eq('estado', 'PAGADA');
+            if (!rSPM.error) spms = filtrarPorEmpresaDepto(rSPM.data || []).map(function(d) {
+              var idx = MESES_INDICADOR.indexOf(d.mes);
+              return { empresa: d.empresa, departamento: d.departamento, monto: Number(d.pmvdg_total != null ? d.pmvdg_total : d.pmvdg_1) || 0,
+                mesClave: idx >= 0 && d.anio ? d.anio + '-' + String(idx + 1).padStart(2, '0') : null };
+            });
+          } catch (eSPM) { console.warn('No se pudo leer el presupuesto PMVDG de las SPM:', eSPM); }
           if (!vehiculosCache.length) await window.cargarVehiculos();
-
-          var statsPorVehiculo = {};
-          var litrosTotal = 0, montoTotal = 0;
-          // 🧮 Consumo total (litros) y 💰 Gasto total solo cuentan lo ya
-          // comprobado (litros/importe reales capturados al comprobar el
-          // vale), no lo autorizado/solicitado: COMPROBADA y CERRADA (un
-          // vale cerrado ya pasó por comprobación y conserva esos datos).
-          var litrosTotalComprobado = 0, montoTotalComprobado = 0;
-          var statsPorDepto = {};
-          vales.forEach(function(v) {
-            var litros = Number(v.litros) || 0;
-            var monto = Number(v.monto) || 0;
-            litrosTotal += litros;
-            montoTotal += monto;
-
-            if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
-              litrosTotalComprobado += Number(v.litros_cargados) || litros;
-              montoTotalComprobado += Number(v.importe) || monto;
-            }
-
-            var vehId = v.vehiculo_id || 'sin_asignar';
-            if (!statsPorVehiculo[vehId]) statsPorVehiculo[vehId] = { litros: 0, monto: 0, vales: 0 };
-            statsPorVehiculo[vehId].litros += litros;
-            statsPorVehiculo[vehId].monto += monto;
-            statsPorVehiculo[vehId].vales += 1;
-
-            var deptoKey = (v.departamento || 'Sin departamento') + '||' + (v.empresa || '');
-            if (!statsPorDepto[deptoKey]) statsPorDepto[deptoKey] = { litros: 0, monto: 0 };
-            statsPorDepto[deptoKey].litros += litros;
-            statsPorDepto[deptoKey].monto += monto;
-          });
-
-          var filasVehiculo = Object.keys(statsPorVehiculo).map(function(vehId) {
-            var vehiculo = vehiculosCache.find(function(x) { return String(x.id) === String(vehId); });
-            return {
-              nombre: vehiculo ? vehiculo.nombre : 'Sin vehículo asignado',
-              litros: statsPorVehiculo[vehId].litros,
-              monto: statsPorVehiculo[vehId].monto,
-              vales: statsPorVehiculo[vehId].vales
-            };
-          });
-          filasVehiculo.sort(function(a, b) { return b.litros - a.litros; });
-
-          cuerpo.innerHTML = filasVehiculo.map(function(f) {
-            return '<tr>' +
-              '<td>' + escapeHTML(f.nombre) + '</td>' +
-              '<td style="text-align:center;">' + f.litros.toFixed(2) + '</td>' +
-              '<td>' + formatoMoneda(f.monto, 'MXN') + '</td>' +
-              '<td style="text-align:center;">' + f.vales + '</td>' +
-              '</tr>';
-          }).join('');
-
-          var deptosResumen = Object.keys(statsPorDepto).map(function(k) {
-            var partes = k.split('||');
-            return { departamento: partes[0], litros: statsPorDepto[k].litros, monto: statsPorDepto[k].monto };
-          });
-          var deptoMayorConsumo = deptosResumen.length ? deptosResumen.reduce(function(max, d) { return d.litros > max.litros ? d : max; }, deptosResumen[0]) : null;
-          var vehiculoMayorConsumo = filasVehiculo.length ? filasVehiculo[0] : null;
-
-          if (vales.length === 0) {
-            resumen.innerHTML = '<p>No hay vales de gasolina registrados todavía.</p>';
-          } else {
-            resumen.innerHTML =
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Consumo total (litros)</div><div class="almacen-kpi-valor">' + litrosTotalComprobado.toFixed(2) + '</div></div>' +
-              '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Gasto total</div><div class="almacen-kpi-valor">' + formatoMoneda(montoTotalComprobado, 'MXN') + '</div></div>' +
-              (deptoMayorConsumo ? '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🏢 Departamento con más consumo</div><div class="almacen-kpi-valor">' + escapeHTML(deptoMayorConsumo.departamento) + '</div></div>' : '') +
-              (vehiculoMayorConsumo ? '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🚗 Vehículo que más consume</div><div class="almacen-kpi-valor">' + escapeHTML(vehiculoMayorConsumo.nombre) + '</div></div>' : '');
-          }
+          dashboardVSCDatos = { vales: filtrarPorEmpresaDepto(data), spms: spms };
+          window.cambiarTipoPeriodoDashboardVSC();
         } catch (e) {
           console.error('Error cargando dashboard de VSC:', e);
           resumen.innerHTML = '<div class="alert">❌ No se pudo cargar el dashboard: ' + escapeHTML(e.message) + '</div>';
+        }
+      };
+
+      window.renderDashboardVSC = function() {
+        var resumen = document.getElementById('vscDashboardResumen');
+        var cuerpo = document.getElementById('vscDashboardCuerpo');
+        var cuerpoDeptos = document.getElementById('vscDashboardDeptos');
+        var pieDeptos = document.getElementById('vscDashboardDeptosTotal');
+        if (!dashboardVSCDatos) return;
+        var tipo = document.getElementById('vscDashTipoPeriodo').value;
+        var periodo = document.getElementById('vscDashPeriodo').value;
+        var enPeriodo = function(fechaStr) {
+          if (tipo === 'todo') return true;
+          var c = clavesPeriodoVale(fechaStr);
+          return !!c && c[tipo] === periodo;
+        };
+        var enPeriodoMes = function(mesClave) { return tipo === 'todo' || (!!mesClave && enPeriodo(mesClave + '-01')); };
+        document.getElementById('vscDashTituloPeriodo').textContent = '· ' + etiquetaPeriodoVale(tipo, periodo);
+
+        var vales = dashboardVSCDatos.vales.filter(function(v) { return v.estado !== 'CANCELADA' && enPeriodo(fechaMesVale(v)); });
+        var statsPorVehiculo = {};
+        var statsPorDepto = {};
+        var litrosTotal = 0, montoTotal = 0;
+        var claveDepto = function(empresa, depto) { return normalizar(empresa) + '||' + deptoParaComparar(empresa, depto); };
+        var filaDepto = function(empresa, depto) {
+          var k = claveDepto(empresa, depto);
+          if (!statsPorDepto[k]) statsPorDepto[k] = { empresa: empresa || '', departamento: depto || '', vales: 0, porComprobar: 0, litros: 0, importe: 0, importeConTope: 0, presupuesto: 0 };
+          return statsPorDepto[k];
+        };
+        vales.forEach(function(v) {
+          var comprobado = v.estado === 'COMPROBADA' || v.estado === 'CERRADA';
+          var litros = comprobado ? (Number(v.litros_cargados) || Number(v.litros) || 0) : 0;
+          var importe = comprobado ? (Number(v.importe) || Number(v.monto) || 0) : 0;
+          litrosTotal += litros;
+          montoTotal += importe;
+
+          var vehId = v.vehiculo_id || 'sin_asignar';
+          if (!statsPorVehiculo[vehId]) statsPorVehiculo[vehId] = { litros: 0, monto: 0, vales: 0 };
+          statsPorVehiculo[vehId].litros += litros;
+          statsPorVehiculo[vehId].monto += importe;
+          statsPorVehiculo[vehId].vales += 1;
+
+          var d = filaDepto(v.empresa, v.departamento);
+          d.vales += 1;
+          if (!comprobado) d.porComprobar += 1;
+          d.litros += litros;
+          d.importe += importe;
+          if (!proyectoValeSinTope(v.proyecto_oc)) d.importeConTope += importe;
+        });
+        dashboardVSCDatos.spms.forEach(function(s) {
+          if (!enPeriodoMes(s.mesClave)) return;
+          filaDepto(s.empresa, s.departamento).presupuesto += s.monto;
+        });
+
+        var filasDepto = Object.keys(statsPorDepto).map(function(k) { return statsPorDepto[k]; });
+        filasDepto.sort(function(a, b) { return b.importe - a.importe || b.litros - a.litros || (a.empresa + a.departamento).localeCompare(b.empresa + b.departamento); });
+        var pct = function(usado, presupuesto) { return presupuesto > 0 ? (usado / presupuesto * 100).toFixed(1) + '%' : '—'; };
+        var celdaPct = function(usado, presupuesto) {
+          var texto = pct(usado, presupuesto);
+          var excede = presupuesto > 0 && usado > presupuesto + 0.005;
+          return '<td style="text-align:center;' + (excede ? 'color:#c62828;font-weight:700;' : '') + '">' + texto + '</td>';
+        };
+        cuerpoDeptos.innerHTML = filasDepto.length ? filasDepto.map(function(d) {
+          return '<tr>' +
+            '<td>' + escapeHTML(getAbreviaturaEmpresa(d.empresa) || d.empresa || '—') + '</td>' +
+            '<td>' + escapeHTML(mostrarDepto(d.departamento)) + '</td>' +
+            '<td style="text-align:center;">' + d.vales + '</td>' +
+            '<td style="text-align:center;">' + d.porComprobar + '</td>' +
+            '<td style="text-align:center;">' + d.litros.toFixed(2) + '</td>' +
+            '<td>' + formatoMoneda(d.importe, 'MXN') + '</td>' +
+            '<td>' + (d.presupuesto > 0 ? formatoMoneda(d.presupuesto, 'MXN') : '—') + '</td>' +
+            celdaPct(d.importeConTope, d.presupuesto) +
+            '</tr>';
+        }).join('') : '<tr><td colspan="8">Sin vales ni presupuesto de gasolina en este periodo.</td></tr>';
+        if (filasDepto.length > 1) {
+          var tot = filasDepto.reduce(function(a, d) {
+            a.vales += d.vales; a.porComprobar += d.porComprobar; a.litros += d.litros; a.importe += d.importe; a.importeConTope += d.importeConTope; a.presupuesto += d.presupuesto; return a;
+          }, { vales: 0, porComprobar: 0, litros: 0, importe: 0, importeConTope: 0, presupuesto: 0 });
+          pieDeptos.innerHTML = '<tr style="font-weight:700;"><td colspan="2">Total</td><td style="text-align:center;">' + tot.vales + '</td><td style="text-align:center;">' + tot.porComprobar + '</td>' +
+            '<td style="text-align:center;">' + tot.litros.toFixed(2) + '</td><td>' + formatoMoneda(tot.importe, 'MXN') + '</td><td>' + (tot.presupuesto > 0 ? formatoMoneda(tot.presupuesto, 'MXN') : '—') + '</td>' +
+            celdaPct(tot.importeConTope, tot.presupuesto) + '</tr>';
+        } else {
+          pieDeptos.innerHTML = '';
+        }
+
+        var filasVehiculo = Object.keys(statsPorVehiculo).map(function(vehId) {
+          var vehiculo = vehiculosCache.find(function(x) { return String(x.id) === String(vehId); });
+          return {
+            nombre: vehiculo ? vehiculo.nombre : 'Sin vehículo asignado',
+            litros: statsPorVehiculo[vehId].litros,
+            monto: statsPorVehiculo[vehId].monto,
+            vales: statsPorVehiculo[vehId].vales
+          };
+        });
+        filasVehiculo.sort(function(a, b) { return b.litros - a.litros || b.vales - a.vales; });
+        cuerpo.innerHTML = filasVehiculo.length ? filasVehiculo.map(function(f) {
+          return '<tr>' +
+            '<td>' + escapeHTML(f.nombre) + '</td>' +
+            '<td style="text-align:center;">' + f.litros.toFixed(2) + '</td>' +
+            '<td>' + formatoMoneda(f.monto, 'MXN') + '</td>' +
+            '<td style="text-align:center;">' + f.vales + '</td>' +
+            '</tr>';
+        }).join('') : '<tr><td colspan="4">Sin vales en este periodo.</td></tr>';
+
+        var deptoMayorConsumo = filasDepto.filter(function(d) { return d.litros > 0; }).sort(function(a, b) { return b.litros - a.litros; })[0] || null;
+        var vehiculoMayorConsumo = filasVehiculo.filter(function(f) { return f.litros > 0; })[0] || null;
+        if (!vales.length) {
+          resumen.innerHTML = '<p>No hay vales de gasolina en este periodo.</p>';
+        } else {
+          resumen.innerHTML =
+            '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🧮 Consumo total (litros)</div><div class="almacen-kpi-valor">' + litrosTotal.toFixed(2) + '</div></div>' +
+            '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">💰 Gasto total</div><div class="almacen-kpi-valor">' + formatoMoneda(montoTotal, 'MXN') + '</div></div>' +
+            (deptoMayorConsumo ? '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🏢 Departamento con más consumo</div><div class="almacen-kpi-valor">' + escapeHTML(mostrarDepto(deptoMayorConsumo.departamento)) + '</div></div>' : '') +
+            (vehiculoMayorConsumo ? '<div class="almacen-kpi-card"><div class="almacen-kpi-titulo">🚗 Vehículo que más consume</div><div class="almacen-kpi-valor">' + escapeHTML(vehiculoMayorConsumo.nombre) + '</div></div>' : '');
         }
       };
 
