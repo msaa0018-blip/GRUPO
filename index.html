@@ -5064,6 +5064,7 @@
             <button class="btn-modal-x" onclick="window.cerrarVisualizarValeX()">✕</button>
           </div>
           <div class="modal-body">
+            <div id="valeVisualizarAviso" class="hidden" style="margin-bottom:14px; padding:12px 14px; border-radius:8px; background:#e8f5e9; border:1px solid #2e7d32; color:#1b5e20; font-weight:700;"></div>
             <div id="valeVisualizarStepper" class="stepper-oc"></div>
             <div class="table-wrapper" style="margin-top:16px;">
               <table>
@@ -12509,6 +12510,17 @@
         }).join('');
 
         var acciones = document.getElementById('valeVisualizarAcciones');
+        var avisoVale = document.getElementById('valeVisualizarAviso');
+        var botonCerrarSistema = '<button onclick="window.cerrarVisualizarValeX()">🚪 Cerrar sistema</button>';
+        // Entrada por el QR con el link ya utilizado (vale comprobado o
+        // cerrado): solo se ven los datos del vale y se cierra el sistema.
+        if (sesionPorEnlace === 'vale' && valeEnlaceUtilizado(v)) {
+          if (avisoVale) { avisoVale.textContent = '✅ ' + textoValeAutorizadoPor(v); avisoVale.classList.remove('hidden'); }
+          acciones.innerHTML = botonCerrarSistema;
+          document.getElementById('valeVisualizarModal').classList.add('active');
+          return;
+        }
+        if (avisoVale) { avisoVale.textContent = ''; avisoVale.classList.add('hidden'); }
         var botones = '';
         var puedeAprobar = v.estado === 'CREADA' && puedeAccionPorRol('aprobar_vsc');
         if (puedeAprobar) {
@@ -12522,10 +12534,14 @@
         if (v.estado === 'APROBADA_JEFE' && !v.fecha_impresion) {
           botones += '<button class="success" onclick="window.imprimirPDFVale(' + v.id + ')">🖨️ Imprimir PDF</button>';
         }
-        if (v.fecha_impresion && v.estado !== 'COMPROBADA' && v.estado !== 'CERRADA' && v.estado !== 'CANCELADA') {
+        // Comprobar: solo el solicitante del vale o el Administrador.
+        var pendienteComprobar = v.estado === 'APROBADA_JEFE' && (v.fecha_impresion || sesionPorEnlace === 'vale');
+        if (pendienteComprobar && puedeComprobarValeGasolina(v)) {
           botones += '<button class="success" onclick="window.abrirComprobarVale(' + v.id + ')">✅ Comprobar</button>';
+        } else if (pendienteComprobar) {
+          botones += '<p class="text-muted" style="margin:0; align-self:center;">' + escapeHTML(textoQuienCompruebaVale(v)) + '</p>';
         }
-        var puedeCerrar = v.estado === 'COMPROBADA' && actual && (actual.rol === 'Finanzas' || actual.rol === 'Administrador' || actual.rol === 'Director General');
+        var puedeCerrar = sesionPorEnlace !== 'vale' && v.estado === 'COMPROBADA' && actual && (actual.rol === 'Finanzas' || actual.rol === 'Administrador' || actual.rol === 'Director General');
         if (puedeCerrar) {
           botones += '<button class="success" onclick="window.cerrarRevisionVale(' + v.id + ')">🔒 Cerrar (Revisión/Cierre)</button>';
         }
@@ -12533,6 +12549,8 @@
         if (puedeEditarValeGasolina()) {
           botones += '<button onclick="window.abrirEditarVale(' + v.id + ')">✏️ Editar (ADMIN)</button>';
         }
+        // Entrada por el QR: además de lo que le toque, solo puede cerrar el sistema.
+        if (sesionPorEnlace === 'vale') botones += botonCerrarSistema;
         acciones.innerHTML = botones || '<p class="text-muted">Sin acciones disponibles en este momento.</p>';
 
         document.getElementById('valeVisualizarModal').classList.add('active');
@@ -13653,6 +13671,10 @@
       window.abrirComprobarVale = function(id) {
         var v = valesGasolinaCache.find(function(x) { return x.id === id; });
         if (!v) return;
+        if (!puedeComprobarValeGasolina(v)) return alert('❌ ' + textoQuienCompruebaVale(v));
+        if (v.estado !== 'APROBADA_JEFE') {
+          return alert(valeEnlaceUtilizado(v) ? '⚠️ Este vale ya fue comprobado.' : '⚠️ Este vale no está pendiente de comprobar.');
+        }
         valeComprobarId = id;
         document.getElementById('valeComprobarTitulo').textContent = v.codigo || '';
         document.getElementById('valeComprobarCombustible').value = v.combustible || '';
@@ -13729,6 +13751,36 @@
 
       function puedeEditarValeGasolina() {
         return !!(actual && actual.rol === 'Administrador' && sesionPorEnlace !== 'vale');
+      }
+
+      // Comprobar un vale de gasolina: sin excepción, solo su solicitante
+      // (el usuario que lo pidió: "responsable") o el Administrador. Los
+      // demás usuarios solo pueden aprobar los vales que les corresponden.
+      function solicitanteValeGasolina(v) {
+        return String((v && (v.responsable || v.elaborador)) || '').trim().toUpperCase();
+      }
+      function puedeComprobarValeGasolina(v) {
+        if (!actual || !v) return false;
+        if (usuarioTieneAlgunRol(actual, ['Administrador'])) return true;
+        var solicitante = solicitanteValeGasolina(v);
+        return !!solicitante && solicitante === String(actual.usuario || '').trim().toUpperCase();
+      }
+      function textoQuienCompruebaVale(v) {
+        var solicitante = solicitanteValeGasolina(v);
+        return 'Solo el solicitante' + (solicitante ? ' (' + solicitante + ')' : '') + ' o el Administrador pueden comprobar este vale.';
+      }
+      // Link del QR ya utilizado: el vale ya se comprobó (o se cerró).
+      function valeEnlaceUtilizado(v) {
+        return !!v && (v.estado === 'COMPROBADA' || v.estado === 'CERRADA');
+      }
+      // "Vale de gasolina autorizado por (usuario) el (fecha)": quién lo
+      // autorizó (aprobó) y cuándo.
+      function textoValeAutorizadoPor(v) {
+        var f = v && v.fecha_aprobacion_jefe ? new Date(v.fecha_aprobacion_jefe) : null;
+        var fecha = f && !isNaN(f.getTime())
+          ? f.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : '(fecha no registrada)';
+        return 'Vale de gasolina autorizado por ' + ((v && v.nombre_jefe) || '(usuario no registrado)') + ' el ' + fecha;
       }
 
       function historialEdicionesVale(v) {
@@ -13934,6 +13986,11 @@
       window.guardarComprobacionVale = async function() {
         var msg = document.getElementById('msgComprobarVale');
         if (!valeComprobarId) return;
+        var valeAComprobar = valesGasolinaCache.find(function(x) { return x.id === valeComprobarId; });
+        if (!puedeComprobarValeGasolina(valeAComprobar)) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ ' + escapeHTML(textoQuienCompruebaVale(valeAComprobar)) + '</div>';
+          return;
+        }
         var resultado = document.getElementById('valeResultadoComprobacion').value;
         if (!resultado) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Selecciona el resultado de la comprobación.</div>';
@@ -13992,8 +14049,19 @@
         var vOriginal = valesGasolinaCache.find(function(x) { return x.id === valeComprobarId; });
         var codigoVale = (vOriginal && vOriginal.codigo) ? vOriginal.codigo : ('VSC-' + valeComprobarId);
         try {
-          // ¿El folio ya está en otro vale?
           var idComprobando = valeComprobarId;
+          // Se vuelve a leer el vale: si mientras tanto ya se comprobó, no
+          // se registra otra vez; y solo lo comprueba su solicitante o el
+          // Administrador.
+          var rValeActual = await supabase.from('vales_gasolina').select('*').eq('id', idComprobando).maybeSingle();
+          if (rValeActual.error) throw rValeActual.error;
+          if (rValeActual.data) {
+            if (!puedeComprobarValeGasolina(rValeActual.data)) throw new Error(textoQuienCompruebaVale(rValeActual.data));
+            if (rValeActual.data.estado !== 'APROBADA_JEFE') {
+              throw new Error(valeEnlaceUtilizado(rValeActual.data) ? 'Este vale ya fue comprobado. ' + textoValeAutorizadoPor(rValeActual.data) + '.' : 'Este vale ya no está pendiente de comprobar.');
+            }
+          }
+          // ¿El folio ya está en otro vale?
           var rFolio = await supabase.from('vales_gasolina').select('id,codigo').eq('folio_ticket', folioTicket).neq('id', idComprobando).limit(5);
           if (rFolio.error) throw rFolio.error;
           var repetido = (rFolio.data || []).find(function(x) { return x.id !== idComprobando; });
@@ -30393,9 +30461,9 @@
           // ===== Enlace de QR de un vale (VSC): abre directamente ese =====
           // vale en su ventana modal para poder comprobarlo, sin que el
           // usuario tenga que buscarlo manualmente en la lista. Si el
-          // vale ya fue comprobado (o cerrado), el enlace ya se usó: se
-          // avisa y se manda al usuario al menú principal, limpiando el
-          // parámetro de la URL para que el enlace no se pueda reutilizar.
+          // vale ya fue comprobado (o cerrado), el enlace ya se usó: solo
+          // se muestran sus datos y quién lo autorizó, y se cierra el
+          // sistema. El parámetro se quita de la URL al abrirlo.
           if (pendingValeId) {
             var valeIdAAbrir = pendingValeId;
             pendingValeId = null;
@@ -30406,6 +30474,16 @@
 
                 var urlLimpia = window.location.origin + window.location.pathname;
                 window.history.replaceState({}, '', urlLimpia);
+
+                // Su solicitante y el Administrador siempre abren el vale,
+                // aunque no esté en la lista de su empresa y departamento.
+                if (!v) {
+                  var rValeQR = await supabase.from('vales_gasolina').select('*').eq('id', valeIdAAbrir).maybeSingle();
+                  if (!rValeQR.error && rValeQR.data && puedeComprobarValeGasolina(rValeQR.data)) {
+                    v = rValeQR.data;
+                    valesGasolinaCache.push(v);
+                  }
+                }
 
                 if (!v) {
                   cerrarSesionPorEnlace('⚠️ No se encontró el vale (' + valeIdAAbrir + '). Puede que ya no exista o que no tengas permiso para verlo.');
@@ -30426,28 +30504,6 @@
                   var menuMaestroCancel = document.getElementById('menuMaestroPrincipal');
                   if (menuMaestroCancel) { menuMaestroCancel.classList.add('hidden'); menuMaestroCancel.classList.remove('visible'); }
                   try { location.reload(); } catch (eReloadCancel) { console.warn('No se pudo recargar automáticamente:', eReloadCancel); }
-                  return;
-                }
-
-                if (v.estado === 'COMPROBADA' || v.estado === 'CERRADA') {
-                  alert('⚠️ El link ya ha sido utilizado.');
-                  // Al aceptar el mensaje, se cierra la sesión y se regresa
-                  // al login limpio (la URL ya fue limpiada arriba, así que
-                  // no vuelve a apuntar al VSC). Se restablece el DOM
-                  // directamente (no solo location.reload()) para que
-                  // funcione también si el navegador difiere el reload.
-                  actual = null;
-                  var appContenido = document.getElementById('contenidoApp');
-                  if (appContenido) { appContenido.classList.remove('visible'); appContenido.classList.add('hidden'); }
-                  var header = document.getElementById('mainHeader');
-                  if (header) header.classList.add('hidden');
-                  var loginForm = document.getElementById('login');
-                  if (loginForm) loginForm.classList.remove('hidden');
-                  var loginCont = document.getElementById('loginContainer');
-                  if (loginCont) loginCont.style.display = '';
-                  var menuMaestro = document.getElementById('menuMaestroPrincipal');
-                  if (menuMaestro) { menuMaestro.classList.add('hidden'); menuMaestro.classList.remove('visible'); }
-                  try { location.reload(); } catch (eReload) { console.warn('No se pudo recargar automáticamente:', eReload); }
                   return;
                 }
 
@@ -30476,15 +30532,19 @@
                   var rVehQR = await supabase.from('vehiculos').select('*').order('nombre');
                   if (!rVehQR.error) vehiculosCache = rVehQR.data || [];
                 }
-                window.visualizarVale(valeIdAAbrir);
-                // Si el vale ya fue impreso y está pendiente de comprobar,
-                // se abre directamente el modal de "Comprobar" (que es lo
-                // que normalmente se busca al escanear el QR); si no,
-                // se deja abierto el modal de "Visualizar" con sus
-                // acciones disponibles (p.ej. Aprobar, si aplica).
-                if (v.fecha_impresion && v.estado !== 'COMPROBADA' && v.estado !== 'CERRADA' && v.estado !== 'CANCELADA') {
+                // Vale autorizado y pendiente de comprobar: su solicitante o
+                // el Administrador pasan directo a la ventana "Comprobar"
+                // (es lo que se busca al escanear el QR).
+                if (v.estado === 'APROBADA_JEFE' && puedeComprobarValeGasolina(v)) {
                   window.abrirComprobarVale(valeIdAAbrir);
+                  return;
                 }
+                // Link ya utilizado (vale comprobado o cerrado): "Vale de
+                // gasolina autorizado por (usuario) el (fecha)" con los datos
+                // del vale; solo se pueden ver y cerrar el sistema.
+                // Cualquier otro usuario solo ve el vale (y lo aprueba si le
+                // toca); no lo puede comprobar.
+                window.visualizarVale(valeIdAAbrir);
               } catch (e) {
                 console.error('Error abriendo el vale desde el enlace QR:', e);
               }
