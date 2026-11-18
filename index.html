@@ -34398,8 +34398,70 @@
         ]);
       }
 
+      // DATOS DEL PROVEEDOR de la OC: razón social y nombre comercial
+      // salen del catálogo de Proveedores (todos, activos o no), buscando
+      // el proveedor de la OC por razón social, por nombre comercial, sin
+      // sociedad ni signos, o por RFC. Así no dependen de que antes se
+      // haya abierto "Crear OC" (que es donde se llena
+      // proveedoresCatalogoCache) ni de que el proveedor siga activo.
+      var proveedoresPDFOCCache = null, proveedoresPDFOCCacheEn = 0;
+      async function proveedoresParaPDFOC() {
+        if (proveedoresPDFOCCache && Date.now() - proveedoresPDFOCCacheEn < 20000) return proveedoresPDFOCCache;
+        try {
+          var r = await supabase.from('proveedores').select('*').order('nombre');
+          if (!r.error && Array.isArray(r.data)) {
+            proveedoresPDFOCCache = r.data;
+            proveedoresPDFOCCacheEn = Date.now();
+            return r.data;
+          }
+        } catch (e) { console.warn('No se pudo leer el catálogo de proveedores para el PDF de la OC:', e); }
+        return (proveedoresCatalogoCache || []).slice();
+      }
+      function buscarProveedorParaPDFOC(provs, nombre, rfc, sucursal) {
+        provs = provs || [];
+        var mayus = function(t) { return String(t || '').trim().toUpperCase(); };
+        var n = mayus(nombre), suc = mayus(sucursal);
+        var elegir = function(lista) {
+          if (!lista.length) return null;
+          if (lista.length > 1 && suc) {
+            var mismaSucursal = lista.filter(function(p) { return mayus(p.sucursal) === suc; });
+            if (mismaSucursal.length) return mismaSucursal[0];
+          }
+          return lista[0];
+        };
+        if (n) {
+          var exacto = elegir(provs.filter(function(p) { return mayus(p.nombre) === n; })) ||
+                       elegir(provs.filter(function(p) { return mayus(p.nombre_comercial) === n; }));
+          if (exacto) return exacto;
+          var k = claveProveedorOC(nombre);
+          if (k) {
+            var porClave = provs.filter(function(p) { return claveProveedorOC(p.nombre) === k || claveProveedorOC(p.nombre_comercial) === k; });
+            var r0 = claveRfc(rfc);
+            if (porClave.length > 1 && r0) {
+              var conRfc = porClave.filter(function(p) { return claveRfc(p.rfc) === r0; });
+              if (conRfc.length) porClave = conRfc;
+            }
+            var porNombre = elegir(porClave);
+            if (porNombre) return porNombre;
+          }
+        }
+        var r = claveRfc(rfc);
+        if (r) return elegir(provs.filter(function(p) { return claveRfc(p.rfc) === r; }));
+        return null;
+      }
+      async function completarProveedorParaPDFOC(datos) {
+        if (!datos || !datos.proveedor) return;
+        var prov = buscarProveedorParaPDFOC(await proveedoresParaPDFOC(), datos.proveedor, datos.rfc, datos.sucursal);
+        if (!prov) return;
+        if (!datos.provRazonSocial) datos.provRazonSocial = (prov.nombre || '').trim();
+        if (!datos.provNombreComercial) datos.provNombreComercial = (prov.nombre_comercial || '').trim();
+        if (!datos.provTelefono && prov.telefono) datos.provTelefono = prov.telefono;
+        if (!datos.provEmail && prov.email) datos.provEmail = prov.email;
+      }
+
       async function generarPDFParaPreviewInterno(datos, ocExistente) {
         ocExistente = ocExistente || null;
+        try { await completarProveedorParaPDFOC(datos); } catch (e) { console.warn('Datos del proveedor para el PDF de la OC:', e); }
         // Blindaje contra el bug de "AAMS | N/A | N/A": si quien llama a
         // esta función construye "datos" a partir de una OC ya guardada
         // (ocExistente) y olvida copiar alguno de estos campos —como
@@ -34707,13 +34769,13 @@
         var proveedorTelefono = datos.provTelefono || (proveedorMatchEmail ? proveedorMatchEmail.telefono : '') || 'N/A';
 
         var camposProveedor = [
-          { label: 'Razón Social:', value: datos.proveedor },
+          { label: 'Razón Social:', value: datos.provRazonSocial || datos.proveedor },
+          { label: 'Nombre Comercial:', value: datos.provNombreComercial || (proveedorMatchEmail ? proveedorMatchEmail.nombre_comercial : '') || 'N/A' },
           { label: 'Sucursal:', value: datos.sucursal || 'N/A' },
           { label: 'RFC:', value: datos.rfc },
           { label: 'C.P.:', value: datos.cp || '' },
           { label: 'Teléfono:', value: proveedorTelefono },
-          { label: 'Email:', value: proveedorEmail },
-          { label: 'Nombre Comercial:', value: datos.provNombreComercial || (proveedorMatchEmail ? proveedorMatchEmail.nombre_comercial : '') || 'N/A' }
+          { label: 'Email:', value: proveedorEmail }
         ];
         // "FACTURAR A": cada empresa tiene su propia razón social/RFC/
         // domicilio/C.P. registrados en el módulo "🏛️ Empresas" (tabla
