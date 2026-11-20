@@ -3881,12 +3881,12 @@
                 <th>CP</th>
                 <th>Cuenta Bancaria MXN</th>
                 <th>Banco MXN</th>
-                <th>Clave MXN</th>
+                <th>CLABE MXN</th>
                 <th>Swift MXN</th>
                 <th>CIE MXN</th>
                 <th>Cuenta Bancaria USD</th>
                 <th>Banco USD</th>
-                <th>Clave USD</th>
+                <th>CLABE USD</th>
                 <th>Swift USD</th>
                 <th>CIE USD</th>
                 <th>Condiciones Comerciales</th>
@@ -3935,7 +3935,7 @@
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Banco<input id="nvoProvBanco" placeholder="Banco MXN" style="width:100%;margin-top:4px;"></label>
             </div>
             <div class="cxc-form-row">
-              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Clave<input id="nvoProvClave" placeholder="CLABE MXN" style="width:100%;margin-top:4px;"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">CLABE<input id="nvoProvClave" placeholder="CLABE MXN" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Swift<input id="nvoProvSwift" placeholder="Swift MXN" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">CIE<input id="nvoProvCIE" placeholder="CIE MXN" style="width:100%;margin-top:4px;"></label>
             </div>
@@ -3945,7 +3945,7 @@
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Banco<input id="nvoProvBancoUSD" placeholder="Banco USD" style="width:100%;margin-top:4px;"></label>
             </div>
             <div class="cxc-form-row">
-              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Clave<input id="nvoProvClaveUSD" placeholder="Clave USD" style="width:100%;margin-top:4px;"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">CLABE<input id="nvoProvClaveUSD" placeholder="CLABE USD" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Swift<input id="nvoProvSwiftUSD" placeholder="Swift USD" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">CIE<input id="nvoProvCIEUSD" placeholder="CIE USD" style="width:100%;margin-top:4px;"></label>
             </div>
@@ -4004,7 +4004,7 @@
               <input id="edProvBanco" placeholder="Banco MXN">
             </div>
             <div class="cxc-form-row">
-              <input id="edProvClave" placeholder="Clave MXN">
+              <input id="edProvClave" placeholder="CLABE MXN">
               <input id="edProvSwift" placeholder="Swift MXN">
               <input id="edProvCIE" placeholder="CIE MXN">
             </div>
@@ -4013,7 +4013,7 @@
               <input id="edProvBancoUSD" placeholder="Banco USD">
             </div>
             <div class="cxc-form-row">
-              <input id="edProvClaveUSD" placeholder="Clave USD">
+              <input id="edProvClaveUSD" placeholder="CLABE USD">
               <input id="edProvSwiftUSD" placeholder="Swift USD">
               <input id="edProvCIEUSD" placeholder="CIE USD">
             </div>
@@ -10633,7 +10633,7 @@
           doc.setTextColor(100, 100, 100);
           doc.text('Generado: ' + new Date().toLocaleString(), margin, margin + 28);
 
-          var headers = ['Nombre', 'Sucursal', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Dirección', 'CP', 'Banco MXN', 'Cuenta MXN', 'Clave MXN', 'Condiciones'];
+          var headers = ['Nombre', 'Sucursal', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Dirección', 'CP', 'Banco MXN', 'Cuenta MXN', 'CLABE MXN', 'Condiciones'];
           var rows = proveedoresCatalogoCache.map(function(p) {
             return [
               // Sin el 🟡: la fuente del PDF no tiene emojis y lo imprimía
@@ -37908,7 +37908,7 @@
           add([p + 'CuentaBancaria', p + 'CuentaBancariaUSD'], 'numero', 'Cuenta bancaria');
           add([p + 'CIE', p + 'CIEUSD'], 'numero', 'CIE');
           add([p + 'Swift', p + 'SwiftUSD'], 'swift', 'SWIFT');
-          add([p + 'ClaveUSD'], 'codigo', 'Clave USD (ABA / IBAN)');
+          add([p + 'ClaveUSD'], 'codigo', 'CLABE USD (ABA / IBAN)');
         });
         // Productos y servicios por proveedor
         add(['psDescripcion'], 'descripcion', 'Descripción');
@@ -38080,6 +38080,58 @@
       function avisarErroresReglas(lista) {
         alert('❌ No se puede guardar. Corrige estos datos según las reglas de captura:\n\n' + lista.join('\n'));
       }
+      // Pegar texto (20/11/2026): al pegar en un campo o celda se respetan
+      // los espacios. El texto copiado de un PDF, Excel o Word puede traer
+      // saltos de línea, tabuladores o espacios especiales (no separables,
+      // angostos, de ancho cero…) que se pegaban pegados, se veían como
+      // espacio pero no lo eran, o salían como "/" o "0" en los PDF del
+      // sistema. Aquí se cambian por un espacio normal (en las notas y
+      // mensajes de varias líneas se conservan los saltos de línea). Si el
+      // texto plano viene sin ningún espacio pero la versión con formato
+      // (HTML) del mismo texto sí los trae, se usa esa.
+      var RE_ESPACIOS_ESPECIALES = /[\u00a0\u1680\u2000-\u200b\u202f\u205f\u3000\ufeff]/g;
+      function normalizarTextoPegado(t, conSaltos) {
+        t = String(t || '').replace(/\u00ad/g, '').replace(RE_ESPACIOS_ESPECIALES, ' ').replace(/\t/g, ' ').replace(/\r\n?/g, '\n');
+        if (conSaltos) return t.replace(/ *\n */g, '\n').replace(/ {2,}/g, ' ');
+        return t.replace(/^\n+|\n+$/g, '').replace(/\n+/g, ' ').replace(/ {2,}/g, ' ');
+      }
+      function textoDeHTMLPegado(html) {
+        try {
+          var d = new DOMParser().parseFromString(html, 'text/html');
+          return d.body ? (d.body.textContent || '') : '';
+        } catch (e) { return ''; }
+      }
+      document.addEventListener('paste', function(ev) {
+        var el = ev.target;
+        if (!el || el.readOnly || el.disabled) return;
+        var tipoInput = el.tagName === 'INPUT' ? String(el.getAttribute('type') || 'text').toLowerCase() : '';
+        var esInput = el.tagName === 'INPUT' && (tipoInput === 'text' || tipoInput === 'search');
+        var esArea = el.tagName === 'TEXTAREA';
+        if (!esInput && !esArea) return;
+        var cd = ev.clipboardData;
+        if (!cd) return;
+        var plano = cd.getData('text/plain');
+        if (!plano) return;
+        // Las descripciones de partidas son de un solo renglón aunque sean textarea.
+        var conSaltos = esArea && !(el.classList && el.classList.contains('desc'));
+        var texto = normalizarTextoPegado(plano, conSaltos);
+        if (texto.indexOf(' ') === -1 && texto.replace(/\s/g, '').length >= 12) {
+          var html = cd.getData('text/html');
+          if (html) {
+            var deHtml = normalizarTextoPegado(textoDeHTMLPegado(html), conSaltos).trim();
+            if (deHtml.indexOf(' ') !== -1 && deHtml.replace(/\s/g, '').toUpperCase() === texto.replace(/\s/g, '').toUpperCase()) texto = deHtml;
+          }
+        }
+        if (texto === plano) return;   // nada que corregir: pegado normal
+        ev.preventDefault();
+        var insertado = false;
+        try { insertado = document.execCommand('insertText', false, texto); } catch (e) {}
+        if (!insertado) {
+          var ini = el.selectionStart, fin = el.selectionEnd;
+          if (ini == null) el.value += texto; else el.setRangeText(texto, ini, fin, 'end');
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, true);
       // Mayúsculas automáticas y marca en rojo mientras se escribe.
       document.addEventListener('input', function(ev) {
         var el = ev.target; if (!el) return;
