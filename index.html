@@ -6284,7 +6284,7 @@
             <select id="empresaDeptoSinProyectoOC" class="hidden" onchange="window.actualizarDatosOC()" style="flex:1;"></select>
             <input id="nombreProyectoSinProyOC" class="hidden" placeholder="Nombre del proyecto de esta OC * (ej. EQUIPO_COMPUTO_TI)" style="flex:1;" title="Nombre con el que se identifica esta OC (va en su folio). En MAYÚSCULAS, sin espacios (usa guion bajo), sin Ñ, acentos ni puntos, y que no inicie con número.">
           </div>
-          <div id="avisoSinProyectoOC" class="hidden" style="font-size:12px;margin-top:6px;color:var(--gray-700);">⚠️ OC sin proyecto: no se aplica la regla del 60/40. Después de la aprobación del Jefe pasa siempre al Director General para autorizar el pago. Al pagarse se registra como proyecto del departamento.</div>
+          <div id="avisoSinProyectoOC" class="hidden" style="font-size:12px;margin-top:6px;color:var(--gray-700);">⚠️ OC sin proyecto: no se aplica la regla del 60/40. Después de la aprobación del Jefe pasa siempre al Director General para autorizar el pago; sin esa autorización no se puede pagar. Se puede crear aunque no haya SPM pagada o presupuesto de COMPRAS. Al pagarse se registra como proyecto del departamento.</div>
         </div>
         <div class="grupo-formulario hidden" id="grupoProyectosMultiOC">
           <div class="flex">
@@ -10495,6 +10495,14 @@
         var cuerpo = document.getElementById('cuerpoProductos');
         if (cuerpo && cuerpo.children.length === 0) {
           window.agregarFilaProducto();
+        }
+        // Sin proyectos disponibles: la OC se hace sin proyecto (20/11/2026).
+        var selProyAbrir = document.getElementById('selectProyecto');
+        var radioNoAbrir = document.getElementById('ocLigarProyectoNo');
+        if (selProyAbrir && radioNoAbrir && !radioNoAbrir.checked &&
+            !Array.prototype.some.call(selProyAbrir.options, function(o) { return !!o.value; })) {
+          radioNoAbrir.checked = true;
+          if (typeof window.cambiarLigarProyectoOC === 'function') { window.cambiarLigarProyectoOC(); return; }
         }
         if (typeof window.actualizarDatosOC === 'function') window.actualizarDatosOC();
       };
@@ -19852,7 +19860,7 @@
             productos: productos
           };
 
-          var motivoExceso = sinProyectoJefe ? 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' : (excedePorSiSola ?
+          var motivoExceso = sinProyectoJefe ? 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' + (await notaComprasDirectorSinProyectoOC(oc)) : (excedePorSiSola ?
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
             'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
 
@@ -20214,7 +20222,7 @@
             fechaentrega: oc.fechaentrega || new Date().toISOString(),
             productos: productos
           };
-          var motivoExceso = sinProyectoParidad ? 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' : (excedePorSiSola ?
+          var motivoExceso = sinProyectoParidad ? 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' + (await notaComprasDirectorSinProyectoOC(oc)) : (excedePorSiSola ?
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
             'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
@@ -25904,7 +25912,7 @@
           return f.tipo === o.tipo && String(f.usuario || '').trim().toUpperCase() === usuario.toUpperCase();
         }).reduce(function(a, f) { return a + (Number(f.monto) || 0); }, 0);
         if (presupuesto <= 0) {
-          return { ok: false, mensaje: usuario + ' no tiene presupuesto de ' + etiqueta + ' en la SPM pagada ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). Pide que se le asigne en la SPM del mes.' };
+          return { ok: false, sinRenglon: true, usuario: usuario, spm: spm, mensaje: usuario + ' no tiene presupuesto de ' + etiqueta + ' en la SPM pagada ' + folioSPM + ' (' + spm.mes + ' ' + spm.anio + '). Pide que se le asigne en la SPM del mes.' };
         }
 
         var mesIdx = MESES_INDICADOR.indexOf(spm.mes);
@@ -26040,6 +26048,23 @@
         return { exceso: r.exceso, usuario: oc.responsable, spm_folio: spm.folio || spm.codigo, nuevo: fila.monto };
       }
 
+      // Nota para el aviso al Director de una OC sin proyecto: si el
+      // solicitante no tiene SPM pagada ni renglón de COMPRAS en el mes de
+      // la OC, se le indica al Director al pedirle la autorización de pago.
+      async function notaComprasDirectorSinProyectoOC(oc) {
+        try {
+          if (!oc || !ocEsSinProyecto(oc)) return '';
+          var f = oc.fechacreacion ? new Date(oc.fechacreacion) : new Date();
+          var r = await revisarPresupuestoUsuarioSPM({
+            tipo: 'COMPRAS', empresa: oc.empresa, departamento: oc.departamento, usuario: oc.responsable,
+            monto: 0, fecha: fechaISOCortaPpto(f), documento: 'Esta OC', excluirId: oc.id
+          });
+          if (r.sinSPM) return ' Sin SPM pagada del mes: no hay presupuesto de COMPRAS (VDC-3).';
+          if (r.sinRenglon) return ' ' + (oc.responsable || 'El solicitante') + ' no tiene presupuesto de COMPRAS (VDC-3) en la SPM pagada del mes.';
+        } catch (e) { console.warn('Nota de COMPRAS para el Director:', e); }
+        return '';
+      }
+
       async function validarComprasSinProyectoOC(datos, enPantalla) {
         if (!datos || !datos.sin_proyecto) return true;
         var r = await revisarPresupuestoUsuarioSPM({
@@ -26076,6 +26101,25 @@
           datos.envioDirectoDirector = infoExceso;
           datos.estadoAntesDeDirector = datos.estado;
           datos.estado = 'PENDIENTE_DIRECTOR';
+          return true;
+        }
+        // Sin SPM pagada del mes o sin renglón de COMPRAS (20/11/2026): ya
+        // no se bloquea. La OC sigue el proceso normal (Solicitante → Jefe)
+        // y, como toda OC sin proyecto, pasa al Director General para que
+        // autorice el pago; sin esa autorización no se puede pagar.
+        if (r.sinSPM || r.sinRenglon) {
+          if (datos.envioDirectoDirector) {
+            datos.estado = datos.estadoAntesDeDirector || datos.estado;
+            delete datos.envioDirectoDirector;
+            delete datos.estadoAntesDeDirector;
+          }
+          datos.sinPresupuestoCompras = true;
+          var msgInfo = document.getElementById('mensajeOC');
+          if (enPantalla && msgInfo) {
+            msgInfo.innerHTML = '<div class="alert" style="background:#fff8e1;border-color:#e6c97a;color:#6b5200;">ℹ️ ' +
+              (r.sinSPM ? 'No hay SPM pagada del mes' : escapeHTML(r.usuario || datos.responsable || '') + ' no tiene presupuesto de COMPRAS (VDC-3) en la SPM pagada') +
+              '. La OC sin proyecto sigue el proceso normal (Solicitante → Jefe) y el Director General autoriza el pago.</div>';
+          }
           return true;
         }
         var msgDiv = document.getElementById('mensajeOC');
@@ -27422,9 +27466,33 @@
           if (error) throw error;
           proveedoresCatalogoCache = data || [];
           console.log('✅ Proveedores cargados para autocompletar OC:', proveedoresCatalogoCache.length, proveedoresCatalogoCache);
-          lista.innerHTML = proveedoresCatalogoCache.map(function(p) {
-            return '<option value="' + escapeHTML(p.nombre) + '"></option>';
-          }).join('');
+          // Búsqueda por razón social o por nombre comercial (20/11/2026):
+          // cada proveedor sale con su razón social y, al lado, su nombre
+          // comercial; además, el nombre comercial es una opción propia
+          // (para navegadores que solo buscan en el valor). Al elegirla, el
+          // campo se cambia a la razón social (ver autocompletarProveedorOC).
+          var mayusLP = function(t) { return String(t || '').trim().toUpperCase(); };
+          var razonesLP = {};
+          proveedoresCatalogoCache.forEach(function(p) { if (mayusLP(p.nombre)) razonesLP[mayusLP(p.nombre)] = true; });
+          var vistosLP = {};
+          var opcionesLP = [];
+          proveedoresCatalogoCache.forEach(function(p) {
+            var rs = mayusLP(p.nombre), nc = mayusLP(p.nombre_comercial);
+            if (rs && !vistosLP['R|' + rs]) {
+              vistosLP['R|' + rs] = true;
+              opcionesLP.push('<option value="' + escapeHTML(p.nombre) + '"' + (nc && nc !== rs ? ' label="Nombre comercial: ' + escapeHTML(p.nombre_comercial) + '"' : '') + '></option>');
+            }
+          });
+          proveedoresCatalogoCache.forEach(function(p) {
+            var rs = mayusLP(p.nombre), nc = mayusLP(p.nombre_comercial);
+            if (!nc || nc === rs || razonesLP[nc] || vistosLP['C|' + nc]) return;
+            vistosLP['C|' + nc] = true;
+            var razones = proveedoresCatalogoCache.filter(function(x) { return mayusLP(x.nombre_comercial) === nc; })
+              .map(function(x) { return String(x.nombre || '').trim(); })
+              .filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+            opcionesLP.push('<option value="' + escapeHTML(p.nombre_comercial) + '" label="Razón social: ' + escapeHTML(razones.join(' / ')) + '"></option>');
+          });
+          lista.innerHTML = opcionesLP.join('');
 
           var listaRFC = document.getElementById('listaProveedoresRFCOC');
           if (listaRFC) {
@@ -27482,7 +27550,19 @@
         var match = proveedoresCatalogoCache.find(function(p) {
           return (p.nombre || '').trim().toUpperCase() === valor;
         });
-        if (!match) return;
+        // También por nombre comercial: si corresponde a una sola razón
+        // social, el campo queda con la razón social del proveedor.
+        if (!match) {
+          var porComercial = proveedoresCatalogoCache.filter(function(p) {
+            return (p.nombre_comercial || '').trim().toUpperCase() === valor;
+          });
+          var razonesComercial = porComercial.map(function(p) { return (p.nombre || '').trim().toUpperCase(); })
+            .filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+          if (razonesComercial.length !== 1) return;
+          match = porComercial[0];
+          inputProveedor.value = match.nombre;
+          if (typeof window.actualizarSelectorProductosProveedor === 'function') window.actualizarSelectorProductosProveedor();
+        }
 
         // Los datos bancarios que se muestran dependen de la moneda
         // elegida para la OC: MXN muestra Cuenta/Banco/Clave/Swift/CIE
