@@ -1061,6 +1061,8 @@
     font-size: 14px
   }
   .resumen-totales strong { font-size: 15px }
+  .resumen-totales .resumen-faltante-pago { color: #b8860b; padding-left: 12px; border-left: 2px solid #e6c97a }
+  .resumen-totales .resumen-faltante-pago strong { color: #8a6508 }
   .donut-container { width: 160px; height: 160px; margin: 0 auto; position: relative }
   .donut-container svg { width: 100%; height: 100%; transform: rotate(-90deg) }
   .donut-container .center-text {
@@ -5446,7 +5448,7 @@
               <input id="rastreoCiudad" placeholder="Ciudad o municipio (opcional)">
             </div>
             <div class="cxc-form-row">
-              <input id="rastreoCalle" placeholder="Calle, número y colonia * (ej. PRIVADA COPALILLO #298 COLONIA COPALILLO)">
+              <input id="rastreoCalle" placeholder="Calle, número y colonia (opcional; ej. PRIVADA COPALILLO #298 COLONIA COPALILLO)">
             </div>
             <div class="cxc-form-row">
               <button type="button" id="btnRastreoUbicar" onclick="window.ubicarRastreoEnMapa()">📍 Ubicar en el mapa</button>
@@ -20820,6 +20822,24 @@
         return 'Pagado ' + formatoMoneda(m.pagado, m.moneda) + ' · Pendiente ' + formatoMoneda(m.pendiente, m.moneda) +
           (oc && oc.fecha_siguiente_pago ? ' · Próximo pago ' + fechaCortaTelegram(oc.fecha_siguiente_pago) : '');
       }
+      // CXP (20/11/2026): lo pagado y el saldo pendiente de una OC, en MXN
+      // (montomxn) y en su moneda (montototal), según sus pagos
+      // registrados. Una OC con pago parcial ya no cuenta completa como
+      // pendiente: lo pagado va a Pagado y solo el saldo queda pendiente.
+      function montosCXPOC(o) {
+        var mxn = Number(o && o.montomxn) || 0, tot = Number(o && o.montototal) || 0;
+        if (!o || o.estadopago === 'PAGADA') {
+          return { pagadoMXN: mxn, pendienteMXN: 0, pagadoOC: tot, pendienteOC: 0, totalOC: tot, parcial: false };
+        }
+        var m = montosPagoOC(o);
+        var fraccion = m.total > 0 ? Math.min(1, Math.max(0, m.pendiente / m.total)) : 1;
+        var pendienteMXN = redondearMontoPago(mxn * fraccion), pendienteOC = redondearMontoPago(tot * fraccion);
+        return {
+          pagadoMXN: redondearMontoPago(mxn - pendienteMXN), pendienteMXN: pendienteMXN,
+          pagadoOC: redondearMontoPago(tot - pendienteOC), pendienteOC: pendienteOC,
+          totalOC: tot, parcial: m.pagado > 0 && fraccion < 1
+        };
+      }
       // ===== SALDO A FAVOR CON EL PROVEEDOR (10/11/2026) =====
       // Si CCHF indica "Pago de más", el pago liquida la OC y el excedente
       // queda como saldo a favor con ese proveedor, con una nota
@@ -24149,12 +24169,19 @@
           if (esPagada) {
             totalPagado += monto;
             if (o.moneda === 'USD') totalPagadoUSD += o.montototal;
-          } else if (esVencida) {
-            totalVencido += monto;
-            if (o.moneda === 'USD') totalVencidoUSD += o.montototal;
-          } else if (esPendiente) {
-            totalPendiente += monto;
-            if (o.moneda === 'USD') totalPendienteUSD += o.montototal;
+          } else if (esVencida || esPendiente) {
+            // Pago parcial: lo pagado cuenta como Pagado y solo el saldo
+            // queda como Vencido o Pendiente.
+            var mc = montosCXPOC(o);
+            totalPagado += mc.pagadoMXN;
+            if (o.moneda === 'USD') totalPagadoUSD += mc.pagadoOC;
+            if (esVencida) {
+              totalVencido += mc.pendienteMXN;
+              if (o.moneda === 'USD') totalVencidoUSD += mc.pendienteOC;
+            } else {
+              totalPendiente += mc.pendienteMXN;
+              if (o.moneda === 'USD') totalPendienteUSD += mc.pendienteOC;
+            }
           }
         });
 
@@ -24178,16 +24205,24 @@
         } else {
           proys.forEach(function(p) {
             var ocProyecto = ocFiltradas.filter(function(o) { return normalizar(o.proyecto) === normalizar(p.nombre); });
-            var pagado = ocProyecto.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
-            var pendiente = ocProyecto.filter(function(o) { return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA'); }).reduce(function(sum, o) { return sum + (o.montomxn || 0); }, 0);
-            var vencido = 0;
+            // Mismo criterio que las tarjetas de arriba (20/11/2026): lo
+            // pagado de una OC con pago parcial va a Pagado y solo su saldo
+            // a Vencido (>1 día) o Pendiente; una OC vencida ya no se suma
+            // también en Pendiente.
+            var pagado = 0, pendiente = 0, vencido = 0;
             ocProyecto.forEach(function(o) {
-              if (o.estadopago !== 'PAGADA' && o.estado === 'AUTORIZADA') {
+              if (o.estadopago === 'PAGADA') { pagado += (o.montomxn || 0); return; }
+              var esPendienteP = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
+              var esVencidaP = false;
+              if (o.estado === 'AUTORIZADA') {
                 var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
-                var ahora = new Date();
-                var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
-                if (diffDias > 1) vencido += (o.montomxn || 0);
+                var diffDias = (new Date() - fechaAut) / (1000 * 60 * 60 * 24);
+                esVencidaP = diffDias > 1;
               }
+              if (!esVencidaP && !esPendienteP) return;
+              var mc = montosCXPOC(o);
+              pagado += mc.pagadoMXN;
+              if (esVencidaP) vencido += mc.pendienteMXN; else pendiente += mc.pendienteMXN;
             });
             var totalGastado = pagado + pendiente + vencido;
             var porcentaje = p.limite > 0 ? (totalGastado / p.limite) * 100 : 0;
@@ -29515,7 +29550,21 @@
           var totalMXN = ocPaginacion.datosFiltrados.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'MXN'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
           var totalUSD = ocPaginacion.datosFiltrados.filter(function(o) { return o.estadopago === 'PAGADA' && o.moneda === 'USD'; }).reduce(function(s, o) { return s + o.montototal; }, 0);
           var totalMXNEquiv = ocPaginacion.datosFiltrados.filter(function(o) { return o.estadopago === 'PAGADA'; }).reduce(function(s, o) { return s + (o.montomxn || 0); }, 0);
-          resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>';
+          // Faltante por pagar (20/11/2026): saldo de las OC visibles que
+          // siguen por pagar (mismo criterio que "Pendientes por Pagar":
+          // AUTORIZADA, sin pagar y sin pausa). Si la OC ya tiene un pago
+          // parcial, solo cuenta lo que le falta (montosCXPOC).
+          var faltaMXN = 0, faltaUSD = 0, faltaMXNEquiv = 0, numFalta = 0;
+          ocPaginacion.datosFiltrados.forEach(function(o) {
+            if (o.estado !== 'AUTORIZADA' || o.estadopago === 'PAGADA' || o.pausada) return;
+            var mc = montosCXPOC(o);
+            if (!(mc.pendienteMXN > 0 || mc.pendienteOC > 0)) return;
+            numFalta++;
+            if (o.moneda === 'USD') faltaUSD += mc.pendienteOC; else faltaMXN += mc.pendienteOC;
+            faltaMXNEquiv += mc.pendienteMXN;
+          });
+          resumenTotales.innerHTML = '<strong>Totales pagados (visibles):</strong><span>MXN: ' + formatoMoneda(totalMXN, 'MXN') + '</span>' + (totalUSD > 0 ? '<span>USD: ' + formatoMoneda(totalUSD, 'USD') + ' (equiv. MXN: ' + formatoMoneda(totalMXNEquiv, 'MXN') + ')</span>' : '') + '<span><strong>Total MXN equivalente:</strong> ' + formatoMoneda(totalMXNEquiv, 'MXN') + '</span>' +
+            '<span class="resumen-faltante-pago"><strong>Faltante por pagar (' + numFalta + ' OC):</strong> MXN ' + formatoMoneda(faltaMXN, 'MXN') + (faltaUSD > 0 ? ' · ' + formatoMoneda(faltaUSD, 'USD') : '') + ' · <strong>Equiv. MXN</strong> ' + formatoMoneda(faltaMXNEquiv, 'MXN') + '</span>';
         }
 
         renderTablaOCPaginada();
@@ -35943,12 +35992,19 @@
           if (esPagada) {
             totalPagado += monto;
             if (o.moneda === 'USD') totalPagadoUSD += o.montototal || 0;
-          } else if (esVencida) {
-            totalVencido += monto;
-            if (o.moneda === 'USD') totalVencidoUSD += o.montototal || 0;
-          } else if (esPendiente) {
-            totalPendiente += monto;
-            if (o.moneda === 'USD') totalPendienteUSD += o.montototal || 0;
+          } else if (esVencida || esPendiente) {
+            // Pago parcial: lo pagado cuenta como Pagado y solo el saldo
+            // queda como Vencido o Pendiente.
+            var mc = montosCXPOC(o);
+            totalPagado += mc.pagadoMXN;
+            if (o.moneda === 'USD') totalPagadoUSD += mc.pagadoOC;
+            if (esVencida) {
+              totalVencido += mc.pendienteMXN;
+              if (o.moneda === 'USD') totalVencidoUSD += mc.pendienteOC;
+            } else {
+              totalPendiente += mc.pendienteMXN;
+              if (o.moneda === 'USD') totalPendienteUSD += mc.pendienteOC;
+            }
           }
         });
 
@@ -35994,9 +36050,14 @@
         // la columna que corresponde a su moneda, la otra queda en "—"),
         // y Prioridad. En Proveedor solo se muestran los primeros 15
         // caracteres.
-        var headersOC = ['#', 'Proveedor', 'Concepto', 'Cliente', 'Código', 'Factura', 'F.Pago', 'Monto USD', 'Monto MXN', 'Prioridad'];
+        // Saldo USD / Saldo MXN: lo que falta pagar de la OC. Si ya tiene
+        // un pago parcial, debajo del saldo se indica el total de la OC.
+        var headersOC = ['#', 'Proveedor', 'Concepto', 'Cliente', 'Código', 'Factura', 'F.Pago', 'Saldo USD', 'Saldo MXN', 'Prioridad'];
         var rowsOC = ocParaTabla.map(function(o, idx) {
           var esUSD = o.moneda === 'USD';
+          var mc = montosCXPOC(o);
+          var saldoTexto = function(n) { return esUSD ? formatearNumeroMexico(n, true) : formatoMoneda(n, 'MXN'); };
+          var celdaSaldo = saldoTexto(mc.pendienteOC) + (mc.parcial ? '\nTotal OC: ' + saldoTexto(mc.totalOC) : '');
           return [
             idx + 1,
             String(o.proveedor || '').slice(0, 15),
@@ -36005,8 +36066,8 @@
             o.codigo,
             o.uuidfactura || '—',
             o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—',
-            esUSD ? formatearNumeroMexico(o.montototal, true) : '—',
-            !esUSD ? formatoMoneda(o.montototal, 'MXN') : '—',
+            esUSD ? celdaSaldo : '—',
+            !esUSD ? celdaSaldo : '—',
             prioridadPorFechaPago(o.fechapago)
           ];
         });
@@ -37233,7 +37294,7 @@
         ['rastreoCiudad', 'rastreoCalle', 'rastreoUso'].forEach(function(cid) { marcarCampoRegla(document.getElementById(cid), []); });
         document.getElementById('rastreoModal').classList.add('active');
         // Al editar, la ubicación guardada vale mientras no cambie la dirección.
-        rastreoGeoModal = (r && r.lat != null && r.lng != null && r.calle)
+        rastreoGeoModal = (r && r.lat != null && r.lng != null)
           ? { clave: rastreoClaveGeoModal(), lat: +r.lat, lng: +r.lng, precision: r.ubicacion_precision || 'MANUAL' }
           : null;
         if (rastreoGeoModal) rastreoMostrarMiniMapa(rastreoGeoModal);
@@ -37256,6 +37317,7 @@
         if (g.precision === 'CALLE') return '📍 Se encontró la calle (el mapa no tiene el número exacto). Arrastra el pin o toca el mapa para dejarlo en el lugar correcto.';
         if (g.precision === 'COLONIA') return '⚠️ La calle no aparece en el mapa; el pin quedó en la colonia. Arrástralo o toca el mapa en el lugar correcto.';
         if (g.precision === 'MANUAL') return '📍 Pin colocado a mano.';
+        if (g.sinCalle) return '📍 Sin calle: el pin quedó en el centro de la ' + (g.precision === 'CIUDAD' ? 'ciudad o municipio' : 'entidad') + '. Si quieres dejarlo en el lugar exacto, arrástralo o toca el mapa.';
         return '⚠️ No se encontró la dirección en el mapa; el pin quedó en el centro de la ' + (g.precision === 'CIUDAD' ? 'ciudad' : 'entidad') + '. Arrástralo o toca el mapa en el lugar correcto.';
       }
 
@@ -37303,9 +37365,20 @@
         var estadoId = document.getElementById('rastreoEstado').value;
         var ciudad = document.getElementById('rastreoCiudad').value.trim();
         var calle = document.getElementById('rastreoCalle').value.trim();
-        if (!estadoId || !calle) {
-          msg.innerHTML = '<div class="alert">❌ Para ubicar en el mapa indica el estado de la República y la calle.</div>';
+        if (!estadoId) {
+          msg.innerHTML = '<div class="alert">❌ Para ubicar en el mapa indica el estado de la República.</div>';
           return false;
+        }
+        // Sin calle (es opcional): el pin parte de la ciudad o municipio, o
+        // del centro del estado, y se puede arrastrar al lugar correcto.
+        if (!calle) {
+          var cSin = rastreoCoordsCiudad(estadoId, ciudad);
+          var anclaSin = RASTREO_ANCLA_GEO[estadoId];
+          rastreoGeoModal = cSin ? { clave: rastreoClaveGeoModal(), lat: cSin[0], lng: cSin[1], precision: 'CIUDAD', sinCalle: true }
+            : { clave: rastreoClaveGeoModal(), lat: anclaSin[0], lng: anclaSin[1], precision: 'ESTADO', sinCalle: true };
+          msg.innerHTML = '';
+          await rastreoMostrarMiniMapa(rastreoGeoModal);
+          return true;
         }
         if (rastreoBuscandoGeo) return false;
         rastreoBuscandoGeo = true;
@@ -37356,7 +37429,6 @@
         var hasta = document.getElementById('rastreoHasta').value;
         if (!veh) return error('❌ Selecciona el vehículo.');
         if (!edo) return error('❌ Selecciona el estado de la República.');
-        if (!calle) return error('❌ Indica la calle donde estará el vehículo.');
         if (!uso) return error('❌ Indica el uso del vehículo.');
         if (!desde || !hasta) return error('❌ Indica de cuándo (Desde) a cuándo (Hasta) estará el vehículo en ese estado.');
         if (hasta < desde) return error('❌ La fecha "Hasta" no puede ser anterior a "Desde".');
@@ -37371,7 +37443,12 @@
         // La dirección se ubica en el mapa antes de guardar: si cambió (o
         // aún no se buscó), se busca y se muestra el pin para revisarlo; el
         // usuario lo ajusta si hace falta y vuelve a tocar ➜ para guardar.
-        if (!rastreoGeoModal || rastreoGeoModal.clave !== rastreoClaveGeoModal()) {
+        // Sin calle (opcional) no se pide revisar el mapa: el vehículo se
+        // ve en su ciudad o municipio, o en el centro del estado, salvo que
+        // se haya colocado el pin con "Ubicar en el mapa".
+        if (!calle && (!rastreoGeoModal || rastreoGeoModal.clave !== rastreoClaveGeoModal())) {
+          rastreoGeoModal = null;
+        } else if (!rastreoGeoModal || rastreoGeoModal.clave !== rastreoClaveGeoModal()) {
           var ubicado = await window.ubicarRastreoEnMapa();
           if (ubicado) {
             msg.innerHTML = '<div class="alert">📍 Revisa que el pin esté en el lugar correcto (puedes arrastrarlo) y toca ➜ otra vez para guardar.</div>';
@@ -37389,7 +37466,7 @@
           estado: edo[0],
           estado_nombre: edo[1],
           ciudad: ciudad || null,
-          calle: calle,
+          calle: calle || null,
           lat: geo ? geo.lat : null,
           lng: geo ? geo.lng : null,
           ubicacion_precision: geo ? geo.precision : null,
