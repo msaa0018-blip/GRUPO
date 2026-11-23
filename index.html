@@ -21227,25 +21227,28 @@
 
       // Se ejecuta al entrar con el link de pago de Telegram (?pago=ID):
       // abre solo la ventana del comprobante de esa OC. Si ya está pagada
-      // (o concluida), "Link previamente atendido." y se cierra la sesión.
+      // (o concluida), cancelada, no autorizada, pausada o ya no existe, se
+      // avisa ("Link previamente atendido." si ya está pagada) y el usuario
+      // sigue en el menú principal, sin cerrar la sesión (ver
+      // continuarConEnlaceUsado).
       async function abrirPagoDesdeLink(id) {
         try {
           var r = await supabase.from('ordenes').select('*').eq('id', id);
           if (r.error) throw r.error;
           var ocBD = (r.data || [])[0];
-          if (!ocBD) return cerrarSesionPorEnlace('⚠️ No se encontró la OC del link (' + id + '). Puede que ya no exista.');
+          if (!ocBD) return continuarConEnlaceUsado('⚠️ No se encontró la OC del link (' + id + '). Puede que ya no exista.');
           var idx = ordenes.findIndex(function(o) { return o.id === ocBD.id; });
           if (idx === -1) { ordenes.push(ocBD); idx = ordenes.length - 1; } else { Object.assign(ordenes[idx], ocBD); }
           var oc = ordenes[idx];
           var codigo = oc.codigo || ('OC-' + oc.id);
           if (oc.estadopago === 'PAGADA' || oc.estado === 'CONCLUIDA') {
             var fechaPagada = fechaUltimoPagoOC(oc);
-            return cerrarSesionPorEnlace('✅ Link previamente atendido.\n\nLa OC ' + codigo + ' ya está pagada' +
+            return continuarConEnlaceUsado('✅ Link previamente atendido.\n\nLa OC ' + codigo + ' ya está pagada' +
               (fechaPagada && oc.estadopago === 'PAGADA' ? ' (' + fechaCortaTelegram(fechaPagada) + ')' : '') + '.');
           }
-          if (oc.estado === 'CANCELADA') return cerrarSesionPorEnlace('❌ La OC ' + codigo + ' fue cancelada. Ya no requiere pago.');
-          if (oc.estado !== 'AUTORIZADA') return cerrarSesionPorEnlace('⚠️ La OC ' + codigo + ' no está autorizada para pago.');
-          if (oc.pausada) return cerrarSesionPorEnlace('⏸️ La OC ' + codigo + ' está pausada. Por ahora no se puede registrar su pago.');
+          if (oc.estado === 'CANCELADA') return continuarConEnlaceUsado('❌ La OC ' + codigo + ' fue cancelada. Ya no requiere pago.');
+          if (oc.estado !== 'AUTORIZADA') return continuarConEnlaceUsado('⚠️ La OC ' + codigo + ' no está autorizada para pago.');
+          if (oc.pausada) return continuarConEnlaceUsado('⏸️ La OC ' + codigo + ' está pausada. Por ahora no se puede registrar su pago.');
           // La ventana se muestra encima del menú principal.
           var modal = document.getElementById('comprobantePagoModal');
           if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
@@ -23219,6 +23222,20 @@
         try { location.reload(); } catch (e2) { console.warn('No se pudo recargar automáticamente:', e2); }
       }
 
+      // Link de Telegram ya atendido (OC, SPM, pago o complemento de pago
+      // que ya no está pendiente, o que ya no existe): se limpia la URL, se
+      // avisa y el usuario sigue en el sistema normal (menú principal), SIN
+      // cerrar la sesión. Así no se queda fuera quien escribe
+      // gestion.extingue.com.mx y el navegador le completa la dirección con
+      // un link anterior (?oc=ID, ?spm=ID, ?pago=ID o ?complemento=ID).
+      function continuarConEnlaceUsado(mensaje) {
+        try { window.history.replaceState({}, '', window.location.origin + window.location.pathname); } catch (e) {}
+        sesionPorEnlace = null;
+        pendingOcId = null;
+        pendingSpmId = null;
+        if (mensaje) setTimeout(function() { alert(mensaje + '\n\nSe abre el menú principal del sistema.'); }, 400);
+      }
+
       function cerrarSesionPorLinkComplemento(mensaje) {
         try { window.history.replaceState({}, '', window.location.origin + window.location.pathname); } catch (e) {}
         if (mensaje) alert(mensaje);
@@ -23230,17 +23247,19 @@
       async function abrirComplementoDesdeLink(enlace) {
         try {
           var index = ordenes.findIndex(function(o) { return o.id === enlace.ocId; });
-          if (index === -1) return cerrarSesionPorLinkComplemento('⚠️ No se encontró la OC del link. Puede que ya no exista.');
+          // Link ya atendido o sin nada que subir: aviso y sigue en el menú
+          // principal, sin cerrar la sesión (ver continuarConEnlaceUsado).
+          if (index === -1) return continuarConEnlaceUsado('⚠️ No se encontró la OC del link. Puede que ya no exista.');
           var oc = ordenes[index];
-          if (oc.estado === 'CONCLUIDA') return cerrarSesionPorLinkComplemento('✅ Esta OC ya fue concluida. El link ya ha sido atendido.');
+          if (oc.estado === 'CONCLUIDA') return continuarConEnlaceUsado('✅ Esta OC ya fue concluida. El link ya ha sido atendido.');
           if (enlace.facturaId) {
             var facturas = await facturasDeOC(oc.id);
             var factura = facturas.find(function(f) { return f.id === enlace.facturaId; });
-            if (!factura) return cerrarSesionPorLinkComplemento('⚠️ No se encontró la factura del link en la OC ' + (oc.codigo || oc.id) + '.');
-            if (!facturaRequiereComplemento(factura)) return cerrarSesionPorLinkComplemento('ℹ️ Esta factura es PUE: no requiere complemento de pago.');
+            if (!factura) return continuarConEnlaceUsado('⚠️ No se encontró la factura del link en la OC ' + (oc.codigo || oc.id) + '.');
+            if (!facturaRequiereComplemento(factura)) return continuarConEnlaceUsado('ℹ️ Esta factura es PUE: no requiere complemento de pago.');
             if (factura.complemento_pago_url) {
               var fechaSubida = factura.complemento_fecha_subida ? new Date(factura.complemento_fecha_subida).toLocaleDateString('es-MX') : '';
-              return cerrarSesionPorLinkComplemento('✅ Complemento de pago subido previamente' + (fechaSubida ? ' (' + fechaSubida + ')' : '') + '. El link ya ha sido atendido.');
+              return continuarConEnlaceUsado('✅ Complemento de pago subido previamente' + (fechaSubida ? ' (' + fechaSubida + ')' : '') + '. El link ya ha sido atendido.');
             }
           }
           complementoViaLink = true;
@@ -25967,15 +25986,17 @@
           var r = await supabase.from('documentos_cxp').select('*').eq('id', id).eq('tipo', 'SPM');
           if (r.error) throw r.error;
           var d = (r.data || [])[0];
+          // Link ya atendido: aviso y sigue en el menú principal (no se
+          // cierra la sesión; ver continuarConEnlaceUsado).
           if (!d) {
-            cerrarSesionPorEnlace('⚠️ No se encontró la SPM (' + id + '). Puede que ya no exista.');
+            continuarConEnlaceUsado('⚠️ No se encontró la SPM (' + id + '). Puede que ya no exista.');
             return;
           }
           if (d.estado !== 'PENDIENTE') {
             if (d.estado === 'CANCELADA') {
-              cerrarSesionPorEnlace('❌ Esta SPM se canceló el día ' + fechaCortaSPM(d.fecha_cancelacion) + '. El link ya se utilizó.');
+              continuarConEnlaceUsado('❌ Esta SPM se canceló el día ' + fechaCortaSPM(d.fecha_cancelacion) + '. El link ya se utilizó.');
             } else {
-              cerrarSesionPorEnlace('✅ SPM autorizada previamente (' + fechaCortaSPM(d.fecha_autorizacion_director) + '). El link ya se utilizó.');
+              continuarConEnlaceUsado('✅ SPM autorizada previamente (' + fechaCortaSPM(d.fecha_autorizacion_director) + '). El link ya se utilizó.');
             }
             return;
           }
@@ -31033,14 +31054,12 @@
           }
 
           if (ocId) {
-            console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
-
-            // Si el Director vuelve a entrar por el mismo enlace y esa OC
+            // Si el Director vuelve a entrar con el mismo enlace y esa OC
             // ya fue autorizada (o siguió su curso: pagada/facturada/
-            // cancelada) en una visita anterior, el link ya se usó: se
-            // avisa, se cierra la sesión y se regresa al login limpio,
-            // limpiando la URL para que no vuelva a apuntar a esta OC
-            // (misma lógica que el enlace QR de los vales de gasolina).
+            // cancelada), el link ya se usó: se avisa y entra al sistema
+            // normal (menú principal), sin cerrar la sesión. Pasa también
+            // cuando el navegador completa la dirección con un link
+            // anterior aunque solo se escriba gestion.extingue.com.mx.
             var ocEnlace = ordenes.find(function(o) { return o.id === ocId; });
             if (ocEnlace && ocEnlace.estado !== 'PENDIENTE_DIRECTOR') {
               var formatearFechaCortaOC = function(fechaISO) {
@@ -31055,25 +31074,13 @@
               } else {
                 mensajeLinkUsadoOC = '✅ OC autorizada previamente (' + formatearFechaCortaOC(ocEnlace.fechaaprobaciondirector) + '). Esta OC se autorizó el día ' + formatearFechaCortaOC(ocEnlace.fechaaprobaciondirector) + ', el link ha sido autorizado.';
               }
-              alert(mensajeLinkUsadoOC);
-              pendingOcId = null;
-              var urlLimpiaOC = window.location.origin + window.location.pathname;
-              window.history.replaceState({}, '', urlLimpiaOC);
-              actual = null;
-              var appContenidoOC = document.getElementById('contenidoApp');
-              if (appContenidoOC) { appContenidoOC.classList.remove('visible'); appContenidoOC.classList.add('hidden'); }
-              var headerOC = document.getElementById('mainHeader');
-              if (headerOC) headerOC.classList.add('hidden');
-              var loginFormOC = document.getElementById('login');
-              if (loginFormOC) loginFormOC.classList.remove('hidden');
-              var loginContOC = document.getElementById('loginContainer');
-              if (loginContOC) loginContOC.style.display = '';
-              var menuMaestroOC = document.getElementById('menuMaestroPrincipal');
-              if (menuMaestroOC) { menuMaestroOC.classList.add('hidden'); menuMaestroOC.classList.remove('visible'); }
-              try { location.reload(); } catch (eReloadOC) { console.warn('No se pudo recargar automáticamente:', eReloadOC); }
-              return;
+              continuarConEnlaceUsado(mensajeLinkUsadoOC);
+              ocId = null;
             }
+          }
 
+          if (ocId) {
+            console.log('🔗 Enlace de Telegram detectado, OC ID:', ocId);
             pendingOcId = ocId;
             ocNotificadaId = ocId;
 
