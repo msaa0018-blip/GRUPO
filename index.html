@@ -3837,7 +3837,7 @@
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Modelo<input id="psModelo" placeholder="Opcional" style="width:100%;margin-top:4px;"></label>
             </div>
             <div class="cxc-form-row">
-              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Núm. de parte<input id="psNumeroParte" placeholder="Opcional" style="width:100%;margin-top:4px;"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Núm. de parte<input id="psNumeroParte" placeholder="Si no tiene, queda NA" style="width:100%;margin-top:4px;"></label>
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">UDM *<select id="psUdm" style="width:100%;margin-top:4px;"></select></label>
             </div>
             <div class="cxc-form-row">
@@ -4059,7 +4059,7 @@
           <div class="modal-body">
             <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Código<input id="nvoProdCodigo" placeholder="Automático" style="width:100%;margin-top:4px;" readonly disabled title="El código se genera automáticamente y es consecutivo."></label>
-              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Número de parte<input id="nvoProdNumeroParte" placeholder="Opcional" style="width:100%;margin-top:4px;"></label>
+              <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Número de parte<input id="nvoProdNumeroParte" placeholder="Si no tiene, queda NA" style="width:100%;margin-top:4px;"></label>
             </div>
             <div class="cxc-form-row">
               <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:3;">Descripción *<input id="nvoProdDescripcion" placeholder="Descripción del producto" style="width:100%;margin-top:4px;"></label>
@@ -9418,85 +9418,170 @@
       var canalesRealtimeActivos = [];
       var refrescoRealtimeOCPendiente = null;
       var refrescoRealtimeValesPendiente = null;
+      var refrescoTiempoRealEnCurso = false;
+
+      // Tiempo real (20/11/2026): todas las tablas que el sistema muestra se
+      // escuchan, cada una en su propio canal. Antes varias tablas iban en
+      // un mismo canal y, si a una le faltaba estar en la publicación
+      // supabase_realtime, el canal completo fallaba y tampoco llegaban los
+      // cambios de las OC. Además:
+      //  - si un canal se cae (sin internet, el celular se suspende, error
+      //    del servidor), se vuelve a conectar solo y al reconectarse se
+      //    recargan los datos para no perder lo que cambió mientras tanto;
+      //  - al volver a la pestaña o al recuperar internet se recargan los
+      //    datos;
+      //  - mientras algún canal importante no esté conectado, los datos se
+      //    recargan cada 30 segundos (respaldo), así los cambios se ven
+      //    aunque falte habilitar el tiempo real de alguna tabla.
+      // SQL: tiempo_real_todas_las_tablas.sql (agrega las tablas a la
+      // publicación supabase_realtime).
+      var TABLAS_TIEMPO_REAL = {
+        ordenes: function() { programarRefrescoRealtimeOC(); },
+        proyectos: function() { programarRefrescoRealtimeOC(); },
+        cuentas_cxc: function() { programarRefrescoRealtimeOC(); },
+        ordenes_facturacion: function() { programarRefrescoRealtimeOC(); },
+        facturas_oc: function() { programarRefrescoRealtimeOC(); },
+        vales_gasolina: function() { programarRefrescoRealtimeVales(); },
+        vsc_catalogos: function() { programarRefrescoRealtimeVales(); },
+        documentos_cxp: function() { programarRefrescoRealtimeDocumentos(); },
+        buzon_mensajes: function(payload) { programarRefrescoRealtimeBuzon(payload && payload.eventType === 'INSERT' ? payload.new : null); },
+        buzon_conversaciones: function() { programarRefrescoRealtimeBuzon(null); },
+        comunicados_internos: function() { programarRefrescoRealtimeBuzon(null); },
+        proveedores: function() { programarRefrescoRealtimeCatalogo('proveedores'); },
+        productos_servicios: function() { programarRefrescoRealtimeCatalogo('productos_servicios'); },
+        productos: function() { programarRefrescoRealtimeCatalogo('productos'); },
+        movimientos_inventario: function() { programarRefrescoRealtimeCatalogo('productos'); },
+        clientes: function() { programarRefrescoRealtimeCatalogo('clientes'); },
+        almacenes: function() { programarRefrescoRealtimeCatalogo('almacenes'); },
+        vehiculos: function() { programarRefrescoRealtimeCatalogo('vehiculos'); },
+        empresas_fiscales: function() { programarRefrescoRealtimeCatalogo('empresas_fiscales'); },
+        rastreo_vehiculos: function() { programarRefrescoRastreo(); },
+        proyecto_colaboradores: function() { programarRefrescoRealtimeREPSE(); }
+      };
+      // Si alguna de estas no está conectada, entra el respaldo de 30 s.
+      var TABLAS_TIEMPO_REAL_RESPALDO = ['ordenes', 'proyectos', 'cuentas_cxc', 'ordenes_facturacion', 'vales_gasolina', 'documentos_cxp'];
+      var canalesRT = {};          // tabla -> canal
+      var estadoCanalesRT = {};    // tabla -> último estado (SUBSCRIBED, CHANNEL_ERROR, ...)
+      var intentosCanalesRT = {};  // tabla -> reintentos seguidos
+      var reintentoCanalesRT = {}; // tabla -> timeout del reintento
+      var huboFallaCanalRT = {};   // tabla -> se cayó antes de volver a conectar
+      var respaldoTiempoRealIniciado = false;
+      var ultimaVezOcultoRT = 0;
+
+      function conectarCanalTiempoReal(tabla) {
+        if (!supabase || typeof supabase.channel !== 'function') return;
+        var anterior = canalesRT[tabla];
+        if (anterior) {
+          anterior._cerradoAdrede = true;
+          try { supabase.removeChannel(anterior); } catch (e) {}
+        }
+        var canal = supabase.channel('rt-' + tabla)
+          .on('postgres_changes', { event: '*', schema: 'public', table: tabla }, function(payload) {
+            try { TABLAS_TIEMPO_REAL[tabla](payload); } catch (e) { console.error('Tiempo real (' + tabla + '):', e); }
+          });
+        canalesRT[tabla] = canal;
+        canal.subscribe(function(status, err) {
+          if (canal._cerradoAdrede) return;
+          var previo = estadoCanalesRT[tabla];
+          estadoCanalesRT[tabla] = status;
+          if (status === 'SUBSCRIBED') {
+            intentosCanalesRT[tabla] = 0;
+            if (previo !== 'SUBSCRIBED') console.log('📡 Tiempo real conectado: ' + tabla);
+            // Al reconectarse después de una caída, se recarga lo de esa
+            // tabla para no perder cambios hechos mientras no hubo conexión.
+            if (huboFallaCanalRT[tabla]) {
+              huboFallaCanalRT[tabla] = false;
+              try { TABLAS_TIEMPO_REAL[tabla](null); } catch (e) {}
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            huboFallaCanalRT[tabla] = true;
+            var n = (intentosCanalesRT[tabla] || 0) + 1;
+            intentosCanalesRT[tabla] = n;
+            if (n === 1) {
+              console.warn('⚠️ Tiempo real sin conexión para "' + tabla + '" (' + status + ')' + (err ? ': ' + (err.message || err) : '') +
+                '. Se reintenta solo; si sigue, corre en Supabase el SQL "tiempo_real_todas_las_tablas.sql". Mientras tanto los datos se recargan cada 30 s.');
+            }
+            programarReconexionCanalRT(tabla, [5, 15, 30, 60][Math.min(n - 1, 3)] * 1000 + (n > 4 ? 60000 : 0));
+          }
+        });
+      }
+
+      function programarReconexionCanalRT(tabla, ms) {
+        if (reintentoCanalesRT[tabla]) clearTimeout(reintentoCanalesRT[tabla]);
+        reintentoCanalesRT[tabla] = setTimeout(function() {
+          reintentoCanalesRT[tabla] = null;
+          if (!actual) return;
+          conectarCanalTiempoReal(tabla);
+        }, ms);
+      }
+
+      // Recarga de respaldo: OC/proyectos/CXC/OF, vales, documentos (SPM,
+      // VC, VI) y lo que esté abierto (Buzón, Rastreo, REPSE).
+      function refrescarTodoTiempoReal(motivo) {
+        if (!actual) return;
+        console.log('🔄 Recarga de datos (' + motivo + ')');
+        programarRefrescoRealtimeOC();
+        programarRefrescoRealtimeVales();
+        programarRefrescoRealtimeDocumentos();
+        programarRefrescoRealtimeBuzon(null);
+        if (panelVisible('panelRastreo')) programarRefrescoRastreo();
+        if (panelVisible('panelREPSE')) programarRefrescoRealtimeREPSE();
+      }
+
+      function iniciarRespaldoTiempoReal() {
+        if (respaldoTiempoRealIniciado) return;
+        respaldoTiempoRealIniciado = true;
+        setInterval(function() {
+          if (!actual || document.visibilityState === 'hidden') return;
+          var faltan = TABLAS_TIEMPO_REAL_RESPALDO.filter(function(t) { return estadoCanalesRT[t] !== 'SUBSCRIBED'; });
+          if (faltan.length) refrescarTodoTiempoReal('respaldo cada 30 s; sin tiempo real: ' + faltan.join(', '));
+        }, 30000);
+        document.addEventListener('visibilitychange', function() {
+          if (document.visibilityState === 'hidden') { ultimaVezOcultoRT = Date.now(); return; }
+          if (ultimaVezOcultoRT && Date.now() - ultimaVezOcultoRT > 10000) refrescarTodoTiempoReal('regreso a la pestaña');
+          ultimaVezOcultoRT = 0;
+        });
+        window.addEventListener('online', function() {
+          Object.keys(TABLAS_TIEMPO_REAL).forEach(function(t) {
+            if (estadoCanalesRT[t] !== 'SUBSCRIBED') programarReconexionCanalRT(t, 1000);
+          });
+          refrescarTodoTiempoReal('se recuperó internet');
+        });
+      }
 
       window.iniciarSincronizacionTiempoReal = function() {
         if (canalesRealtimeActivos.length > 0) return; // ya iniciado
-
-        // OC / Proyectos / CXC / OF: cualquier cambio en estas tablas
-        // recarga los datos y vuelve a pintar la vista actual (Bandeja de
-        // OC, Control por Proyecto, CXP, CXC, OF), con un pequeño
-        // "debounce" para no recargar de más si llegan varios cambios
-        // seguidos (por ejemplo, al confirmar una OC con productos).
-        var canalOC = supabase.channel('sync-oc-proyectos')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, function(payload) { console.log('🔄 Realtime OC:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'proyectos' }, function(payload) { console.log('🔄 Realtime Proyectos:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'cuentas_cxc' }, function(payload) { console.log('🔄 Realtime CXC:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes_facturacion' }, function(payload) { console.log('🔄 Realtime OF:', payload.eventType, payload.table); programarRefrescoRealtimeOC(); })
-          .subscribe(function(status, err) {
-            console.log('📡 Canal Realtime "sync-oc-proyectos":', status, err || '');
-            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.error('❌ No se pudo conectar el canal de OC/Proyectos en tiempo real. Revisa que "ordenes", "proyectos", "cuentas_cxc" y "ordenes_facturacion" estén agregadas a la publicación supabase_realtime en Supabase.');
-            }
-          });
-        canalesRealtimeActivos.push(canalOC);
-
-        // Vales de gasolina (VSC): igual, pero refresca solo esa lista.
-        var canalVSC = supabase.channel('sync-vales-gasolina')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'vales_gasolina' }, function(payload) { console.log('🔄 Realtime Vales:', payload.eventType, payload.table); programarRefrescoRealtimeVales(); })
-          .subscribe(function(status, err) {
-            console.log('📡 Canal Realtime "sync-vales-gasolina":', status, err || '');
-            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.error('❌ No se pudo conectar el canal de Vales de gasolina en tiempo real. Revisa que "vales_gasolina" esté agregada a la publicación supabase_realtime en Supabase.');
-            }
-          });
-        canalesRealtimeActivos.push(canalVSC);
-
-        // Buzón: un mensaje nuevo (de cualquier participante) aparece al
-        // instante en la conversación abierta y la lista se reordena.
-        var canalBuzon = supabase.channel('sync-buzon')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buzon_mensajes' }, function(payload) { programarRefrescoRealtimeBuzon(payload && payload.new); })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'buzon_conversaciones' }, function() { programarRefrescoRealtimeBuzon(null); })
-          .subscribe(function(status, err) {
-            console.log('📡 Canal Realtime "sync-buzon":', status, err || '');
-            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.error('❌ No se pudo conectar el Buzón en tiempo real. Revisa que "buzon_mensajes" y "buzon_conversaciones" estén agregadas a la publicación supabase_realtime en Supabase. Mientras tanto se actualiza cada 5 segundos.');
-            }
-          });
-        canalesRealtimeActivos.push(canalBuzon);
-
-        // Catálogos (proveedores, productos y servicios, inventario,
-        // clientes, almacenes, vehículos, empresas): cuando el Administrador
-        // agrega o modifica algo, se refrescan las listas desplegables y
-        // las tablas abiertas en todos los equipos, sin recargar la página.
-        // Lo que el usuario ya capturó (por ejemplo, las partidas de una OC
-        // a medio hacer) NO se toca: solo se actualizan las opciones.
-        var canalCatalogos = supabase.channel('sync-catalogos');
-        ['proveedores', 'productos_servicios', 'productos', 'clientes', 'almacenes', 'vehiculos', 'empresas_fiscales'].forEach(function(tabla) {
-          canalCatalogos = canalCatalogos.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, function(payload) {
-            console.log('🔄 Realtime catálogo:', payload.eventType, tabla);
-            programarRefrescoRealtimeCatalogo(tabla);
-          });
+        Object.keys(TABLAS_TIEMPO_REAL).forEach(function(tabla) {
+          conectarCanalTiempoReal(tabla);
+          canalesRealtimeActivos.push(tabla);
         });
-        canalCatalogos.subscribe(function(status, err) {
-          console.log('📡 Canal Realtime "sync-catalogos":', status, err || '');
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error('❌ No se pudo conectar el canal de catálogos en tiempo real. Corre en Supabase el SQL "catalogos_tiempo_real.sql".');
-          }
-        });
-        canalesRealtimeActivos.push(canalCatalogos);
-
-        // Rastreo de vehículos: canal propio, para que si la tabla aún no
-        // existe no afecte la sincronización de los demás catálogos.
-        var canalRastreo = supabase.channel('sync-rastreo')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'rastreo_vehiculos' }, function(payload) {
-            console.log('🔄 Realtime rastreo:', payload.eventType);
-            programarRefrescoRastreo();
-          })
-          .subscribe(function(status, err) {
-            console.log('📡 Canal Realtime "sync-rastreo":', status, err || '');
-          });
-        canalesRealtimeActivos.push(canalRastreo);
+        iniciarRespaldoTiempoReal();
       };
+
+      // Documentos de EGRESOS (SPM, VC, VI): se recarga la lista abierta.
+      var refrescoRealtimeDocumentosPendiente = null;
+      function programarRefrescoRealtimeDocumentos() {
+        if (refrescoRealtimeDocumentosPendiente) clearTimeout(refrescoRealtimeDocumentosPendiente);
+        refrescoRealtimeDocumentosPendiente = setTimeout(async function() {
+          refrescoRealtimeDocumentosPendiente = null;
+          try {
+            var cuerpoDocs = document.getElementById('cuerpoDocumentosCXP');
+            if (cuerpoDocs && cuerpoDocs.offsetParent !== null && typeof window.cargarDocumentosCXP === 'function') await window.cargarDocumentosCXP();
+          } catch (e) {
+            console.error('Error al sincronizar documentos (SPM/VC/VI) en tiempo real:', e);
+          }
+        }, 400);
+      }
+
+      // REPSE (colaboradores por proyecto): solo si está abierto.
+      var refrescoRealtimeREPSEPendiente = null;
+      function programarRefrescoRealtimeREPSE() {
+        if (refrescoRealtimeREPSEPendiente) clearTimeout(refrescoRealtimeREPSEPendiente);
+        refrescoRealtimeREPSEPendiente = setTimeout(function() {
+          refrescoRealtimeREPSEPendiente = null;
+          try { if (panelVisible('panelREPSE') && typeof window.cargarREPSE === 'function') window.cargarREPSE(); } catch (e) { console.error('Error al sincronizar REPSE en tiempo real:', e); }
+        }, 500);
+      }
 
       var refrescoCatalogoPendiente = {};
       function panelVisible(id) { var el = document.getElementById(id); return !!(el && !el.classList.contains('hidden')); }
@@ -9547,7 +9632,8 @@
           refrescoRealtimeOCPendiente = null;
           try {
             await cargarDatos();
-            if (typeof render === 'function') render();
+            refrescoTiempoRealEnCurso = true;
+            try { if (typeof render === 'function') render(); } finally { refrescoTiempoRealEnCurso = false; }
             refrescarModalVisualizacionActivo();
           } catch (e) {
             console.error('Error al sincronizar cambios en tiempo real (OC/Proyectos):', e);
@@ -11214,7 +11300,7 @@
             : data.map(function(p) {
                 return '<tr>' +
                   '<td>' + escapeHTML(p.codigo) + '</td>' +
-                  '<td>' + escapeHTML(p.numero_parte) + '</td>' +
+                  '<td>' + escapeHTML(textoNumeroParte(p.numero_parte)) + '</td>' +
                   '<td>' + escapeHTML(p.marca) + '</td>' +
                   '<td>' + escapeHTML(p.modelo) + '</td>' +
                   '<td>' + escapeHTML(p.descripcion) + '</td>' +
@@ -16902,7 +16988,7 @@
             var txtMMInv = [p.marca ? 'MARCA: ' + p.marca : '', p.modelo ? 'MODELO: ' + p.modelo : ''].filter(Boolean).join(' · ');
             var txtUbicInv = [almacen ? almacen.nombre : (p.almacen_id ? 'Almacén eliminado' : ''), p.nave ? 'Nave ' + p.nave : '', p.ubicacion || ''].filter(Boolean);
             fila.innerHTML =
-              '<td><strong>' + escapeHTML(p.codigo) + '</strong>' + (p.numero_parte ? '<br><small>' + escapeHTML(p.numero_parte) + '</small>' : '') + '</td>' +
+              '<td><strong>' + escapeHTML(p.codigo) + '</strong>' + '<br><small>' + escapeHTML(textoNumeroParte(p.numero_parte)) + '</small>' + '</td>' +
               '<td class="inv-desc">' + escapeHTML(p.descripcion) + (txtMMInv ? '<br><small class="text-muted">' + escapeHTML(txtMMInv) + '</small>' : '') + '</td>' +
               '<td>' + escapeHTML(p.udm) + '</td>' +
               '<td style="white-space:nowrap;">' + formatoMoneda(p.precio_referencia || 0, p.moneda || 'MXN') + '<br><small>' + (p.moneda === 'USD' ? 'USD' : 'MXN') + '</small></td>' +
@@ -17275,7 +17361,7 @@
         var cantidad = parseFloat(document.getElementById('edProdCantidad').value);
 
         var datos = {
-          numero_parte: document.getElementById('edProdNumeroParte').value.trim().toUpperCase(),
+          numero_parte: numeroParteReal(document.getElementById('edProdNumeroParte').value),
           marca: document.getElementById('edProdMarca').value.trim().toUpperCase(),
           modelo: document.getElementById('edProdModelo').value.trim().toUpperCase(),
           descripcion: descripcion.toUpperCase(),
@@ -17371,7 +17457,7 @@
         var precio = parseFloat(document.getElementById('nvoProdPrecio').value);
         var cantidadInput = parseFloat(document.getElementById('nvoProdCantidad').value);
         var cantidad = isNaN(cantidadInput) ? 0 : cantidadInput;
-        var numeroParte = document.getElementById('nvoProdNumeroParte').value.trim();
+        var numeroParte = numeroParteReal(document.getElementById('nvoProdNumeroParte').value);
 
         // Si el producto ya existe en el catálogo, no se crea otro
         // registro: se ofrece sumar/restar la cantidad al ya existente.
@@ -19754,9 +19840,9 @@
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
         // Aviso por Telegram a los Jefes del departamento de la OC.
-        await notificarJefesOCPorAprobar(oc);
+        var avisoJefes = await notificarJefesOCPorAprobar(oc);
         render();
-        alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.');
+        alert('✅ OC aprobada por Solicitante. Ahora debe ser aprobada por el Jefe de Departamento.' + lineaResultadoAvisosTelegram(avisoJefes, 'al Jefe'));
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -19818,9 +19904,9 @@
           if (error) return alert('Error al actualizar OC');
           Object.assign(oc, updates);
           // Aviso a CCHF con el link para subir el comprobante de pago.
-          await notificarPagoPendienteCCHF(oc, 'En automático, dentro del ' + obtenerPorcentajeLimite(proyecto) + '% (aprobó el Jefe ' + actual.u + ')');
+          var avisoCCHFJefe = await notificarPagoPendienteCCHF(oc, 'En automático, dentro del ' + obtenerPorcentajeLimite(proyecto) + '% (aprobó el Jefe ' + actual.u + ')');
           render();
-          alert('✅ OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
+          alert('✅ OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).' + lineaResultadoAvisosTelegram(avisoCCHFJefe, 'a pagos'));
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
           return;
         }
@@ -19828,7 +19914,8 @@
         var updates = {
           estado: 'PENDIENTE_DIRECTOR',
           fechaaprobacionjefe: new Date().toISOString(),
-          nombrejefe: actual.u
+          nombrejefe: actual.u,
+          notificacion_enviada: true   // aviso al Director en curso (ver enviarAvisoDirectorOC)
         };
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
@@ -19865,11 +19952,8 @@
             'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
 
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
-          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram, { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
+          var telegramMessageId = await enviarAvisoDirectorOC(oc, mensajeTelegram);
           if (telegramMessageId) {
-            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: telegramMessageId }).eq('id', oc.id);
-            oc.notificacion_enviada = true;
-            oc.telegram_message_id = telegramMessageId;
             ocNotificadaId = oc.id;
             console.log('✅ Notificación enviada al Director');
           }
@@ -19878,7 +19962,7 @@
         }
 
         render();
-        alert(sinProyectoJefe ? '⏳ OC sin proyecto. Enviada al Director General para autorización de pago.' : '⏳ OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.');
+        alert((sinProyectoJefe ? '⏳ OC sin proyecto. Enviada al Director General para autorización de pago.' : '⏳ OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.') + lineaAvisoDirectorTelegram(telegramMessageId));
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -19941,7 +20025,7 @@
         reaccionarMensajeTelegramOC(oc, '👍');
         // Aviso a CCHF con el link para subir el comprobante de pago (se
         // espera a que salga: por el link del Director la página se recarga).
-        await notificarPagoPendienteCCHF(oc, actual.rol === 'Director General' ? 'Director General (' + (actual.u || actual.usuario) + ')' : (actual.u || actual.usuario));
+        var avisoCCHFDirector = await notificarPagoPendienteCCHF(oc, actual.rol === 'Director General' ? 'Director General (' + (actual.u || actual.usuario) + ')' : (actual.u || actual.usuario));
 
         render();
 
@@ -19959,7 +20043,7 @@
           return;
         }
 
-        alert('✅ OC autorizada' + (actual.rol === 'Director General' ? ' por Director.' : ' por ' + actual.u + '.') + avisoAumentoCompras);
+        alert('✅ OC autorizada' + (actual.rol === 'Director General' ? ' por Director.' : ' por ' + actual.u + '.') + avisoAumentoCompras + lineaResultadoAvisosTelegram(avisoCCHFDirector, 'a pagos'));
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -20183,9 +20267,9 @@
           if (error) return alert('Error al actualizar OC');
           Object.assign(oc, updates);
           // Aviso a CCHF con el link para subir el comprobante de pago.
-          await notificarPagoPendienteCCHF(oc, 'En automático tras la paridad, dentro del ' + obtenerPorcentajeLimite(proyecto) + '%');
+          var avisoCCHFParidad = await notificarPagoPendienteCCHF(oc, 'En automático tras la paridad, dentro del ' + obtenerPorcentajeLimite(proyecto) + '%');
           render();
-          alert('✅ ' + mensajeOrigen + '. OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).');
+          alert('✅ ' + mensajeOrigen + '. OC autorizada automáticamente (dentro del ' + obtenerPorcentajeLimite(proyecto) + '%).' + lineaResultadoAvisosTelegram(avisoCCHFParidad, 'a pagos'));
           window.mostrarMenuMaestro('egresos', 'EGRESOS');
           return;
         }
@@ -20193,6 +20277,7 @@
         // Excede el límite del proyecto: pasa a Director para autorización,
         // igual que ocurriría con una OC en MXN.
         updates.estado = 'PENDIENTE_DIRECTOR';
+        updates.notificacion_enviada = true;   // aviso al Director en curso (ver enviarAvisoDirectorOC)
         var { error } = await supabase.from('ordenes').update(updates).eq('id', oc.id);
         if (error) return alert('Error al actualizar OC');
         Object.assign(oc, updates);
@@ -20226,18 +20311,13 @@
             'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.' :
             'El acumulado de OC de este proyecto excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.');
           var mensajeTelegram = formatearMensajeOC(datosOC, proyecto, oc.id, motivoExceso);
-          var telegramMessageId = await enviarNotificacionTelegram(mensajeTelegram, { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
-          if (telegramMessageId) {
-            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: telegramMessageId }).eq('id', oc.id);
-            oc.notificacion_enviada = true;
-            oc.telegram_message_id = telegramMessageId;
-            ocNotificadaId = oc.id;
-          }
+          var telegramMessageId = await enviarAvisoDirectorOC(oc, mensajeTelegram);
+          if (telegramMessageId) ocNotificadaId = oc.id;
         } catch (errNotif) {
           console.error('❌ Error al enviar notificación:', errNotif);
         }
 
-        alert('✅ ' + mensajeOrigen + (sinProyectoParidad ? '. OC sin proyecto: enviada al Director General para autorización de pago.' : '. OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.'));
+        alert(('✅ ' + mensajeOrigen + (sinProyectoParidad ? '. OC sin proyecto: enviada al Director General para autorización de pago.' : '. OC supera el ' + obtenerPorcentajeLimite(proyecto) + '%. Enviada a Director para autorización.')) + lineaAvisoDirectorTelegram(telegramMessageId));
         window.mostrarMenuMaestro('egresos', 'EGRESOS');
       };
 
@@ -20264,6 +20344,16 @@
       // actualiza con el código final (ver aplicarMovimientoInventarioOC).
       var CAMPOS_PRODUCTO_INVENTARIO_OC = 'id, codigo, cantidad, descripcion, numero_parte, almacen_id, marca, modelo';
       function claveProductoInventario(valor) { return String(valor == null ? '' : valor).toUpperCase().replace(/\s+/g, ' ').trim(); }
+      // Número de parte (20/11/2026): un producto sin número de parte se
+      // muestra como "NA" (catálogos, inventario y OC). En la base se guarda
+      // vacío, y un "NA" / "N/A" capturado a mano también se guarda vacío,
+      // para que todos esos productos no se confundan entre sí al buscar por
+      // número de parte (inventario, catálogo, actualización de las OC).
+      function numeroParteReal(valor) {
+        var v = String(valor == null ? '' : valor).toUpperCase().replace(/\s+/g, ' ').trim();
+        return /^N\s*[\/.\-]?\s*A\.?$/.test(v) ? '' : v;
+      }
+      function textoNumeroParte(valor) { return numeroParteReal(valor) || 'NA'; }
       async function siguienteCodigoProductoLibreBD(productosBD) {
         var maxNum = 0;
         function considerar(c) { var m = /^PROD-(\d+)$/.exec(claveProductoInventario(c)); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
@@ -20278,12 +20368,12 @@
         var r = await supabase.from('productos').select(CAMPOS_PRODUCTO_INVENTARIO_OC);
         if (r.error) return { error: r.error };
         var todos = r.data || [];
-        var parte = claveProductoInventario(linea.parte);
+        var parte = numeroParteReal(linea.parte);
         var desc = claveProductoInventario(linea.descripcion);
         var cod = claveProductoInventario(codigo);
-        var prod = parte ? todos.find(function(p) { return claveProductoInventario(p.numero_parte) === parte; }) : null;
+        var prod = parte ? todos.find(function(p) { return numeroParteReal(p.numero_parte) === parte; }) : null;
         if (!prod) prod = todos.find(function(p) { return claveProductoInventario(p.codigo) === cod && claveProductoInventario(p.descripcion) === desc; }) || null;
-        if (!prod && desc) prod = todos.find(function(p) { return claveProductoInventario(p.descripcion) === desc && (!parte || !claveProductoInventario(p.numero_parte)); }) || null;
+        if (!prod && desc) prod = todos.find(function(p) { return claveProductoInventario(p.descripcion) === desc && (!parte || !numeroParteReal(p.numero_parte)); }) || null;
         if (prod) return { prod: prod };
         var ocupado = todos.some(function(p) { return claveProductoInventario(p.codigo) === cod; });
         return { prod: null, codigoAlta: ocupado ? await siguienteCodigoProductoLibreBD(todos) : String(codigo).trim().toUpperCase() };
@@ -20293,7 +20383,7 @@
           codigo: codigoAlta,
           descripcion: lineaOrigen.descripcion,
           udm: lineaOrigen.udm || 'PZA',
-          numero_parte: lineaOrigen.parte || null,
+          numero_parte: numeroParteReal(lineaOrigen.parte) || null,
           marca: lineaOrigen.marca || null,
           modelo: lineaOrigen.modelo || null,
           cantidad: 0,
@@ -21506,8 +21596,32 @@
           .test(String(r.description || ''));
       }
       var ESPERA_REINTENTO_TELEGRAM_MS = 1500;
+      // Si Telegram rechaza el formato del texto (Markdown/HTML mal
+      // formado por algún dato), el aviso se manda en texto simple para que
+      // sí llegue, en lugar de perderse.
+      function payloadTextoSimpleTelegram(payload) {
+        var copia = Object.assign({}, payload);
+        var modo = String(copia.parse_mode || '').toUpperCase();
+        delete copia.parse_mode;
+        ['text', 'caption'].forEach(function(k) {
+          if (typeof copia[k] !== 'string') return;
+          var t = copia[k];
+          if (modo === 'HTML') {
+            t = t.replace(/<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2: $1').replace(/<[^>]+>/g, '')
+              .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          } else {
+            t = t.replace(/\\([_*`\[])/g, '$1').replace(/[*`]/g, '');
+          }
+          copia[k] = t;
+        });
+        return copia;
+      }
       async function telegramAPI(metodo, payload) {
         var r = await telegramAPIUnaVez(metodo, payload);
+        if (!r.ok && payload && payload.parse_mode && /can't parse entities|can't find end/i.test(String(r.description || ''))) {
+          console.warn('Telegram rechazó el formato del aviso; se envía en texto simple:', r.description);
+          r = await telegramAPIUnaVez(metodo, payloadTextoSimpleTelegram(payload));
+        }
         if (r.ok || errorTelegramDefinitivo(r)) return r;
         var espera = ESPERA_REINTENTO_TELEGRAM_MS;
         var retryAfter = r.parameters && Number(r.parameters.retry_after);
@@ -21564,8 +21678,13 @@
             if (tomado.error || !tomado.data || !tomado.data.length) continue;
             var caducado = (Date.now() - new Date(p.creado_en).getTime()) > 24 * 3600000;
             var chatId = caducado ? null : await chatIdDestinoTelegram(p.destinatario);
-            var r = chatId
-              ? await telegramAPIUnaVez(p.metodo, Object.assign({}, p.payload, { chat_id: chatId }))
+            var payloadCola = Object.assign({}, p.payload, { chat_id: chatId });
+            var r = chatId ? await telegramAPIUnaVez(p.metodo, payloadCola) : null;
+            if (r && !r.ok && payloadCola.parse_mode && /can't parse entities|can't find end/i.test(String(r.description || ''))) {
+              r = await telegramAPIUnaVez(p.metodo, payloadTextoSimpleTelegram(payloadCola));
+            }
+            r = chatId
+              ? r
               : { ok: false, description: caducado ? 'Más de 24 horas sin poder enviarse' : 'Sin Chat ID de Telegram' };
             var intentos = (Number(p.intentos) || 0) + 1;
             var cambios;
@@ -21648,10 +21767,10 @@
 
       var procesosAvisosTelegramIniciados = false;
       function iniciarProcesosAvisosTelegram() {
-        setTimeout(function() { procesarColaTelegram(); revisarAvisosProgramados(); regularizarInventarioOCPagadas(); }, 5000);
+        setTimeout(async function() { await procesarColaTelegram(); revisarAvisosDirectorPendientesOC(); revisarAvisosProgramados(); regularizarInventarioOCPagadas(); }, 5000);
         if (procesosAvisosTelegramIniciados) return;
         procesosAvisosTelegramIniciados = true;
-        setInterval(function() { if (!document.hidden) procesarColaTelegram(); }, 2 * 60000);
+        setInterval(async function() { if (!document.hidden) { await procesarColaTelegram(); revisarAvisosDirectorPendientesOC(); } }, 2 * 60000);
         setInterval(function() { if (!document.hidden) revisarAvisosProgramados(); }, 30 * 60000);
       }
 
@@ -21844,8 +21963,9 @@
       var USUARIO_PAGOS_OC = 'CCHF';
       function linkPagoOC(oc) { return URL_APP_TELEGRAM + '?pago=' + oc.id; }
       async function notificarPagoPendienteCCHF(oc, autorizo) {
+        var res = { enviados: [], sinChatId: [], fallidos: [], motivo: '' };
         try {
-          if (!oc) return false;
+          if (!oc) return res;
           var esc = escaparHTMLTelegram;
           var m = montosPagoOC(oc);
           var es5050 = oc.condicionpago === '50/50 FINIQUITO Y ANTICIPO';
@@ -21863,7 +21983,8 @@
           var chatId = await obtenerTelegramChatIdUsuario(USUARIO_PAGOS_OC);
           if (!chatId) {
             console.warn('Aviso de pago pendiente: ' + USUARIO_PAGOS_OC + ' no tiene Chat ID de Telegram registrado.');
-            return false;
+            res.sinChatId.push(USUARIO_PAGOS_OC);
+            return res;
           }
           var payload = { chat_id: chatId, text: texto, parse_mode: 'HTML', disable_web_page_preview: true };
           var ref = { tabla: 'ordenes', id: oc.id, columna: 'telegram_pago_message_id' };
@@ -21881,14 +22002,17 @@
               if (!error) Object.assign(oc, cambiosAviso);
             }
             console.log('✅ Aviso de OC por pagar enviado a ' + USUARIO_PAGOS_OC);
-            return true;
+            res.enviados.push(USUARIO_PAGOS_OC);
+            return res;
           }
           console.error('❌ No se pudo avisar a ' + USUARIO_PAGOS_OC + ' de la OC por pagar:', r);
           if (!errorTelegramDefinitivo(r)) await encolarAvisoTelegram(USUARIO_PAGOS_OC, 'sendMessage', payload, 'OC por pagar ' + (oc.codigo || oc.id), ref);
-          return false;
+          res.fallidos.push(USUARIO_PAGOS_OC);
+          return res;
         } catch (e) {
           console.error('Error avisando a ' + USUARIO_PAGOS_OC + ' de la OC por pagar:', e);
-          return false;
+          res.motivo = 'No se pudo avisar a ' + USUARIO_PAGOS_OC + ': ' + (e && e.message ? e.message : e);
+          return res;
         }
       }
       // 👍 al aviso de CCHF cuando la OC queda pagada en su totalidad.
@@ -21911,12 +22035,14 @@
       // empresa y el departamento de la OC reciben el aviso (salvo quien
       // acaba de aprobarla, si también es Jefe).
       async function notificarJefesOCPorAprobar(oc) {
+        var resultado = { enviados: [], sinChatId: [], fallidos: [], motivo: '' };
         try {
           var quien = actual ? String(actual.usuario || actual.u || '') : '';
           var jefes = obtenerJefesDepartamentoOC(oc).filter(function(j, i, arr) { return j && j !== quien && arr.indexOf(j) === i; });
           if (!jefes.length) {
+            resultado.motivo = 'No hay otro Jefe de Departamento con permiso en el departamento de la OC a quién avisar.';
             console.warn('No hay Jefes de Departamento a quién avisar de la OC ' + (oc.codigo || oc.id) + '.');
-            return;
+            return resultado;
           }
           var esc = escaparHTMLTelegram;
           var m = montosPagoOC(oc);
@@ -21929,15 +22055,38 @@
           var chatsAvisados = {};
           for (var i = 0; i < jefes.length; i++) {
             var chatId = await obtenerTelegramChatIdUsuario(jefes[i]);
-            if (!chatId) { console.warn('El Jefe ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.'); continue; }
-            if (chatsAvisados[chatId]) continue;   // misma persona con 2 cuentas
+            if (!chatId) { resultado.sinChatId.push(jefes[i]); console.warn('El Jefe ' + jefes[i] + ' no tiene Chat ID de Telegram registrado.'); continue; }
+            if (chatsAvisados[chatId]) { resultado.enviados.push(jefes[i]); continue; }   // misma persona con 2 cuentas
             chatsAvisados[chatId] = true;
-            await enviarTelegramAChat(chatId, texto, jefes[i], 'OC por aprobar ' + (oc.codigo || oc.id));
+            if (await enviarTelegramAChat(chatId, texto, jefes[i], 'OC por aprobar ' + (oc.codigo || oc.id))) resultado.enviados.push(jefes[i]);
+            else resultado.fallidos.push(jefes[i]);
           }
-          console.log('Aviso de OC por aprobar enviado a: ' + jefes.join(', '));
+          console.log('Aviso de OC por aprobar — enviados: ' + (resultado.enviados.join(', ') || 'ninguno') +
+            (resultado.sinChatId.length ? ' · sin Chat ID: ' + resultado.sinChatId.join(', ') : '') + (resultado.fallidos.length ? ' · fallidos: ' + resultado.fallidos.join(', ') : ''));
         } catch (e) {
+          resultado.motivo = 'Error al enviar: ' + (e && e.message ? e.message : e);
           console.error('No se pudo avisar a los Jefes de la OC por aprobar:', e);
         }
+        return resultado;
+      }
+
+      function lineaAvisoDirectorTelegram(idMensaje) {
+        return idMensaje ? '\n\n📨 Aviso por Telegram enviado al Director General.'
+          : '\n\n⚠️ No se pudo enviar ahora el aviso por Telegram al Director General (si fue un error temporal, se reintenta solo).';
+      }
+      // Línea para el mensaje de quien hace la acción: a quién le llegó el
+      // aviso de Telegram y a quién no (sin Telegram registrado o error).
+      function lineaResultadoAvisosTelegram(res, destinoTxt) {
+        if (!res) return '';
+        var partes = [];
+        if (res.enviados && res.enviados.length) {
+          var destino = destinoTxt === 'al Jefe' && res.enviados.length > 1 ? 'a los Jefes' : destinoTxt;
+          partes.push('📨 Aviso por Telegram enviado' + (destino ? ' ' + destino : '') + ': ' + res.enviados.join(', ') + '.');
+        }
+        if (res.sinChatId && res.sinChatId.length) partes.push('⚠️ No les llegó el aviso por no tener Telegram registrado: ' + res.sinChatId.join(', ') + '.');
+        if (res.fallidos && res.fallidos.length) partes.push('⚠️ No se pudo enviar el aviso ahora a: ' + res.fallidos.join(', ') + ' (se reintenta solo).');
+        if (!partes.length && res.motivo) partes.push('⚠️ ' + res.motivo);
+        return partes.length ? '\n\n' + partes.join('\n') : '';
       }
 
       // ===== RECORDATORIOS AL RESPONSABLE (09/11/2026) =====
@@ -23739,7 +23888,111 @@
       // ref = { tabla, id, columna }: si el aviso no sale y queda en la cola
       // de reenvío, al enviarse se guarda ahí su número de mensaje (para
       // que la reacción 👍/👎 siga funcionando).
+      // ===== AVISO AL DIRECTOR SIEMPRE (23/11/2026) =====
+      // Toda OC que llega a PENDIENTE DIRECTOR debe avisarle al Director
+      // para seguir su proceso, sin que nadie tenga que reenviarlo:
+      //  - enviarAvisoDirectorOC: manda el aviso, guarda el número del
+      //    mensaje (para el 👍/👎) y deja la OC como avisada. Si falla y no
+      //    quedó en la cola de reenvío, la deja como NO avisada.
+      //  - revisarAvisosDirectorPendientesOC: cada 2 minutos, con cualquier
+      //    sesión abierta, busca OC en PENDIENTE DIRECTOR (de los últimos 30
+      //    días, no pausadas) sin aviso entregado ni en cola y se lo manda
+      //    al Director. Espera 3 minutos desde la aprobación del Jefe (o la
+      //    creación) para no duplicar el aviso que se está mandando en ese
+      //    momento, y "toma" la OC en la base de datos para que dos
+      //    sesiones no la avisen a la vez.
+      async function enviarAvisoDirectorOC(oc, mensaje) {
+        var idMensaje = await enviarNotificacionTelegram(mensaje, { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
+        try {
+          if (idMensaje) {
+            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: idMensaje }).eq('id', oc.id);
+            oc.notificacion_enviada = true;
+            oc.telegram_message_id = idMensaje;
+          } else if (!ultimoAvisoDirectorEncolado) {
+            await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', oc.id);
+            oc.notificacion_enviada = false;
+          } else {
+            await supabase.from('ordenes').update({ notificacion_enviada: true }).eq('id', oc.id);
+            oc.notificacion_enviada = true;
+          }
+        } catch (e) { console.warn('No se pudo registrar el aviso al Director de la OC ' + (oc.codigo || oc.id) + ':', e); }
+        return idMensaje;
+      }
+
+      async function mensajeDirectorPendienteOC(oc) {
+        var proyecto = proyectoDeOC(oc);
+        if (!proyecto) return null;
+        var productos = oc.productos || [];
+        if (typeof productos === 'string') { try { productos = JSON.parse(productos); } catch (e) { productos = []; } }
+        var datosOC = {
+          codigo: oc.codigo, proyectonombre: oc.proyecto, empresa: proyecto.empresa, departamento: proyecto.departamento,
+          proveedor: oc.proveedor, responsable: oc.responsable, solicitante: oc.responsable, elaborador: oc.elaborador,
+          moneda: oc.moneda || 'MXN', montototal: oc.montototal || 0, montomxn: oc.montomxn || 0,
+          fechapago: oc.fechapago || new Date().toISOString(), fechaentrega: oc.fechaentrega || new Date().toISOString(),
+          productos: Array.isArray(productos) ? productos : []
+        };
+        var motivo;
+        if (ocEsSinProyecto(oc) || proyecto.virtual) {
+          motivo = 'OC SIN PROYECTO: requiere autorización directa de pago del Director General (no aplica la regla del 60/40).' + (await notaComprasDirectorSinProyectoOC(oc));
+        } else {
+          var monto = oc.montomxn || 0;
+          if (proyecto.moneda === 'USD') monto = oc.paridadinicial ? oc.montomxn / oc.paridadinicial : oc.montomxn / 20;
+          var porSiSola = monto > limiteProyecto(proyecto);
+          motivo = porSiSola
+            ? 'Esta OC por sí sola excede el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto del proyecto.'
+            : 'La suma de lo ya autorizado y pagado en el proyecto más esta OC alcanza o supera el ' + obtenerPorcentajeLimite(proyecto) + '% del presupuesto.';
+        }
+        return formatearMensajeOC(datosOC, proyecto, oc.id, motivo);
+      }
+
+      var revisandoAvisosDirectorOC = false;
+      var avisosDirectorIntentadosOC = {};   // id de OC -> hora del último intento en esta sesión
+      async function revisarAvisosDirectorPendientesOC() {
+        if (revisandoAvisosDirectorOC || !actual || sesionPorEnlace) return;
+        revisandoAvisosDirectorOC = true;
+        try {
+          var r = await supabase.from('ordenes').select('*').eq('estado', 'PENDIENTE_DIRECTOR').is('telegram_message_id', null);
+          if (r.error) return;
+          var ahora = Date.now();
+          var hora = function(v) { var t = v ? new Date(v).getTime() : 0; return isNaN(t) ? 0 : t; };
+          var pendientes = (r.data || []).filter(function(o) {
+            if (o.pausada || o.notificacion_enviada === true) return false;
+            var desde = Math.max(hora(o.fechaaprobacionjefe), hora(o.fechacreacion));
+            if (!desde || ahora - desde < 3 * 60000 || ahora - desde > 30 * 86400000) return false;
+            var ultimo = avisosDirectorIntentadosOC[o.id];
+            return !ultimo || ahora - ultimo > 30 * 60000;
+          }).slice(0, 10);
+          for (var i = 0; i < pendientes.length; i++) {
+            var o = pendientes[i];
+            avisosDirectorIntentadosOC[o.id] = ahora;
+            // Ya está en la cola de reenvío: la cola lo entregará.
+            var q = await supabase.from('telegram_pendientes').select('id').eq('ref_tabla', 'ordenes').eq('ref_id', o.id)
+              .eq('ref_columna', 'telegram_message_id').is('enviado_en', null).eq('descartado', false).limit(1);
+            if (!q.error && q.data && q.data.length) continue;
+            // Se "toma" la OC; si otra sesión la tomó al mismo tiempo, se salta.
+            var tomada = await supabase.from('ordenes').update({ notificacion_enviada: true })
+              .eq('id', o.id).eq('estado', 'PENDIENTE_DIRECTOR').is('telegram_message_id', null)
+              .or('notificacion_enviada.is.null,notificacion_enviada.eq.false').select('id');
+            if (tomada.error || !tomada.data || !tomada.data.length) continue;
+            var enMemoria = (typeof ordenes !== 'undefined' && Array.isArray(ordenes) ? ordenes : []).find(function(x) { return x.id === o.id; }) || o;
+            var mensaje = await mensajeDirectorPendienteOC(enMemoria);
+            if (!mensaje) {
+              await supabase.from('ordenes').update({ notificacion_enviada: false }).eq('id', o.id);
+              continue;
+            }
+            var idMensaje = await enviarAvisoDirectorOC(enMemoria, mensaje);
+            console.log((idMensaje ? '📨 Aviso al Director enviado en automático: ' : '⚠️ No se pudo enviar en automático el aviso al Director: ') + (o.codigo || o.id));
+          }
+        } catch (e) {
+          console.warn('No se pudieron revisar los avisos pendientes al Director:', e);
+        } finally {
+          revisandoAvisosDirectorOC = false;
+        }
+      }
+
+      var ultimoAvisoDirectorEncolado = false;
       async function enviarNotificacionTelegram(mensaje, ref) {
+        ultimoAvisoDirectorEncolado = false;
         try {
           var chatIdDirector = await obtenerChatIdDirectorTelegram();
           var payloadDirector = {
@@ -23753,7 +24006,7 @@
             return (data.result && data.result.message_id) || null;
           } else {
             console.error('❌ Error al enviar notificación:', data);
-            if (!errorTelegramDefinitivo(data)) await encolarAvisoTelegram(DESTINO_TELEGRAM_DIRECTOR, 'sendMessage', payloadDirector, 'Aviso al Director', ref);
+            if (!errorTelegramDefinitivo(data)) ultimoAvisoDirectorEncolado = await encolarAvisoTelegram(DESTINO_TELEGRAM_DIRECTOR, 'sendMessage', payloadDirector, 'Aviso al Director', ref);
             return null;
           }
         } catch (error) {
@@ -23798,18 +24051,22 @@
         var pctLimite = obtenerPorcentajeLimite(proyecto);
         var esSinProyectoMsg = !!(proyecto && (proyecto.virtual || proyecto.sin_proyecto));
         var mensaje = esSinProyectoMsg ? '📋 *OC SIN PROYECTO — AUTORIZACIÓN DE PAGO*\n\n' : '📋 *NUEVA OC PENDIENTE DE AUTORIZACIÓN* (Supera el ' + pctLimite + '%)\n\n';
-        if (motivoExceso) mensaje += '⚠️ ' + motivoExceso + '\n\n';
-        mensaje += '📌 *Código:* ' + datosOC.codigo + '\n';
-        mensaje += '🏢 *Empresa:* ' + datosOC.empresa + '\n';
-        mensaje += '📁 *Departamento:* ' + mostrarDepto(datosOC.departamento) + '\n';
-        mensaje += '📂 *Proyecto:* ' + datosOC.proyectonombre + '\n';
-        mensaje += '👤 *Solicitante:* ' + datosOC.solicitante + '\n';
-        mensaje += '👤 *Elaborador:* ' + datosOC.elaborador + '\n';
-        mensaje += '👤 *Responsable:* ' + datosOC.responsable + '\n';
-        mensaje += '🏢 *Proveedor:* ' + datosOC.proveedor + '\n';
-        mensaje += '📅 *Fecha Pago:* ' + fechaSoloDia(datosOC.fechapago).toLocaleDateString() + '\n';
-        mensaje += '📅 *Fecha Entrega:* ' + new Date(datosOC.fechaentrega).toLocaleDateString() + '\n';
-        mensaje += '💰 *Moneda:* ' + datosOC.moneda + '\n';
+        // Los datos van escapados: con Markdown, un "_" (p. ej. en el
+        // nombre del proyecto EQUIPO_COMPUTO_TI) hacía que Telegram
+        // rechazara el aviso completo y no le llegaba al Director.
+        var e = escaparMarkdownTelegram;
+        if (motivoExceso) mensaje += '⚠️ ' + e(motivoExceso) + '\n\n';
+        // 23/11/2026: sin empresa, departamento, solicitante, elaborador ni
+        // responsable (el código de la OC ya los identifica).
+        mensaje += '📌 *Código:* ' + e(datosOC.codigo) + '\n';
+        mensaje += '📂 *Proyecto:* ' + e(datosOC.proyectonombre) + '\n';
+        mensaje += '🏢 *Proveedor:* ' + e(datosOC.proveedor) + '\n';
+        // Fechas en dd/mm/aaaa sin corrimiento de zona horaria (antes la
+        // fecha de entrega salía un día antes: "2026-11-26" se leía como
+        // medianoche UTC = 25/11 en México).
+        mensaje += '📅 *Fecha Pago:* ' + fechaSoloDia(datosOC.fechapago).toLocaleDateString('es-MX') + '\n';
+        mensaje += '📅 *Fecha Entrega:* ' + fechaSoloDia(datosOC.fechaentrega).toLocaleDateString('es-MX') + '\n';
+        mensaje += '💰 *Moneda:* ' + e(datosOC.moneda) + '\n';
         mensaje += '💰 *Total:* ' + formatoMoneda(datosOC.montototal, datosOC.moneda) + '\n';
         mensaje += '💰 *Equivalente MXN:* ' + formatoMoneda(datosOC.montomxn, 'MXN') + '\n';
         if (esSinProyectoMsg) {
@@ -25445,7 +25702,7 @@
         try {
           await aplicarAutorizacionSPM(d);
           window.cargarDocumentosCXP();
-          alert('✅ SPM autorizada. Finanzas ya puede marcarla como pagada.');
+          alert('✅ SPM autorizada. Finanzas ya puede marcarla como pagada.' + lineaAvisosSPM(d._avisosSPM));
         } catch (e) {
           console.error('Error autorizando la SPM:', e);
           alert('❌ No se pudo autorizar: ' + mensajeErrorSPMDirector(e));
@@ -25466,7 +25723,7 @@
         try {
           await aplicarCancelacionSPM(d, motivo);
           window.cargarDocumentosCXP();
-          alert('❌ SPM cancelada por Director.');
+          alert('❌ SPM cancelada por Director.' + lineaAvisosSPM(d._avisosSPM));
         } catch (e) {
           console.error('Error cancelando la SPM:', e);
           alert('❌ No se pudo cancelar: ' + mensajeErrorSPMDirector(e));
@@ -25585,6 +25842,7 @@
           fecha_autorizacion_director: new Date().toISOString()
         });
         reaccionarMensajeTelegramOC(d, '👍');
+        d._avisosSPM = await notificarSPMAutorizada(d);
       }
 
       async function aplicarCancelacionSPM(d, motivo) {
@@ -25595,6 +25853,111 @@
           fecha_cancelacion: new Date().toISOString()
         });
         reaccionarMensajeTelegramOC(d, '👎');
+        d._avisosSPM = await notificarSPMCancelada(d, motivo);
+      }
+
+      // ===== AVISOS DE SPM AL JEFE Y A FINANZAS (20/11/2026) =====
+      // - SPM autorizada por el Director: al Jefe que la generó y a los
+      //   Jefes del departamento ("SPM AUTORIZADA") y a Finanzas ("SPM
+      //   AUTORIZADA — PENDIENTE DE PAGO", para marcarla como pagada).
+      // - SPM cancelada por el Director: al Jefe que la generó y a los
+      //   Jefes del departamento, con el motivo.
+      // - SPM pagada (Finanzas): al Jefe que la generó y a los Jefes del
+      //   departamento (ya pueden generar vales contra su presupuesto).
+      // Nunca a quien hace la acción. Si alguien no tiene Telegram
+      // registrado, se le dice a quien hizo la acción.
+      function lineasSPMTelegram(d) {
+        var esc = escaparHTMLTelegram;
+        return '🧾 <b>SPM:</b> ' + esc(d.folio || d.codigo || ('SPM ' + d.id)) + '\n' +
+          '🏢 <b>Empresa / Depto:</b> ' + esc((getAbreviaturaEmpresa(d.empresa) || d.empresa || '—') + ' / ' + mostrarDepto(d.departamento)) + '\n' +
+          '🗓️ <b>Periodo:</b> ' + esc(periodoTextoSPM(d)) + '\n' +
+          '💰 <b>Total SPM:</b> ' + esc(formatoMoneda(Number(d.monto) || 0, 'MXN')) + '\n';
+      }
+      async function usuariosParaAvisosSPM() {
+        if ((!usuariosDB || !usuariosDB.length) && typeof cargarUsuarios === 'function') {
+          try { await cargarUsuarios(); } catch (e) {}
+        }
+        return usuariosDB || [];
+      }
+      async function destinatariosJefesSPM(d) {
+        var usuarios = await usuariosParaAvisosSPM();
+        var existe = function(u) { return u && usuarios.some(function(x) { return x.usuario === u; }); };
+        var lista = [d.solicitante, d.elaborador].filter(existe);
+        var empNorm = normalizar(d.empresa);
+        var deptoNorm = deptoParaComparar(d.empresa, d.departamento);
+        usuarios.forEach(function(u) {
+          if (!usuarioTieneAlgunRol(u, ['Jefe Departamento']) || !u.permisos || !u.permisos.length) return;
+          var tiene = u.permisos.some(function(pm) { return normalizar(pm.empresa) === empNorm && deptoParaComparar(pm.empresa, pm.depto) === deptoNorm; });
+          if (tiene) lista.push(u.usuario);
+        });
+        return lista;
+      }
+      async function destinatariosFinanzasSPM() {
+        var usuarios = await usuariosParaAvisosSPM();
+        return usuarios.filter(function(u) { return usuarioTieneAlgunRol(u, ['Finanzas']); }).map(function(u) { return u.usuario; });
+      }
+      async function enviarAvisoSPMUsuarios(usuarios, texto, descripcion) {
+        var res = { enviados: [], sinChatId: [], fallidos: [], motivo: '' };
+        var quien = actual ? String(actual.usuario || actual.u || '') : '';
+        var lista = (usuarios || []).filter(function(u, i, arr) { return u && u !== quien && arr.indexOf(u) === i; });
+        if (!lista.length) { res.motivo = 'No hay a quién avisar por Telegram.'; return res; }
+        var chats = {};
+        for (var i = 0; i < lista.length; i++) {
+          var chatId = await obtenerTelegramChatIdUsuario(lista[i]);
+          if (!chatId) { res.sinChatId.push(lista[i]); continue; }
+          if (chats[chatId]) { res.enviados.push(lista[i]); continue; }   // misma persona con 2 cuentas
+          chats[chatId] = true;
+          if (await enviarTelegramAChat(chatId, texto, lista[i], descripcion)) res.enviados.push(lista[i]);
+          else res.fallidos.push(lista[i]);
+        }
+        return res;
+      }
+      async function notificarSPMAutorizada(d) {
+        try {
+          var esc = escaparHTMLTelegram;
+          var quien = actual ? (actual.u || actual.usuario) : '—';
+          var folio = d.folio || d.codigo || d.id;
+          var jefes = await enviarAvisoSPMUsuarios(await destinatariosJefesSPM(d),
+            '✅ <b>SPM AUTORIZADA</b>\n\n' + lineasSPMTelegram(d) + '👤 <b>Autorizó:</b> ' + esc(quien) + '\n\n' +
+            'Finanzas ya puede marcarla como pagada.', 'SPM autorizada ' + folio);
+          var finanzas = await enviarAvisoSPMUsuarios(await destinatariosFinanzasSPM(),
+            '💵 <b>SPM AUTORIZADA — PENDIENTE DE PAGO</b>\n\n' + lineasSPMTelegram(d) + '👤 <b>Autorizó:</b> ' + esc(quien) + '\n\n' +
+            '👉 Márcala como pagada en EGRESOS → SPM (💰 Pagada):\n' + esc(URL_APP_TELEGRAM), 'SPM por pagar ' + folio);
+          return { jefes: jefes, finanzas: finanzas };
+        } catch (e) {
+          console.error('No se pudo avisar de la SPM autorizada:', e);
+          return null;
+        }
+      }
+      async function notificarSPMCancelada(d, motivo) {
+        try {
+          var esc = escaparHTMLTelegram;
+          var quien = actual ? (actual.u || actual.usuario) : '—';
+          var jefes = await enviarAvisoSPMUsuarios(await destinatariosJefesSPM(d),
+            '❌ <b>SPM CANCELADA</b>\n\n' + lineasSPMTelegram(d) + '👤 <b>Canceló:</b> ' + esc(quien) + '\n' +
+            '🗒️ <b>Motivo:</b> ' + esc(motivo || '—'), 'SPM cancelada ' + (d.folio || d.codigo || d.id));
+          return { jefes: jefes };
+        } catch (e) {
+          console.error('No se pudo avisar de la SPM cancelada:', e);
+          return null;
+        }
+      }
+      async function notificarSPMPagada(d) {
+        try {
+          var esc = escaparHTMLTelegram;
+          var quien = actual ? (actual.u || actual.usuario) : '—';
+          var jefes = await enviarAvisoSPMUsuarios(await destinatariosJefesSPM(d),
+            '💰 <b>SPM PAGADA</b>\n\n' + lineasSPMTelegram(d) + '👤 <b>Marcó como pagada:</b> ' + esc(quien) + '\n\n' +
+            'Ya se pueden generar vales contra su presupuesto.', 'SPM pagada ' + (d.folio || d.codigo || d.id));
+          return { jefes: jefes };
+        } catch (e) {
+          console.error('No se pudo avisar de la SPM pagada:', e);
+          return null;
+        }
+      }
+      function lineaAvisosSPM(av) {
+        if (!av) return '';
+        return (av.jefes ? lineaResultadoAvisosTelegram(av.jefes, 'al Jefe') : '') + (av.finanzas ? lineaResultadoAvisosTelegram(av.finanzas, 'a Finanzas') : '');
       }
 
       var spmLinkActualId = null;
@@ -25710,9 +26073,11 @@
         try {
           var { error } = await supabase.from('documentos_cxp').update({ estado: 'PAGADA' }).eq('id', id);
           if (error) throw error;
+          var avisosPagoSPM = null;
+          if (d && d.tipo === 'SPM') { d.estado = 'PAGADA'; avisosPagoSPM = await notificarSPMPagada(d); }
           window.cargarDocumentosCXP();
           window.actualizarTotalesModulosVales();
-          if (d && d.tipo === 'SPM') alert('✅ SPM marcada como pagada. Ya se pueden generar vales contra su presupuesto.');
+          if (d && d.tipo === 'SPM') alert('✅ SPM marcada como pagada. Ya se pueden generar vales contra su presupuesto.' + lineaAvisosSPM(avisosPagoSPM));
         } catch (e) {
           console.error('Error marcando documento como pagado:', e);
           alert('❌ No se pudo actualizar: ' + e.message);
@@ -25984,12 +26349,7 @@
           var motivo = 'EXCEDE EL PRESUPUESTO DE COMPRAS (VDC-3) de ' + info.usuario + ' en la SPM ' + info.spm_folio + ': presupuesto ' +
             formatoMoneda(info.presupuesto, 'MXN') + ', usado ' + formatoMoneda(info.usado, 'MXN') + ', esta OC ' + formatoMoneda(info.importe, 'MXN') +
             ', excedente ' + formatoMoneda(info.exceso, 'MXN') + '. Requiere autorización directa del Director; si la autoriza, el presupuesto de COMPRAS aumenta en el excedente.';
-          var idMensaje = await enviarNotificacionTelegram(formatearMensajeOC(datosOC, proyectoOC, oc.id, motivo), { tabla: 'ordenes', id: oc.id, columna: 'telegram_message_id' });
-          if (idMensaje) {
-            await supabase.from('ordenes').update({ notificacion_enviada: true, telegram_message_id: idMensaje }).eq('id', oc.id);
-            oc.notificacion_enviada = true;
-            oc.telegram_message_id = idMensaje;
-          }
+          await enviarAvisoDirectorOC(oc, formatearMensajeOC(datosOC, proyectoOC, oc.id, motivo));
         } catch (eTg) {
           console.error('No se pudo avisar al Director de la OC que excede Compras:', eTg);
         }
@@ -27897,7 +28257,7 @@
             '<td>' + escapeHTML(it.proveedor || '') + '</td>' +
             '<td>' + (it.tipo === 'SERVICIO' ? '🛠️ Servicio' : '📦 Producto') + '</td>' +
             '<td>' + escapeHTML(it.codigo || '—') + '</td>' +
-            '<td>' + escapeHTML(it.numero_parte || '—') + '</td>' +
+            '<td>' + escapeHTML(textoNumeroParte(it.numero_parte)) + '</td>' +
             '<td>' + escapeHTML(it.marca || '—') + '</td>' +
             '<td>' + escapeHTML(it.modelo || '—') + '</td>' +
             '<td>' + escapeHTML(it.descripcion || '') + '</td>' +
@@ -28038,14 +28398,14 @@
           if (clavesProv[claveProveedorOC(oc.proveedor)]) return true;
           return !!(nuevo.proveedor_id && idsProveedorDeOC(oc, indiceProv)[String(nuevo.proveedor_id)]);
         }
-        var parteAnt = normTextoPartida(anterior.numero_parte), parteNva = normTextoPartida(nuevo.numero_parte);
+        var parteAnt = normTextoPartida(numeroParteReal(anterior.numero_parte)), parteNva = normTextoPartida(numeroParteReal(nuevo.numero_parte));
         var descAnt = normTextoPartida(anterior.descripcion), descNva = normTextoPartida(nuevo.descripcion);
         var fijos = datosFijosDeCatalogo(nuevo);
         var descOtros = {}, partesOtros = {};
         (catalogoProveedor || []).forEach(function(x) {
           if (String(x.id) === String(nuevo.id)) return;
           descOtros[normTextoPartida(x.descripcion)] = true;
-          if (x.numero_parte) partesOtros[normTextoPartida(x.numero_parte)] = true;
+          if (numeroParteReal(x.numero_parte)) partesOtros[normTextoPartida(numeroParteReal(x.numero_parte))] = true;
         });
         var exactas = [], posibles = [];
         (listaOC || []).forEach(function(oc) {
@@ -28053,7 +28413,7 @@
           var delProveedor = ocEsDelProveedor(oc);
           parsearProductosOC(oc).forEach(function(p, i) {
             if (!p) return;
-            var parteP = normTextoPartida(p.parte), descP = normTextoPartida(p.descripcion);
+            var parteP = normTextoPartida(numeroParteReal(p.parte)), descP = normTextoPartida(p.descripcion);
             var ligada = p.catalogo_id !== undefined && p.catalogo_id !== null && p.catalogo_id !== '';
             var tipo = null;
             if (ligada) {
@@ -28170,7 +28530,7 @@
       // tenían exactamente la anterior.
       async function sincronizarMarcaModeloInventarioEnOC(pOriginal, datos) {
         var codigo = normalizar(pOriginal && pOriginal.codigo);
-        var parteInv = normTextoPartida(datos.numero_parte || pOriginal.numero_parte);
+        var parteInv = normTextoPartida(numeroParteReal(datos.numero_parte || pOriginal.numero_parte));
         if (!codigo && !parteInv) return null;
         var nuevos = { marca: mayusONulo(datos.marca), modelo: mayusONulo(datos.modelo) };
         var previos = { marca: mayusONulo(pOriginal.marca), modelo: mayusONulo(pOriginal.modelo) };
@@ -28183,7 +28543,7 @@
           try {
             var rc = await supabase.from('productos_servicios').select('id,numero_parte,marca,modelo');
             if (rc.error) throw rc.error;
-            var mismos = (rc.data || []).filter(function(x) { return normTextoPartida(x.numero_parte) === parteInv; });
+            var mismos = (rc.data || []).filter(function(x) { return normTextoPartida(numeroParteReal(x.numero_parte)) === parteInv; });
             for (var ic = 0; ic < mismos.length; ic++) {
               var x = mismos[ic], cambiosCat = {};
               if (nuevos.marca !== previos.marca && mayusONulo(x.marca) !== nuevos.marca) cambiosCat.marca = nuevos.marca;
@@ -28206,7 +28566,7 @@
           parsearProductosOC(oc).forEach(function(p, i) {
             if (!p) return;
             var mismoCodigo = codigo && normalizar(p.codigo) === codigo;
-            var mismaParte = parteInv && normTextoPartida(p.parte) === parteInv;
+            var mismaParte = parteInv && normTextoPartida(numeroParteReal(p.parte)) === parteInv;
             if (!mismoCodigo && !mismaParte) return;
             var campos = {}, cambios = [];
             [['marca', 'MARCA'], ['modelo', 'MODELO']].forEach(function(c) {
@@ -28271,8 +28631,8 @@
               var fuente = null;
               if (p.catalogo_id !== undefined && p.catalogo_id !== null && p.catalogo_id !== '') fuente = catPorId[String(p.catalogo_id)] || null;
               if (!fuente) {
-                var parteP = normTextoPartida(p.parte), descP = normTextoPartida(p.descripcion);
-                if (parteP) fuente = catProv.find(function(x) { return normTextoPartida(x.numero_parte) === parteP; }) || null;
+                var parteP = normTextoPartida(numeroParteReal(p.parte)), descP = normTextoPartida(p.descripcion);
+                if (parteP) fuente = catProv.find(function(x) { return normTextoPartida(numeroParteReal(x.numero_parte)) === parteP; }) || null;
                 if (!fuente && descP) fuente = catProv.find(function(x) { return normTextoPartida(x.descripcion) === descP && (!parteP || !x.numero_parte); }) || null;
               }
               if (!fuente && p.codigo) fuente = invPorCodigo[normalizar(p.codigo)] || null;
@@ -28358,7 +28718,7 @@
           proveedor: prov.nombre,
           tipo: document.getElementById('psTipo').value,
           descripcion: descripcion,
-          numero_parte: document.getElementById('psNumeroParte').value.trim().toUpperCase() || null,
+          numero_parte: numeroParteReal(document.getElementById('psNumeroParte').value) || null,
           marca: document.getElementById('psMarca').value.trim().toUpperCase() || null,
           modelo: document.getElementById('psModelo').value.trim().toUpperCase() || null,
           udm: document.getElementById('psUdm').value || 'PZA',
@@ -28493,10 +28853,10 @@
       // Busca en el catálogo un producto cuyo número de parte coincida
       // (sin distinguir mayúsculas/espacios) con el capturado en la fila.
       function buscarProductoCatalogoPorParte(parte) {
-        parte = (parte || '').trim().toUpperCase();
+        parte = numeroParteReal(parte);
         if (!parte) return null;
         return (productosCatalogoCache || []).find(function(p) {
-          return (p.numero_parte || '').trim().toUpperCase() === parte;
+          return numeroParteReal(p.numero_parte) === parte;
         }) || null;
       }
 
@@ -28529,7 +28889,7 @@
         var fila = inputDesc.closest ? inputDesc.closest('tr') : null;
         if (!fila) return;
         var parteInput = fila.querySelector('.part');
-        var parte = parteInput ? parteInput.value.trim() : '';
+        var parte = parteInput ? numeroParteReal(parteInput.value) : '';
         if (!parte) return;
         var existente = buscarProductoCatalogoPorParte(parte);
         if (!existente) return;
@@ -29621,7 +29981,9 @@
           if (selectProyecto.options.length > 0 && selectProyecto.selectedIndex < 0) {
             selectProyecto.selectedIndex = 0;
           }
-          window.actualizarDatosOC();
+          // Una recarga por tiempo real no toca la OC que se está
+          // capturando (solicitante, teléfono y correo elegidos).
+          if (!(refrescoTiempoRealEnCurso && panelVisible('panelOC'))) window.actualizarDatosOC();
         }
 
         if (ocPaginacion.datosFiltrados.length === 0) {
@@ -29939,7 +30301,7 @@
           var importe = parseNumero(fila.querySelector('.importe') ? fila.querySelector('.importe').value : '0');
           if (!descripcion || cantidad <= 0 || precioUnitario <= 0) invalido = true;
           var codigoFila = (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase();
-          var parteFila = (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase();
+          var parteFila = numeroParteReal(fila.querySelector('.part') ? fila.querySelector('.part').value : '');
           var udmFila = fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA';
           var codigoFinal = codigoAutoParaPartida(descripcion, udmFila, codigoFila);
           if (!codigoFinal) {
@@ -33961,7 +34323,7 @@
           var udmPartida = fila.querySelector('.udm') ? fila.querySelector('.udm').value : 'PZA';
           productos.push({
             codigo: codigoAutoParaPartida(descripcion, udmPartida, (fila.querySelector('.codigo') ? fila.querySelector('.codigo').value : '').trim().toUpperCase()),
-            parte: (fila.querySelector('.part') ? fila.querySelector('.part').value : '').trim().toUpperCase(),
+            parte: numeroParteReal(fila.querySelector('.part') ? fila.querySelector('.part').value : ''),
             descripcion: descripcion,
             cantidad: cantidad,
             udm: udmPartida,
@@ -35069,7 +35431,7 @@
         var headers = ['#', 'Parte', 'Descripción', 'Cant.', 'UDM', 'Precio', 'Dto.%', 'Imp.%', 'Importe'];
         var rows = datos.productos.map(function(p, i) {
           return [
-            i + 1, p.parte || '', p.descripcion + (textoMarcaModelo(p.marca, p.modelo) ? '\n' + textoMarcaModelo(p.marca, p.modelo) : ''), formatearNumeroMexico(p.cantidad, false, true), p.udm || 'PZA',
+            i + 1, textoNumeroParte(p.parte), p.descripcion + (textoMarcaModelo(p.marca, p.modelo) ? '\n' + textoMarcaModelo(p.marca, p.modelo) : ''), formatearNumeroMexico(p.cantidad, false, true), p.udm || 'PZA',
             formatoMoneda(p.precioUnitario, datos.moneda),
             (p.descuento || 0).toFixed(2) + '%',
             (p.impuesto || 0).toFixed(2) + '%',
