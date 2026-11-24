@@ -3018,6 +3018,30 @@
     max-width: none !important;
     width: auto !important;
   }
+  /* Bandeja de OC: los botones de cada OC se reparten en partes iguales a
+     lo ancho visible de la tabla, sin desbordarse ni pedir desplazamiento
+     horizontal (sticky a la izquierda y con el ancho visible que calcula
+     ajustarAnchoAccionesBandeja). Si no caben en un renglón bajan al
+     siguiente, y cada renglón se reparte igual. */
+  #bandejaOCCard .oc-acciones-container {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px;
+    position: sticky;
+    left: 0;
+    width: var(--bandeja-acciones-ancho, 100%);
+    max-width: var(--bandeja-acciones-ancho, 100%);
+    box-sizing: border-box;
+  }
+  #bandejaOCCard .oc-acciones-container > button {
+    flex: 1 1 120px !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+  }
 
   .menu-maestro-total {
     margin-top: 12px;
@@ -7051,7 +7075,6 @@
                 <th>F.Pago</th>
                 <th>UUID</th>
                 <th>Estado</th>
-                <th class="acciones-header">Acciones</th>
               </tr>
             </thead>
             <tbody id="tablaOC"></tbody>
@@ -29240,7 +29263,7 @@
         tablaOC.innerHTML = '';
 
         if (datos.length === 0) {
-          tablaOC.innerHTML = '<tr><td colspan="9" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
+          tablaOC.innerHTML = '<tr><td colspan="8" class="mensaje-sin-datos">No hay órdenes de compra disponibles</td></tr>';
         } else {
           ocPagina.forEach(function(o, i) {
             var idxOriginal = ordenes.indexOf(o);
@@ -29431,18 +29454,17 @@
               '<tr class="fila-oc-info ' + rowClass + '" data-oc-id="' + o.id + '">' +
               '<td data-label="Código"><code>' + o.codigo + '</code></td>' +
               '<td data-label="Proveedor" title="' + escapeHTML(o.proveedor || '') + '">' + escapeHTML(String(o.proveedor || '').slice(0, 8)) + '</td>' +
-              '<td data-label="Concepto" title="' + escapeHTML(o.concepto || '') + '">' + escapeHTML(o.concepto || '—') + '</td>' +
+              '<td data-label="Concepto" title="' + escapeHTML(o.concepto || '') + '">' + (o.concepto ? escapeHTML(String(o.concepto).slice(0, 15)) : '—') + '</td>' +
               '<td data-label="Moneda">' + o.moneda + '</td>' +
               '<td data-label="Total">' + formatoMoneda(o.montototal, o.moneda) + '</td>' +
               '<td data-label="F.Pago">' + fechaPago + '</td>' +
-              '<td data-label="UUID">' + (o.uuidfactura || '—') + '</td>' +
+              '<td data-label="UUID" title="' + escapeHTML(o.uuidfactura || '') + '">' + (o.uuidfactura ? escapeHTML(String(o.uuidfactura).slice(-15)) : '—') + '</td>' +
               '<td data-label="Estado"><span class="badge ' + badgeClass + '">' + estadoMostrado + '</span>' + htmlSaldoFavorFilaOC(o) + '</td>' +
-              '<td data-label="Acciones" class="acciones-header">—</td>' +
               '</tr>';
 
             tablaOC.innerHTML +=
               '<tr class="fila-oc-acciones ' + rowClass + '" data-oc-id="' + o.id + '">' +
-              '<td colspan="9">' +
+              '<td colspan="8">' +
               '<div class="oc-acciones-container">' + acciones + '</div>' +
               '</td>' +
               '</tr>';
@@ -29450,7 +29472,32 @@
         }
 
         actualizarControlesPaginacionOC();
+        ajustarAnchoAccionesBandeja();
       }
+
+      // Bandeja de OC: los botones de cada OC ocupan siempre el ancho
+      // VISIBLE de la tabla (no el ancho total si la tabla es más ancha que
+      // la pantalla), repartidos en partes iguales. Se recalcula al dibujar,
+      // al abrir la Bandeja y al cambiar el tamaño de la ventana.
+      var observadorAnchoBandeja = null;
+      function ajustarAnchoAccionesBandeja() {
+        var card = document.getElementById('bandejaOCCard');
+        var wrap = card ? card.querySelector('.table-wrapper') : null;
+        if (!wrap) return;
+        if (!observadorAnchoBandeja && typeof ResizeObserver !== 'undefined') {
+          observadorAnchoBandeja = new ResizeObserver(function() { ajustarAnchoAccionesBandeja(); });
+          observadorAnchoBandeja.observe(wrap);
+        }
+        if (!wrap.clientWidth) return;
+        var td = wrap.querySelector('tr.fila-oc-acciones td');
+        var relleno = 24;
+        if (td) {
+          var cs = window.getComputedStyle(td);
+          relleno = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+        }
+        card.style.setProperty('--bandeja-acciones-ancho', Math.max(0, wrap.clientWidth - relleno) + 'px');
+      }
+      window.addEventListener('resize', function() { ajustarAnchoAccionesBandeja(); });
 
       // Dibuja/actualiza los controles de paginación de la Bandeja de OC:
       // contador "Mostrando X - Y de Z", números de página y botones
