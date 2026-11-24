@@ -3042,6 +3042,54 @@
     text-overflow: ellipsis;
     white-space: nowrap !important;
   }
+  /* Bandeja de OC sin barra de desplazamiento horizontal: la tabla
+     siempre cabe en el ancho de la pantalla. En pantallas medianas el
+     Código se parte en renglones (por los guiones); en pantallas angostas
+     cada OC se muestra como tarjeta (etiqueta arriba, dato abajo) en lugar
+     de columnas, y sus botones debajo, repartidos igual. */
+  #bandejaOCCard .table-wrapper { white-space: normal !important; }
+  #bandejaOCCard .table-wrapper table { min-width: 0 !important; width: 100% !important; }
+  #bandejaOCCard #tablaOC td[data-label="Código"] { white-space: normal !important; overflow-wrap: anywhere; min-width: 110px; }
+  #bandejaOCCard #tablaOC td[data-label="Código"] code { white-space: normal; overflow-wrap: anywhere; }
+  #bandejaOCCard #tablaOC tr.fila-oc-info td[data-label="Concepto"],
+  #bandejaOCCard #tablaOC tr.fila-oc-info td[data-label="Estado"] { white-space: normal !important; }
+  @media (max-width: 1100px) {
+    #bandejaOCCard .table-wrapper table thead { display: none; }
+    #bandejaOCCard .table-wrapper table,
+    #bandejaOCCard #tablaOC { display: block; width: 100% !important; }
+    #bandejaOCCard #tablaOC tr { display: block; }
+    #bandejaOCCard #tablaOC tr.fila-oc-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 6px 12px;
+      padding: 10px 12px 6px;
+      background: white;
+    }
+    #bandejaOCCard #tablaOC tr.fila-oc-info td {
+      display: block;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+      min-width: 0;
+      font-size: 13px;
+    }
+    #bandejaOCCard #tablaOC tr.fila-oc-info td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      color: var(--gray-600);
+      text-transform: uppercase;
+    }
+    #bandejaOCCard #tablaOC tr.fila-oc-info td[data-label="Código"],
+    #bandejaOCCard #tablaOC tr.fila-oc-info td[data-label="Estado"] { grid-column: 1 / -1; }
+    #bandejaOCCard #tablaOC tr.fila-oc-info td .badge { white-space: normal; max-width: 100%; display: inline-block; }
+    #bandejaOCCard #tablaOC tr.fila-oc-acciones td,
+    #bandejaOCCard #tablaOC td.mensaje-sin-datos { display: block; }
+  }
 
   .menu-maestro-total {
     margin-top: 12px;
