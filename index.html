@@ -1297,6 +1297,87 @@
     white-space: nowrap !important;
   }
 
+  /* ===== DISEÑO PARA CELULAR (768 px o menos) =====
+     Tablas como tarjetas (ver "TABLAS COMO TARJETAS" al final del
+     archivo): cada renglón es una tarjeta con la etiqueta de la columna
+     arriba de cada dato; las celdas con botones ocupan el renglón completo
+     y sus botones se reparten en partes iguales. Así nada pide desplazarse
+     de lado. La Bandeja de OC tiene su propio diseño (1100 px o menos).
+     Los :not(#_t1):not(#_t2) solo suben la prioridad de estas reglas sobre
+     las de tablas con id (catálogos con width: max-content !important). */
+  @media (max-width: 768px) {
+    .table-wrapper { white-space: normal !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) { display: block; width: 100% !important; min-width: 0 !important; max-width: 100% !important; border: none !important; background: transparent !important; box-shadow: none !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) > thead { display: none !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) > tbody, table.tabla-tarjetas:not(#_t1):not(#_t2) > tfoot { display: block; width: 100% !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) > tbody > tr, table.tabla-tarjetas:not(#_t1):not(#_t2) > tfoot > tr {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px 12px;
+      padding: 10px 12px !important;
+      margin: 0 0 10px !important;
+      border: 1px solid var(--gray-200, #e5e7eb) !important;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,.05);
+      height: auto !important;
+    }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) > tbody > tr > td, table.tabla-tarjetas:not(#_t1):not(#_t2) > tfoot > tr > td {
+      display: block;
+      min-width: 0 !important;
+      max-width: none !important;
+      width: auto !important;
+      height: auto !important;
+      padding: 0 !important;
+      border: none !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+      word-break: normal;
+      text-align: left !important;
+      font-size: 13px;
+      position: static !important;
+    }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) > tbody > tr > td[data-label]:not(.td-botones):not(.td-completa)::before,
+    table.tabla-tarjetas:not(#_t1):not(#_t2) > tfoot > tr > td[data-label]:not(.td-botones):not(.td-completa)::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      color: var(--gray-600, #4b5563);
+      margin-bottom: 2px;
+    }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td.td-completa, table.tabla-tarjetas:not(#_t1):not(#_t2) td.td-botones { grid-column: 1 / -1; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td.td-vacia { display: none !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) tr.tr-con-titulo > td::before { display: none !important; }
+    /* Lo que el sistema oculta (clase hidden) sigue oculto en las tarjetas. */
+    table.tabla-tarjetas:not(#_t1):not(#_t2) .hidden { display: none !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td.td-botones { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td.td-botones > div, table.tabla-tarjetas:not(#_t1):not(#_t2) td.td-botones > span { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; min-width: 0; width: 100% !important; }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td button, table.tabla-tarjetas:not(#_t1):not(#_t2) td .btn {
+      flex: 1 1 90px;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      width: auto !important;
+      white-space: normal !important;
+      height: auto !important;
+      min-height: 34px;
+    }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td input:not([type=checkbox]):not([type=radio]), table.tabla-tarjetas:not(#_t1):not(#_t2) td select, table.tabla-tarjetas:not(#_t1):not(#_t2) td textarea {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box;
+    }
+    table.tabla-tarjetas:not(#_t1):not(#_t2) td img { max-width: 100%; height: auto; }
+    /* Tablas sin encabezados (dato: valor, como el detalle de un vale):
+       al ancho de la pantalla y con texto que baja de renglón. */
+    .table-wrapper table:not(.tabla-tarjetas):not(#_t1):not(#_t2) { min-width: 0 !important; width: 100% !important; max-width: 100% !important; }
+    .table-wrapper table:not(.tabla-tarjetas):not(#_t1):not(#_t2) td,
+    .table-wrapper table:not(.tabla-tarjetas):not(#_t1):not(#_t2) th { white-space: normal !important; overflow-wrap: anywhere; }
+  }
+
   .card.modal-card .cerrar-modal-btn { display: none; }
   .card.modal-card.abierta .cerrar-modal-btn { display: inline-flex; }
 
@@ -24313,8 +24394,10 @@
         var hoy = new Date();
         var haceUnMes = new Date(hoy);
         haceUnMes.setMonth(haceUnMes.getMonth() - 1);
-        document.getElementById('cxpFechaInicio').value = haceUnMes.toISOString().split('T')[0];
-        document.getElementById('cxpFechaFin').value = hoy.toISOString().split('T')[0];
+        // Día local (no UTC): después de las 18:00 en el centro de México,
+        // toISOString() ya daba el día siguiente.
+        document.getElementById('cxpFechaInicio').value = fechaLocalISOCXP(haceUnMes);
+        document.getElementById('cxpFechaFin').value = fechaLocalISOCXP(hoy);
 
         document.getElementById('cxpFechaInicio').onchange = function() { cxpPaginaOC = 1; window.renderCXP(); };
         document.getElementById('cxpFechaFin').onchange = function() { cxpPaginaOC = 1; window.renderCXP(); };
@@ -24392,6 +24475,11 @@
         window.renderCXP();
       };
 
+      // Fecha en formato AAAA-MM-DD con el día local (para los campos de fecha).
+      function fechaLocalISOCXP(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+
       function obtenerDatosCXP() {
         var esPagosCCHF = esUsuarioPagosCCHF(actual);
         var esGlobal = esRolGlobalCXP(actual) || esPagosCCHF;
@@ -24449,15 +24537,20 @@
           return esGlobal || usuarioPuedeAcceder(actual, o.empresa, o.departamento) || esPagosCCHF;
         });
 
+        // Las fechas del filtro se leen como día local (fechaSoloDia), igual
+        // que la fecha de pago de la OC. Con new Date('AAAA-MM-DD') eran
+        // medianoche UTC (18:00 del día anterior en México) y se quedaban
+        // fuera las OC con fecha de pago igual a la fecha fin (por defecto,
+        // las que se pagan hoy) o a la fecha inicio.
         if (fechaInicio) {
-          var fechaInicioObj = new Date(fechaInicio);
+          var fechaInicioObj = fechaSoloDia(fechaInicio);
           ocVisibles = ocVisibles.filter(function(o) {
             var fechaOC = fechaSoloDia(o.fechapago);
             return fechaOC >= fechaInicioObj;
           });
         }
         if (fechaFin) {
-          var fechaFinObj = new Date(fechaFin);
+          var fechaFinObj = fechaSoloDia(fechaFin);
           fechaFinObj.setHours(23, 59, 59, 999);
           ocVisibles = ocVisibles.filter(function(o) {
             var fechaOC = fechaSoloDia(o.fechapago);
@@ -36578,9 +36671,11 @@
 
         // Prioridad según los días entre HOY (fecha de generación del PDF)
         // y la fecha de pago de la OC: menos de 5 días = A (urgente),
-        // de 5 a 14 días = B, 15 días o más = C.
+        // de 5 a 14 días = B, 15 días o más = C. Una OC pausada siempre
+        // es C, sin importar su fecha de pago.
         var hoyPrioridad = new Date();
-        function prioridadPorFechaPago(fechapago) {
+        function prioridadPorFechaPago(fechapago, pausada) {
+          if (pausada) return 'C';
           if (!fechapago) return '—';
           var diasRestantes = (fechaSoloDia(fechapago) - hoyPrioridad) / (1000 * 60 * 60 * 24);
           if (diasRestantes < 5) return 'A';
@@ -36612,7 +36707,7 @@
             o.fechapago ? fechaSoloDia(o.fechapago).toLocaleDateString() : '—',
             esUSD ? celdaSaldo : '—',
             !esUSD ? celdaSaldo : '—',
-            prioridadPorFechaPago(o.fechapago)
+            prioridadPorFechaPago(o.fechapago, o.pausada === true)
           ];
         });
         doc.autoTable({
@@ -38916,6 +39011,122 @@
     abrir(sel);
   }, true);
   document.addEventListener('keydown', function(ev) { if (lista && ev.key === 'Escape') cerrar(); }, true);
+})();
+</script>
+<script>
+// ===== DISEÑO PARA CELULAR: TABLAS COMO TARJETAS =====
+// En pantallas de 768 px o menos, cada renglón de las tablas se muestra
+// como una tarjeta (etiqueta arriba, dato abajo) en lugar de columnas, para
+// que la tabla respete el ancho de la pantalla y los botones no se salgan.
+// Aquí solo se ponen las etiquetas (data-label, tomadas de los encabezados)
+// y las clases; el CSS de @media (max-width: 768px) hace el resto. En
+// computadora las tablas se ven igual que antes.
+(function() {
+  function textoEnc(th) {
+    return (th.getAttribute('data-label') || th.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+  // Etiqueta de cada columna: la celda de encabezado más baja que la cubre
+  // (respeta colspan y rowspan de encabezados de varios renglones).
+  function etiquetasDe(tabla) {
+    var thead = tabla.tHead;
+    if (!thead || !thead.rows.length) return null;
+    var grid = [];
+    for (var r = 0; r < thead.rows.length; r++) {
+      grid[r] = grid[r] || [];
+      var c = 0;
+      var celdas = thead.rows[r].cells;
+      for (var i = 0; i < celdas.length; i++) {
+        while (grid[r][c] !== undefined) c++;
+        var cs = celdas[i].colSpan || 1, rs = celdas[i].rowSpan || 1, txt = textoEnc(celdas[i]);
+        for (var rr = r; rr < r + rs; rr++) {
+          grid[rr] = grid[rr] || [];
+          for (var cc = c; cc < c + cs; cc++) grid[rr][cc] = txt;
+        }
+        c += cs;
+      }
+    }
+    var ultima = grid[grid.length - 1] || [];
+    return ultima.map(function(t) { return t || ''; });
+  }
+  function tieneSoloBotones(td) {
+    if (!td.querySelector('button, .btn, a.btn')) return false;
+    var copia = td.cloneNode(true);
+    [].forEach.call(copia.querySelectorAll('button, .btn, a.btn, select, input'), function(x) { x.remove(); });
+    return copia.textContent.replace(/[\s—\-|·]/g, '').length <= 2;
+  }
+  function excluida(t) {
+    return t.classList.contains('sin-tarjetas') || !!t.querySelector('#tablaOC') ||
+      !!t.closest('#reportePreviewContenido, .no-tarjetas, [id$="PreviewContenido"]');
+  }
+  function preparar(t) {
+    if (!t || !t.tHead || excluida(t)) return;
+    var et = etiquetasDe(t);
+    if (!et || !et.length) return;
+    t.classList.add('tabla-tarjetas');
+    var secciones = [].slice.call(t.tBodies);
+    if (t.tFoot) secciones.push(t.tFoot);
+    secciones.forEach(function(sec) {
+      [].forEach.call(sec.rows, function(tr) {
+        var col = 0;
+        // Renglón con su propio título en una celda que abarca varias
+        // columnas (p. ej. "Subtotal (sin IVA):" + importe): sus datos no
+        // llevan la etiqueta de la columna.
+        var conTitulo = tr.cells.length > 1 && [].some.call(tr.cells, function(c) { return (c.colSpan || 1) > 1 && c.textContent.trim(); });
+        tr.classList.toggle('tr-con-titulo', conTitulo);
+        [].forEach.call(tr.cells, function(td) {
+          var span = td.colSpan || 1;
+          if (span > 1 || tr.cells.length === 1) {
+            td.classList.add('td-completa');
+          } else {
+            td.classList.remove('td-completa');
+            if (!td.hasAttribute('data-label') || td.__etiquetaAuto) {
+              td.setAttribute('data-label', et[col] || '');
+              td.__etiquetaAuto = true;
+            }
+          }
+          td.classList.toggle('td-botones', tieneSoloBotones(td));
+          td.classList.toggle('td-vacia', !td.textContent.trim() && !td.querySelector('input, select, textarea, button, img, svg, canvas, a, .badge'));
+          col += span;
+        });
+      });
+    });
+  }
+  var pendientes = new Set(), programado = false;
+  function procesar() {
+    programado = false;
+    var lista = Array.from(pendientes);
+    pendientes.clear();
+    lista.forEach(function(t) { try { preparar(t); } catch (e) { console.warn('Tabla para celular:', e); } });
+  }
+  function encolar(t) {
+    if (!t) return;
+    pendientes.add(t);
+    if (!programado) { programado = true; setTimeout(procesar, 30); }
+  }
+  function revisarNodo(n) {
+    if (!n || n.nodeType !== 1) {
+      if (n && n.parentElement) encolar(n.parentElement.closest('table'));
+      return;
+    }
+    if (n.tagName === 'TABLE') encolar(n);
+    else {
+      var t = n.closest('table');
+      if (t) encolar(t);
+    }
+    if (n.querySelectorAll) [].forEach.call(n.querySelectorAll('table'), encolar);
+  }
+  function iniciar() {
+    [].forEach.call(document.querySelectorAll('table'), encolar);
+    new MutationObserver(function(muts) {
+      muts.forEach(function(m) {
+        revisarNodo(m.target);
+        [].forEach.call(m.addedNodes || [], revisarNodo);
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+  window.prepararTablasCelular = function() { [].forEach.call(document.querySelectorAll('table'), encolar); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+  else iniciar();
 })();
 </script>
 </body>
