@@ -7721,7 +7721,7 @@
              PMSYS pero con 2 semanas laboradas fijas por colaborador. -->
         <div id="seccionAguinaldoSPM" class="hidden" style="margin-top:16px;">
           <h4>🎁 1.1 PMSYS — Presupuesto Mes Aguinaldo</h4>
-          <p class="text-muted" style="margin:0 0 8px;font-size:12px;">Solo en la SPM de diciembre. Aguinaldo de cada colaborador = salario semanal × 2 semanas laboradas. El personal de PMSYS se agrega solo (para quitarlo, quítalo de PMSYS); también puedes agregar otros colaboradores. TDD BBVA y Efectivo se calculan solos y los puedes capturar a mano por colaborador; el Total aguinaldo es TDD BBVA + Efectivo.</p>
+          <p class="text-muted" style="margin:0 0 8px;font-size:12px;">Solo en la SPM de diciembre. Aguinaldo de cada colaborador = salario semanal × 2 semanas laboradas. El personal de PMSYS se agrega solo (para quitarlo, quítalo de PMSYS); también puedes agregar otros colaboradores. Los montos se llenan solos y los puedes cambiar a mano por colaborador: al cambiar el Salario semanal se recalcula la fila; al cambiar el Total aguinaldo, el Efectivo es Total − TDD BBVA; al cambiar TDD BBVA o Efectivo, el Total es la suma.</p>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMSYSAguinaldo">
               <thead>
@@ -27139,18 +27139,20 @@
         if (!tbody) return;
         var fila = document.createElement('tr');
         fila.dataset.tddBase = Number(tddPrecargado) || 0;
-        var celdaMonto = function(clase, titulo) {
-          return '<td><input class="' + clase + '" type="number" step="0.01" min="0" value="0" title="' + titulo + '"' +
-            ' oninput="window.cambiarMontoAguinaldo(this)" onchange="window.cambiarMontoAguinaldo(this, true)" style="width:100%;"></td>';
+        // Todos los montos de la fila se llenan solos y se pueden cambiar
+        // a mano (el Jefe al crear la SPM, el ADMIN al editarla).
+        var celdaMonto = function(clase, titulo, manejador, valor) {
+          return '<td><input class="' + clase + '" type="number" step="0.01" min="0" value="' + (valor || '0') + '" title="' + titulo + '"' +
+            ' oninput="window.' + manejador + '(this)" onchange="window.' + manejador + '(this, true)" style="width:100%;"></td>';
         };
         fila.innerHTML =
           '<td class="indice">AGU-' + (tbody.children.length + 1) + '</td>' +
           '<td><input class="agu-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="agu-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span><span class="agu-origen" style="display:block;font-size:11px;color:var(--gray-600);"></span></td>' +
-          '<td><input class="agu-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" readonly></td>' +
+          celdaMonto('agu-salario', 'Salario semanal (se puede cambiar; recalcula la fila)', 'cambiarSalarioAguinaldo', (Math.round((Number(salarioPrecargado) || 0) * 100) / 100).toFixed(2)) +
           '<td class="agu-semanas" style="text-align:center;">' + SEMANAS_AGUINALDO_SPM + '</td>' +
-          '<td><input class="agu-importe-total" type="text" value="0.00" readonly></td>' +
-          celdaMonto('agu-tdd', 'TDD BBVA del aguinaldo (se puede capturar a mano)') +
-          celdaMonto('agu-efectivo', 'Efectivo del aguinaldo (se puede capturar a mano)') +
+          celdaMonto('agu-importe-total', 'Total aguinaldo (se puede cambiar; Efectivo = Total - TDD BBVA)', 'cambiarTotalAguinaldo') +
+          celdaMonto('agu-tdd', 'TDD BBVA del aguinaldo (se puede cambiar; Total = TDD BBVA + Efectivo)', 'cambiarMontoAguinaldo') +
+          celdaMonto('agu-efectivo', 'Efectivo del aguinaldo (se puede cambiar; Total = TDD BBVA + Efectivo)', 'cambiarMontoAguinaldo') +
           '<td><button class="danger" onclick="window.eliminarFilaAguinaldo(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         marcarOrigenFilaAguinaldo(fila, origen === 'pmsys' ? 'pmsys' : 'manual');
@@ -27164,13 +27166,48 @@
         var fila = input && input.closest ? input.closest('tr') : null;
         if (!fila) return;
         fila.dataset.montosManuales = '1';
-        if (alSalir) {
-          var v = parseFloat(String(input.value).replace(/,/g, ''));
-          input.value = (isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0).toFixed(2);
-        }
+        if (alSalir) formatearMontoInputAguinaldo(input);
         actualizarTotalFilaAguinaldo(fila);
         window.recalcularTotalesAguinaldo();
       };
+
+      // Salario semanal cambiado a mano: la fila se recalcula con la regla
+      // (Total = salario × 2; TDD BBVA = TDD semanal × 2; Efectivo = resto).
+      window.cambiarSalarioAguinaldo = function(input, alSalir) {
+        var fila = input && input.closest ? input.closest('tr') : null;
+        if (!fila) return;
+        if (alSalir) formatearMontoInputAguinaldo(input);
+        fila.dataset.salarioManual = '1';
+        window.recalcularFilaAguinaldo(fila);
+      };
+
+      // Total aguinaldo cambiado a mano: se conserva TDD BBVA y el Efectivo
+      // es Total − TDD BBVA. Al salir del campo, si el Total queda por
+      // debajo de TDD BBVA, TDD BBVA baja al Total y el Efectivo queda en 0.
+      window.cambiarTotalAguinaldo = function(input, alSalir) {
+        var fila = input && input.closest ? input.closest('tr') : null;
+        if (!fila) return;
+        fila.dataset.montosManuales = '1';
+        var total = montoInputAguinaldo(fila, 'agu-importe-total');
+        var tdd = montoInputAguinaldo(fila, 'agu-tdd');
+        var elTdd = fila.querySelector('.agu-tdd');
+        var elEfectivo = fila.querySelector('.agu-efectivo');
+        if (alSalir) {
+          formatearMontoInputAguinaldo(input);
+          if (tdd > total) {
+            tdd = total;
+            if (elTdd) elTdd.value = (Math.round(tdd * 100) / 100).toFixed(2);
+          }
+        }
+        if (elEfectivo) elEfectivo.value = (Math.round(Math.max(total - tdd, 0) * 100) / 100).toFixed(2);
+        if (alSalir) actualizarTotalFilaAguinaldo(fila);
+        window.recalcularTotalesAguinaldo();
+      };
+
+      function formatearMontoInputAguinaldo(input) {
+        var v = parseFloat(String(input.value).replace(/,/g, ''));
+        input.value = (isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0).toFixed(2);
+      }
 
       function montoInputAguinaldo(fila, clase) {
         var el = fila.querySelector('.' + clase);
@@ -27181,7 +27218,7 @@
       function actualizarTotalFilaAguinaldo(fila) {
         var total = montoInputAguinaldo(fila, 'agu-tdd') + montoInputAguinaldo(fila, 'agu-efectivo');
         var elTotal = fila.querySelector('.agu-importe-total');
-        if (elTotal) elTotal.value = formatearNumeroMexico(total, true);
+        if (elTotal) elTotal.value = (Math.round(total * 100) / 100).toFixed(2);
       }
 
       function marcarOrigenFilaAguinaldo(fila, origen) {
@@ -27300,8 +27337,8 @@
       // Igual que PMSYS: Total = salario semanal × semanas (aquí 2);
       // TDD BBVA = TDD semanal del catálogo (topado al salario) × 2;
       // Efectivo = (salario semanal − TDD semanal) × 2.
-      // TDD BBVA y Efectivo se pueden capturar a mano (montos): entonces
-      // el Total aguinaldo de la fila es TDD BBVA + Efectivo.
+      // Los montos se pueden capturar a mano (montos): el Total aguinaldo
+      // de la fila siempre es TDD BBVA + Efectivo.
       window.recalcularFilaAguinaldo = function(elemento, montos) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
@@ -27335,7 +27372,7 @@
           var emp = {
             id: 'AGU-' + (r.empleados.length + 1),
             usuario: usuario,
-            salario_semanal: parseNumero(fila.querySelector('.agu-salario').value),
+            salario_semanal: Math.round(montoInputAguinaldo(fila, 'agu-salario') * 100) / 100,
             tdd_semanal: Number(fila.dataset.tddBase) || 0,
             semanas: SEMANAS_AGUINALDO_SPM,
             origen: fila.dataset.origen || 'manual',
@@ -27344,6 +27381,7 @@
           };
           emp.total = Math.round((emp.tdd_bbva + emp.efectivo) * 100) / 100;
           if (fila.dataset.montosManuales === '1') emp.montos_manuales = true;
+          if (fila.dataset.salarioManual === '1') emp.salario_manual = true;
           r.empleados.push(emp);
           r.total += emp.total;
           r.tdd += emp.tdd_bbva;
@@ -27899,6 +27937,8 @@
         if (aguGuardado) aguGuardado.empleados.forEach(function(emp) {
           window.agregarFilaEmpleadoAguinaldo(emp.usuario, emp.salario_semanal, emp.tdd_semanal != null ? emp.tdd_semanal : emp.tdd_bbva, emp.origen || 'manual',
             emp.montos_manuales ? { tdd: emp.tdd_bbva, efectivo: emp.efectivo } : null);
+          var filaAgregada = document.querySelector('#cuerpoPMSYSAguinaldo tr:last-child');
+          if (emp.salario_manual && filaAgregada) filaAgregada.dataset.salarioManual = '1';
         });
         window.actualizarListaColaboradoresAguinaldo();
         window.actualizarSeccionAguinaldoSPM();
