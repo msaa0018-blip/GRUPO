@@ -18575,9 +18575,9 @@
               });
             }
           });
-          // OC vencidas
+          // OC vencidas (una OC pausada no se marca como vencida)
           ordenes.forEach(function(o) {
-            if (o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA') {
+            if (o.estado === 'AUTORIZADA' && o.estadopago !== 'PAGADA' && !o.pausada) {
               var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
               var diffDias = (new Date() - fechaAut) / (1000 * 60 * 60 * 24);
               if (diffDias > 30) {
@@ -24411,7 +24411,8 @@
         if (estado === 'PAGADA') return o.estadopago === 'PAGADA';
         if (estado === 'PENDIENTE') return o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
         if (estado === 'VENCIDA') {
-          if (o.estadopago === 'PAGADA') return false;
+          // Una OC pausada no se marca como vencida.
+          if (o.estadopago === 'PAGADA' || o.pausada) return false;
           var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
           var ahora = new Date();
           var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
@@ -24607,7 +24608,8 @@
           var esPagada = o.estadopago === 'PAGADA';
           var esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
           var esVencida = false;
-          if (!esPagada && o.estado === 'AUTORIZADA') {
+          // Una OC pausada no se marca como vencida (cuenta como pendiente).
+          if (!esPagada && o.estado === 'AUTORIZADA' && !o.pausada) {
             var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
             var ahora = new Date();
             var diffDias = (ahora - fechaAut) / (1000 * 60 * 60 * 24);
@@ -24662,7 +24664,7 @@
               if (o.estadopago === 'PAGADA') { pagado += (o.montomxn || 0); return; }
               var esPendienteP = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
               var esVencidaP = false;
-              if (o.estado === 'AUTORIZADA') {
+              if (o.estado === 'AUTORIZADA' && !o.pausada) {
                 var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
                 var diffDias = (new Date() - fechaAut) / (1000 * 60 * 60 * 24);
                 esVencidaP = diffDias > 1;
@@ -24729,6 +24731,10 @@
             } else if (o.estado === 'AUTORIZADA' && montosPagoOC(o).parcial) {
               estadoLabel = 'PAGO PARCIAL<span class="pago-oc-monto-badge">' + escapeHTML(textoMontosPagoParcialOC(o)) + '</span>';
               badgeClass = 'badge-pendiente-pago';
+            } else if (o.pausada && o.estado === 'AUTORIZADA') {
+              // Pausada: no se marca como vencida.
+              estadoLabel = 'PAUSADA';
+              badgeClass = 'badge-pausada';
             } else if (o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA')) {
               var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
               var ahora = new Date();
@@ -36621,7 +36627,8 @@
           var esPagada = o.estadopago === 'PAGADA';
           var esPendiente = o.estadopago === 'PENDIENTE' || (o.estadopago === null && o.estado === 'AUTORIZADA');
           var esVencida = false;
-          if (!esPagada && o.estado === 'AUTORIZADA') {
+          // Una OC pausada no se marca como vencida (cuenta como pendiente).
+          if (!esPagada && o.estado === 'AUTORIZADA' && !o.pausada) {
             var fechaAut = new Date(o.fechaaprobaciondirector || o.fechaaprobacionjefe || Date.now());
             var diffDias = (new Date() - fechaAut) / (1000 * 60 * 60 * 24);
             esVencida = diffDias > 1;
