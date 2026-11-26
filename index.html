@@ -7714,6 +7714,47 @@
           </div>
         </div>
 
+        <!-- Solo en la SPM de DICIEMBRE: aguinaldo del personal, igual que
+             PMSYS pero con 2 semanas laboradas fijas por colaborador. -->
+        <div id="seccionAguinaldoSPM" class="hidden" style="margin-top:16px;">
+          <h4>🎁 PMSYS — Presupuesto Mes Aguinaldo</h4>
+          <p class="text-muted" style="margin:0 0 8px;font-size:12px;">Solo en la SPM de diciembre. Aguinaldo de cada colaborador = salario semanal × 2 semanas laboradas. El personal de PMSYS se agrega solo (para quitarlo, quítalo de PMSYS); también puedes agregar otros colaboradores.</p>
+          <div class="table-wrapper">
+            <table class="productos-tabla" id="tablaPMSYSAguinaldo">
+              <thead>
+                <tr>
+                  <th style="width:70px;">ID</th>
+                  <th style="min-width:180px;">Empleado / Usuario</th>
+                  <th style="width:130px;">Salario semanal</th>
+                  <th style="width:90px;">Semanas</th>
+                  <th style="width:140px;">Total aguinaldo</th>
+                  <th style="width:140px;">TDD BBVA</th>
+                  <th style="width:140px;">Efectivo</th>
+                  <th style="width:60px;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="cuerpoPMSYSAguinaldo"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" style="text-align:right;font-weight:bold;">Total aguinaldo:</td>
+                  <td id="aguinaldoTotalCalculado" style="font-weight:bold;">$0.00</td>
+                  <td colspan="3"></td>
+                </tr>
+                <tr>
+                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38%:</td>
+                  <td id="aguinaldoComision" style="font-weight:bold;">$0.00</td>
+                  <td colspan="3"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div id="filaBuscarColaboradorAguinaldo" style="display:flex; gap:8px; margin-top:8px;">
+            <input id="buscarColaboradorAguinaldo" list="listaColaboradoresAguinaldo" placeholder="Buscar colaborador por usuario..." autocomplete="off" style="flex:2;" oninput="window.validarBusquedaColaboradorAguinaldo()" onchange="window.validarBusquedaColaboradorAguinaldo()">
+            <datalist id="listaColaboradoresAguinaldo"></datalist>
+            <button type="button" id="btnAgregarEmpleadoAguinaldo" onclick="window.agregarColaboradorAguinaldoDesdeBusqueda()" class="success" title="Agregar colaborador" style="flex:0 0 auto; width:auto; min-width:0; padding:10px 12px;">➕</button>
+          </div>
+        </div>
+
         <div style="margin-top:16px;">
           <h4>🚚 PMVDC TKC — Presupuesto Mes Vale de Caja Toka Connect</h4>
           <div class="table-wrapper">
@@ -7796,6 +7837,7 @@
                 <tr><td>III.- PMVDC Presupuesto Mes Vale de Caja Cash</td><td>—</td><td>—</td><td id="resGIEVCr3Cash">$0.00</td></tr>
                 <tr><td>IV.- PMVDG Presupuesto Mes Vale de Gasolina</td><td id="resGIEVCr4Bancos">$0.00</td><td>—</td><td>—</td></tr>
                 <tr><td>V.- PMACR Presupuesto Mes Acreedores Diversos</td><td id="resGIEVCr5Bancos">$0.00</td><td>—</td><td>—</td></tr>
+                <tr id="resGIEVCFilaAguinaldo" class="hidden"><td>VI.- PMSYS Presupuesto Mes Aguinaldo</td><td id="resGIEVCr6Bancos">$0.00</td><td>—</td><td id="resGIEVCr6Cash">$0.00</td></tr>
               </tbody>
               <tfoot>
                 <tr style="font-weight:bold;"><td>Subtotales</td><td id="resGIEVCSubBancos">$0.00</td><td id="resGIEVCSubToka">$0.00</td><td id="resGIEVCSubCash">$0.00</td></tr>
@@ -13865,12 +13907,27 @@
             totalEfectivo += Number(emp.efectivo) || 0;
           });
 
-          var presupuestoBancos = d.presupuesto_bancos != null ? Number(d.presupuesto_bancos) : (totalTDD + vdgTotal + acrTotal);
+          // VI.- PMSYS Presupuesto Mes Aguinaldo (solo SPM de diciembre).
+          var aguPDF = aguinaldoGuardadoSPM(d);
+          var rowsAguinaldo = aguPDF ? aguPDF.empleados.map(function(emp, i) {
+            return [
+              i + 1,
+              emp.usuario || '',
+              formatoMoneda(emp.salario_semanal || 0, 'MXN'),
+              emp.semanas || 2,
+              formatoMoneda(emp.total || 0, 'MXN'),
+              formatoMoneda(emp.tdd_bbva || 0, 'MXN'),
+              formatoMoneda(emp.efectivo || 0, 'MXN')
+            ];
+          }) : [];
+          var aguTDD = aguPDF ? aguPDF.tdd : 0, aguEfectivo = aguPDF ? aguPDF.efectivo : 0;
+
+          var presupuestoBancos = d.presupuesto_bancos != null ? Number(d.presupuesto_bancos) : (totalTDD + vdgTotal + acrTotal + aguTDD);
           var presupuestoToka = d.presupuesto_toka != null ? Number(d.presupuesto_toka) : tkcTotal;
-          var presupuestoCash = d.presupuesto_cash != null ? Number(d.presupuesto_cash) : (totalEfectivo + cashTotal);
+          var presupuestoCash = d.presupuesto_cash != null ? Number(d.presupuesto_cash) : (totalEfectivo + cashTotal + aguEfectivo);
           var presupuestoMensual = d.presupuesto_mensual != null ? Number(d.presupuesto_mensual) : (presupuestoBancos + presupuestoToka + presupuestoCash);
 
-          var granTotal = Number(d.monto) || (pmsysTotal + pmsysComision + tkcTotal + cashTotal + vdgTotal + acrTotal);
+          var granTotal = Number(d.monto) || (pmsysTotal + pmsysComision + tkcTotal + cashTotal + vdgTotal + acrTotal + (aguPDF ? aguPDF.total + aguPDF.comision : 0));
 
           var fmtCelda = function(v) { return (v === null || v === undefined) ? '—' : formatoMoneda(v, 'MXN'); };
           // Ediciones hechas por ADMIN, con su justificación.
@@ -13949,6 +14006,36 @@
               didDrawPage: alNuevaHoja
             });
             y = dd.lastAutoTable.finalY + gap;
+
+            // VI.- PMSYS Presupuesto Mes Aguinaldo (solo si la SPM lo trae)
+            if (rowsAguinaldo.length) {
+              dd.setFontSize(Math.max(6.5, 9 * s));
+              dd.setFont('helvetica', 'bold');
+              dd.setTextColor(0, 0, 0);
+              dd.text('VI.- PMSYS — Presupuesto Mes Aguinaldo (2 semanas laboradas)', margin, y + 7 * s);
+              dd.autoTable({
+                head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo']],
+                body: rowsAguinaldo,
+                foot: [['', 'Total aguinaldo', '', '', formatoMoneda(aguPDF.total, 'MXN'), '', ''], ['', 'Comisión 6.38%', '', '', formatoMoneda(aguPDF.comision, 'MXN'), '', '']],
+                startY: y + 11 * s,
+                margin: margenTabla(margin, anchoUtil),
+                tableWidth: anchoUtil,
+                styles: estilos,
+                headStyles: estiloHead,
+                footStyles: estiloFoot,
+                columnStyles: {
+                  0: { cellWidth: 20 },
+                  1: { cellWidth: 'auto' },
+                  2: { cellWidth: 70 },
+                  3: { cellWidth: 45 },
+                  4: { cellWidth: 70 },
+                  5: { cellWidth: 70 },
+                  6: { cellWidth: 70 }
+                },
+                didDrawPage: alNuevaHoja
+              });
+              y = dd.lastAutoTable.finalY + gap;
+            }
 
             // II a V: tablas de código / concepto en dos columnas
             var sep = 12, anchoMitad = (anchoUtil - sep) / 2;
@@ -14038,7 +14125,7 @@
                 ['III.- PMVDC Presupuesto Mes Vale de Caja Cash', '—', '—', fmtCelda(cashTotal)],
                 ['IV.- PMVDG Presupuesto Mes Vale de Gasolina', fmtCelda(vdgTotal), '—', '—'],
                 ['V.- PMACR Presupuesto Mes Acreedores Diversos', fmtCelda(acrTotal), '—', '—']
-              ],
+              ].concat(aguPDF ? [['VI.- PMSYS Presupuesto Mes Aguinaldo', fmtCelda(aguTDD), '—', fmtCelda(aguEfectivo)]] : []),
               foot: [['Subtotales', formatoMoneda(presupuestoBancos, 'MXN'), formatoMoneda(presupuestoToka, 'MXN'), formatoMoneda(presupuestoCash, 'MXN')]],
               startY: y + 11 * s,
               margin: margenTabla(margin, anchoUtil),
@@ -25946,7 +26033,11 @@
           { etiqueta: 'III.- PMVDC Vale de caja Cash', monto: Number(d.pmvdc_cash_total) || 0 },
           { etiqueta: 'IV.- PMVDG Vales de gasolina', monto: Number(d.pmvdg_total) || 0 },
           { etiqueta: 'V.- PMACR Acreedores diversos', monto: Number(d.pmacr_total) || 0 }
-        ];
+        ].concat((function() {
+          // VI.- Aguinaldo (solo SPM de diciembre que lo incluye)
+          var a = aguinaldoGuardadoSPM(d);
+          return a ? [{ etiqueta: 'VI.- PMSYS Aguinaldo', monto: a.total }] : [];
+        })());
       }
 
       function periodoTextoSPM(d) {
@@ -26773,6 +26864,7 @@
       // abreviaturas del catálogo (igual convención que otros folios).
       window.actualizarFolioSPM = function() {
         if (typeof window.actualizarMesConceptosSPM === 'function') window.actualizarMesConceptosSPM();
+        if (typeof window.actualizarSeccionAguinaldoSPM === 'function') window.actualizarSeccionAguinaldoSPM();
         var folioInput = document.getElementById('spmFolio');
         if (!folioInput) return;
         var mes = document.getElementById('spmMes').value;
@@ -26840,6 +26932,7 @@
         window.aplicarPermisosPMSYS();
         window.actualizarListaColaboradoresPMSYS();
         window.recalcularFilaPMSYS(fila);
+        if (typeof window.sincronizarAguinaldoConPMSYS === 'function') window.sincronizarAguinaldoConPMSYS();
       };
 
       // ===== Alta de colaboradores a PMSYS por búsqueda (igual filosofía
@@ -26901,6 +26994,7 @@
         window.reindexarPMSYS();
         window.actualizarListaColaboradoresPMSYS();
         window.recalcularTotalesPMSYS();
+        if (typeof window.sincronizarAguinaldoConPMSYS === 'function') window.sincronizarAguinaldoConPMSYS();
       };
 
       window.reindexarPMSYS = function() {
@@ -26968,6 +27062,238 @@
           if (btnEliminar) btnEliminar.style.display = '';
         });
       };
+
+      // ===== PMSYS — PRESUPUESTO MES AGUINALDO (solo en diciembre) =====
+      // Funciona igual que PMSYS (mismos colaboradores del catálogo, mismo
+      // salario semanal y TDD BBVA, misma comisión de 6.38%), pero en su
+      // propio apartado y con 2 semanas laboradas fijas por colaborador:
+      // Total aguinaldo = salario semanal × 2. Solo aparece y solo cuenta
+      // en la SPM cuyo mes es Diciembre. Se guarda en
+      // documentos_cxp.presupuesto_detalle.aguinaldo (no requiere SQL).
+      var SEMANAS_AGUINALDO_SPM = 2;
+
+      function esMesAguinaldoSPM(mes) {
+        return String(mes || '').trim().toLowerCase() === 'diciembre';
+      }
+
+      function aguinaldoActivoSPM() {
+        var selMes = document.getElementById('spmMes');
+        return esMesAguinaldoSPM(selMes ? selMes.value : '');
+      }
+
+      window.actualizarSeccionAguinaldoSPM = function() {
+        var activo = aguinaldoActivoSPM();
+        var seccion = document.getElementById('seccionAguinaldoSPM');
+        if (seccion) seccion.classList.toggle('hidden', !activo);
+        var filaRes = document.getElementById('resGIEVCFilaAguinaldo');
+        if (filaRes) filaRes.classList.toggle('hidden', !activo);
+        if (activo && typeof window.sincronizarAguinaldoConPMSYS === 'function') window.sincronizarAguinaldoConPMSYS();
+        if (typeof window.recalcularGranTotalSPM === 'function') window.recalcularGranTotalSPM();
+      };
+
+      // origen: 'pmsys' = agregado en automático por estar en PMSYS (no se
+      // quita aquí, se quita de PMSYS); 'manual' = agregado con la búsqueda
+      // (se puede quitar con 🗑️).
+      window.agregarFilaEmpleadoAguinaldo = function(usuarioPrecargado, salarioPrecargado, tddPrecargado, origen) {
+        var tbody = document.getElementById('cuerpoPMSYSAguinaldo');
+        if (!tbody) return;
+        var fila = document.createElement('tr');
+        fila.dataset.tddBase = Number(tddPrecargado) || 0;
+        fila.innerHTML =
+          '<td class="indice">AGU-' + (tbody.children.length + 1) + '</td>' +
+          '<td><input class="agu-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="agu-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span><span class="agu-origen" style="display:block;font-size:11px;color:var(--gray-600);"></span></td>' +
+          '<td><input class="agu-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" readonly></td>' +
+          '<td class="agu-semanas" style="text-align:center;">' + SEMANAS_AGUINALDO_SPM + '</td>' +
+          '<td><input class="agu-importe-total" type="text" value="0.00" readonly></td>' +
+          '<td><input class="agu-tdd" type="text" value="0.00" readonly></td>' +
+          '<td><input class="agu-efectivo" type="text" value="0.00" readonly></td>' +
+          '<td><button class="danger" onclick="window.eliminarFilaAguinaldo(this)">🗑️</button></td>';
+        tbody.appendChild(fila);
+        marcarOrigenFilaAguinaldo(fila, origen === 'pmsys' ? 'pmsys' : 'manual');
+        window.actualizarListaColaboradoresAguinaldo();
+        window.recalcularFilaAguinaldo(fila);
+      };
+
+      function marcarOrigenFilaAguinaldo(fila, origen) {
+        fila.dataset.origen = origen;
+        var etiqueta = fila.querySelector('.agu-origen');
+        if (etiqueta) etiqueta.textContent = origen === 'pmsys' ? 'De PMSYS' : 'Agregado aparte';
+        var btn = fila.querySelector('button.danger');
+        if (btn) {
+          btn.style.display = origen === 'pmsys' ? 'none' : '';
+          btn.title = origen === 'pmsys' ? '' : 'Quitar del aguinaldo';
+        }
+      }
+
+      function reindexarAguinaldo() {
+        document.querySelectorAll('#cuerpoPMSYSAguinaldo tr').forEach(function(fila, i) {
+          var celda = fila.querySelector('.indice');
+          if (celda) celda.textContent = 'AGU-' + (i + 1);
+        });
+      }
+
+      // En diciembre el aguinaldo sigue a PMSYS: todo colaborador de PMSYS
+      // se agrega solo (con su mismo salario semanal y TDD BBVA), y si se
+      // quita de PMSYS se quita también de aquí (solo si se había agregado
+      // por PMSYS). Los agregados aparte se conservan.
+      window.sincronizarAguinaldoConPMSYS = function() {
+        if (!aguinaldoActivoSPM()) return;
+        var tbody = document.getElementById('cuerpoPMSYSAguinaldo');
+        if (!tbody) return;
+        var enPMSYS = {};
+        document.querySelectorAll('#cuerpoPMSYS tr').forEach(function(filaP) {
+          var u = ((filaP.querySelector('.pmsys-usuario') || {}).value || '').trim();
+          if (!u) return;
+          enPMSYS[u.toUpperCase()] = {
+            usuario: u,
+            salario: parseNumero((filaP.querySelector('.pmsys-salario') || {}).value || '0'),
+            tdd: Number(filaP.dataset.tddBase) || 0
+          };
+        });
+        var existentes = {};
+        Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(filaA) {
+          var u = (((filaA.querySelector('.agu-usuario') || {}).value) || '').trim().toUpperCase();
+          if (!u) return;
+          if (enPMSYS[u]) {
+            existentes[u] = true;
+            if (filaA.dataset.origen !== 'pmsys') marcarOrigenFilaAguinaldo(filaA, 'pmsys');
+          } else if (filaA.dataset.origen === 'pmsys') {
+            filaA.remove();
+          }
+        });
+        Object.keys(enPMSYS).forEach(function(u) {
+          if (existentes[u]) return;
+          var e = enPMSYS[u];
+          window.agregarFilaEmpleadoAguinaldo(e.usuario, e.salario, e.tdd, 'pmsys');
+        });
+        reindexarAguinaldo();
+        window.actualizarListaColaboradoresAguinaldo();
+        window.recalcularTotalesAguinaldo();
+      };
+
+      window.actualizarListaColaboradoresAguinaldo = function() {
+        var lista = document.getElementById('listaColaboradoresAguinaldo');
+        if (!lista) return;
+        var yaAgregados = Array.prototype.map.call(document.querySelectorAll('#cuerpoPMSYSAguinaldo .agu-usuario'), function(inp) { return (inp.value || '').toUpperCase(); });
+        var disponibles = usuariosDB.filter(function(u) { return yaAgregados.indexOf((u.usuario || '').toUpperCase()) === -1; });
+        lista.innerHTML = disponibles.slice().sort(function(a, b) { return (a.usuario || '').localeCompare(b.usuario || ''); })
+          .map(function(u) { return '<option value="' + escapeHTML(u.usuario) + '">' + escapeHTML(u.rol || '') + '</option>'; }).join('');
+      };
+
+      window.validarBusquedaColaboradorAguinaldo = function() {
+        var input = document.getElementById('buscarColaboradorAguinaldo');
+        if (!input) return;
+        var valor = input.value.trim().toUpperCase();
+        if (!valor) { input.style.background = ''; return; }
+        var coincide = usuariosDB.some(function(u) { return (u.usuario || '').trim().toUpperCase() === valor; });
+        input.style.background = coincide ? '#e8f7ee' : '#fdecea';
+      };
+
+      window.agregarColaboradorAguinaldoDesdeBusqueda = async function() {
+        var input = document.getElementById('buscarColaboradorAguinaldo');
+        if (!input) return;
+        var texto = input.value.trim().toUpperCase();
+        if (!texto) {
+          alert('⚠️ Escribe el usuario del colaborador que quieres agregar y elige una coincidencia.');
+          return;
+        }
+        var match = usuariosDB.find(function(u) { return (u.usuario || '').trim().toUpperCase() === texto; });
+        if (!match) {
+          alert('⚠️ No se encontró ese colaborador. Elige una de las coincidencias sugeridas (debe existir en el catálogo de Colaboradores).');
+          return;
+        }
+        var yaAgregado = Array.prototype.some.call(document.querySelectorAll('#cuerpoPMSYSAguinaldo .agu-usuario'), function(inp) {
+          return (inp.value || '').toUpperCase() === texto;
+        });
+        if (yaAgregado) {
+          alert('⚠️ Ese colaborador ya está agregado al aguinaldo de esta SPM.');
+          return;
+        }
+        var datos = await obtenerDatosUsuarioSPM(match.usuario);
+        window.agregarFilaEmpleadoAguinaldo(match.usuario, datos.salario, datos.tdd, 'manual');
+        input.value = '';
+        input.style.background = '';
+      };
+
+      window.eliminarFilaAguinaldo = function(boton) {
+        var filaQuitar = boton.closest('tr');
+        if (filaQuitar && filaQuitar.dataset.origen === 'pmsys') {
+          alert('ℹ️ Este colaborador está en PMSYS: para quitarlo del aguinaldo, quítalo de PMSYS.');
+          return;
+        }
+        filaQuitar.remove();
+        reindexarAguinaldo();
+        window.actualizarListaColaboradoresAguinaldo();
+        window.recalcularTotalesAguinaldo();
+      };
+
+      // Igual que PMSYS: Total = salario semanal × semanas (aquí 2);
+      // TDD BBVA = el del catálogo de Colaboradores (topado al salario);
+      // Efectivo = salario semanal − TDD BBVA.
+      window.recalcularFilaAguinaldo = function(elemento) {
+        var fila = elemento.closest ? elemento.closest('tr') : elemento;
+        if (!fila) return;
+        var inputSalario = fila.querySelector('.agu-salario');
+        var salario = parseNumero(inputSalario ? inputSalario.value : '0');
+        var total = salario * SEMANAS_AGUINALDO_SPM;
+        var tdd = Math.min(Number(fila.dataset.tddBase) || 0, salario);
+        var efectivo = salario - tdd;
+        var set = function(sel, v) { var el = fila.querySelector(sel); if (el) el.value = formatearNumeroMexico(v, true); };
+        set('.agu-importe-total', total);
+        set('.agu-tdd', tdd);
+        set('.agu-efectivo', efectivo);
+        window.recalcularTotalesAguinaldo();
+      };
+
+      // Totales del aguinaldo; fuera de diciembre no cuentan (0).
+      function obtenerTotalesAguinaldoSPM() {
+        var r = { total: 0, comision: 0, tdd: 0, efectivo: 0, empleados: [] };
+        if (!aguinaldoActivoSPM()) return r;
+        document.querySelectorAll('#cuerpoPMSYSAguinaldo tr').forEach(function(fila) {
+          var usuario = (fila.querySelector('.agu-usuario') || {}).value || '';
+          if (!usuario) return;
+          var emp = {
+            id: 'AGU-' + (r.empleados.length + 1),
+            usuario: usuario,
+            salario_semanal: parseNumero(fila.querySelector('.agu-salario').value),
+            semanas: SEMANAS_AGUINALDO_SPM,
+            origen: fila.dataset.origen || 'manual',
+            total: parseNumero(fila.querySelector('.agu-importe-total').value),
+            tdd_bbva: parseNumero(fila.querySelector('.agu-tdd').value),
+            efectivo: parseNumero(fila.querySelector('.agu-efectivo').value)
+          };
+          r.empleados.push(emp);
+          r.total += emp.total;
+          r.tdd += emp.tdd_bbva;
+          r.efectivo += emp.efectivo;
+        });
+        r.comision = r.total * COMISION_PMSYS;
+        return r;
+      }
+
+      window.recalcularTotalesAguinaldo = function() {
+        var r = obtenerTotalesAguinaldoSPM();
+        var elTotal = document.getElementById('aguinaldoTotalCalculado');
+        var elComision = document.getElementById('aguinaldoComision');
+        if (elTotal) elTotal.textContent = formatoMoneda(r.total, 'MXN');
+        if (elComision) elComision.textContent = formatoMoneda(r.comision, 'MXN');
+        window.recalcularGranTotalSPM();
+        return r;
+      };
+
+      // Aguinaldo guardado en una SPM (presupuesto_detalle.aguinaldo).
+      function aguinaldoGuardadoSPM(d) {
+        var det = d ? parsePresupuestoDetalleSPM(d.presupuesto_detalle) : null;
+        var a = det && det.aguinaldo;
+        if (!a || !Array.isArray(a.empleados) || !a.empleados.length) return null;
+        return {
+          empleados: a.empleados,
+          total: Number(a.total) || 0,
+          comision: Number(a.comision) || 0,
+          tdd: Number(a.total_tdd) || 0,
+          efectivo: Number(a.total_efectivo) || 0
+        };
+      }
 
       // ===== Presupuestos de la SPM por renglón (secciones II a V) =====
       // Cada sección acepta varios renglones, igual que las partidas de una
@@ -27293,13 +27619,15 @@
         var vdg = obtenerTotalPMVDG();
         var acr = obtenerTotalPMACR();
 
-        var granTotal = totalPMSYS + comisionPMSYS + tkc.total + cash.total + vdg + acr;
+        var agu = obtenerTotalesAguinaldoSPM();
+
+        var granTotal = totalPMSYS + comisionPMSYS + tkc.total + cash.total + vdg + acr + agu.total + agu.comision;
         var elGranTotal = document.getElementById('spmGranTotal');
         if (elGranTotal) elGranTotal.textContent = formatoMoneda(granTotal, 'MXN');
 
-        var subBancos = totalTDD + vdg + acr;
+        var subBancos = totalTDD + vdg + acr + agu.tdd;
         var subToka = tkc.total;
-        var subCash = totalEfectivo + cash.total;
+        var subCash = totalEfectivo + cash.total + agu.efectivo;
 
         var setTxt = function(id, val) {
           var el = document.getElementById(id);
@@ -27311,6 +27639,8 @@
         setTxt('resGIEVCr3Cash', cash.total);
         setTxt('resGIEVCr4Bancos', vdg);
         setTxt('resGIEVCr5Bancos', acr);
+        setTxt('resGIEVCr6Bancos', agu.tdd);
+        setTxt('resGIEVCr6Cash', agu.efectivo);
         setTxt('resGIEVCSubBancos', subBancos);
         setTxt('resGIEVCSubToka', subToka);
         setTxt('resGIEVCSubCash', subCash);
@@ -27353,6 +27683,11 @@
         var buscarColabNuevo = document.getElementById('buscarColaboradorPMSYS');
         if (buscarColabNuevo) { buscarColabNuevo.value = ''; buscarColabNuevo.style.background = ''; }
         window.actualizarListaColaboradoresPMSYS();
+        var cuerpoAguNuevo = document.getElementById('cuerpoPMSYSAguinaldo');
+        if (cuerpoAguNuevo) cuerpoAguNuevo.innerHTML = '';
+        var buscarAguNuevo = document.getElementById('buscarColaboradorAguinaldo');
+        if (buscarAguNuevo) { buscarAguNuevo.value = ''; buscarAguNuevo.style.background = ''; }
+        window.actualizarListaColaboradoresAguinaldo();
 
         configurarCamposDefaultSPM();
         window.actualizarFolioSPM();
@@ -27463,6 +27798,16 @@
           window.agregarFilaEmpleadoPMSYS(emp.usuario, emp.salario_semanal, emp.tdd_bbva);
         });
         window.actualizarListaColaboradoresPMSYS();
+        var cuerpoAguEd = document.getElementById('cuerpoPMSYSAguinaldo');
+        if (cuerpoAguEd) cuerpoAguEd.innerHTML = '';
+        var buscarAguEd = document.getElementById('buscarColaboradorAguinaldo');
+        if (buscarAguEd) { buscarAguEd.value = ''; buscarAguEd.style.background = ''; }
+        var aguGuardado = aguinaldoGuardadoSPM(d);
+        if (aguGuardado) aguGuardado.empleados.forEach(function(emp) {
+          window.agregarFilaEmpleadoAguinaldo(emp.usuario, emp.salario_semanal, emp.tdd_bbva, emp.origen || 'manual');
+        });
+        window.actualizarListaColaboradoresAguinaldo();
+        window.actualizarSeccionAguinaldoSPM();
 
         window.recalcularSemanasSPM();
         window.recalcularPMVDC();
@@ -27550,7 +27895,19 @@
         var cash = obtenerTotalPMVDCCash();
         var vdg = obtenerTotalPMVDG();
         var acr = obtenerTotalPMACR();
-        var granTotal = totales.total + totales.comision + tkc.total + cash.total + vdg + acr;
+        // Aguinaldo (solo diciembre): se guarda en presupuesto_detalle.
+        var aguinaldo = obtenerTotalesAguinaldoSPM();
+        if (aguinaldo.empleados.length) {
+          detallePpto.aguinaldo = {
+            semanas: SEMANAS_AGUINALDO_SPM,
+            empleados: aguinaldo.empleados,
+            total: Math.round(aguinaldo.total * 100) / 100,
+            comision: Math.round(aguinaldo.comision * 100) / 100,
+            total_tdd: Math.round(aguinaldo.tdd * 100) / 100,
+            total_efectivo: Math.round(aguinaldo.efectivo * 100) / 100
+          };
+        }
+        var granTotal = totales.total + totales.comision + tkc.total + cash.total + vdg + acr + aguinaldo.total + aguinaldo.comision;
         if (notaEdicion) {
           detallePpto.ediciones.push({
             fecha: new Date().toISOString(),
@@ -27566,9 +27923,9 @@
           totalTDD += Number(emp.tdd_bbva) || 0;
           totalEfectivo += Number(emp.efectivo) || 0;
         });
-        var presupuestoBancos = totalTDD + vdg + acr;
+        var presupuestoBancos = totalTDD + vdg + acr + aguinaldo.tdd;
         var presupuestoToka = tkc.total;
-        var presupuestoCash = totalEfectivo + cash.total;
+        var presupuestoCash = totalEfectivo + cash.total + aguinaldo.efectivo;
 
         var registro = {
           tipo: 'SPM',
