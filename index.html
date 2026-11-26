@@ -27141,7 +27141,7 @@
         fila.dataset.tddBase = Number(tddPrecargado) || 0;
         var celdaMonto = function(clase, titulo) {
           return '<td><input class="' + clase + '" type="number" step="0.01" min="0" value="0" title="' + titulo + '"' +
-            ' oninput="window.cambiarMontoAguinaldo(this)" onchange="window.cambiarMontoAguinaldo(this)" style="width:100%;"></td>';
+            ' oninput="window.cambiarMontoAguinaldo(this)" onchange="window.cambiarMontoAguinaldo(this, true)" style="width:100%;"></td>';
         };
         fila.innerHTML =
           '<td class="indice">AGU-' + (tbody.children.length + 1) + '</td>' +
@@ -27160,10 +27160,14 @@
 
       // TDD BBVA o Efectivo capturado a mano: la fila queda con montos
       // manuales y su Total aguinaldo = TDD BBVA + Efectivo.
-      window.cambiarMontoAguinaldo = function(input) {
+      window.cambiarMontoAguinaldo = function(input, alSalir) {
         var fila = input && input.closest ? input.closest('tr') : null;
         if (!fila) return;
         fila.dataset.montosManuales = '1';
+        if (alSalir) {
+          var v = parseFloat(String(input.value).replace(/,/g, ''));
+          input.value = (isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0).toFixed(2);
+        }
         actualizarTotalFilaAguinaldo(fila);
         window.recalcularTotalesAguinaldo();
       };
