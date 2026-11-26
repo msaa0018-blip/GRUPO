@@ -7675,9 +7675,12 @@
           <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha de inicio<input id="spmFechaInicio" type="date" style="width:100%;margin-top:4px;" onchange="window.recalcularSemanasSPM()"></label>
           <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha final (calculada)<input id="spmFechaFin" type="text" readonly style="width:100%;margin-top:4px;background:var(--gray-200);"></label>
         </div>
+        <div class="cxc-form-row">
+          <label style="font-size:12px;font-weight:500;color:var(--gray-600);flex:1;">Fecha solicitada de pago *<input id="spmFechaSolicitadaPago" type="date" style="width:100%;margin-top:4px;"></label>
+        </div>
 
         <div style="margin-top:16px;">
-          <h4>📋 PMSYS — Personal incluido en la SPM</h4>
+          <h4>📋 1 PMSYS — Presupuesto Mes Sueldos y Salarios</h4>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMSYS">
               <thead>
@@ -7700,7 +7703,7 @@
                   <td colspan="3"></td>
                 </tr>
                 <tr>
-                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38%:</td>
+                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38% (sobre efectivo):</td>
                   <td id="pmsysComision" style="font-weight:bold;">$0.00</td>
                   <td colspan="3"></td>
                 </tr>
@@ -7717,8 +7720,8 @@
         <!-- Solo en la SPM de DICIEMBRE: aguinaldo del personal, igual que
              PMSYS pero con 2 semanas laboradas fijas por colaborador. -->
         <div id="seccionAguinaldoSPM" class="hidden" style="margin-top:16px;">
-          <h4>🎁 PMSYS — Presupuesto Mes Aguinaldo</h4>
-          <p class="text-muted" style="margin:0 0 8px;font-size:12px;">Solo en la SPM de diciembre. Aguinaldo de cada colaborador = salario semanal × 2 semanas laboradas. El personal de PMSYS se agrega solo (para quitarlo, quítalo de PMSYS); también puedes agregar otros colaboradores.</p>
+          <h4>🎁 1.1 PMSYS — Presupuesto Mes Aguinaldo</h4>
+          <p class="text-muted" style="margin:0 0 8px;font-size:12px;">Solo en la SPM de diciembre. Aguinaldo de cada colaborador = salario semanal × 2 semanas laboradas. El personal de PMSYS se agrega solo (para quitarlo, quítalo de PMSYS); también puedes agregar otros colaboradores. TDD BBVA y Efectivo se calculan solos y los puedes capturar a mano por colaborador; el Total aguinaldo es TDD BBVA + Efectivo.</p>
           <div class="table-wrapper">
             <table class="productos-tabla" id="tablaPMSYSAguinaldo">
               <thead>
@@ -7741,7 +7744,7 @@
                   <td colspan="3"></td>
                 </tr>
                 <tr>
-                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38%:</td>
+                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38% (sobre efectivo):</td>
                   <td id="aguinaldoComision" style="font-weight:bold;">$0.00</td>
                   <td colspan="3"></td>
                 </tr>
@@ -7833,11 +7836,11 @@
               <thead><tr><th>Concepto</th><th style="width:120px;">GIE Bancos</th><th style="width:120px;">Toka Connect</th><th style="width:120px;">Cash</th></tr></thead>
               <tbody>
                 <tr><td>I.- PMSYS Presupuesto Mes Sueldos y Salarios</td><td id="resGIEVCr1Bancos">$0.00</td><td>—</td><td id="resGIEVCr1Cash">$0.00</td></tr>
+                <tr id="resGIEVCFilaAguinaldo" class="hidden"><td>1.1 PMSYS Presupuesto Mes Aguinaldo</td><td id="resGIEVCr6Bancos">$0.00</td><td>—</td><td id="resGIEVCr6Cash">$0.00</td></tr>
                 <tr><td>II.- PMVDC Presupuesto Mes Vale de Caja Toka Connect</td><td>—</td><td id="resGIEVCr2Toka">$0.00</td><td>—</td></tr>
                 <tr><td>III.- PMVDC Presupuesto Mes Vale de Caja Cash</td><td>—</td><td>—</td><td id="resGIEVCr3Cash">$0.00</td></tr>
                 <tr><td>IV.- PMVDG Presupuesto Mes Vale de Gasolina</td><td id="resGIEVCr4Bancos">$0.00</td><td>—</td><td>—</td></tr>
                 <tr><td>V.- PMACR Presupuesto Mes Acreedores Diversos</td><td id="resGIEVCr5Bancos">$0.00</td><td>—</td><td>—</td></tr>
-                <tr id="resGIEVCFilaAguinaldo" class="hidden"><td>VI.- PMSYS Presupuesto Mes Aguinaldo</td><td id="resGIEVCr6Bancos">$0.00</td><td>—</td><td id="resGIEVCr6Cash">$0.00</td></tr>
               </tbody>
               <tfoot>
                 <tr style="font-weight:bold;"><td>Subtotales</td><td id="resGIEVCSubBancos">$0.00</td><td id="resGIEVCSubToka">$0.00</td><td id="resGIEVCSubCash">$0.00</td></tr>
@@ -13832,7 +13835,7 @@
       // Genera el PDF de reporte de una SPM (Solicitud de Presupuesto
       // Mensual): datos generales, tabla de personal PMSYS, bloques II a V
       // y el resumen de totales (PMSYS + comisión + PMVDC TKC).
-      // Lleva el membrete de la empresa (el mismo membrete fijo de sus OC),
+      // Lleva el membrete de Grupo Industrial Extingue (el de sus OC),
       // sin logo aparte, y TODO cabe en UNA sola hoja: el contenido se
       // ensaya primero en una hoja de prueba y la letra y el espaciado se
       // reducen solo lo necesario para que quepa completo.
@@ -13852,9 +13855,9 @@
           var anchoUtil = pageWidth - 2 * margin;
           var leyendaPie = getLeyendaPie(d.empresa);
 
-          // Membrete (sin logo): el membrete fijo de la empresa de la SPM,
-          // igual que en sus OC; si la empresa no tiene uno fijo, el Dálmata.
-          var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, membreteFijoEmpresa(d.empresa) || '9');
+          // Membrete (sin logo): la SPM siempre lleva el membrete de Grupo
+          // Industrial Extingue (formato 9, el mismo de las OC de Extingue).
+          var franjas = await dibujarMembreteImagenesOC(doc, pageWidth, pageHeight, '9');
           var repetirMembrete = function(dd) {
             (franjas.instrucciones || []).forEach(function(ins) {
               try { dd.addImage(ins.dataUrl, ins.tipo, ins.x, ins.y, ins.w, ins.h); } catch (e) { console.warn('No se pudo repetir el membrete:', e); }
@@ -13907,7 +13910,7 @@
             totalEfectivo += Number(emp.efectivo) || 0;
           });
 
-          // VI.- PMSYS Presupuesto Mes Aguinaldo (solo SPM de diciembre).
+          // 1.1 PMSYS Presupuesto Mes Aguinaldo (solo SPM de diciembre).
           var aguPDF = aguinaldoGuardadoSPM(d);
           var rowsAguinaldo = aguPDF ? aguPDF.empleados.map(function(emp, i) {
             return [
@@ -13921,10 +13924,17 @@
             ];
           }) : [];
           var aguTDD = aguPDF ? aguPDF.tdd : 0, aguEfectivo = aguPDF ? aguPDF.efectivo : 0;
+          // Regla 2 (SPM guardadas desde el 26/11/2026): TDD y Efectivo ya
+          // vienen por semanas y la comisión (solo sobre el Efectivo) va en
+          // la columna Cash del resumen, como la tabla III.
+          var detPDF = parsePresupuestoDetalleSPM(d.presupuesto_detalle);
+          var reglaPMSYS2 = !!(detPDF && detPDF.regla_pmsys >= 2);
+          var cashPMSYS = totalEfectivo + (reglaPMSYS2 ? pmsysComision : 0);
+          var cashAgu = aguEfectivo + (reglaPMSYS2 && aguPDF ? aguPDF.comision : 0);
 
           var presupuestoBancos = d.presupuesto_bancos != null ? Number(d.presupuesto_bancos) : (totalTDD + vdgTotal + acrTotal + aguTDD);
           var presupuestoToka = d.presupuesto_toka != null ? Number(d.presupuesto_toka) : tkcTotal;
-          var presupuestoCash = d.presupuesto_cash != null ? Number(d.presupuesto_cash) : (totalEfectivo + cashTotal + aguEfectivo);
+          var presupuestoCash = d.presupuesto_cash != null ? Number(d.presupuesto_cash) : (cashPMSYS + cashTotal + cashAgu);
           var presupuestoMensual = d.presupuesto_mensual != null ? Number(d.presupuesto_mensual) : (presupuestoBancos + presupuestoToka + presupuestoCash);
 
           var granTotal = Number(d.monto) || (pmsysTotal + pmsysComision + tkcTotal + cashTotal + vdgTotal + acrTotal + (aguPDF ? aguPDF.total + aguPDF.comision : 0));
@@ -13981,19 +13991,29 @@
             ], y);
             var yDer = columnaDatos(margin + anchoColDatos + 16, anchoColDatos, [
               { label: 'Fecha de creación:', value: d.fecha_registro ? new Date(d.fecha_registro).toLocaleDateString() : '' },
-              { label: 'N.º de semanas:', value: d.num_semanas }
+              { label: 'N.º de semanas:', value: d.num_semanas },
+              { label: 'Fecha solicitada de pago:', value: (function() {
+                var fPago = fechaSolicitadaPagoSPM(d);
+                return fPago ? new Date(fPago + 'T00:00:00').toLocaleDateString() : '—';
+              })() }
             ], y);
             y = Math.max(yIzq, yDer) + 2 * s;
 
-            // I.- PMSYS: personal
+            // 1 PMSYS — Presupuesto Mes Sueldos y Salarios (personal)
+            dd.setFontSize(Math.max(6.5, 9 * s));
+            dd.setFont('helvetica', 'bold');
+            dd.setTextColor(0, 0, 0);
+            dd.text('1 PMSYS — Presupuesto Mes Sueldos y Salarios', margin, y + 7 * s);
             dd.autoTable({
               head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo']],
               body: rowsPMSYS,
-              startY: y,
+              foot: reglaPMSYS2 ? [['', 'Total', '', '', formatoMoneda(pmsysTotal, 'MXN'), formatoMoneda(totalTDD, 'MXN'), formatoMoneda(totalEfectivo, 'MXN')], ['', 'Comisión 6.38% (sobre efectivo)', '', '', '', '', formatoMoneda(pmsysComision, 'MXN')]] : undefined,
+              startY: y + 11 * s,
               margin: margenTabla(margin, anchoUtil),
               tableWidth: anchoUtil,
               styles: estilos,
               headStyles: estiloHead,
+              footStyles: estiloFoot,
               columnStyles: {
                 0: { cellWidth: 20 },
                 1: { cellWidth: 'auto' },
@@ -14007,16 +14027,18 @@
             });
             y = dd.lastAutoTable.finalY + gap;
 
-            // VI.- PMSYS Presupuesto Mes Aguinaldo (solo si la SPM lo trae)
+            // 1.1 PMSYS Presupuesto Mes Aguinaldo (solo si la SPM lo trae)
             if (rowsAguinaldo.length) {
               dd.setFontSize(Math.max(6.5, 9 * s));
               dd.setFont('helvetica', 'bold');
               dd.setTextColor(0, 0, 0);
-              dd.text('VI.- PMSYS — Presupuesto Mes Aguinaldo (2 semanas laboradas)', margin, y + 7 * s);
+              dd.text('1.1 PMSYS — Presupuesto Mes Aguinaldo (2 semanas laboradas)', margin, y + 7 * s);
               dd.autoTable({
                 head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo']],
                 body: rowsAguinaldo,
-                foot: [['', 'Total aguinaldo', '', '', formatoMoneda(aguPDF.total, 'MXN'), '', ''], ['', 'Comisión 6.38%', '', '', formatoMoneda(aguPDF.comision, 'MXN'), '', '']],
+                foot: reglaPMSYS2
+                  ? [['', 'Total aguinaldo', '', '', formatoMoneda(aguPDF.total, 'MXN'), formatoMoneda(aguTDD, 'MXN'), formatoMoneda(aguEfectivo, 'MXN')], ['', 'Comisión 6.38% (sobre efectivo)', '', '', '', '', formatoMoneda(aguPDF.comision, 'MXN')]]
+                  : [['', 'Total aguinaldo', '', '', formatoMoneda(aguPDF.total, 'MXN'), '', ''], ['', 'Comisión 6.38%', '', '', formatoMoneda(aguPDF.comision, 'MXN'), '', '']],
                 startY: y + 11 * s,
                 margin: margenTabla(margin, anchoUtil),
                 tableWidth: anchoUtil,
@@ -14120,12 +14142,13 @@
             dd.autoTable({
               head: [['Concepto', 'GIE Bancos', 'Toka Connect', 'Cash']],
               body: [
-                ['I.- PMSYS Presupuesto Mes Sueldos y Salarios', fmtCelda(totalTDD), '—', fmtCelda(totalEfectivo)],
+                ['I.- PMSYS Presupuesto Mes Sueldos y Salarios', fmtCelda(totalTDD), '—', fmtCelda(cashPMSYS)]
+              ].concat(aguPDF ? [['1.1 PMSYS Presupuesto Mes Aguinaldo', fmtCelda(aguTDD), '—', fmtCelda(cashAgu)]] : []).concat([
                 ['II.- PMVDC Presupuesto Mes Vale de Caja Toka Connect', '—', fmtCelda(tkcTotal), '—'],
                 ['III.- PMVDC Presupuesto Mes Vale de Caja Cash', '—', '—', fmtCelda(cashTotal)],
                 ['IV.- PMVDG Presupuesto Mes Vale de Gasolina', fmtCelda(vdgTotal), '—', '—'],
                 ['V.- PMACR Presupuesto Mes Acreedores Diversos', fmtCelda(acrTotal), '—', '—']
-              ].concat(aguPDF ? [['VI.- PMSYS Presupuesto Mes Aguinaldo', fmtCelda(aguTDD), '—', fmtCelda(aguEfectivo)]] : []),
+              ]),
               foot: [['Subtotales', formatoMoneda(presupuestoBancos, 'MXN'), formatoMoneda(presupuestoToka, 'MXN'), formatoMoneda(presupuestoCash, 'MXN')]],
               startY: y + 11 * s,
               margin: margenTabla(margin, anchoUtil),
@@ -26027,17 +26050,16 @@
       }
 
       function resumenMontosSPM(d) {
+        // 1.1 Aguinaldo (solo SPM de diciembre que lo incluye), debajo de I.
+        var aguResumen = aguinaldoGuardadoSPM(d);
         return [
-          { etiqueta: 'I.- PMSYS Sueldos y salarios', monto: Number(d.pmsys_total) || 0 },
+          { etiqueta: 'I.- PMSYS Sueldos y salarios', monto: Number(d.pmsys_total) || 0 }
+        ].concat(aguResumen ? [{ etiqueta: '1.1 PMSYS Aguinaldo', monto: aguResumen.total }] : []).concat([
           { etiqueta: 'II.- PMVDC Vale de caja Toka Connect', monto: Number(d.pmvdc_total) || 0 },
           { etiqueta: 'III.- PMVDC Vale de caja Cash', monto: Number(d.pmvdc_cash_total) || 0 },
           { etiqueta: 'IV.- PMVDG Vales de gasolina', monto: Number(d.pmvdg_total) || 0 },
           { etiqueta: 'V.- PMACR Acreedores diversos', monto: Number(d.pmacr_total) || 0 }
-        ].concat((function() {
-          // VI.- Aguinaldo (solo SPM de diciembre que lo incluye)
-          var a = aguinaldoGuardadoSPM(d);
-          return a ? [{ etiqueta: 'VI.- PMSYS Aguinaldo', monto: a.total }] : [];
-        })());
+        ]);
       }
 
       function periodoTextoSPM(d) {
@@ -26883,8 +26905,18 @@
         folioInput.value = 'SPM-' + mesNumero + '-' + version + '-' + empAbrev + (deptoAbrev ? '-' + deptoAbrev : '');
       };
 
-      // Fecha final = fecha de inicio + N semanas (N × 7 días), mostrando
-      // el último día de esa N-ésima semana.
+      // Fecha final = fecha de inicio + N semanas (N × 7 días) − 2 días:
+      // un día antes del último día de la N-ésima semana (pedido del
+      // usuario el 26/11/2026; antes era − 1). Misma regla en pantalla y
+      // al guardar (fecha_fin_semanas).
+      function fechaFinSemanasSPM(fechaInicioStr, numSemanas) {
+        if (!fechaInicioStr || !(numSemanas > 0)) return null;
+        var fin = new Date(fechaInicioStr + 'T00:00:00');
+        if (isNaN(fin.getTime())) return null;
+        fin.setDate(fin.getDate() + (numSemanas * 7) - 2);
+        return fin;
+      }
+
       window.recalcularSemanasSPM = function() {
         var inputInicio = document.getElementById('spmFechaInicio');
         var inputSemanas = document.getElementById('spmNumSemanas');
@@ -26894,10 +26926,8 @@
         if (!inputInicio.value || numSemanas <= 0) {
           campoFin.value = '';
         } else {
-          var inicio = new Date(inputInicio.value + 'T00:00:00');
-          var fin = new Date(inicio.getTime());
-          fin.setDate(fin.getDate() + (numSemanas * 7) - 1);
-          campoFin.value = fin.toLocaleDateString();
+          var fin = fechaFinSemanasSPM(inputInicio.value, numSemanas);
+          campoFin.value = fin ? fin.toLocaleDateString() : '';
         }
         // El número de semanas alimenta el cálculo de cada empleado
         // (salario semanal × semanas), así que hay que refrescar la tabla.
@@ -27004,11 +27034,14 @@
         });
       };
 
-      // Por cada empleado: Total = salario semanal × N semanas (el costo
-      // del periodo completo). TDD BBVA es el monto semanal que capturó
-      // ADMIN para ese colaborador en el catálogo de Colaboradores
-      // (guardado en fila.dataset.tddBase, topado al salario semanal para
-      // no dar negativo). Efectivo = Salario semanal − TDD BBVA.
+      // Por cada empleado (desde el 26/11/2026):
+      //   Total     = salario semanal × N semanas;
+      //   TDD BBVA  = TDD semanal × N semanas (TDD semanal: el que capturó
+      //               ADMIN en Colaboradores, 2,205.30 por default; topado
+      //               al salario semanal para no dar negativo);
+      //   Efectivo  = (salario semanal − TDD semanal) × N semanas.
+      // Así TDD BBVA + Efectivo = Total. La comisión de 6.38% se calcula
+      // solo sobre el Efectivo (igual que la tabla III, PMVDC Cash).
       window.recalcularFilaPMSYS = function(elemento) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
@@ -27025,8 +27058,9 @@
         var semanas = parseInt(celdaSemanas ? celdaSemanas.textContent : '0', 10) || 0;
         var total = salario * semanas;
         var tddBase = Number(fila.dataset.tddBase) || 0;
-        var tdd = Math.min(tddBase, salario);
-        var efectivo = salario - tdd;
+        var tddSemanal = Math.min(tddBase, salario);
+        var tdd = tddSemanal * semanas;
+        var efectivo = (salario - tddSemanal) * semanas;
 
         if (inputTotal) inputTotal.value = formatearNumeroMexico(total, true);
         if (inputTdd) inputTdd.value = formatearNumeroMexico(tdd, true);
@@ -27036,11 +27070,15 @@
       };
 
       window.recalcularTotalesPMSYS = function() {
-        var total = 0;
+        var total = 0, efectivo = 0;
         document.querySelectorAll('#cuerpoPMSYS .pmsys-importe-total').forEach(function(input) {
           total += parseNumero(input.value);
         });
-        var comision = total * COMISION_PMSYS;
+        document.querySelectorAll('#cuerpoPMSYS .pmsys-efectivo').forEach(function(input) {
+          efectivo += parseNumero(input.value);
+        });
+        // Comisión 6.38% solo sobre el Efectivo (como la tabla III).
+        var comision = efectivo * COMISION_PMSYS;
         var elTotal = document.getElementById('pmsysTotalCalculado');
         var elComision = document.getElementById('pmsysComision');
         if (elTotal) elTotal.textContent = formatoMoneda(total, 'MXN');
@@ -27094,25 +27132,53 @@
       // origen: 'pmsys' = agregado en automático por estar en PMSYS (no se
       // quita aquí, se quita de PMSYS); 'manual' = agregado con la búsqueda
       // (se puede quitar con 🗑️).
-      window.agregarFilaEmpleadoAguinaldo = function(usuarioPrecargado, salarioPrecargado, tddPrecargado, origen) {
+      // montosGuardados (opcional): { tdd, efectivo } capturados a mano en
+      // una SPM ya guardada; si vienen, se respetan en lugar del cálculo.
+      window.agregarFilaEmpleadoAguinaldo = function(usuarioPrecargado, salarioPrecargado, tddPrecargado, origen, montosGuardados) {
         var tbody = document.getElementById('cuerpoPMSYSAguinaldo');
         if (!tbody) return;
         var fila = document.createElement('tr');
         fila.dataset.tddBase = Number(tddPrecargado) || 0;
+        var celdaMonto = function(clase, titulo) {
+          return '<td><input class="' + clase + '" type="number" step="0.01" min="0" value="0" title="' + titulo + '"' +
+            ' oninput="window.cambiarMontoAguinaldo(this)" onchange="window.cambiarMontoAguinaldo(this)" style="width:100%;"></td>';
+        };
         fila.innerHTML =
           '<td class="indice">AGU-' + (tbody.children.length + 1) + '</td>' +
           '<td><input class="agu-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="agu-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span><span class="agu-origen" style="display:block;font-size:11px;color:var(--gray-600);"></span></td>' +
           '<td><input class="agu-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" readonly></td>' +
           '<td class="agu-semanas" style="text-align:center;">' + SEMANAS_AGUINALDO_SPM + '</td>' +
           '<td><input class="agu-importe-total" type="text" value="0.00" readonly></td>' +
-          '<td><input class="agu-tdd" type="text" value="0.00" readonly></td>' +
-          '<td><input class="agu-efectivo" type="text" value="0.00" readonly></td>' +
+          celdaMonto('agu-tdd', 'TDD BBVA del aguinaldo (se puede capturar a mano)') +
+          celdaMonto('agu-efectivo', 'Efectivo del aguinaldo (se puede capturar a mano)') +
           '<td><button class="danger" onclick="window.eliminarFilaAguinaldo(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         marcarOrigenFilaAguinaldo(fila, origen === 'pmsys' ? 'pmsys' : 'manual');
         window.actualizarListaColaboradoresAguinaldo();
-        window.recalcularFilaAguinaldo(fila);
+        window.recalcularFilaAguinaldo(fila, montosGuardados);
       };
+
+      // TDD BBVA o Efectivo capturado a mano: la fila queda con montos
+      // manuales y su Total aguinaldo = TDD BBVA + Efectivo.
+      window.cambiarMontoAguinaldo = function(input) {
+        var fila = input && input.closest ? input.closest('tr') : null;
+        if (!fila) return;
+        fila.dataset.montosManuales = '1';
+        actualizarTotalFilaAguinaldo(fila);
+        window.recalcularTotalesAguinaldo();
+      };
+
+      function montoInputAguinaldo(fila, clase) {
+        var el = fila.querySelector('.' + clase);
+        var v = el ? parseFloat(String(el.value).replace(/,/g, '')) : 0;
+        return isFinite(v) && v > 0 ? v : 0;
+      }
+
+      function actualizarTotalFilaAguinaldo(fila) {
+        var total = montoInputAguinaldo(fila, 'agu-tdd') + montoInputAguinaldo(fila, 'agu-efectivo');
+        var elTotal = fila.querySelector('.agu-importe-total');
+        if (elTotal) elTotal.value = formatearNumeroMexico(total, true);
+      }
 
       function marcarOrigenFilaAguinaldo(fila, origen) {
         fila.dataset.origen = origen;
@@ -27228,20 +27294,30 @@
       };
 
       // Igual que PMSYS: Total = salario semanal × semanas (aquí 2);
-      // TDD BBVA = el del catálogo de Colaboradores (topado al salario);
-      // Efectivo = salario semanal − TDD BBVA.
-      window.recalcularFilaAguinaldo = function(elemento) {
+      // TDD BBVA = TDD semanal del catálogo (topado al salario) × 2;
+      // Efectivo = (salario semanal − TDD semanal) × 2.
+      // TDD BBVA y Efectivo se pueden capturar a mano (montos): entonces
+      // el Total aguinaldo de la fila es TDD BBVA + Efectivo.
+      window.recalcularFilaAguinaldo = function(elemento, montos) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
         if (!fila) return;
-        var inputSalario = fila.querySelector('.agu-salario');
-        var salario = parseNumero(inputSalario ? inputSalario.value : '0');
-        var total = salario * SEMANAS_AGUINALDO_SPM;
-        var tdd = Math.min(Number(fila.dataset.tddBase) || 0, salario);
-        var efectivo = salario - tdd;
-        var set = function(sel, v) { var el = fila.querySelector(sel); if (el) el.value = formatearNumeroMexico(v, true); };
-        set('.agu-importe-total', total);
+        var tdd, efectivo;
+        if (montos) {
+          tdd = Number(montos.tdd) || 0;
+          efectivo = Number(montos.efectivo) || 0;
+          fila.dataset.montosManuales = '1';
+        } else {
+          var inputSalario = fila.querySelector('.agu-salario');
+          var salario = parseNumero(inputSalario ? inputSalario.value : '0');
+          var tddSemanal = Math.min(Number(fila.dataset.tddBase) || 0, salario);
+          tdd = tddSemanal * SEMANAS_AGUINALDO_SPM;
+          efectivo = (salario - tddSemanal) * SEMANAS_AGUINALDO_SPM;
+          delete fila.dataset.montosManuales;
+        }
+        var set = function(sel, v) { var el = fila.querySelector(sel); if (el) el.value = (Math.round(v * 100) / 100).toFixed(2); };
         set('.agu-tdd', tdd);
         set('.agu-efectivo', efectivo);
+        actualizarTotalFilaAguinaldo(fila);
         window.recalcularTotalesAguinaldo();
       };
 
@@ -27256,18 +27332,20 @@
             id: 'AGU-' + (r.empleados.length + 1),
             usuario: usuario,
             salario_semanal: parseNumero(fila.querySelector('.agu-salario').value),
+            tdd_semanal: Number(fila.dataset.tddBase) || 0,
             semanas: SEMANAS_AGUINALDO_SPM,
             origen: fila.dataset.origen || 'manual',
-            total: parseNumero(fila.querySelector('.agu-importe-total').value),
-            tdd_bbva: parseNumero(fila.querySelector('.agu-tdd').value),
-            efectivo: parseNumero(fila.querySelector('.agu-efectivo').value)
+            tdd_bbva: Math.round(montoInputAguinaldo(fila, 'agu-tdd') * 100) / 100,
+            efectivo: Math.round(montoInputAguinaldo(fila, 'agu-efectivo') * 100) / 100
           };
+          emp.total = Math.round((emp.tdd_bbva + emp.efectivo) * 100) / 100;
+          if (fila.dataset.montosManuales === '1') emp.montos_manuales = true;
           r.empleados.push(emp);
           r.total += emp.total;
           r.tdd += emp.tdd_bbva;
           r.efectivo += emp.efectivo;
         });
-        r.comision = r.total * COMISION_PMSYS;
+        r.comision = r.efectivo * COMISION_PMSYS; // solo sobre el Efectivo (como la tabla III)
         return r;
       }
 
@@ -27280,6 +27358,13 @@
         window.recalcularGranTotalSPM();
         return r;
       };
+
+      // Fecha solicitada de pago guardada en una SPM (YYYY-MM-DD) o null.
+      function fechaSolicitadaPagoSPM(d) {
+        var det = d ? parsePresupuestoDetalleSPM(d.presupuesto_detalle) : null;
+        var f = det && det.fecha_solicitada_pago;
+        return (typeof f === 'string' && /^\d{4}-\d{2}-\d{2}/.test(f)) ? f.slice(0, 10) : null;
+      }
 
       // Aguinaldo guardado en una SPM (presupuesto_detalle.aguinaldo).
       function aguinaldoGuardadoSPM(d) {
@@ -27613,7 +27698,7 @@
           if (inputTdd) totalTDD += parseNumero(inputTdd.value);
           if (inputEfectivo) totalEfectivo += parseNumero(inputEfectivo.value);
         });
-        var comisionPMSYS = totalPMSYS * COMISION_PMSYS;
+        var comisionPMSYS = totalEfectivo * COMISION_PMSYS; // solo sobre el Efectivo
         var tkc = obtenerTotalPMVDCTkc();
         var cash = obtenerTotalPMVDCCash();
         var vdg = obtenerTotalPMVDG();
@@ -27627,20 +27712,20 @@
 
         var subBancos = totalTDD + vdg + acr + agu.tdd;
         var subToka = tkc.total;
-        var subCash = totalEfectivo + cash.total + agu.efectivo;
+        var subCash = totalEfectivo + comisionPMSYS + cash.total + agu.efectivo + agu.comision;
 
         var setTxt = function(id, val) {
           var el = document.getElementById(id);
           if (el) el.textContent = formatoMoneda(val, 'MXN');
         };
         setTxt('resGIEVCr1Bancos', totalTDD);
-        setTxt('resGIEVCr1Cash', totalEfectivo);
+        setTxt('resGIEVCr1Cash', totalEfectivo + comisionPMSYS);
         setTxt('resGIEVCr2Toka', tkc.total);
         setTxt('resGIEVCr3Cash', cash.total);
         setTxt('resGIEVCr4Bancos', vdg);
         setTxt('resGIEVCr5Bancos', acr);
         setTxt('resGIEVCr6Bancos', agu.tdd);
-        setTxt('resGIEVCr6Cash', agu.efectivo);
+        setTxt('resGIEVCr6Cash', agu.efectivo + agu.comision);
         setTxt('resGIEVCSubBancos', subBancos);
         setTxt('resGIEVCSubToka', subToka);
         setTxt('resGIEVCSubCash', subCash);
@@ -27677,6 +27762,8 @@
         document.getElementById('spmNumSemanas').value = 4;
         document.getElementById('spmFechaInicio').value = '';
         document.getElementById('spmFechaFin').value = '';
+        var fechaPagoNueva = document.getElementById('spmFechaSolicitadaPago');
+        if (fechaPagoNueva) fechaPagoNueva.value = '';
         reiniciarPresupuestoSPM();
         mostrarJustificacionEdicionSPM(null);
         document.getElementById('cuerpoPMSYS').innerHTML = '';
@@ -27782,6 +27869,8 @@
         document.getElementById('spmVersion').value = d.version_spm || 'A';
         document.getElementById('spmNumSemanas').value = d.num_semanas || 4;
         document.getElementById('spmFechaInicio').value = d.fecha_inicio_semanas ? d.fecha_inicio_semanas.slice(0, 10) : '';
+        var fechaPagoEdicion = document.getElementById('spmFechaSolicitadaPago');
+        if (fechaPagoEdicion) fechaPagoEdicion.value = fechaSolicitadaPagoSPM(d) || '';
 
         var folioInput = document.getElementById('spmFolio');
         folioInput.value = d.folio || '';
@@ -27795,7 +27884,7 @@
         var empleados = [];
         try { empleados = d.pmsys_empleados ? JSON.parse(d.pmsys_empleados) : []; } catch (e) { empleados = Array.isArray(d.pmsys_empleados) ? d.pmsys_empleados : []; }
         empleados.forEach(function(emp) {
-          window.agregarFilaEmpleadoPMSYS(emp.usuario, emp.salario_semanal, emp.tdd_bbva);
+          window.agregarFilaEmpleadoPMSYS(emp.usuario, emp.salario_semanal, emp.tdd_semanal != null ? emp.tdd_semanal : emp.tdd_bbva);
         });
         window.actualizarListaColaboradoresPMSYS();
         var cuerpoAguEd = document.getElementById('cuerpoPMSYSAguinaldo');
@@ -27804,7 +27893,8 @@
         if (buscarAguEd) { buscarAguEd.value = ''; buscarAguEd.style.background = ''; }
         var aguGuardado = aguinaldoGuardadoSPM(d);
         if (aguGuardado) aguGuardado.empleados.forEach(function(emp) {
-          window.agregarFilaEmpleadoAguinaldo(emp.usuario, emp.salario_semanal, emp.tdd_bbva, emp.origen || 'manual');
+          window.agregarFilaEmpleadoAguinaldo(emp.usuario, emp.salario_semanal, emp.tdd_semanal != null ? emp.tdd_semanal : emp.tdd_bbva, emp.origen || 'manual',
+            emp.montos_manuales ? { tdd: emp.tdd_bbva, efectivo: emp.efectivo } : null);
         });
         window.actualizarListaColaboradoresAguinaldo();
         window.actualizarSeccionAguinaldoSPM();
@@ -27831,10 +27921,18 @@
         var versionSpm = document.getElementById('spmVersion').value;
         var numSemanas = parseInt(document.getElementById('spmNumSemanas').value, 10) || 0;
         var fechaInicio = document.getElementById('spmFechaInicio').value || null;
+        var fechaSolicitadaPago = (document.getElementById('spmFechaSolicitadaPago') || {}).value || '';
         var folio = document.getElementById('spmFolio').value.trim();
 
         if (!empresa || !mes || !anio || !numSemanas || !fechaInicio) {
           if (msg) msg.innerHTML = '<div class="alert">❌ Empresa, mes, año, semanas y fecha de inicio son obligatorios.</div>';
+          return;
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaSolicitadaPago)) {
+          if (msg) msg.innerHTML = '<div class="alert">❌ Captura la fecha solicitada de pago.</div>';
+          alert('⚠️ Captura la fecha solicitada de pago de la SPM.');
+          var campoFechaPago = document.getElementById('spmFechaSolicitadaPago');
+          if (campoFechaPago) campoFechaPago.focus();
           return;
         }
 
@@ -27855,7 +27953,8 @@
             salario_semanal: salario,
             semanas: numSemanas,
             total: total,
-            tdd_bbva: tdd,
+            tdd_bbva: tdd,                                   // TDD del periodo (× semanas)
+            tdd_semanal: Number(fila.dataset.tddBase) || 0,  // TDD semanal del catálogo
             efectivo: efectivo
           });
         }
@@ -27866,6 +27965,9 @@
           return;
         }
         var detallePpto = lecturaPpto.datos;
+        // Fecha solicitada de pago (obligatoria al crear la SPM): se guarda
+        // en presupuesto_detalle (no requiere SQL) y se muestra en el PDF.
+        detallePpto.fecha_solicitada_pago = fechaSolicitadaPago;
 
         // Edición (solo ADMIN): la justificación es obligatoria y se agrega
         // al historial de ediciones de la SPM (presupuesto_detalle.ediciones),
@@ -27925,7 +28027,10 @@
         });
         var presupuestoBancos = totalTDD + vdg + acr + aguinaldo.tdd;
         var presupuestoToka = tkc.total;
-        var presupuestoCash = totalEfectivo + cash.total + aguinaldo.efectivo;
+        var presupuestoCash = totalEfectivo + totales.comision + cash.total + aguinaldo.efectivo + aguinaldo.comision;
+        // Regla 2 (26/11/2026): TDD y Efectivo por semanas y comisión solo
+        // sobre el Efectivo (va en Cash). El PDF la usa para el resumen.
+        detallePpto.regla_pmsys = 2;
 
         var registro = {
           tipo: 'SPM',
@@ -27951,10 +28056,10 @@
           version_spm: versionSpm,
           num_semanas: numSemanas,
           fecha_inicio_semanas: fechaInicio,
+          // Día local (AAAA-MM-DD), con la misma regla que la pantalla.
           fecha_fin_semanas: (function() {
-            var inicio = new Date(fechaInicio + 'T00:00:00');
-            inicio.setDate(inicio.getDate() + (numSemanas * 7) - 1);
-            return inicio.toISOString().slice(0, 10);
+            var fin = fechaFinSemanasSPM(fechaInicio, numSemanas);
+            return fin ? fin.getFullYear() + '-' + String(fin.getMonth() + 1).padStart(2, '0') + '-' + String(fin.getDate()).padStart(2, '0') : null;
           })(),
           pmsys_empleados: JSON.stringify(empleados),
           pmsys_total: totales.total,
