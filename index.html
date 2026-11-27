@@ -3509,6 +3509,10 @@
     transition: width 0.6s ease;
   }
 
+  /* Pasos 1-5 de la OC (Bandeja): siempre se ven los 5 en el ancho
+     visible, sin barra horizontal. En pantalla ancha cada paso mide 110px
+     y las líneas llenan el resto (como antes); si no caben, las líneas y
+     los pasos se encogen y los textos bajan de renglón. */
   .oc-stepper-referencia {
     display: flex;
     align-items: flex-start;
@@ -3516,13 +3520,16 @@
     gap: 0;
     margin: 10px 0 14px;
     padding: 0 8px;
-    overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
   .oc-stepper-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 110px;
+    flex: 0 1 110px;
+    min-width: 0;
   }
   .oc-stepper-circulo {
     width: 26px;
@@ -3544,6 +3551,8 @@
     color: var(--gray-700);
     text-align: center;
     max-width: 105px;
+    overflow-wrap: anywhere;
+    hyphens: auto;
   }
   .oc-stepper-sub {
     margin-top: 2px;
@@ -3552,19 +3561,38 @@
     text-align: center;
     max-width: 110px;
     line-height: 1.3;
+    overflow-wrap: anywhere;
   }
   .oc-stepper-linea {
     flex: 1;
     height: 2px;
     background: var(--gray-300);
     margin: 13px 4px 0;
-    min-width: 20px;
+    min-width: 12px;
   }
+  /* Subtítulo corto de cada paso: solo en celular (Elaboración, Jefe
+     Dpto, Director, Pagada, Finalizada), en lugar del título y el
+     subtítulo largos, para que los 5 pasos quepan en una fila. */
+  .oc-stepper-corto { display: none; }
   @media (max-width: 480px) {
-    .oc-stepper-label { font-size: 9px; max-width: 60px; }
+    .oc-stepper-referencia { padding: 0 2px; }
+    .oc-stepper-label { display: none; }
     .oc-stepper-sub { display: none; }
+    .oc-stepper-corto {
+      display: block;
+      margin-top: 4px;
+      font-size: 9px;
+      color: var(--gray-500);
+      text-align: center;
+      line-height: 1.25;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
     .oc-stepper-circulo { width: 20px; height: 20px; font-size: 11px; }
-    .oc-stepper-linea { margin-top: 10px; }
+    .oc-stepper-linea { margin: 10px 1px 0; min-width: 4px; }
+  }
+  @media (max-width: 360px) {
+    .oc-stepper-corto { font-size: 8px; }
   }
 
   .semforo {
@@ -7126,30 +7154,35 @@
             <div class="oc-stepper-circulo">1</div>
             <div class="oc-stepper-label">Elaboración</div>
             <div class="oc-stepper-sub">CREADA</div>
+            <div class="oc-stepper-corto">Elaboración</div>
           </div>
           <div class="oc-stepper-linea"></div>
           <div class="oc-stepper-item">
             <div class="oc-stepper-circulo">2</div>
             <div class="oc-stepper-label">Autorización Jefe Dpto</div>
             <div class="oc-stepper-sub">APROBADA SOLICITANTE</div>
+            <div class="oc-stepper-corto">Jefe Dpto</div>
           </div>
           <div class="oc-stepper-linea"></div>
           <div class="oc-stepper-item">
             <div class="oc-stepper-circulo">3</div>
             <div class="oc-stepper-label">Autorización LJGR</div>
             <div class="oc-stepper-sub">PENDIENTE DIRECTOR · AUTORIZADA</div>
+            <div class="oc-stepper-corto">Director</div>
           </div>
           <div class="oc-stepper-linea"></div>
           <div class="oc-stepper-item">
             <div class="oc-stepper-circulo">4</div>
             <div class="oc-stepper-label">Pagada</div>
             <div class="oc-stepper-sub">ESTADO PAGO: PAGADA</div>
+            <div class="oc-stepper-corto">Pagada</div>
           </div>
           <div class="oc-stepper-linea"></div>
           <div class="oc-stepper-item">
             <div class="oc-stepper-circulo">5</div>
             <div class="oc-stepper-label">Facturación / Cierre</div>
             <div class="oc-stepper-sub">CONCLUIDA · OF FACTURADA/PAGADO</div>
+            <div class="oc-stepper-corto">Finalizada</div>
           </div>
         </div>
 
@@ -7689,23 +7722,23 @@
                   <th style="min-width:180px;">Empleado / Usuario</th>
                   <th style="width:130px;">Salario semanal</th>
                   <th style="width:90px;">Semanas</th>
-                  <th style="width:140px;">Total</th>
                   <th style="width:140px;">TDD BBVA</th>
                   <th style="width:140px;">Efectivo</th>
+                  <th style="width:140px;">Total</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
               <tbody id="cuerpoPMSYS"></tbody>
               <tfoot>
                 <tr>
-                  <td colspan="4" style="text-align:right;font-weight:bold;">Total calculado:</td>
+                  <td colspan="6" style="text-align:right;font-weight:bold;">Total calculado:</td>
                   <td id="pmsysTotalCalculado" style="font-weight:bold;">$0.00</td>
-                  <td colspan="3"></td>
+                  <td></td>
                 </tr>
                 <tr>
-                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38% (sobre efectivo):</td>
+                  <td colspan="6" style="text-align:right;font-weight:bold;">Comisión 6.383% (solo sobre efectivo):</td>
                   <td id="pmsysComision" style="font-weight:bold;">$0.00</td>
-                  <td colspan="3"></td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
@@ -7730,23 +7763,23 @@
                   <th style="min-width:180px;">Empleado / Usuario</th>
                   <th style="width:130px;">Salario semanal</th>
                   <th style="width:90px;">Semanas</th>
-                  <th style="width:140px;">Total aguinaldo</th>
                   <th style="width:140px;">TDD BBVA</th>
                   <th style="width:140px;">Efectivo</th>
+                  <th style="width:140px;">Total aguinaldo</th>
                   <th style="width:60px;">Acción</th>
                 </tr>
               </thead>
               <tbody id="cuerpoPMSYSAguinaldo"></tbody>
               <tfoot>
                 <tr>
-                  <td colspan="4" style="text-align:right;font-weight:bold;">Total aguinaldo:</td>
+                  <td colspan="6" style="text-align:right;font-weight:bold;">Total aguinaldo:</td>
                   <td id="aguinaldoTotalCalculado" style="font-weight:bold;">$0.00</td>
-                  <td colspan="3"></td>
+                  <td></td>
                 </tr>
                 <tr>
-                  <td colspan="4" style="text-align:right;font-weight:bold;">Comisión 6.38% (sobre efectivo):</td>
+                  <td colspan="6" style="text-align:right;font-weight:bold;">Comisión 6.383% (solo sobre efectivo):</td>
                   <td id="aguinaldoComision" style="font-weight:bold;">$0.00</td>
-                  <td colspan="3"></td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
@@ -9855,6 +9888,32 @@
         return (lista || []).slice().sort(function(a, b) { return (Number(a && a.id) || 0) - (Number(b && b.id) || 0); });
       }
 
+      // Facturas registradas por OC (monto y diferencia), para saber en la
+      // Bandeja si ya cubren el total y ocultar el botón "📄 Factura".
+      // null = no se pudieron leer (el botón se muestra como antes).
+      var facturasPorOC = null;
+      async function cargarFacturasPorOC() {
+        try {
+          var r = await supabase.from('facturas_oc').select('oc_id, monto, diferencia');
+          if (r.error) throw r.error;
+          var mapa = {};
+          (r.data || []).forEach(function(f) { (mapa[f.oc_id] = mapa[f.oc_id] || []).push(f); });
+          facturasPorOC = mapa;
+        } catch (eFacturas) {
+          console.warn('No se pudieron leer las facturas de las OC:', eFacturas);
+          facturasPorOC = null;
+        }
+      }
+      // true si las facturas registradas ya comprueban la OC (cubren su
+      // total o una la cerró con diferencia).
+      function ocFacturadaPorCompleto(o) {
+        if (!o || !facturasPorOC) return false;
+        var lista = facturasPorOC[o.id] || [];
+        // OC anteriores a la tabla facturas_oc: su única factura en la OC.
+        if (!lista.length && o.uuidfactura && Number(o.montofactura) > 0) lista = [{ monto: o.montofactura }];
+        try { return facturasCubrenOC(o, lista); } catch (eCubre) { return false; }
+      }
+
       async function cargarDatos() {
         try {
           await cargarUsuarios();
@@ -9871,6 +9930,7 @@
           // posición de la OC en esta lista terminaban apuntando a otra OC
           // si la lista se recargaba con la ventana abierta.
           ordenes = ordenarOCPorId(oData);
+          await cargarFacturasPorOC();
 
           var { data: cxcData, error: e3 } = await supabase.from('cuentas_cxc').select('*');
           if (e3) throw e3;
@@ -13875,15 +13935,16 @@
           var empleados = [];
           try { empleados = d.pmsys_empleados ? JSON.parse(d.pmsys_empleados) : []; } catch (eParse) { empleados = Array.isArray(d.pmsys_empleados) ? d.pmsys_empleados : []; }
 
+          // Columnas: ..., TDD BBVA, Efectivo y el Total al final (27/11/2026).
           var rowsPMSYS = empleados.map(function(emp, i) {
             return [
               i + 1,
               emp.usuario || '',
               formatoMoneda(emp.salario_semanal || 0, 'MXN'),
               emp.semanas || d.num_semanas || 0,
-              formatoMoneda(emp.total || 0, 'MXN'),
               formatoMoneda(emp.tdd_bbva || 0, 'MXN'),
-              formatoMoneda(emp.efectivo || 0, 'MXN')
+              formatoMoneda(emp.efectivo || 0, 'MXN'),
+              formatoMoneda(emp.total || 0, 'MXN')
             ];
           });
 
@@ -13895,7 +13956,7 @@
           var tkcTotal = d.pmvdc_total != null ? Number(d.pmvdc_total) : (tkcBase * 1.03 * 1.16);
 
           var cashBase = Number(d.pmvdc_cash_1) || 0;
-          var cashComision = d.pmvdc_cash_comision != null ? Number(d.pmvdc_cash_comision) : (cashBase * 0.0638);
+          var cashComision = d.pmvdc_cash_comision != null ? Number(d.pmvdc_cash_comision) : (cashBase * 0.0638);  // respaldo de SPM anteriores sin la columna
           var cashTotal = d.pmvdc_cash_total != null ? Number(d.pmvdc_cash_total) : (cashBase + cashComision);
 
           var vdgTotal = Number(d.pmvdg_total != null ? d.pmvdg_total : d.pmvdg_1) || 0;
@@ -13918,9 +13979,9 @@
               emp.usuario || '',
               formatoMoneda(emp.salario_semanal || 0, 'MXN'),
               emp.semanas || 2,
-              formatoMoneda(emp.total || 0, 'MXN'),
               formatoMoneda(emp.tdd_bbva || 0, 'MXN'),
-              formatoMoneda(emp.efectivo || 0, 'MXN')
+              formatoMoneda(emp.efectivo || 0, 'MXN'),
+              formatoMoneda(emp.total || 0, 'MXN')
             ];
           }) : [];
           var aguTDD = aguPDF ? aguPDF.tdd : 0, aguEfectivo = aguPDF ? aguPDF.efectivo : 0;
@@ -13929,6 +13990,9 @@
           // la columna Cash del resumen, como la tabla III.
           var detPDF = parsePresupuestoDetalleSPM(d.presupuesto_detalle);
           var reglaPMSYS2 = !!(detPDF && detPDF.regla_pmsys >= 2);
+          // Tasa con la que se calculó la SPM (las anteriores al 27/11/2026,
+          // 6.38%).
+          var pctComisionPDF = (detPDF && detPDF.comision_efectivo_pct) ? (String(detPDF.comision_efectivo_pct) + '%') : '6.38%';
           var cashPMSYS = totalEfectivo + (reglaPMSYS2 ? pmsysComision : 0);
           var cashAgu = aguEfectivo + (reglaPMSYS2 && aguPDF ? aguPDF.comision : 0);
 
@@ -14005,9 +14069,9 @@
             dd.setTextColor(0, 0, 0);
             dd.text('1 PMSYS — Presupuesto Mes Sueldos y Salarios', margin, y + 7 * s);
             dd.autoTable({
-              head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo']],
+              head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'TDD BBVA', 'Efectivo', 'Total']],
               body: rowsPMSYS,
-              foot: reglaPMSYS2 ? [['', 'Total', '', '', formatoMoneda(pmsysTotal, 'MXN'), formatoMoneda(totalTDD, 'MXN'), formatoMoneda(totalEfectivo, 'MXN')], ['', 'Comisión 6.38% (sobre efectivo)', '', '', '', '', formatoMoneda(pmsysComision, 'MXN')]] : undefined,
+              foot: reglaPMSYS2 ? [['', 'Total', '', '', formatoMoneda(totalTDD, 'MXN'), formatoMoneda(totalEfectivo, 'MXN'), formatoMoneda(pmsysTotal, 'MXN')], ['', 'Comisión ' + pctComisionPDF + ' (solo sobre efectivo)', '', '', '', '', formatoMoneda(pmsysComision, 'MXN')]] : undefined,
               startY: y + 11 * s,
               margin: margenTabla(margin, anchoUtil),
               tableWidth: anchoUtil,
@@ -14034,11 +14098,11 @@
               dd.setTextColor(0, 0, 0);
               dd.text('1.1 PMSYS — Presupuesto Mes Aguinaldo (2 semanas laboradas)', margin, y + 7 * s);
               dd.autoTable({
-                head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'Total', 'TDD BBVA', 'Efectivo']],
+                head: [['#', 'Colaborador', 'Salario Semanal', 'Semanas', 'TDD BBVA', 'Efectivo', 'Total']],
                 body: rowsAguinaldo,
                 foot: reglaPMSYS2
-                  ? [['', 'Total aguinaldo', '', '', formatoMoneda(aguPDF.total, 'MXN'), formatoMoneda(aguTDD, 'MXN'), formatoMoneda(aguEfectivo, 'MXN')], ['', 'Comisión 6.38% (sobre efectivo)', '', '', '', '', formatoMoneda(aguPDF.comision, 'MXN')]]
-                  : [['', 'Total aguinaldo', '', '', formatoMoneda(aguPDF.total, 'MXN'), '', ''], ['', 'Comisión 6.38%', '', '', formatoMoneda(aguPDF.comision, 'MXN'), '', '']],
+                  ? [['', 'Total aguinaldo', '', '', formatoMoneda(aguTDD, 'MXN'), formatoMoneda(aguEfectivo, 'MXN'), formatoMoneda(aguPDF.total, 'MXN')], ['', 'Comisión ' + pctComisionPDF + ' (solo sobre efectivo)', '', '', '', '', formatoMoneda(aguPDF.comision, 'MXN')]]
+                  : [['', 'Total aguinaldo', '', '', '', '', formatoMoneda(aguPDF.total, 'MXN')], ['', 'Comisión ' + pctComisionPDF, '', '', '', '', formatoMoneda(aguPDF.comision, 'MXN')]],
                 startY: y + 11 * s,
                 margin: margenTabla(margin, anchoUtil),
                 tableWidth: anchoUtil,
@@ -17433,9 +17497,9 @@
       };
 
       // ===== VER FACTURA DE UNA OC CONCLUIDA (modal, no pestaña nueva) =====
-      // Si la OC tiene más de una factura comprobada, primero se muestra
-      // un selector; si solo tiene una (o no se pudo consultar el
-      // historial), se abre directamente.
+      // Con una factura se abre directamente; con más de una, todas juntas
+      // en un solo PDF (desde el 27/11/2026; si no se pueden unir, se
+      // muestra el selector de antes).
       window.verFacturaOC = async function(ocId, urlLegado) {
         var facturas = [];
         try {
@@ -17450,6 +17514,12 @@
           if (url) window.abrirFacturaVer(url);
           return;
         }
+
+        // Más de una factura: todas en un solo PDF, una tras otra, para
+        // verlas a la vez (y el botón Imprimir abre ese PDF unido). Si no
+        // se pueden unir, queda el selector de antes.
+        var urlsFacturas = facturas.map(function(f) { return f.factura_url; }).filter(Boolean);
+        if (urlsFacturas.length > 1 && await abrirFacturasUnidas(urlsFacturas, 'Facturas de la OC (' + urlsFacturas.length + ')')) return;
 
         var lista = document.getElementById('facturaSeleccionLista');
         if (lista) {
@@ -17469,6 +17539,52 @@
       };
 
       var facturaVerUrlActual = null;
+      var facturaVerBlobUrl = null; // PDF unido (varias facturas), para Imprimir
+
+      function liberarFacturaVerBlob() {
+        if (facturaVerBlobUrl) { try { URL.revokeObjectURL(facturaVerBlobUrl); } catch (eBlob) {} }
+        facturaVerBlobUrl = null;
+      }
+
+      // Une los PDF de las facturas (en orden) en uno solo con pdf-lib y lo
+      // muestra en la ventana "Factura". Regresa false si no se pudo.
+      async function abrirFacturasUnidas(urls, titulo) {
+        var modal = document.getElementById('facturaVerModal');
+        var contenedor = document.getElementById('facturaVerFrame');
+        var tituloEl = document.getElementById('facturaVerTitulo');
+        if (!modal || !contenedor) return false;
+        liberarFacturaVerBlob();
+        if (tituloEl) tituloEl.textContent = titulo || 'Facturas';
+        facturaVerUrlActual = null;
+        contenedor._pdfRenderToken = (contenedor._pdfRenderToken || 0) + 1;
+        contenedor.innerHTML = '<div class="visualizar-pdf-cargando">Uniendo ' + urls.length + ' facturas…</div>';
+        modal.classList.add('active');
+        try {
+          var PDFLib = await cargarPdfLibOC();
+          var unido = await PDFLib.PDFDocument.create();
+          for (var i = 0; i < urls.length; i++) {
+            var bytes = await obtenerBytesPDF(urls[i]);
+            if (!bytes) throw new Error('No se pudo descargar la factura ' + (i + 1) + '.');
+            var origen = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+            var paginas = await unido.copyPages(origen, origen.getPageIndices());
+            paginas.forEach(function(pg) { unido.addPage(pg); });
+          }
+          // Sin flujos de objetos: así la corrección de fuentes de la vista
+          // previa encuentra las fuentes de cada factura.
+          var bytesUnidos = await unido.save({ useObjectStreams: false });
+          if (!modal.classList.contains('active')) return true; // se cerró mientras se unían
+          facturaVerBlobUrl = URL.createObjectURL(new Blob([bytesUnidos], { type: 'application/pdf' }));
+          facturaVerUrlActual = facturaVerBlobUrl;
+          await renderizarPDFEnContenedor('facturaVerFrame', bytesUnidos);
+          return true;
+        } catch (eUnir) {
+          console.error('No se pudieron unir las facturas en un PDF:', eUnir);
+          modal.classList.remove('active');
+          contenedor.innerHTML = '';
+          if (tituloEl) tituloEl.textContent = 'Factura';
+          return false;
+        }
+      }
 
       window.abrirFacturaVer = async function(url, titulo) {
         if (!url) return;
@@ -17477,6 +17593,7 @@
         var tituloEl = document.getElementById('facturaVerTitulo');
         if (!modal || !contenedor) return;
         if (tituloEl) tituloEl.textContent = titulo || 'Factura';
+        liberarFacturaVerBlob();
         facturaVerUrlActual = url;
         modal.classList.add('active');
         await renderizarPDFEnContenedor('facturaVerFrame', url);
@@ -17486,8 +17603,9 @@
         var modal = document.getElementById('facturaVerModal');
         var contenedor = document.getElementById('facturaVerFrame');
         if (modal) modal.classList.remove('active');
-        if (contenedor) contenedor.innerHTML = '';
+        if (contenedor) { contenedor._pdfRenderToken = (contenedor._pdfRenderToken || 0) + 1; contenedor.innerHTML = ''; }
         facturaVerUrlActual = null;
+        setTimeout(liberarFacturaVerBlob, 60000);
       };
 
       // Botón "🖨️ Imprimir" de la ventana de previsualización (Factura /
@@ -21221,7 +21339,13 @@
       // columnas ordenes.diferencia_factura y nota_diferencia_factura):
       // negativa = se facturó de menos (saldo a favor); positiva = se
       // facturó de más (saldo en contra).
+      // Desde el 27/11/2026 las facturas se suman hasta el total de la OC y
+      // ya no se cierra con diferencia: las diferencias guardadas antes
+      // (p. ej. TONY PAPELERIA) ya no se toman en cuenta en la fila de la
+      // OC ni en el saldo con el proveedor.
+      var FACTURAS_CON_DIFERENCIA_ACTIVAS = false;
       function diferenciaFacturaOC(oc) {
+        if (!FACTURAS_CON_DIFERENCIA_ACTIVAS) return null;
         var d = oc ? Number(oc.diferencia_factura) : NaN;
         if (!oc || oc.diferencia_factura == null || oc.diferencia_factura === '' || isNaN(d) || Math.abs(d) <= 0.009) return null;
         return { monto: redondearMontoPago(d), moneda: montoEsperadoFacturaOC(oc).moneda, nota: oc.nota_diferencia_factura || '' };
@@ -23149,10 +23273,12 @@
           (f.nota_diferencia ? '<br><span style="font-size:12px;color:var(--gray-600);">Nota: ' + escapeHTML(f.nota_diferencia) + '</span>' : '');
       }
       function facturaCierraConDiferencia(f) {
+        if (!FACTURAS_CON_DIFERENCIA_ACTIVAS) return false; // ver diferenciaFacturaOC
         return !!f && f.diferencia !== null && f.diferencia !== undefined && f.diferencia !== '' && !isNaN(Number(f.diferencia));
       }
-      // true si las facturas ya comprueban la OC: cubren su total o una de
-      // ellas la cerró con diferencia.
+      // true si las facturas ya comprueban la OC: la suma de sus montos
+      // (los que captura el usuario) cubre el total de la OC. (Antes del
+      // 27/11/2026 también contaba una factura que cerraba con diferencia.)
       function facturasCubrenOC(oc, facturas) {
         var lista = facturas || [];
         if (!lista.length) return false;
@@ -23173,11 +23299,17 @@
         var dif = redondearMontoPago(acumulado - total);
         var falta = dif < -TOLERANCIA_MONTO_FACTURA;
         var sobra = dif > TOLERANCIA_MONTO_FACTURA;
-        var cierra = tipo === 'PUE' || !falta || (tipo === 'PPD' && ultima);
+        // Desde el 27/11/2026 las facturas se complementan: la OC queda
+        // facturada solo cuando la suma de los montos que captura el
+        // usuario llega al total; no se cierra con diferencia y la suma no
+        // puede pasar el total.
+        var cierra = !falta;
         return {
           oc: oc, moneda: esperado.moneda, total: total, previa: previa, monto: monto, tipo: tipo, ultima: ultima,
           acumulado: acumulado, dif: dif, falta: falta, sobra: sobra, cierra: cierra,
-          hayDiferencia: monto > 0 && cierra && (falta || sobra)
+          restante: redondearMontoPago(Math.max(total - previa, 0)),
+          excede: monto > 0 && sobra,
+          hayDiferencia: false
         };
       }
       // Pinta el resumen y la diferencia en vivo; regresa el error que
@@ -23188,12 +23320,19 @@
         var mon = function(v) { return formatoMoneda(v, c.moneda); };
         var resumen = document.getElementById('facturaResumenMontos');
         if (resumen) {
-          resumen.classList.remove('error');
+          resumen.classList.toggle('error', !!c.excede);
           resumen.textContent = 'Total de la OC: ' + mon(c.total) + (c.previa > 0 ? ' · Facturado antes: ' + mon(c.previa) : '') +
-            (c.monto > 0 ? ' · Con esta factura: ' + mon(c.acumulado) : '');
+            ' · Falta por facturar: ' + mon(c.restante) +
+            (c.monto > 0 ? ' · Con esta factura: ' + mon(c.acumulado) + (c.excede ? '' : (c.falta ? ' (faltarán ' + mon(c.total - c.acumulado) + ')' : ' (completa el total)')) : '');
         }
+        // Ya no hay "última factura" ni cierre con diferencia (27/11/2026).
         var ultimaCont = document.getElementById('facturaUltimaContainer');
-        if (ultimaCont) ultimaCont.classList.toggle('hidden', !(c.tipo === 'PPD' && c.monto > 0 && c.falta));
+        if (ultimaCont) ultimaCont.classList.add('hidden');
+        if (c.excede) {
+          var grupoExcede = document.getElementById('grupoDiferenciaFactura');
+          if (grupoExcede) grupoExcede.classList.add('hidden');
+          return 'La suma de las facturas (' + mon(c.acumulado) + ') pasa el total de la OC (' + mon(c.total) + '). El monto de esta factura puede ser como máximo ' + mon(c.restante) + ', lo que falta por facturar.';
+        }
         var grupo = document.getElementById('grupoDiferenciaFactura');
         if (grupo) grupo.classList.toggle('hidden', !c.hayDiferencia);
         var caja = document.getElementById('facturaCajaDiferencia');
@@ -23214,7 +23353,10 @@
       // Comprueba (agrega) una factura a la OC en curso. Hasta
       // MAX_FACTURAS_POR_OC facturas pueden adjuntarse a la misma OC.
       //
-      // Reglas de monto:
+      // Reglas de monto (desde el 27/11/2026): cada factura, PUE o PPD, se
+      // suma a las anteriores; la OC queda facturada cuando la suma llega al
+      // total y no puede pasarlo (ya no se cierra con diferencia).
+      // Reglas anteriores:
       // - PUE: el monto de la factura debe coincidir con el total de la
       //   OC. Si no coincide, se rechaza con el mensaje "Factura
       //   ingresada no coincide con monto." y no se permite concluir. Si
@@ -23303,6 +23445,8 @@
 
           var facturaGuardada = (data && data[0]) || nuevaFactura;
           ocConclusionPendiente.facturas.push(facturaGuardada);
+          // La Bandeja oculta "📄 Factura" en cuanto las facturas cubren la OC.
+          if (facturasPorOC) facturasPorOC[oc.id] = ocConclusionPendiente.facturas.map(function(f) { return { oc_id: oc.id, monto: f.monto, diferencia: f.diferencia }; });
 
           // Compatibilidad: la última factura comprobada también se
           // refleja en la propia OC (uuidfactura/montofactura/factura_url).
@@ -26516,8 +26660,18 @@
       // en "documentos_cxp" con tipo: 'SPM' para reutilizar el mismo
       // listado, cobro y reportes que ya existen para VC/VI.
       var spmEdicionId = null; // id del documento en edición, o null si es nuevo
-      var COMISION_PMSYS = 0.0638;
+      // Comisión sobre el efectivo de la SPM (PMSYS, aguinaldo y tabla III
+      // PMVDC Cash): 6.383% desde el 27/11/2026 (antes 6.38%). Se guarda en
+      // presupuesto_detalle.comision_efectivo_pct para que el PDF de cada
+      // SPM muestre la tasa con la que se calculó.
+      var COMISION_PMSYS = 0.06383;
+      var COMISION_PMSYS_TEXTO = '6.383%';
+      // TDD BBVA semanal de la SPM: siempre 2,205.30 por colaborador (topado
+      // al salario semanal); TDD BBVA = 2,205.30 × semanas.
       var TDD_BBVA_DEFAULT = 2205.30; // valor por default de todo colaborador mientras ADMIN no capture otro en Colaboradores
+      function comisionEfectivoSPM(monto) {
+        return Math.round((Number(monto) || 0) * COMISION_PMSYS * 100) / 100;
+      }
 
       // Una SPM, ya autorizada por el Director y marcada como pagada por
       // Finanzas, es la que rige el consumo del mes: solo entonces se
@@ -26948,15 +27102,16 @@
       window.agregarFilaEmpleadoPMSYS = function(usuarioPrecargado, salarioPrecargado, tddPrecargado) {
         var tbody = document.getElementById('cuerpoPMSYS');
         var fila = document.createElement('tr');
-        fila.dataset.tddBase = Number(tddPrecargado) || 0;
+        // TDD BBVA semanal fijo de 2,205.30 (petición del 27/11/2026).
+        fila.dataset.tddBase = TDD_BBVA_DEFAULT;
         fila.innerHTML =
           '<td class="indice">SYS-' + (tbody.children.length + 1) + '</td>' +
           '<td><input class="pmsys-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="pmsys-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span></td>' +
           '<td><input class="pmsys-salario" type="text" value="' + formatearNumeroMexico(salarioPrecargado || 0, true) + '" readonly></td>' +
           '<td class="pmsys-semanas" style="text-align:center;">' + (parseInt(document.getElementById('spmNumSemanas').value, 10) || 0) + '</td>' +
-          '<td><input class="pmsys-importe-total" type="text" value="0.00" readonly></td>' +
           '<td><input class="pmsys-tdd" type="text" value="0.00" readonly></td>' +
           '<td><input class="pmsys-efectivo" type="text" value="0.00" readonly></td>' +
+          '<td><input class="pmsys-importe-total" type="text" value="0.00" readonly></td>' +
           '<td><button class="danger" onclick="window.eliminarFilaPMSYS(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         window.aplicarPermisosPMSYS();
@@ -27036,11 +27191,11 @@
 
       // Por cada empleado (desde el 26/11/2026):
       //   Total     = salario semanal × N semanas;
-      //   TDD BBVA  = TDD semanal × N semanas (TDD semanal: el que capturó
-      //               ADMIN en Colaboradores, 2,205.30 por default; topado
-      //               al salario semanal para no dar negativo);
+      //   TDD BBVA  = 2,205.30 × N semanas (TDD semanal fijo desde el
+      //               27/11/2026; topado al salario semanal para no dar
+      //               negativo);
       //   Efectivo  = (salario semanal − TDD semanal) × N semanas.
-      // Así TDD BBVA + Efectivo = Total. La comisión de 6.38% se calcula
+      // Así TDD BBVA + Efectivo = Total. La comisión de 6.383% se calcula
       // solo sobre el Efectivo (igual que la tabla III, PMVDC Cash).
       window.recalcularFilaPMSYS = function(elemento) {
         var fila = elemento.closest ? elemento.closest('tr') : elemento;
@@ -27077,8 +27232,8 @@
         document.querySelectorAll('#cuerpoPMSYS .pmsys-efectivo').forEach(function(input) {
           efectivo += parseNumero(input.value);
         });
-        // Comisión 6.38% solo sobre el Efectivo (como la tabla III).
-        var comision = efectivo * COMISION_PMSYS;
+        // Comisión 6.383% solo sobre el Efectivo (como la tabla III).
+        var comision = comisionEfectivoSPM(efectivo);
         var elTotal = document.getElementById('pmsysTotalCalculado');
         var elComision = document.getElementById('pmsysComision');
         if (elTotal) elTotal.textContent = formatoMoneda(total, 'MXN');
@@ -27103,7 +27258,7 @@
 
       // ===== PMSYS — PRESUPUESTO MES AGUINALDO (solo en diciembre) =====
       // Funciona igual que PMSYS (mismos colaboradores del catálogo, mismo
-      // salario semanal y TDD BBVA, misma comisión de 6.38%), pero en su
+      // salario semanal y TDD BBVA, misma comisión de 6.383%), pero en su
       // propio apartado y con 2 semanas laboradas fijas por colaborador:
       // Total aguinaldo = salario semanal × 2. Solo aparece y solo cuenta
       // en la SPM cuyo mes es Diciembre. Se guarda en
@@ -27138,7 +27293,8 @@
         var tbody = document.getElementById('cuerpoPMSYSAguinaldo');
         if (!tbody) return;
         var fila = document.createElement('tr');
-        fila.dataset.tddBase = Number(tddPrecargado) || 0;
+        // TDD BBVA semanal fijo de 2,205.30 (petición del 27/11/2026).
+        fila.dataset.tddBase = TDD_BBVA_DEFAULT;
         // Todos los montos de la fila se llenan solos y se pueden cambiar
         // a mano (el Jefe al crear la SPM, el ADMIN al editarla).
         var celdaMonto = function(clase, titulo, manejador, valor) {
@@ -27150,9 +27306,9 @@
           '<td><input class="agu-usuario" type="hidden" value="' + escapeHTML(usuarioPrecargado || '') + '"><span class="agu-usuario-nombre">' + escapeHTML(usuarioPrecargado || '') + '</span><span class="agu-origen" style="display:block;font-size:11px;color:var(--gray-600);"></span></td>' +
           celdaMonto('agu-salario', 'Salario semanal (se puede cambiar; recalcula la fila)', 'cambiarSalarioAguinaldo', (Math.round((Number(salarioPrecargado) || 0) * 100) / 100).toFixed(2)) +
           '<td class="agu-semanas" style="text-align:center;">' + SEMANAS_AGUINALDO_SPM + '</td>' +
-          celdaMonto('agu-importe-total', 'Total aguinaldo (se puede cambiar; Efectivo = Total - TDD BBVA)', 'cambiarTotalAguinaldo') +
           celdaMonto('agu-tdd', 'TDD BBVA del aguinaldo (se puede cambiar; Total = TDD BBVA + Efectivo)', 'cambiarMontoAguinaldo') +
           celdaMonto('agu-efectivo', 'Efectivo del aguinaldo (se puede cambiar; Total = TDD BBVA + Efectivo)', 'cambiarMontoAguinaldo') +
+          celdaMonto('agu-importe-total', 'Total aguinaldo (se puede cambiar; Efectivo = Total - TDD BBVA)', 'cambiarTotalAguinaldo') +
           '<td><button class="danger" onclick="window.eliminarFilaAguinaldo(this)">🗑️</button></td>';
         tbody.appendChild(fila);
         marcarOrigenFilaAguinaldo(fila, origen === 'pmsys' ? 'pmsys' : 'manual');
@@ -27387,7 +27543,7 @@
           r.tdd += emp.tdd_bbva;
           r.efectivo += emp.efectivo;
         });
-        r.comision = r.efectivo * COMISION_PMSYS; // solo sobre el Efectivo (como la tabla III)
+        r.comision = comisionEfectivoSPM(r.efectivo); // solo sobre el Efectivo (como la tabla III)
         return r;
       }
 
@@ -27679,11 +27835,11 @@
       };
 
       // ===== PMVDC CASH =====
-      // La fila "VDC-2" es la comisión: 6.38% (misma tasa que la de
+      // La fila "VDC-2" es la comisión: 6.383% (misma tasa que la de
       // PMSYS) sobre el monto capturado en VDC-1.
       function obtenerTotalPMVDCCash() {
         var v1 = sumarMontosFilasSPM('cash');
-        var comision = v1 * COMISION_PMSYS;
+        var comision = comisionEfectivoSPM(v1);
         return { base: v1, comision: comision, total: v1 + comision };
       }
 
@@ -27740,7 +27896,7 @@
           if (inputTdd) totalTDD += parseNumero(inputTdd.value);
           if (inputEfectivo) totalEfectivo += parseNumero(inputEfectivo.value);
         });
-        var comisionPMSYS = totalEfectivo * COMISION_PMSYS; // solo sobre el Efectivo
+        var comisionPMSYS = comisionEfectivoSPM(totalEfectivo); // solo sobre el Efectivo
         var tkc = obtenerTotalPMVDCTkc();
         var cash = obtenerTotalPMVDCCash();
         var vdg = obtenerTotalPMVDG();
@@ -28012,6 +28168,8 @@
         // Fecha solicitada de pago (obligatoria al crear la SPM): se guarda
         // en presupuesto_detalle (no requiere SQL) y se muestra en el PDF.
         detallePpto.fecha_solicitada_pago = fechaSolicitadaPago;
+        // Tasa de la comisión sobre el efectivo con la que se calculó (para el PDF).
+        detallePpto.comision_efectivo_pct = Math.round(COMISION_PMSYS * 100000) / 1000;
 
         // Edición (solo ADMIN): la justificación es obligatoria y se agrega
         // al historial de ediciones de la SPM (presupuesto_detalle.ediciones),
@@ -30059,7 +30217,9 @@
                 if (o.estado === 'PENDIENTE_PARIDAD' && (esAdminFila || (o.elaborador && String(o.elaborador).toUpperCase() === String(actual.usuario || actual.u || '').toUpperCase()))) {
                   acciones += '<button class="btn-warning" onclick="window.abrirModalParidadOC(' + idxOriginal + ')">💰 Paridad</button>';
                 }
-                if ((o.responsable === actual.u || esAdminFila) && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA') {
+                // Ya no se muestra cuando las facturas registradas cubren el
+                // total de la OC (27/11/2026).
+                if ((o.responsable === actual.u || esAdminFila) && o.estadopago === 'PAGADA' && o.estado !== 'CONCLUIDA' && !ocFacturadaPorCompleto(o)) {
                   acciones += '<button class="btn-success" onclick="window.registrarFactura(' + idxOriginal + ')">📄 Factura</button>';
                 }
               }
@@ -34364,6 +34524,55 @@
       // documento: al aumentar, las páginas se dibujan más grandes y el
       // contenedor (que ya tiene scroll propio) permite desplazarse para
       // ver el resto.
+      // Facturas de proveedores generadas con htmldoc (p. ej. TONY TIENDAS)
+      // traen incrustadas las fuentes estándar Courier y Helvetica en un
+      // formato Type1 que pdf.js no puede cargar ("Invalid font data"): la
+      // vista previa salía sin texto (solo logo, QR y recuadros). Para la
+      // vista previa se quita la referencia a ese archivo de fuente (solo en
+      // fuentes estándar Courier/Helvetica/Times no simbólicas, /FontFile
+      // Type1) y pdf.js usa la fuente equivalente del sistema. Se cambia por
+      // espacios del mismo largo, así el PDF sigue siendo válido. El archivo
+      // guardado en Storage no se modifica.
+      var FUENTE_ESTANDAR_PDF = /^(Courier|Helvetica|Times)(-|,|$)/;
+      function corregirFuentesEstandarPDF(bytes) {
+        try {
+          var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+          var texto = '';
+          for (var i = 0; i < u8.length; i += 0x8000) texto += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+          if (texto.indexOf('/FontDescriptor') === -1 || !/\/FontFile\s+\d/.test(texto)) return u8;
+          var copia = null;
+          var reDict = /<<((?:(?!>>)[\s\S])*?\/Type\s*\/FontDescriptor(?:(?!>>)[\s\S])*?)>>/g;
+          var m;
+          while ((m = reDict.exec(texto))) {
+            var cuerpo = m[1];
+            var nombre = (cuerpo.match(/\/FontName\s*\/([^\s\/<>\[\]()]+)/) || [])[1] || '';
+            nombre = nombre.replace(/^[A-Z]{6}\+/, '');
+            if (!FUENTE_ESTANDAR_PDF.test(nombre)) continue;
+            var flags = parseInt((cuerpo.match(/\/Flags\s+(\d+)/) || [])[1] || '32', 10);
+            if (flags & 4) continue; // simbólica: se deja como viene
+            var ref = cuerpo.match(/\/FontFile\s+\d+\s+\d+\s+R/);
+            if (!ref) continue;
+            var inicio = m.index + 2 + ref.index;
+            if (!copia) copia = u8.slice();
+            for (var k = 0; k < ref[0].length; k++) copia[inicio + k] = 32;
+          }
+          return copia || u8;
+        } catch (eFuentes) {
+          console.warn('No se pudieron revisar las fuentes del PDF:', eFuentes);
+          return bytes;
+        }
+      }
+      async function obtenerBytesPDF(url) {
+        try {
+          var resp = await fetch(url);
+          if (!resp.ok) return null;
+          return new Uint8Array(await resp.arrayBuffer());
+        } catch (eBytes) {
+          console.warn('No se pudo descargar el PDF para la vista previa:', eBytes);
+          return null;
+        }
+      }
+
       async function renderizarPDFEnContenedor(contenedorId, fuente, zoomFactor) {
         var contenedor = document.getElementById(contenedorId);
         if (!contenedor) return;
@@ -34379,14 +34588,22 @@
           var origenPDF;
           if (fuente && typeof fuente.output === 'function') {
             origenPDF = { data: fuente.output('arraybuffer') };
+          } else if (fuente instanceof Uint8Array || fuente instanceof ArrayBuffer) {
+            // Bytes de un PDF (p. ej. varias facturas unidas en uno).
+            origenPDF = { data: corregirFuentesEstandarPDF(fuente) };
           } else if (typeof fuente === 'string' && fuente.indexOf('data:') === 0) {
             var base64PDF = fuente.substring(fuente.indexOf(',') + 1);
             var binarioPDF = atob(base64PDF);
             var bytesPDF = new Uint8Array(binarioPDF.length);
             for (var biPDF = 0; biPDF < binarioPDF.length; biPDF++) bytesPDF[biPDF] = binarioPDF.charCodeAt(biPDF);
-            origenPDF = { data: bytesPDF };
+            origenPDF = { data: corregirFuentesEstandarPDF(bytesPDF) };
           } else {
-            origenPDF = { url: fuente };
+            // Archivo subido (factura, comprobante, complemento): se
+            // descarga para corregir sus fuentes; si no se puede, se abre
+            // por su dirección como antes.
+            var bytesUrl = await obtenerBytesPDF(fuente);
+            if (contenedor._pdfRenderToken !== token) return;
+            origenPDF = bytesUrl ? { data: corregirFuentesEstandarPDF(bytesUrl) } : { url: fuente };
           }
           var pdf = await window.pdfjsLib.getDocument(origenPDF).promise;
           if (contenedor._pdfRenderToken !== token) return;
